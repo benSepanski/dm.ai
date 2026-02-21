@@ -15,14 +15,31 @@ _pgvector = _types.ModuleType("pgvector")
 _pgvector_sa = _types.ModuleType("pgvector.sqlalchemy")
 
 
-class _FakeVector:
-    def __init__(self, dim):
+class _FakeVector(sa.types.TypeDecorator):
+    """Fake Vector type that stores data as Text for SQLite compatibility."""
+    impl = sa.Text
+    cache_ok = True
+
+    def __init__(self, dim=None):
+        super().__init__()
         self.dim = dim
 
-    def __call__(self, *a, **kw):
-        return sa.Text()  # fallback column type for SQLite
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return str(value)
+
+    def process_result_value(self, value, dialect):
+        return value
 
 
+# pgvector.sqlalchemy.Vector is used as Vector(1536) in column definitions
+# We need it to be callable and return a SQLAlchemy type
+def _vector_factory(dim):
+    return _FakeVector(dim)
+
+
+# Make Vector behave like a class (callable, returns type instance)
 _pgvector_sa.Vector = _FakeVector
 _pgvector.sqlalchemy = _pgvector_sa
 sys.modules["pgvector"] = _pgvector
