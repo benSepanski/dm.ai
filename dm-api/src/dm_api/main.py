@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dm_api.config import settings
+
 from dm_api.api.router import router
+from dm_api.config import settings
 
 
 @asynccontextmanager

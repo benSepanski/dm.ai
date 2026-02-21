@@ -7,7 +7,7 @@ system: highest total goes first, with Dexterity modifier used to break ties.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass

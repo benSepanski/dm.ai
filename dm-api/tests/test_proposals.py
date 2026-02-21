@@ -1,14 +1,14 @@
 """Tests for the AI proposals endpoints."""
+
 import uuid
+
 import pytest
-from sqlalchemy import insert
 
 
 async def _create_proposal(client, world_id, session_id):
     """Helper: create a proposal directly via DB-level fixtures via the session chat mock.
     Instead, we insert directly using the db_session fixture for setup.
     """
-    pass
 
 
 @pytest.mark.asyncio
@@ -53,8 +53,9 @@ async def test_reject_proposal_not_found(client):
 @pytest.mark.asyncio
 async def test_proposal_lifecycle(client, world_id, db_session):
     """Create a proposal directly in the DB, then accept it via API."""
+    from game_engine.types import ProposalStatus, ProposalType
+
     from dm_api.db.models.proposal import Proposal
-    from game_engine.types import ProposalType, ProposalStatus
 
     # Create a session
     r = await client.post(
@@ -99,8 +100,9 @@ async def test_proposal_lifecycle(client, world_id, db_session):
 @pytest.mark.asyncio
 async def test_proposal_reject(client, world_id, db_session):
     """Create a proposal directly in the DB, then reject it via API."""
+    from game_engine.types import ProposalStatus, ProposalType
+
     from dm_api.db.models.proposal import Proposal
-    from game_engine.types import ProposalType, ProposalStatus
 
     # Create a session
     r = await client.post(
@@ -135,8 +137,9 @@ async def test_proposal_reject(client, world_id, db_session):
 @pytest.mark.asyncio
 async def test_accept_already_accepted_proposal(client, world_id, db_session):
     """Trying to accept an already-accepted proposal returns 409."""
+    from game_engine.types import ProposalStatus, ProposalType
+
     from dm_api.db.models.proposal import Proposal
-    from game_engine.types import ProposalType, ProposalStatus
 
     r = await client.post(
         "/api/sessions/",

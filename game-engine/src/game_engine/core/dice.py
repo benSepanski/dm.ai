@@ -11,7 +11,6 @@ Supports standard dice notation such as:
 import random
 import re
 
-
 # ---------------------------------------------------------------------------
 # Parsing
 # ---------------------------------------------------------------------------
@@ -67,9 +66,7 @@ def parse_notation(notation: str) -> tuple[int, int, int]:
 # ---------------------------------------------------------------------------
 
 
-def roll_dice(
-    count: int, sides: int, modifier: int = 0
-) -> tuple[int, list[int]]:
+def roll_dice(count: int, sides: int, modifier: int = 0) -> tuple[int, list[int]]:
     """Roll *count* dice with *sides* faces and add *modifier*.
 
     Args:

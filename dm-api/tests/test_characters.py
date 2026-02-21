@@ -1,5 +1,7 @@
 """Tests for the characters API endpoints."""
+
 import uuid
+
 import pytest
 
 

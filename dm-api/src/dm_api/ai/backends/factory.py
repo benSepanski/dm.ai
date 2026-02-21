@@ -1,4 +1,5 @@
 """Factory for creating AI backends from configuration."""
+
 from __future__ import annotations
 
 from dm_api.ai.backends.base import AIBackend
@@ -20,11 +21,12 @@ def create_backend(provider: str, api_key: str = "") -> AIBackend:
     """
     if provider == "anthropic":
         from dm_api.ai.backends.anthropic_backend import AnthropicBackend
+
         return AnthropicBackend(api_key=api_key)
     if provider == "claude_cli":
         from dm_api.ai.backends.claude_cli_backend import ClaudeCLIBackend
+
         return ClaudeCLIBackend()
     raise ValueError(
-        f"Unknown AI provider {provider!r}. "
-        "Valid options: 'anthropic', 'claude_cli'"
+        f"Unknown AI provider {provider!r}. " "Valid options: 'anthropic', 'claude_cli'"
     )

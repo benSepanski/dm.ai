@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any
 
 import sqlalchemy as sa
+from game_engine.types import LocationType
 from pgvector.sqlalchemy import Vector
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import DateTime, ForeignKey, String, Text, func
@@ -10,15 +11,12 @@ from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from dm_api.db.session import Base
-from game_engine.types import LocationType
 
 
 class Location(Base):
     __tablename__ = "locations"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     world_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False
     )

@@ -2,7 +2,6 @@
 
 from game_engine.core.character import (
     AbstractCharacter,
-    AbilityScores,  # backward-compat alias for AbilityScoreSet
     get_modifier,
 )
 from game_engine.core.combat import AbstractCombat, CombatPhase
@@ -30,14 +29,9 @@ from game_engine.core.dice import (
 )
 from game_engine.core.initiative import InitiativeEntry, InitiativeTracker
 
-# Re-export CharacterType from types for backward compatibility
-from game_engine.types import CharacterType
-
 __all__ = [
     # character
     "AbstractCharacter",
-    "AbilityScores",
-    "CharacterType",
     "get_modifier",
     # combat
     "AbstractCombat",

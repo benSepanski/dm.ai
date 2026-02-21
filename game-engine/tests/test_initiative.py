@@ -8,7 +8,6 @@ import pytest
 
 from game_engine.core.initiative import InitiativeEntry, InitiativeTracker
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -57,7 +56,7 @@ class TestAddCombatant:
 
 class TestSort:
     def test_sorted_descending_by_total(self, tracker: InitiativeTracker):
-        tracker.add_combatant("c", "C", roll=8, dex_modifier=0)   # total=8
+        tracker.add_combatant("c", "C", roll=8, dex_modifier=0)  # total=8
         tracker.add_combatant("a", "A", roll=20, dex_modifier=0)  # total=20
         tracker.add_combatant("b", "B", roll=14, dex_modifier=0)  # total=14
 
@@ -68,8 +67,8 @@ class TestSort:
 
     def test_dex_modifier_tiebreaker(self, tracker: InitiativeTracker):
         """When totals are equal, higher dex_modifier breaks the tie."""
-        tracker.add_combatant("low-dex", "LowDex", roll=15, dex_modifier=0)   # total=15
-        tracker.add_combatant("high-dex", "HighDex", roll=14, dex_modifier=1) # total=15
+        tracker.add_combatant("low-dex", "LowDex", roll=15, dex_modifier=0)  # total=15
+        tracker.add_combatant("high-dex", "HighDex", roll=14, dex_modifier=1)  # total=15
 
         entries = tracker.sort()
         # Both have total=15; high-dex has higher dex_modifier → goes first
@@ -81,9 +80,7 @@ class TestSort:
         result = tracker.sort()
         assert isinstance(result, list)
 
-    def test_higher_dex_scores_produce_higher_average_totals(
-        self, tracker: InitiativeTracker
-    ):
+    def test_higher_dex_scores_produce_higher_average_totals(self, tracker: InitiativeTracker):
         """Adding same roll but higher dex_modifier → higher total."""
         entry_high = tracker.add_combatant("high", "High", roll=10, dex_modifier=4)
         entry_low = tracker.add_combatant("low", "Low", roll=10, dex_modifier=-1)
@@ -133,7 +130,7 @@ class TestNextTurn:
 
         tracker.set_active("b", False)
 
-        first = tracker.next_turn()   # A
+        first = tracker.next_turn()  # A
         second = tracker.next_turn()  # should skip B → go to C
         assert first.char_id == "a"
         assert second.char_id == "c"

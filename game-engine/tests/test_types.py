@@ -8,18 +8,16 @@ import pytest
 
 from game_engine.types import (
     Ability,
-    ActionType,
+    AbilityScoreSet,
+    AttackDetails,
     CharacterClass,
+    CharacterSheet,
     CharacterType,
+    CombatStateData,
     Condition,
     DamageType,
     Skill,
-    AbilityScoreSet,
-    AttackDetails,
-    CharacterSheet,
-    CombatStateData,
 )
-
 
 # ---------------------------------------------------------------------------
 # AbilityScoreSet
@@ -33,8 +31,9 @@ class TestAbilityScoreSet:
             assert scores.get(ability) == 10
 
     def test_custom_construction(self):
-        scores = AbilityScoreSet(strength=18, dexterity=14, constitution=16,
-                                 intelligence=10, wisdom=12, charisma=8)
+        scores = AbilityScoreSet(
+            strength=18, dexterity=14, constitution=16, intelligence=10, wisdom=12, charisma=8
+        )
         assert scores.get(Ability.STRENGTH) == 18
         assert scores.get(Ability.DEXTERITY) == 14
 
@@ -69,8 +68,9 @@ class TestAbilityScoreSet:
             assert ability.value in d
 
     def test_to_dict_values_are_correct(self):
-        scores = AbilityScoreSet(strength=18, dexterity=14, constitution=16,
-                                 intelligence=10, wisdom=12, charisma=8)
+        scores = AbilityScoreSet(
+            strength=18, dexterity=14, constitution=16, intelligence=10, wisdom=12, charisma=8
+        )
         d = scores.to_dict()
         assert d["strength"] == 18
         assert d["dexterity"] == 14
@@ -80,8 +80,9 @@ class TestAbilityScoreSet:
         assert d["charisma"] == 8
 
     def test_from_dict_round_trip(self):
-        original = AbilityScoreSet(strength=15, dexterity=13, constitution=11,
-                                   intelligence=9, wisdom=7, charisma=5)
+        original = AbilityScoreSet(
+            strength=15, dexterity=13, constitution=11, intelligence=9, wisdom=7, charisma=5
+        )
         d = original.to_dict()
         restored = AbilityScoreSet.from_dict(d)
         for ability in Ability:
@@ -200,9 +201,19 @@ class TestCharacterClassEnum:
 
     def test_all_expected_classes_present(self):
         expected = {
-            "Artificer", "Barbarian", "Bard", "Cleric", "Druid",
-            "Fighter", "Monk", "Paladin", "Ranger", "Rogue",
-            "Sorcerer", "Warlock", "Wizard",
+            "Artificer",
+            "Barbarian",
+            "Bard",
+            "Cleric",
+            "Druid",
+            "Fighter",
+            "Monk",
+            "Paladin",
+            "Ranger",
+            "Rogue",
+            "Sorcerer",
+            "Warlock",
+            "Wizard",
         }
         actual = {cls.value for cls in CharacterClass}
         assert actual == expected
@@ -260,43 +271,45 @@ class TestCharacterSheet:
 
     def test_is_alive_when_hp_positive(self):
         sheet = CharacterSheet(
-            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER,
-            hp_current=5
+            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER, hp_current=5
         )
         assert sheet.is_alive is True
 
     def test_is_not_alive_when_hp_zero(self):
         sheet = CharacterSheet(
-            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER,
-            hp_current=0
+            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER, hp_current=0
         )
         assert sheet.is_alive is False
 
     def test_can_act_when_healthy(self):
         sheet = CharacterSheet(
-            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER,
-            hp_current=10
+            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER, hp_current=10
         )
         assert sheet.can_act is True
 
     def test_cannot_act_when_dead(self):
         sheet = CharacterSheet(
-            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER,
-            hp_current=0
+            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER, hp_current=0
         )
         assert sheet.can_act is False
 
     def test_cannot_act_when_paralyzed(self):
         sheet = CharacterSheet(
-            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER,
-            conditions=[Condition.PARALYZED]
+            id="hero-1",
+            name="Hero",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            conditions=[Condition.PARALYZED],
         )
         assert sheet.can_act is False
 
     def test_is_proficient_in_listed_skill(self):
         sheet = CharacterSheet(
-            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER,
-            proficient_skills=[Skill.ATHLETICS]
+            id="hero-1",
+            name="Hero",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            proficient_skills=[Skill.ATHLETICS],
         )
         assert sheet.is_proficient(Skill.ATHLETICS) is True
 
@@ -308,8 +321,11 @@ class TestCharacterSheet:
 
     def test_is_proficient_in_listed_ability(self):
         sheet = CharacterSheet(
-            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER,
-            proficient_abilities=[Ability.STRENGTH]
+            id="hero-1",
+            name="Hero",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            proficient_abilities=[Ability.STRENGTH],
         )
         assert sheet.is_proficient(Ability.STRENGTH) is True
 
@@ -319,9 +335,9 @@ class TestCharacterSheet:
             name="Aria",
             level=5,
             char_class=CharacterClass.FIGHTER,
-            ability_scores=AbilityScoreSet(strength=18, dexterity=14,
-                                           constitution=16, intelligence=10,
-                                           wisdom=12, charisma=8),
+            ability_scores=AbilityScoreSet(
+                strength=18, dexterity=14, constitution=16, intelligence=10, wisdom=12, charisma=8
+            ),
             hp_current=40,
             hp_max=44,
             ac=16,
@@ -361,9 +377,7 @@ class TestCombatStateData:
         assert state.current_turn_index == 0
 
     def test_get_combatant_found(self):
-        char = CharacterSheet(
-            id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER
-        )
+        char = CharacterSheet(id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER)
         state = CombatStateData(combatants=[char])
         found = state.get_combatant("hero-1")
         assert found is char

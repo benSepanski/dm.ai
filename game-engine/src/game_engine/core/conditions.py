@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 
 from game_engine.types import Ability, CharacterSheet, Condition, DamageType
 
-
 # ---------------------------------------------------------------------------
 # ConditionEffect dataclass
 # ---------------------------------------------------------------------------
@@ -140,9 +139,7 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
         immunity_types=[DamageType.POISON, DamageType.PSYCHIC],
     ),
     Condition.POISONED: ConditionEffect(
-        description=(
-            "A poisoned creature has disadvantage on attack rolls and ability checks."
-        ),
+        description=("A poisoned creature has disadvantage on attack rolls and ability checks."),
         can_act=True,
         attack_modifier="disadvantage",
     ),
@@ -265,16 +262,11 @@ EXHAUSTION_LEVELS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 
-def is_immune_to_condition(
-    char: CharacterSheet | dict, condition: Condition | str
-) -> bool:
+def is_immune_to_condition(char: CharacterSheet, condition: Condition | str) -> bool:
     """Return True if *char* is immune to *condition*.
 
-    Accepts both a :class:`~game_engine.types.CharacterSheet` and a raw dict
-    for backward compatibility.
-
     Args:
-        char: Character sheet or dict containing ``condition_immunities``.
+        char: Character sheet.
         condition: The condition enum or name (case-insensitive).
 
     Returns:
@@ -286,53 +278,28 @@ def is_immune_to_condition(
         except ValueError:
             return False
 
-    if isinstance(char, CharacterSheet):
-        return condition in char.condition_immunities
-
-    # Legacy dict path
-    immunities: list[str] = char.get("condition_immunities", [])
-    return condition.value in {c.lower() for c in immunities}
+    return condition in char.condition_immunities
 
 
-def get_active_conditions(
-    char: CharacterSheet | dict,
-) -> list[Condition]:
+def get_active_conditions(char: CharacterSheet) -> list[Condition]:
     """Return the list of conditions currently affecting *char*.
 
     Args:
-        char: Character sheet or dict.
+        char: Character sheet.
 
     Returns:
         List of active :class:`~game_engine.types.Condition` values.
     """
-    if isinstance(char, CharacterSheet):
-        return list(char.conditions)
-
-    # Legacy dict path — coerce strings to Condition enums where possible
-    raw: list[str] = char.get("conditions", [])
-    result: list[Condition] = []
-    for c in raw:
-        try:
-            result.append(Condition(c.lower()))
-        except ValueError:
-            pass
-    return result
+    return list(char.conditions)
 
 
-def condition_prevents_action(char: CharacterSheet | dict) -> bool:
+def condition_prevents_action(char: CharacterSheet) -> bool:
     """Return True if any active condition prevents the character from acting.
 
-    A character cannot act if they have any of the incapacitating conditions:
-    incapacitated, paralyzed, petrified, stunned, or unconscious.
-
     Args:
-        char: Character sheet or dict.
+        char: Character sheet.
 
     Returns:
         True if the character cannot take actions.
     """
-    if isinstance(char, CharacterSheet):
-        return not char.can_act
-
-    active = get_active_conditions(char)
-    return any(Condition.prevents_action(c) for c in active)
+    return not char.can_act

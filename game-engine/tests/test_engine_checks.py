@@ -13,12 +13,11 @@ from game_engine.interface import CheckResult
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
 from game_engine.types import (
     Ability,
+    AbilityScoreSet,
     CharacterClass,
     CharacterSheet,
     Skill,
-    AbilityScoreSet,
 )
-
 
 # ---------------------------------------------------------------------------
 # Shared helper
@@ -125,8 +124,7 @@ class TestCheckSuccessFailure:
     def test_low_dc_str_20_usually_passes(self, engine: DnD55eEngine):
         """STR 20 (+5) + proficiency for Athletics (level 5 = +3) → +8 total.
         DC 10 should pass on nearly every roll (need at least 2 on d20)."""
-        char = make_fighter(strength=20, level=5,
-                            proficient_skills=[Skill.ATHLETICS])
+        char = make_fighter(strength=20, level=5, proficient_skills=[Skill.ATHLETICS])
         results = [engine.roll_check(char, Skill.ATHLETICS, dc=10) for _ in range(30)]
         passes = sum(1 for r in results if r.success)
         # With +8 mod, need roll >= 2 to hit DC 10; P(pass) ≈ 95%
@@ -162,22 +160,16 @@ class TestProficiencyBonus:
         With level 5 (prof +3) and STR 10 (mod 0), the proficient char adds
         +3 to every roll. Over 100 trials their sum should be ~300 higher.
         """
-        proficient = make_fighter(
-            strength=10, level=5, proficient_skills=[Skill.ATHLETICS]
-        )
-        non_proficient = make_fighter(
-            strength=10, level=5, proficient_skills=[]
-        )
+        proficient = make_fighter(strength=10, level=5, proficient_skills=[Skill.ATHLETICS])
+        non_proficient = make_fighter(strength=10, level=5, proficient_skills=[])
 
         random.seed(0)
         prof_totals = [
-            engine.roll_check(proficient, Skill.ATHLETICS, dc=1).total
-            for _ in range(100)
+            engine.roll_check(proficient, Skill.ATHLETICS, dc=1).total for _ in range(100)
         ]
         random.seed(0)
         non_prof_totals = [
-            engine.roll_check(non_proficient, Skill.ATHLETICS, dc=1).total
-            for _ in range(100)
+            engine.roll_check(non_proficient, Skill.ATHLETICS, dc=1).total for _ in range(100)
         ]
 
         assert sum(prof_totals) > sum(non_prof_totals)
@@ -186,12 +178,10 @@ class TestProficiencyBonus:
         """With same seed the proficient total is exactly prof_bonus higher."""
         char = make_fighter(
             strength=10,  # modifier = 0 for clean arithmetic
-            level=5,      # proficiency bonus = +3
+            level=5,  # proficiency bonus = +3
             proficient_skills=[Skill.ATHLETICS],
         )
-        non_prof_char = make_fighter(
-            strength=10, level=5, proficient_skills=[]
-        )
+        non_prof_char = make_fighter(strength=10, level=5, proficient_skills=[])
 
         # Force same dice rolls
         random.seed(7)
@@ -207,7 +197,7 @@ class TestProficiencyBonus:
         """Non-proficient total = roll + ability_mod only (no prof bonus)."""
         char = make_fighter(
             strength=10,  # modifier = 0
-            level=5,      # prof bonus = +3 if proficient, but this char is not
+            level=5,  # prof bonus = +3 if proficient, but this char is not
             proficient_skills=[],
         )
         random.seed(42)
@@ -220,7 +210,8 @@ class TestProficiencyBonus:
     def test_proficiency_bonus_for_proficient_ability(self, engine: DnD55eEngine):
         """Proficiency in Ability.STRENGTH adds prof bonus to STR checks."""
         char = make_fighter(
-            strength=10, level=1,  # prof = +2
+            strength=10,
+            level=1,  # prof = +2
             proficient_abilities=[Ability.STRENGTH],
             proficient_skills=[],
         )
@@ -263,10 +254,7 @@ class TestAdvantageDisadvantage:
     def test_advantage_tends_higher_total(self, engine: DnD55eEngine):
         char = make_fighter(strength=10, proficient_skills=[])
         random.seed(0)
-        normal_totals = [
-            engine.roll_check(char, Skill.ATHLETICS, dc=1).total
-            for _ in range(100)
-        ]
+        normal_totals = [engine.roll_check(char, Skill.ATHLETICS, dc=1).total for _ in range(100)]
         random.seed(0)
         adv_totals = [
             engine.roll_check(char, Skill.ATHLETICS, dc=1, advantage=True).total
@@ -277,10 +265,7 @@ class TestAdvantageDisadvantage:
     def test_disadvantage_tends_lower_total(self, engine: DnD55eEngine):
         char = make_fighter(strength=10, proficient_skills=[])
         random.seed(0)
-        normal_totals = [
-            engine.roll_check(char, Skill.ATHLETICS, dc=1).total
-            for _ in range(100)
-        ]
+        normal_totals = [engine.roll_check(char, Skill.ATHLETICS, dc=1).total for _ in range(100)]
         random.seed(0)
         dis_totals = [
             engine.roll_check(char, Skill.ATHLETICS, dc=1, disadvantage=True).total
@@ -308,7 +293,7 @@ class TestRollInitiative:
 
     def test_higher_dex_produces_higher_average(self, engine: DnD55eEngine):
         high_dex_char = make_fighter(dexterity=20)  # +5 modifier
-        low_dex_char = make_fighter(dexterity=8)    # -1 modifier
+        low_dex_char = make_fighter(dexterity=8)  # -1 modifier
 
         random.seed(123)
         high_totals = [engine.roll_initiative(high_dex_char) for _ in range(100)]
@@ -327,11 +312,16 @@ class TestCalculateProficiencyBonus:
     @pytest.mark.parametrize(
         "level,expected",
         [
-            (1, 2), (4, 2),
-            (5, 3), (8, 3),
-            (9, 4), (12, 4),
-            (13, 5), (16, 5),
-            (17, 6), (20, 6),
+            (1, 2),
+            (4, 2),
+            (5, 3),
+            (8, 3),
+            (9, 4),
+            (12, 4),
+            (13, 5),
+            (16, 5),
+            (17, 6),
+            (20, 6),
         ],
     )
     def test_proficiency_bonus(self, engine: DnD55eEngine, level: int, expected: int):

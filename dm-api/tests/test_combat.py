@@ -1,5 +1,7 @@
 """Tests for the combat API endpoints."""
+
 import uuid
+
 import pytest
 
 

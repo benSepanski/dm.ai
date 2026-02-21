@@ -3,6 +3,7 @@ Test configuration and fixtures for dm-api.
 
 IMPORTANT: pgvector and asyncpg mocks MUST be set up before any dm_api imports.
 """
+
 import sys
 import types as _types
 
@@ -17,6 +18,7 @@ _pgvector_sa = _types.ModuleType("pgvector.sqlalchemy")
 
 class _FakeVector(sa.types.TypeDecorator):
     """Fake Vector type that stores data as Text for SQLite compatibility."""
+
     impl = sa.Text
     cache_ok = True
 
@@ -50,8 +52,8 @@ sys.modules["asyncpg"] = _asyncpg
 # ---------------------------------------------------------------------------
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -65,9 +67,9 @@ def anyio_backend():
 async def test_engine():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     # Import Base AFTER pgvector mock is in place
-    from dm_api.db.session import Base
     # IMPORTANT: import all models so they register with Base.metadata
     import dm_api.db.models  # noqa: F401 — triggers all model imports
+    from dm_api.db.session import Base
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -86,8 +88,9 @@ async def db_session(test_engine):
 
 @pytest_asyncio.fixture(scope="function")
 async def client(test_engine):
-    from dm_api.main import app
     from dm_api.db.session import get_db
+    from dm_api.main import app
+
     session_factory = async_sessionmaker(test_engine, expire_on_commit=False)
 
     async def override_get_db():

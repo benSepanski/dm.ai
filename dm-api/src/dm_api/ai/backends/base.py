@@ -1,12 +1,15 @@
 """Abstract base for AI provider backends."""
+
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
 class AIMessage:
     """A single message in a conversation."""
+
     role: str  # "user" or "assistant"
     content: str
 
@@ -14,6 +17,7 @@ class AIMessage:
 @dataclass
 class AIResponse:
     """Response from an AI backend."""
+
     content: str
     model: str
     input_tokens: int = 0

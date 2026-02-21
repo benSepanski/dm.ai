@@ -6,12 +6,12 @@ Internal module — import via :class:`DnD55eEngine`.
 
 from __future__ import annotations
 
-from game_engine.core.dice import roll as dice_roll, roll_dice
+from game_engine.core.dice import roll as dice_roll
+from game_engine.core.dice import roll_dice
 from game_engine.interface import Action, ActionResult
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
 from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl
 from game_engine.types import (
-    Ability,
     ActionType,
     AttackDetails,
     CharacterSheet,
@@ -34,6 +34,8 @@ _ALL_BASIC_ACTIONS: list[ActionType] = [
 
 #: Actions that require the character to be able to act.
 _REQUIRES_ABILITY_TO_ACT: set[ActionType] = set(_ALL_BASIC_ACTIONS)
+
+_DEFAULT_ATTACK = AttackDetails()
 
 
 def _get_available_actions_impl(
@@ -61,7 +63,6 @@ def _get_available_actions_impl(
                 action_type=action_type,
                 actor_id=char.id,
                 target_id=None,
-                details={},
             )
         )
 
@@ -84,30 +85,19 @@ def _resolve_action_impl(
     Returns:
         :class:`~game_engine.interface.ActionResult`.
     """
-    action_type = action.action_type
-    # Normalise string → enum
-    if isinstance(action_type, str):
-        try:
-            action_type = ActionType(action_type)
-        except ValueError:
-            pass
-
-    if action_type == ActionType.ATTACK:
+    if action.action_type == ActionType.ATTACK:
         return _resolve_attack(action, combat_state)
 
     # Generic non-attack action — simply succeeds.
-    action_type_str = (
-        action_type.value if isinstance(action_type, ActionType) else str(action_type)
-    )
     return ActionResult(
         success=True,
         damage=0,
-        damage_type="",
+        damage_type=DamageType.BLUDGEONING,
         conditions_applied=[],
-        flavor_text=f"{action.actor_id} uses {action_type_str}.",
+        flavor_text=f"{action.actor_id} uses {action.action_type.value}.",
         log_entry={
             "actor_id": action.actor_id,
-            "action_type": action_type_str,
+            "action_type": action.action_type.value,
             "target_id": action.target_id,
         },
     )
@@ -128,14 +118,13 @@ def _resolve_attack(
     else:
         actor_name = actor.name
         actor_level = actor.level
-        # Will be set once we know attack_ability
         actor_ability_mod = 0
 
     if target is None:
         return ActionResult(
             success=False,
             damage=0,
-            damage_type="",
+            damage_type=DamageType.BLUDGEONING,
             conditions_applied=[],
             flavor_text="No target found.",
             log_entry={
@@ -146,29 +135,10 @@ def _resolve_attack(
 
     target_ac = target.ac
 
-    # Determine attack details
-    details = action.details
-    if isinstance(details, AttackDetails):
-        attack_ability = details.attack_ability
-        damage_dice = details.damage_dice
-        damage_type = details.damage_type
-    elif isinstance(details, dict):
-        weapon = details.get("weapon", {})
-        raw_ability = weapon.get("attack_ability", "strength")
-        try:
-            attack_ability = Ability(raw_ability.lower())
-        except (ValueError, AttributeError):
-            attack_ability = Ability.STRENGTH
-        damage_dice = weapon.get("damage_dice", "1d6")
-        raw_dt = weapon.get("damage_type", "bludgeoning")
-        try:
-            damage_type = DamageType(raw_dt.lower())
-        except (ValueError, AttributeError):
-            damage_type = DamageType.BLUDGEONING
-    else:
-        attack_ability = Ability.STRENGTH
-        damage_dice = "1d6"
-        damage_type = DamageType.BLUDGEONING
+    details = action.details or _DEFAULT_ATTACK
+    attack_ability = details.attack_ability
+    damage_dice = details.damage_dice
+    damage_type = details.damage_type
 
     if actor is not None:
         actor_ability_mod = actor.ability_scores.modifier(attack_ability)
@@ -219,8 +189,7 @@ def _resolve_attack(
     flavor = (
         f"{'CRITICAL HIT! ' if critical else ''}"
         f"{actor_name} hits {target_name} for {total_damage} "
-        f"{damage_type.value if isinstance(damage_type, DamageType) else damage_type} "
-        f"damage! "
+        f"{damage_type.value} damage! "
         f"(roll {attack_roll_raw} + {actor_ability_mod + prof_bonus} "
         f"= {attack_total} vs AC {target_ac})"
     )
@@ -240,11 +209,7 @@ def _resolve_attack(
             "hit": True,
             "critical": critical,
             "damage": total_damage,
-            "damage_type": (
-                damage_type.value
-                if isinstance(damage_type, DamageType)
-                else str(damage_type)
-            ),
+            "damage_type": damage_type.value,
             "target_hp_remaining": target.hp_current,
         },
     )

@@ -3,10 +3,6 @@ Abstract character sheet for the RPG game engine.
 
 Provides a rule-agnostic representation of any participant in the game:
 player characters, non-player characters, and monsters.
-
-The :class:`CharacterType` enum and :class:`AbilityScoreSet` dataclass are
-re-exported from :mod:`game_engine.types` for backward compatibility.  New
-code should import directly from ``game_engine.types``.
 """
 
 from __future__ import annotations
@@ -17,14 +13,6 @@ from game_engine.types import (
     CharacterType,
     Condition,
 )
-
-# ---------------------------------------------------------------------------
-# Backward-compatibility aliases
-# ---------------------------------------------------------------------------
-
-# AbilityScores was the old name — keep it as an alias so existing imports
-# (e.g. ``from game_engine.core.character import AbilityScores``) still work.
-AbilityScores = AbilityScoreSet
 
 
 def get_modifier(score: int) -> int:
@@ -141,8 +129,7 @@ class AbstractCharacter:
         ability_enum = _ABILITY_ATTR.get(ability.lower())
         if ability_enum is None:
             raise ValueError(
-                f"Unknown ability {ability!r}. "
-                f"Valid names: {sorted(_ABILITY_ATTR.keys())}"
+                f"Unknown ability {ability!r}. " f"Valid names: {sorted(_ABILITY_ATTR.keys())}"
             )
         return ability_enum.modifier(self.ability_scores.get(ability_enum))
 

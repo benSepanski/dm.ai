@@ -17,6 +17,7 @@ from game_engine.types.enums import (
     DamageType,
     Skill,
 )
+from game_engine.types.values import DiceNotation
 
 
 @dataclass
@@ -142,16 +143,8 @@ class CharacterSheet:
             ]
 
         profs = d.get("proficiencies", [])
-        skills = [
-            Skill(p.lower())
-            for p in profs
-            if p.lower() in Skill._value2member_map_
-        ]
-        abilities = [
-            Ability(p.lower())
-            for p in profs
-            if p.lower() in Ability._value2member_map_
-        ]
+        skills = [Skill(p.lower()) for p in profs if p.lower() in Skill._value2member_map_]
+        abilities = [Ability(p.lower()) for p in profs if p.lower() in Ability._value2member_map_]
 
         raw_class = d.get("class", "Fighter")
         try:
@@ -204,7 +197,7 @@ class AttackDetails:
     """Details for an Attack action."""
 
     weapon_name: str = "Unarmed Strike"
-    damage_dice: str = "1d4"
+    damage_dice: DiceNotation = DiceNotation("1d4")
     damage_type: DamageType = DamageType.BLUDGEONING
     attack_ability: Ability = Ability.STRENGTH
     is_ranged: bool = False

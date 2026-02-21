@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dm_api.ai.backends.base import AIBackend
 from dm_api.ai.dm_orchestrator import DMOrchestrator
 from dm_api.config import settings
-from dm_api.db.models.chat import ChatMessage, ChatMessageCreate, ChatMessageRead
+from dm_api.db.models.chat import ChatMessage, ChatMessageRead
 from dm_api.db.models.proposal import Proposal, ProposalRead
 from dm_api.db.models.session import GameSession, SessionCreate, SessionRead
 from dm_api.db.session import get_db
@@ -19,6 +19,7 @@ router = APIRouter()
 
 def _get_backend() -> AIBackend:
     from dm_api.ai.backends.factory import create_backend
+
     return create_backend(
         provider=settings.ai_provider,
         api_key=settings.anthropic_api_key,
@@ -70,9 +71,7 @@ async def get_session_messages(
     db: AsyncSession = Depends(get_db),
 ) -> list[ChatMessageRead]:
     # Verify session exists
-    session_result = await db.execute(
-        select(GameSession).where(GameSession.id == session_id)
-    )
+    session_result = await db.execute(select(GameSession).where(GameSession.id == session_id))
     if session_result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -92,9 +91,7 @@ async def session_chat(
     db: AsyncSession = Depends(get_db),
 ) -> ChatResponse:
     # Fetch session
-    session_result = await db.execute(
-        select(GameSession).where(GameSession.id == session_id)
-    )
+    session_result = await db.execute(select(GameSession).where(GameSession.id == session_id))
     game_session = session_result.scalar_one_or_none()
     if game_session is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -115,10 +112,7 @@ async def session_chat(
         .where(ChatMessage.session_id == session_id)
         .order_by(ChatMessage.timestamp.asc())
     )
-    history = [
-        {"role": m.role, "content": m.content}
-        for m in history_result.scalars().all()
-    ]
+    history = [{"role": m.role, "content": m.content} for m in history_result.scalars().all()]
 
     # Call DM Orchestrator
     orchestrator = DMOrchestrator(
@@ -171,9 +165,7 @@ async def end_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> SessionRead:
-    result = await db.execute(
-        select(GameSession).where(GameSession.id == session_id)
-    )
+    result = await db.execute(select(GameSession).where(GameSession.id == session_id))
     session = result.scalar_one_or_none()
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -195,9 +187,7 @@ async def end_session(
                 orchestrator_model=settings.orchestrator_model,
                 generation_model=settings.generation_model,
             )
-            summary_text = "\n".join(
-                f"{m.role.upper()}: {m.content}" for m in messages[-20:]
-            )
+            summary_text = "\n".join(f"{m.role.upper()}: {m.content}" for m in messages[-20:])
             session.session_summary = await orchestrator.summarize(summary_text)
         except Exception:
             # Non-fatal: summary generation failure should not block ending a session

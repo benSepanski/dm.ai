@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 from game_engine.types import (
+    Ability,
     ActionType,
     AttackDetails,
     CharacterSheet,
@@ -16,7 +17,6 @@ from game_engine.types import (
     Condition,
     DamageType,
     Skill,
-    Ability,
 )
 
 
@@ -54,7 +54,7 @@ class ActionResult:
 
     success: bool
     damage: int
-    damage_type: DamageType | str
+    damage_type: DamageType
     conditions_applied: list[Condition]
     flavor_text: str
     log_entry: dict
@@ -84,10 +84,10 @@ class Action:
         details: Rule-specific payload (weapon info, spell name, etc.).
     """
 
-    action_type: ActionType | str
+    action_type: ActionType
     actor_id: str
     target_id: str | None
-    details: AttackDetails | dict = field(default_factory=dict)
+    details: AttackDetails | None = None
 
 
 class RuleEngine(ABC):
@@ -125,14 +125,14 @@ class RuleEngine(ABC):
         self,
         target: CharacterSheet,
         damage: int,
-        damage_type: DamageType | str,
+        damage_type: DamageType,
     ) -> CharacterSheet:
         """Apply damage to a character, accounting for resistances/immunities.
 
         Args:
             target: Character sheet (modified in place and returned).
             damage: Raw damage amount before resistance calculations.
-            damage_type: Damage type enum or string (e.g. DamageType.FIRE).
+            damage_type: Damage type enum (e.g. DamageType.FIRE).
 
         Returns:
             Updated character sheet.
@@ -216,11 +216,11 @@ class RuleEngine(ABC):
         """
 
     @abstractmethod
-    def validate_character(self, sheet: CharacterSheet | dict) -> ValidationResult:
+    def validate_character(self, sheet: CharacterSheet) -> ValidationResult:
         """Validate a character sheet for completeness and legality.
 
         Args:
-            sheet: Character sheet or raw dict to validate.
+            sheet: Character sheet to validate.
 
         Returns:
             ValidationResult with valid flag and any error messages.

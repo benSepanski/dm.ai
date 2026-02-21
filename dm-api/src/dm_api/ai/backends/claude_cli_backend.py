@@ -21,6 +21,7 @@ CLI flags used:
                        If this flag is absent in an older build, the backend falls
                        back to treating the raw stdout as plain text.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -57,9 +58,11 @@ class ClaudeCLIBackend(AIBackend):
         prompt = self._build_prompt(messages, system)
         cmd = [
             "claude",
-            "--print",           # non-interactive mode
-            "--model", model,
-            "--output-format", "json",
+            "--print",  # non-interactive mode
+            "--model",
+            model,
+            "--output-format",
+            "json",
             prompt,
         ]
         proc = await asyncio.create_subprocess_exec(
@@ -93,6 +96,6 @@ class ClaudeCLIBackend(AIBackend):
         return AIResponse(
             content=content,
             model=model,
-            input_tokens=0,   # not available from CLI
+            input_tokens=0,  # not available from CLI
             output_tokens=len(content) // 4,  # rough estimate
         )

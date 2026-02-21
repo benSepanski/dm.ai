@@ -15,6 +15,10 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "black>=24.0",
+    "isort>=5.0",
+    "autoflake>=2.0",
+    "mypy>=1.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -22,3 +26,23 @@ packages = ["src/game_engine"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.black]
+line-length = 99
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 99
+
+[tool.autoflake]
+remove-all-unused-imports = true
+remove-unused-variables = true
+in-place = true
+recursive = true
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

@@ -19,9 +19,7 @@ class Settings(BaseSettings):
     # Used for quick tasks: session summaries, NPC dialogue snippets, flavor text
     generation_model: str = "claude-haiku-4-5-20251001"
     # Main orchestrator model (used for session chat responses)
-    orchestrator_model: str = "claude-sonnet-4-6"  # updated default from opus
-    # Fast model kept for backward compat
-    fast_model: str = "claude-haiku-4-5-20251001"
+    orchestrator_model: str = "claude-sonnet-4-6"
 
     # Context window management
     context_token_limit: int = 180_000  # trigger summarization at 80% of 200k

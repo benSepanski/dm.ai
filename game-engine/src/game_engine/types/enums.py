@@ -211,3 +211,70 @@ class ChatRole(str, Enum):
     DM = "dm"
     AI = "ai"
     SYSTEM = "system"
+
+
+class SpellSchool(str, Enum):
+    """Schools of magic in D&D 5.5e."""
+
+    ABJURATION = "abjuration"
+    CONJURATION = "conjuration"
+    DIVINATION = "divination"
+    ENCHANTMENT = "enchantment"
+    EVOCATION = "evocation"
+    ILLUSION = "illusion"
+    NECROMANCY = "necromancy"
+    TRANSMUTATION = "transmutation"
+
+
+class CreatureSize(str, Enum):
+    """Standard D&D creature sizes."""
+
+    TINY = "Tiny"
+    SMALL = "Small"
+    MEDIUM = "Medium"
+    LARGE = "Large"
+    HUGE = "Huge"
+    GARGANTUAN = "Gargantuan"
+
+
+class CreatureType(str, Enum):
+    """Standard D&D creature types."""
+
+    ABERRATION = "aberration"
+    BEAST = "beast"
+    CELESTIAL = "celestial"
+    CONSTRUCT = "construct"
+    DRAGON = "dragon"
+    ELEMENTAL = "elemental"
+    FEY = "fey"
+    FIEND = "fiend"
+    GIANT = "giant"
+    HUMANOID = "humanoid"
+    MONSTROSITY = "monstrosity"
+    OOZE = "ooze"
+    PLANT = "plant"
+    UNDEAD = "undead"
+
+
+class ArmorCategory(str, Enum):
+    """Armor weight categories in D&D 5.5e."""
+
+    LIGHT = "light"
+    MEDIUM = "medium"
+    HEAVY = "heavy"
+    SHIELD = "shield"
+
+
+class WeaponProperty(str, Enum):
+    """Weapon properties in D&D 5.5e."""
+
+    AMMUNITION = "ammunition"
+    FINESSE = "finesse"
+    HEAVY = "heavy"
+    LIGHT = "light"
+    LOADING = "loading"
+    REACH = "reach"
+    SPECIAL = "special"
+    THROWN = "thrown"
+    TWO_HANDED = "two-handed"
+    VERSATILE = "versatile"

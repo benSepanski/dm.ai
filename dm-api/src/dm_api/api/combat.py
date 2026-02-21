@@ -22,9 +22,7 @@ async def start_combat(
     db: AsyncSession = Depends(get_db),
 ) -> CombatStateRead:
     # Verify session exists
-    session_result = await db.execute(
-        select(GameSession).where(GameSession.id == session_id)
-    )
+    session_result = await db.execute(select(GameSession).where(GameSession.id == session_id))
     if session_result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Session not found")
 

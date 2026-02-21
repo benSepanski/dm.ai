@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from dm_api.api import worlds, sessions, characters, locations, combat, ai, ws
+
+from dm_api.api import ai, characters, combat, locations, sessions, worlds, ws
 
 router = APIRouter()
 router.include_router(worlds.router, prefix="/worlds", tags=["worlds"])

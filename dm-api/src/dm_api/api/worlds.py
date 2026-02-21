@@ -1,8 +1,7 @@
 import uuid
-from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dm_api.db.models.location import Location, LocationRead
@@ -51,9 +50,7 @@ async def get_world_locations(
     if world_result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="World not found")
 
-    result = await db.execute(
-        select(Location).where(Location.world_id == world_id)
-    )
+    result = await db.execute(select(Location).where(Location.world_id == world_id))
     locations = result.scalars().all()
     return [LocationRead.model_validate(loc) for loc in locations]
 

@@ -20,8 +20,8 @@ class CombatPhase(Enum):
     """High-level phases of a combat encounter."""
 
     INITIATIVE = auto()  # Waiting for initiative to be rolled / sorted
-    ACTIVE = auto()      # Combat is ongoing; turns are being taken
-    ENDED = auto()       # Combat is over; a winner has been determined
+    ACTIVE = auto()  # Combat is ongoing; turns are being taken
+    ENDED = auto()  # Combat is over; a winner has been determined
 
 
 class AbstractCombat(ABC):
@@ -50,9 +50,7 @@ class AbstractCombat(ABC):
     # Lifecycle
     # ------------------------------------------------------------------
 
-    def start(
-        self, combatants: list[CharacterSheet]
-    ) -> list[InitiativeEntry]:
+    def start(self, combatants: list[CharacterSheet]) -> list[InitiativeEntry]:
         """Initialise the encounter: roll initiative for all combatants and sort.
 
         Args:
@@ -83,10 +81,7 @@ class AbstractCombat(ABC):
             actor_id="system",
             action="combat_start",
             result={
-                "order": [
-                    {"char_id": e.char_id, "total": e.total}
-                    for e in sorted_order
-                ],
+                "order": [{"char_id": e.char_id, "total": e.total} for e in sorted_order],
                 "round": self.round_number,
             },
             flavor="Combat begins! Roll for initiative.",
@@ -144,11 +139,7 @@ class AbstractCombat(ABC):
         active_sides: set[str] = set()
         for char in self.combatants:
             if char.hp_current > 0:
-                side = (
-                    "players"
-                    if char.char_type == CharacterType.PC
-                    else "enemies"
-                )
+                side = "players" if char.char_type == CharacterType.PC else "enemies"
                 active_sides.add(side)
 
         if len(active_sides) <= 1:

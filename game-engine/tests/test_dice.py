@@ -9,17 +9,16 @@ import random
 import pytest
 
 from game_engine.core.dice import (
-    d20,
     d4,
     d6,
     d8,
+    d20,
     parse_notation,
     roll,
     roll_dice,
     roll_with_advantage,
     roll_with_disadvantage,
 )
-
 
 # ---------------------------------------------------------------------------
 # parse_notation — valid inputs
@@ -107,7 +106,7 @@ class TestParseNotationInvalid:
             "d",
             "2d",
             "d+1",
-            "2d6x3",        # unsupported keep-highest notation "kh"
+            "2d6x3",  # unsupported keep-highest notation "kh"
             "notadice",
             "1-d6",
         ],

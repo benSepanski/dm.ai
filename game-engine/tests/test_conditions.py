@@ -19,9 +19,7 @@ from game_engine.types import (
     CharacterSheet,
     Condition,
     DamageType,
-    AbilityScoreSet,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -52,15 +50,13 @@ class TestConditionEffectsDict:
     def test_all_keys_are_condition_enums(self):
         """Keys must be Condition enum instances, not raw strings."""
         for key in CONDITION_EFFECTS:
-            assert isinstance(key, Condition), (
-                f"Key {key!r} is not a Condition enum instance"
-            )
+            assert isinstance(key, Condition), f"Key {key!r} is not a Condition enum instance"
 
     def test_all_values_are_condition_effect_instances(self):
         for cond, effect in CONDITION_EFFECTS.items():
-            assert isinstance(effect, ConditionEffect), (
-                f"Effect for {cond} is not a ConditionEffect instance"
-            )
+            assert isinstance(
+                effect, ConditionEffect
+            ), f"Effect for {cond} is not a ConditionEffect instance"
 
     def test_descriptions_are_non_empty(self):
         for cond, effect in CONDITION_EFFECTS.items():

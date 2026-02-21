@@ -51,9 +51,7 @@ class DnD55eEngine(RuleEngine):
     """Concrete rule engine for D&D 5.5e (2024 Player's Handbook).
 
     All methods operate on typed :class:`~game_engine.types.CharacterSheet`
-    and :class:`~game_engine.types.CombatStateData` objects.  Raw dict inputs
-    are accepted on methods where backward compatibility is required and are
-    coerced internally.
+    and :class:`~game_engine.types.CombatStateData` objects.
     """
 
     # ------------------------------------------------------------------
@@ -127,14 +125,14 @@ class DnD55eEngine(RuleEngine):
         self,
         target: CharacterSheet,
         damage: int,
-        damage_type: DamageType | str,
+        damage_type: DamageType,
     ) -> CharacterSheet:
         """Apply damage to *target*, respecting resistances and immunities.
 
         Args:
             target: Character sheet. Modified in-place and returned.
             damage: Raw damage amount.
-            damage_type: :class:`~game_engine.types.DamageType` or string.
+            damage_type: :class:`~game_engine.types.DamageType` enum.
 
         Returns:
             Updated character sheet.
@@ -223,11 +221,11 @@ class DnD55eEngine(RuleEngine):
     # Character validation
     # ------------------------------------------------------------------
 
-    def validate_character(self, sheet: CharacterSheet | dict) -> ValidationResult:
+    def validate_character(self, sheet: CharacterSheet) -> ValidationResult:
         """Validate a character sheet for completeness and legality.
 
         Args:
-            sheet: :class:`~game_engine.types.CharacterSheet` or raw dict.
+            sheet: :class:`~game_engine.types.CharacterSheet`.
 
         Returns:
             :class:`~game_engine.interface.ValidationResult`.

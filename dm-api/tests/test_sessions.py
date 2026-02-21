@@ -1,7 +1,9 @@
 """Tests for the sessions API endpoints."""
+
 import uuid
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.mark.asyncio

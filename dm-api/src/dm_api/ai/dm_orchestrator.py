@@ -4,6 +4,7 @@ DM Orchestrator – the core AI agent that drives the dungeon-master experience.
 Uses a configurable AI backend (Anthropic API or claude CLI) and supports
 separate model roles for different task types.
 """
+
 from __future__ import annotations
 
 import json
@@ -65,10 +66,12 @@ class DMOrchestrator:
 
     async def summarize(self, text: str) -> str:
         """Generate a brief summary using the fast generation model."""
-        messages = [AIMessage(
-            role="user",
-            content=f"Summarize this D&D session in 2-3 sentences:\n\n{text}",
-        )]
+        messages = [
+            AIMessage(
+                role="user",
+                content=f"Summarize this D&D session in 2-3 sentences:\n\n{text}",
+            )
+        ]
         response = await self._backend.complete(
             messages=messages,
             system="You are a concise summarizer for tabletop RPG sessions.",
@@ -77,9 +80,7 @@ class DMOrchestrator:
         )
         return response.content
 
-    def _build_messages(
-        self, history: list[dict[str, str]], latest: str
-    ) -> list[AIMessage]:
+    def _build_messages(self, history: list[dict[str, str]], latest: str) -> list[AIMessage]:
         messages = []
         for entry in history:
             role = "user" if entry["role"] == "dm" else "assistant"
@@ -97,7 +98,7 @@ def _extract_proposal(text: str) -> dict[str, Any] | None:
     end = text.find("[/PROPOSAL]", start)
     if end == -1:
         return None
-    json_str = text[start + len("[PROPOSAL]"):end].strip()
+    json_str = text[start + len("[PROPOSAL]") : end].strip()
     try:
         return json.loads(json_str)
     except json.JSONDecodeError:

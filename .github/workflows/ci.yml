@@ -7,6 +7,36 @@ on:
     branches: ["**"]
 
 jobs:
+  game-engine-lint:
+    name: game-engine / lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: game-engine
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: game-engine/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: black (check)
+        run: black --check src/ tests/
+
+      - name: isort (check)
+        run: isort --check-only src/ tests/
+
+      - name: autoflake (check)
+        run: autoflake --check --remove-all-unused-imports --remove-unused-variables -r src/ tests/
+
+      - name: mypy
+        run: mypy src/
+
   game-engine-tests:
     name: game-engine / pytest
     runs-on: ubuntu-latest
@@ -27,6 +57,39 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -v --tb=short
+
+  dm-api-lint:
+    name: dm-api / lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dm-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: dm-api/pyproject.toml
+
+      - name: Install game-engine
+        run: pip install -e "../game-engine"
+
+      - name: Install dm-api dependencies
+        run: pip install -e ".[dev]"
+
+      - name: black (check)
+        run: black --check src/ tests/
+
+      - name: isort (check)
+        run: isort --check-only src/ tests/
+
+      - name: autoflake (check)
+        run: autoflake --check --remove-all-unused-imports --remove-unused-variables -r src/ tests/
+
+      - name: mypy
+        run: mypy src/
 
   dm-api-tests:
     name: dm-api / pytest
@@ -49,10 +112,9 @@ jobs:
 
       - name: Install game-engine
         run: pip install -e "../game-engine"
-        working-directory: dm-api
 
       - name: Install dm-api dependencies
-        run: pip install -e ".[dev]" aiosqlite
+        run: pip install -e ".[dev]"
 
       - name: Run tests
         run: pytest tests/ -v --tb=short

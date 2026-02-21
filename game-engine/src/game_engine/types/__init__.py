@@ -4,6 +4,7 @@ Typed enums and dataclasses for the game engine.
 Sub-modules:
 - :mod:`.enums`  — all ``str, Enum`` enumerations
 - :mod:`.sheets` — typed dataclasses (CharacterSheet, AbilityScoreSet, etc.)
+- :mod:`.values` — validated value types (DiceNotation, etc.)
 
 Everything is re-exported here so ``from game_engine.types import X`` works
 regardless of which sub-module *X* lives in.
@@ -12,15 +13,20 @@ regardless of which sub-module *X* lives in.
 from game_engine.types.enums import (
     Ability,
     ActionType,
+    ArmorCategory,
     CharacterClass,
     CharacterType,
     ChatRole,
     Condition,
+    CreatureSize,
+    CreatureType,
     DamageType,
     LocationType,
     ProposalStatus,
     ProposalType,
     Skill,
+    SpellSchool,
+    WeaponProperty,
 )
 from game_engine.types.sheets import (
     AbilityScoreSet,
@@ -28,23 +34,33 @@ from game_engine.types.sheets import (
     CharacterSheet,
     CombatStateData,
 )
+from game_engine.types.values import (
+    DiceNotation,
+)
 
 __all__ = [
     # enums
     "Ability",
     "ActionType",
+    "ArmorCategory",
     "CharacterClass",
     "CharacterType",
     "ChatRole",
     "Condition",
+    "CreatureSize",
+    "CreatureType",
     "DamageType",
     "LocationType",
     "ProposalStatus",
     "ProposalType",
     "Skill",
+    "SpellSchool",
+    "WeaponProperty",
     # dataclasses
     "AbilityScoreSet",
     "AttackDetails",
     "CharacterSheet",
     "CombatStateData",
+    # value types
+    "DiceNotation",
 ]

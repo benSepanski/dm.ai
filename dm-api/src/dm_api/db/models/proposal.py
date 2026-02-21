@@ -3,21 +3,19 @@ from datetime import datetime
 from typing import Any
 
 import sqlalchemy as sa
+from game_engine.types import ProposalStatus, ProposalType
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from dm_api.db.session import Base
-from game_engine.types import ProposalStatus, ProposalType
 
 
 class Proposal(Base):
     __tablename__ = "proposals"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="SET NULL"),

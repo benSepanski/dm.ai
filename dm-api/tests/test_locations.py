@@ -1,5 +1,7 @@
 """Tests for the locations API endpoints."""
+
 import uuid
+
 import pytest
 
 

@@ -8,15 +8,12 @@ import pytest
 
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
 from game_engine.types import (
+    AbilityScoreSet,
     CharacterClass,
     CharacterSheet,
     Condition,
     DamageType,
-    AbilityScoreSet,
-    Skill,
-    Ability,
 )
-
 
 # ---------------------------------------------------------------------------
 # Shared helper (same as engine_checks to keep test files self-contained)

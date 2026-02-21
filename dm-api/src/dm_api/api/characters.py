@@ -64,8 +64,6 @@ async def list_world_characters(
     world_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> list[CharacterRead]:
-    result = await db.execute(
-        select(Character).where(Character.world_id == world_id)
-    )
+    result = await db.execute(select(Character).where(Character.world_id == world_id))
     characters = result.scalars().all()
     return [CharacterRead.model_validate(c) for c in characters]

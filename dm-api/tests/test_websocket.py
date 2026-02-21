@@ -6,33 +6,31 @@ The WebSocket route is at /api/ws/sessions/{session_id}
 These tests use synchronous functions (not async) with Starlette's TestClient
 to avoid event loop conflicts with pytest-asyncio.
 """
+
+import asyncio
 import json
 import uuid
-import asyncio
-import sys
-import types as _types
-import sqlalchemy as sa
-import pytest
 
 from starlette.testclient import TestClient
 
 
 def _make_app():
     """Create a fresh test app with in-memory SQLite database."""
-    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
 
     async def setup_tables():
-        from dm_api.db.session import Base
         import dm_api.db.models  # noqa: F401
+        from dm_api.db.session import Base
+
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
     asyncio.run(setup_tables())
 
-    from dm_api.main import app
     from dm_api.db.session import get_db
+    from dm_api.main import app
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
