@@ -2,15 +2,15 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from dm_api.db.session import Base
-
-CharacterTypeEnum = Enum("PC", "NPC", "MONSTER", name="character_type")
+from game_engine.types import CharacterType
 
 
 class Character(Base):
@@ -22,7 +22,10 @@ class Character(Base):
     world_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False
     )
-    type: Mapped[str] = mapped_column(CharacterTypeEnum, nullable=False)
+    type: Mapped[CharacterType] = mapped_column(
+        sa.Enum(CharacterType, name="character_type", create_type=False),
+        nullable=False,
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     race: Mapped[str | None] = mapped_column(String(100), nullable=True)
     char_class: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -66,7 +69,7 @@ class Character(Base):
 
 class CharacterCreate(BaseModel):
     world_id: uuid.UUID
-    type: str
+    type: CharacterType
     name: str
     race: str | None = None
     char_class: str | None = None
@@ -94,7 +97,7 @@ class CharacterRead(BaseModel):
 
     id: uuid.UUID
     world_id: uuid.UUID
-    type: str
+    type: CharacterType
     name: str
     race: str | None
     char_class: str | None

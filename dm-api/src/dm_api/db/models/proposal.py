@@ -2,29 +2,14 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+import sqlalchemy as sa
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import DateTime, Enum, ForeignKey, Text, func
+from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from dm_api.db.session import Base
-
-ProposalTypeEnum = Enum(
-    "location",
-    "character",
-    "dungeon",
-    "dialogue",
-    "combat_action",
-    name="proposal_type",
-)
-
-ProposalStatusEnum = Enum(
-    "pending",
-    "accepted",
-    "rejected",
-    "modified",
-    name="proposal_status",
-)
+from game_engine.types import ProposalStatus, ProposalType
 
 
 class Proposal(Base):
@@ -41,10 +26,15 @@ class Proposal(Base):
     world_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False
     )
-    type: Mapped[str] = mapped_column(ProposalTypeEnum, nullable=False)
+    type: Mapped[ProposalType] = mapped_column(
+        sa.Enum(ProposalType, name="proposal_type", create_type=False),
+        nullable=False,
+    )
     content: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
-    status: Mapped[str] = mapped_column(
-        ProposalStatusEnum, nullable=False, default="pending"
+    status: Mapped[ProposalStatus] = mapped_column(
+        sa.Enum(ProposalStatus, name="proposal_status", create_type=False),
+        nullable=False,
+        default=ProposalStatus.PENDING,
     )
     dm_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -63,9 +53,9 @@ class ProposalRead(BaseModel):
     id: uuid.UUID
     session_id: uuid.UUID | None
     world_id: uuid.UUID
-    type: str
+    type: ProposalType
     content: dict[str, Any] | None
-    status: str
+    status: ProposalStatus
     dm_notes: str | None
     created_at: datetime
 

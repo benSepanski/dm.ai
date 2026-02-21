@@ -2,26 +2,15 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from dm_api.db.session import Base
-
-LocationTypeEnum = Enum(
-    "realm",
-    "country",
-    "region",
-    "town",
-    "district",
-    "building",
-    "room",
-    "dungeon",
-    "wilderness",
-    name="location_type",
-)
+from game_engine.types import LocationType
 
 
 class Location(Base):
@@ -38,7 +27,10 @@ class Location(Base):
         ForeignKey("locations.id", ondelete="SET NULL"),
         nullable=True,
     )
-    type: Mapped[str] = mapped_column(LocationTypeEnum, nullable=False)
+    type: Mapped[LocationType] = mapped_column(
+        sa.Enum(LocationType, name="location_type", create_type=False),
+        nullable=False,
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     lore: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -63,7 +55,7 @@ class Location(Base):
 class LocationCreate(BaseModel):
     world_id: uuid.UUID
     parent_id: uuid.UUID | None = None
-    type: str
+    type: LocationType
     name: str
     description: str | None = None
     lore: str | None = None
@@ -79,7 +71,7 @@ class LocationRead(BaseModel):
     id: uuid.UUID
     world_id: uuid.UUID
     parent_id: uuid.UUID | None
-    type: str
+    type: LocationType
     name: str
     description: str | None
     lore: str | None
@@ -93,7 +85,7 @@ class LocationRead(BaseModel):
 
 class LocationUpdate(BaseModel):
     parent_id: uuid.UUID | None = None
-    type: str | None = None
+    type: LocationType | None = None
     name: str | None = None
     description: str | None = None
     lore: str | None = None

@@ -2,14 +2,14 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+import sqlalchemy as sa
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, Text, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from dm_api.db.session import Base
-
-ChatRoleEnum = Enum("dm", "ai", "system", name="chat_role")
+from game_engine.types import ChatRole
 
 
 class ChatMessage(Base):
@@ -23,7 +23,10 @@ class ChatMessage(Base):
         ForeignKey("sessions.id", ondelete="CASCADE"),
         nullable=False,
     )
-    role: Mapped[str] = mapped_column(ChatRoleEnum, nullable=False)
+    role: Mapped[ChatRole] = mapped_column(
+        sa.Enum(ChatRole, name="chat_role", create_type=False),
+        nullable=False,
+    )
     content: Mapped[str] = mapped_column(Text, nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     entity_refs: Mapped[list[Any] | None] = mapped_column(JSON, nullable=True)
@@ -40,7 +43,7 @@ class ChatMessage(Base):
 
 class ChatMessageCreate(BaseModel):
     session_id: uuid.UUID
-    role: str
+    role: ChatRole
     content: str
     token_count: int = 0
     entity_refs: list[Any] | None = None
@@ -52,7 +55,7 @@ class ChatMessageRead(BaseModel):
 
     id: uuid.UUID
     session_id: uuid.UUID
-    role: str
+    role: ChatRole
     content: str
     token_count: int
     entity_refs: list[Any] | None
