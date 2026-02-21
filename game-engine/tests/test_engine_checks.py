@@ -8,6 +8,7 @@ import random
 
 import pytest
 
+from game_engine.core.dice import roll_dice
 from game_engine.interface import CheckResult
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
 from game_engine.types import (
@@ -35,7 +36,15 @@ def make_fighter(
     proficient_skills: list[Skill] | None = None,
     proficient_abilities: list[Ability] | None = None,
 ) -> CharacterSheet:
-    """Return a CharacterSheet for a Fighter with sensible defaults."""
+    """Return a CharacterSheet for a Fighter with sensible defaults.
+
+    Uses None sentinel for proficient_skills so an empty list can be
+    passed explicitly (empty list is a valid, distinct value from 'unset').
+    """
+    if proficient_skills is None:
+        proficient_skills = [Skill.ATHLETICS, Skill.INTIMIDATION]
+    if proficient_abilities is None:
+        proficient_abilities = []
     return CharacterSheet(
         id="fighter-1",
         name="Thorin",
@@ -53,8 +62,8 @@ def make_fighter(
         hp_max=44,
         ac=17,
         speed=30,
-        proficient_skills=proficient_skills or [Skill.ATHLETICS, Skill.INTIMIDATION],
-        proficient_abilities=proficient_abilities or [],
+        proficient_skills=proficient_skills,
+        proficient_abilities=proficient_abilities,
     )
 
 
@@ -123,12 +132,12 @@ class TestCheckSuccessFailure:
         # With +8 mod, need roll >= 2 to hit DC 10; P(pass) ≈ 95%
         assert passes >= 25
 
-    def test_high_dc_low_stat_usually_fails(self, engine: DnD55eEngine):
-        """INT 8 (−1) with no proficiency vs DC 25 should almost always fail."""
-        char = make_fighter(intelligence=8)
+    def test_high_dc_low_stat_always_fails(self, engine: DnD55eEngine):
+        """INT 8 (−1) with no proficiency vs DC 25 should always fail.
+        Maximum possible roll is 20 - 1 = 19, which is less than 25."""
+        char = make_fighter(intelligence=8, proficient_skills=[])
         results = [engine.roll_check(char, Ability.INTELLIGENCE, dc=25) for _ in range(30)]
         fails = sum(1 for r in results if not r.success)
-        # Need roll >= 26 which is impossible; always fails.
         assert fails == 30
 
     def test_success_flag_matches_total_vs_dc(self, engine: DnD55eEngine, fighter: CharacterSheet):
@@ -148,7 +157,11 @@ class TestCheckSuccessFailure:
 
 class TestProficiencyBonus:
     def test_proficient_total_higher_than_nonproficient(self, engine: DnD55eEngine):
-        """Proficient character should have a higher average total."""
+        """Proficient character should have a higher average total.
+
+        With level 5 (prof +3) and STR 10 (mod 0), the proficient char adds
+        +3 to every roll. Over 100 trials their sum should be ~300 higher.
+        """
         proficient = make_fighter(
             strength=10, level=5, proficient_skills=[Skill.ATHLETICS]
         )
@@ -156,7 +169,6 @@ class TestProficiencyBonus:
             strength=10, level=5, proficient_skills=[]
         )
 
-        # Run many trials and compare means
         random.seed(0)
         prof_totals = [
             engine.roll_check(proficient, Skill.ATHLETICS, dc=1).total
@@ -171,7 +183,7 @@ class TestProficiencyBonus:
         assert sum(prof_totals) > sum(non_prof_totals)
 
     def test_prof_bonus_added_for_proficient_skill(self, engine: DnD55eEngine):
-        """With a fixed seed, verify the bonus is exactly prof_bonus more."""
+        """With same seed the proficient total is exactly prof_bonus higher."""
         char = make_fighter(
             strength=10,  # modifier = 0 for clean arithmetic
             level=5,      # proficiency bonus = +3
@@ -188,23 +200,22 @@ class TestProficiencyBonus:
         result_non_prof = engine.roll_check(non_prof_char, Skill.ATHLETICS, dc=1)
 
         # Same roll, same ability mod; prof should have total 3 higher (level-5 bonus)
+        assert result_prof.roll == result_non_prof.roll
         assert result_prof.total == result_non_prof.total + 3
 
     def test_no_proficiency_bonus_for_non_proficient(self, engine: DnD55eEngine):
+        """Non-proficient total = roll + ability_mod only (no prof bonus)."""
         char = make_fighter(
             strength=10,  # modifier = 0
-            level=5,      # prof bonus = +3
+            level=5,      # prof bonus = +3 if proficient, but this char is not
             proficient_skills=[],
         )
-        # Without proficiency, total = roll + ability_mod only
         random.seed(42)
         result = engine.roll_check(char, Skill.ATHLETICS, dc=1)
         random.seed(42)
-        raw_roll, _ = __import__("game_engine.core.dice", fromlist=["roll_dice"]).roll_dice(1, 20)
-        expected_total = raw_roll + 4  # STR default=18, modifier=+4
-
-        # Make char with str=10 so mod=0
-        assert result.total == raw_roll + 0  # 0 ability mod, no proficiency
+        raw_roll, _ = roll_dice(1, 20)
+        # STR mod = 0, no prof bonus → total = raw roll + 0
+        assert result.total == raw_roll
 
     def test_proficiency_bonus_for_proficient_ability(self, engine: DnD55eEngine):
         """Proficiency in Ability.STRENGTH adds prof bonus to STR checks."""
@@ -220,6 +231,7 @@ class TestProficiencyBonus:
         result_prof = engine.roll_check(char, Ability.STRENGTH, dc=1)
         random.seed(15)
         result_non_prof = engine.roll_check(non_prof_char, Ability.STRENGTH, dc=1)
+        assert result_prof.roll == result_non_prof.roll
         assert result_prof.total == result_non_prof.total + 2
 
 

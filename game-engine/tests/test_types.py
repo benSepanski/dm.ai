@@ -184,9 +184,11 @@ class TestCharacterClassEnum:
         assert len(classes) == 13
 
     def test_str_representation(self):
-        assert str(CharacterClass.FIGHTER) == "Fighter"
-        assert str(CharacterClass.WIZARD) == "Wizard"
-        assert str(CharacterClass.ROGUE) == "Rogue"
+        # In Python 3.12, str(StrEnum) returns the qualified name.
+        # The wire-compatible string value is accessed via .value
+        assert CharacterClass.FIGHTER.value == "Fighter"
+        assert CharacterClass.WIZARD.value == "Wizard"
+        assert CharacterClass.ROGUE.value == "Rogue"
 
     def test_constructable_from_value(self):
         assert CharacterClass("Fighter") == CharacterClass.FIGHTER
