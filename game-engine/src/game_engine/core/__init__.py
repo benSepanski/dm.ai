@@ -2,14 +2,14 @@
 
 from game_engine.core.character import (
     AbstractCharacter,
-    AbilityScores,
-    CharacterType,
+    AbilityScores,  # backward-compat alias for AbilityScoreSet
     get_modifier,
 )
 from game_engine.core.combat import AbstractCombat, CombatPhase
 from game_engine.core.conditions import (
     CONDITION_EFFECTS,
     EXHAUSTION_LEVELS,
+    ConditionEffect,
     condition_prevents_action,
     get_active_conditions,
     is_immune_to_condition,
@@ -30,6 +30,9 @@ from game_engine.core.dice import (
 )
 from game_engine.core.initiative import InitiativeEntry, InitiativeTracker
 
+# Re-export CharacterType from types for backward compatibility
+from game_engine.types import CharacterType
+
 __all__ = [
     # character
     "AbstractCharacter",
@@ -42,6 +45,7 @@ __all__ = [
     # conditions
     "CONDITION_EFFECTS",
     "EXHAUSTION_LEVELS",
+    "ConditionEffect",
     "condition_prevents_action",
     "get_active_conditions",
     "is_immune_to_condition",
