@@ -41,7 +41,7 @@ class DiceNotation(str):
         return str.__new__(cls, value)
 
     @property
-    def count(self) -> int:
+    def num_dice(self) -> int:
         match = _NOTATION_RE.match(self)
         assert match is not None
         return int(match.group("count")) if match.group("count") else 1
@@ -60,4 +60,4 @@ class DiceNotation(str):
 
     def parsed(self) -> tuple[int, int, int]:
         """Return (count, sides, modifier) tuple."""
-        return self.count, self.sides, self.modifier
+        return self.num_dice, self.sides, self.modifier

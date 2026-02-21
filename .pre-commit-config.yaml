@@ -1,0 +1,37 @@
+repos:
+  - repo: local
+    hooks:
+      - id: game-engine-lint
+        name: game-engine / lint
+        entry: bash -c 'cd game-engine && python -m black --check src/ tests/ && python -m isort --check-only src/ tests/ && python -m autoflake --check --remove-all-unused-imports --remove-unused-variables -r src/ tests/ && python -m mypy src/'
+        language: system
+        pass_filenames: false
+        files: ^game-engine/
+
+      - id: game-engine-test
+        name: game-engine / pytest
+        entry: bash -c 'cd game-engine && python -m pytest tests/ -q'
+        language: system
+        pass_filenames: false
+        files: ^game-engine/
+
+      - id: dm-api-lint
+        name: dm-api / lint
+        entry: bash -c 'cd dm-api && python -m black --check src/ tests/ && python -m isort --check-only src/ tests/ && python -m autoflake --check --remove-all-unused-imports --remove-unused-variables -r src/ tests/ && python -m mypy src/'
+        language: system
+        pass_filenames: false
+        files: ^dm-api/
+
+      - id: dm-api-test
+        name: dm-api / pytest
+        entry: bash -c 'cd dm-api && python -m pytest tests/ -q'
+        language: system
+        pass_filenames: false
+        files: ^dm-api/
+
+      - id: dm-ui-checks
+        name: dm-ui / tsc + eslint
+        entry: bash -c 'cd dm-ui && npx tsc --noEmit && npm run lint'
+        language: system
+        pass_filenames: false
+        files: ^dm-ui/

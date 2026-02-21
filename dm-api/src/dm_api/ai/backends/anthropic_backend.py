@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import anthropic
+from anthropic.types import MessageParam, TextBlock
 
 from dm_api.ai.backends.base import AIBackend, AIMessage, AIResponse
 
@@ -24,15 +25,20 @@ class AnthropicBackend(AIBackend):
         model: str,
         max_tokens: int = 4096,
     ) -> AIResponse:
-        sdk_messages = [{"role": m.role, "content": m.content} for m in messages]
+        sdk_messages: list[MessageParam] = [
+            {"role": m.role, "content": m.content}  # type: ignore[typeddict-item]
+            for m in messages
+        ]
         response = await self._client.messages.create(
             model=model,
             max_tokens=max_tokens,
             system=system,
             messages=sdk_messages,
         )
+        text_blocks = [b for b in response.content if isinstance(b, TextBlock)]
+        content = text_blocks[0].text if text_blocks else ""
         return AIResponse(
-            content=response.content[0].text,
+            content=content,
             model=response.model,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,

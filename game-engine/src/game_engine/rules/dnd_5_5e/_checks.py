@@ -114,12 +114,13 @@ def _roll_check_impl(
         skill_key = skill.value
     else:
         skill_key = skill.lower()
-        ability = SKILL_ABILITY_MAP.get(skill_key)
-        if ability is None:
+        resolved = SKILL_ABILITY_MAP.get(skill_key)
+        if resolved is None:
             raise ValueError(
                 f"Unknown skill or ability {skill!r}.  "
                 f"Valid skills: {sorted(SKILL_ABILITY_MAP.keys())}"
             )
+        ability = resolved
 
     ability_mod = char.ability_scores.modifier(ability)
     prof_bonus = _calc_prof_bonus(char.level)

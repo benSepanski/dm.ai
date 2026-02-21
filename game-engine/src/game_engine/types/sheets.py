@@ -33,7 +33,7 @@ class AbilityScoreSet:
 
     def get(self, ability: Ability) -> int:
         """Return the score for *ability*."""
-        return getattr(self, ability.value)
+        return int(getattr(self, ability.value))
 
     def modifier(self, ability: Ability) -> int:
         """Return the D&D modifier for *ability*."""

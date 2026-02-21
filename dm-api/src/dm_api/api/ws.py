@@ -13,7 +13,7 @@ _connections: dict[str, list[WebSocket]] = defaultdict(list)
 
 
 @router.websocket("/ws/sessions/{session_id}")
-async def session_websocket(websocket: WebSocket, session_id: uuid.UUID):
+async def session_websocket(websocket: WebSocket, session_id: uuid.UUID) -> None:
     """WebSocket endpoint for a game session.
 
     Clients connect here to receive real-time updates about combat,
