@@ -3,71 +3,28 @@ Abstract character sheet for the RPG game engine.
 
 Provides a rule-agnostic representation of any participant in the game:
 player characters, non-player characters, and monsters.
+
+The :class:`CharacterType` enum and :class:`AbilityScoreSet` dataclass are
+re-exported from :mod:`game_engine.types` for backward compatibility.  New
+code should import directly from ``game_engine.types``.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from enum import Enum
+from game_engine.types import (
+    Ability,
+    AbilityScoreSet,
+    CharacterType,
+    Condition,
+)
 
+# ---------------------------------------------------------------------------
+# Backward-compatibility aliases
+# ---------------------------------------------------------------------------
 
-class CharacterType(Enum):
-    """Broad classification for a character's role in the game."""
-
-    PC = "PC"          # Player Character
-    NPC = "NPC"        # Non-Player Character
-    MONSTER = "MONSTER"  # Monster / creature
-
-
-@dataclass
-class AbilityScores:
-    """The six core ability scores used in D&D-style games.
-
-    Attribute names follow Python conventions (``str_`` avoids shadowing the
-    built-in ``str``, ``int_`` avoids shadowing ``int``).
-
-    Attributes:
-        str_: Strength score.
-        dex: Dexterity score.
-        con: Constitution score.
-        int_: Intelligence score.
-        wis: Wisdom score.
-        cha: Charisma score.
-    """
-
-    str_: int = 10
-    dex: int = 10
-    con: int = 10
-    int_: int = 10
-    wis: int = 10
-    cha: int = 10
-
-    def to_dict(self) -> dict:
-        """Return a JSON-serialisable dict of the ability scores."""
-        return {
-            "strength": self.str_,
-            "dexterity": self.dex,
-            "constitution": self.con,
-            "intelligence": self.int_,
-            "wisdom": self.wis,
-            "charisma": self.cha,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "AbilityScores":
-        """Create an :class:`AbilityScores` from a dict.
-
-        Accepts both long-form keys (``"strength"``) and short-form keys
-        (``"str"`` / ``"str_"``).
-        """
-        return cls(
-            str_=data.get("strength", data.get("str_", data.get("str", 10))),
-            dex=data.get("dexterity", data.get("dex", 10)),
-            con=data.get("constitution", data.get("con", 10)),
-            int_=data.get("intelligence", data.get("int_", data.get("int", 10))),
-            wis=data.get("wisdom", data.get("wis", 10)),
-            cha=data.get("charisma", data.get("cha", 10)),
-        )
+# AbilityScores was the old name — keep it as an alias so existing imports
+# (e.g. ``from game_engine.core.character import AbilityScores``) still work.
+AbilityScores = AbilityScoreSet
 
 
 def get_modifier(score: int) -> int:
@@ -92,28 +49,28 @@ def get_modifier(score: int) -> int:
     return (score - 10) // 2
 
 
+#: Map of lowercase ability name aliases to :class:`~game_engine.types.Ability` values.
+_ABILITY_ATTR: dict[str, Ability] = {
+    "strength": Ability.STRENGTH,
+    "str": Ability.STRENGTH,
+    "str_": Ability.STRENGTH,
+    "dexterity": Ability.DEXTERITY,
+    "dex": Ability.DEXTERITY,
+    "constitution": Ability.CONSTITUTION,
+    "con": Ability.CONSTITUTION,
+    "intelligence": Ability.INTELLIGENCE,
+    "int": Ability.INTELLIGENCE,
+    "int_": Ability.INTELLIGENCE,
+    "wisdom": Ability.WISDOM,
+    "wis": Ability.WISDOM,
+    "charisma": Ability.CHARISMA,
+    "cha": Ability.CHARISMA,
+}
+
 #: Conditions that prevent a character from acting.
 _INCAPACITATING_CONDITIONS: frozenset[str] = frozenset(
     {"incapacitated", "paralyzed", "petrified", "stunned", "unconscious"}
 )
-
-#: Map of lowercase ability name aliases to attribute names on AbilityScores.
-_ABILITY_ATTR: dict[str, str] = {
-    "strength": "str_",
-    "str": "str_",
-    "str_": "str_",
-    "dexterity": "dex",
-    "dex": "dex",
-    "constitution": "con",
-    "con": "con",
-    "intelligence": "int_",
-    "int": "int_",
-    "int_": "int_",
-    "wisdom": "wis",
-    "wis": "wis",
-    "charisma": "cha",
-    "cha": "cha",
-}
 
 
 class AbstractCharacter:
@@ -125,14 +82,14 @@ class AbstractCharacter:
     Attributes:
         id: Unique identifier string.
         name: Display name.
-        char_type: :class:`CharacterType` enum value.
-        ability_scores: :class:`AbilityScores` instance.
+        char_type: :class:`~game_engine.types.CharacterType` enum value.
+        ability_scores: :class:`~game_engine.types.AbilityScoreSet` instance.
         hp_current: Current hit points.
         hp_max: Maximum hit points.
         ac: Armour class.
         speed: Movement speed in feet.
         level: Character level (1-20).
-        conditions: List of active condition name strings.
+        conditions: List of active :class:`~game_engine.types.Condition` enums.
     """
 
     def __init__(
@@ -140,35 +97,37 @@ class AbstractCharacter:
         id: str,
         name: str,
         char_type: CharacterType = CharacterType.PC,
-        ability_scores: AbilityScores | None = None,
+        ability_scores: AbilityScoreSet | None = None,
         hp_current: int = 10,
         hp_max: int = 10,
         ac: int = 10,
         speed: int = 30,
         level: int = 1,
-        conditions: list[str] | None = None,
+        conditions: list[Condition | str] | None = None,
     ) -> None:
         self.id = id
         self.name = name
         self.char_type = char_type
-        self.ability_scores: AbilityScores = ability_scores or AbilityScores()
+        self.ability_scores: AbilityScoreSet = ability_scores or AbilityScoreSet()
         self.hp_current = hp_current
         self.hp_max = hp_max
         self.ac = ac
         self.speed = speed
         self.level = level
-        self.conditions: list[str] = conditions or []
+        # Coerce any raw strings to Condition enums where possible.
+        self.conditions: list[Condition] = _coerce_conditions(conditions or [])
 
     # ------------------------------------------------------------------
     # Ability score helpers
     # ------------------------------------------------------------------
 
-    def modifier(self, ability: str) -> int:
+    def modifier(self, ability: str | Ability) -> int:
         """Return the D&D ability modifier for the named ability.
 
         Args:
-            ability: Ability name (case-insensitive). Accepts full names
-                (``"strength"``) and abbreviations (``"str"``).
+            ability: :class:`~game_engine.types.Ability` enum or name string
+                (case-insensitive). Accepts full names (``"strength"``) and
+                abbreviations (``"str"``).
 
         Returns:
             Integer modifier.
@@ -176,14 +135,16 @@ class AbstractCharacter:
         Raises:
             ValueError: If *ability* is not a recognised ability name.
         """
-        attr = _ABILITY_ATTR.get(ability.lower())
-        if attr is None:
+        if isinstance(ability, Ability):
+            return ability.modifier(self.ability_scores.get(ability))
+
+        ability_enum = _ABILITY_ATTR.get(ability.lower())
+        if ability_enum is None:
             raise ValueError(
                 f"Unknown ability {ability!r}. "
                 f"Valid names: {sorted(_ABILITY_ATTR.keys())}"
             )
-        score = getattr(self.ability_scores, attr)
-        return get_modifier(score)
+        return ability_enum.modifier(self.ability_scores.get(ability_enum))
 
     # ------------------------------------------------------------------
     # Status checks
@@ -194,27 +155,22 @@ class AbstractCharacter:
         return self.hp_current > 0
 
     def is_conscious(self) -> bool:
-        """Return True if the character is alive and not incapacitated.
-
-        A character is unconscious if they are dead, or if they have any of:
-        unconscious, stunned, paralyzed, or petrified conditions.
-        """
+        """Return True if the character is alive and not incapacitated."""
         if not self.is_alive():
             return False
-        incap_conditions = {"unconscious", "stunned", "paralyzed", "petrified"}
-        active = {c.lower() for c in self.conditions}
-        return not bool(active & incap_conditions)
+        incap = {
+            Condition.UNCONSCIOUS,
+            Condition.STUNNED,
+            Condition.PARALYZED,
+            Condition.PETRIFIED,
+        }
+        return not bool(set(self.conditions) & incap)
 
     def can_act(self) -> bool:
-        """Return True if the character can take actions this turn.
-
-        Characters cannot act if they are dead or have any incapacitating
-        condition.
-        """
+        """Return True if the character can take actions this turn."""
         if not self.is_alive():
             return False
-        active = {c.lower() for c in self.conditions}
-        return not bool(active & _INCAPACITATING_CONDITIONS)
+        return not any(Condition.prevents_action(c) for c in self.conditions)
 
     # ------------------------------------------------------------------
     # HP manipulation
@@ -260,7 +216,7 @@ class AbstractCharacter:
             "ac": self.ac,
             "speed": self.speed,
             "level": self.level,
-            "conditions": list(self.conditions),
+            "conditions": [c.value for c in self.conditions],
         }
 
     @classmethod
@@ -279,7 +235,7 @@ class AbstractCharacter:
         except ValueError:
             char_type = CharacterType.PC
 
-        ability_scores = AbilityScores.from_dict(data.get("ability_scores", {}))
+        ability_scores = AbilityScoreSet.from_dict(data.get("ability_scores", {}))
 
         return cls(
             id=data["id"],
@@ -299,3 +255,22 @@ class AbstractCharacter:
             f"<{self.__class__.__name__} id={self.id!r} name={self.name!r} "
             f"hp={self.hp_current}/{self.hp_max}>"
         )
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+def _coerce_conditions(raw: list) -> list[Condition]:
+    """Coerce a list of strings or Condition enums to Condition enums."""
+    result: list[Condition] = []
+    for item in raw:
+        if isinstance(item, Condition):
+            result.append(item)
+        else:
+            try:
+                result.append(Condition(str(item).lower()))
+            except ValueError:
+                pass  # Unknown condition string — silently skip
+    return result
