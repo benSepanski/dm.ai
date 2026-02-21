@@ -34,12 +34,6 @@ class _FakeVector(sa.types.TypeDecorator):
 
 
 # pgvector.sqlalchemy.Vector is used as Vector(1536) in column definitions
-# We need it to be callable and return a SQLAlchemy type
-def _vector_factory(dim):
-    return _FakeVector(dim)
-
-
-# Make Vector behave like a class (callable, returns type instance)
 _pgvector_sa.Vector = _FakeVector
 _pgvector.sqlalchemy = _pgvector_sa
 sys.modules["pgvector"] = _pgvector
@@ -72,6 +66,9 @@ async def test_engine():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     # Import Base AFTER pgvector mock is in place
     from dm_api.db.session import Base
+    # IMPORTANT: import all models so they register with Base.metadata
+    import dm_api.db.models  # noqa: F401 — triggers all model imports
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield engine
