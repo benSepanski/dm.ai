@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime, timezone
 
-import anthropic
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.ai.backends.base import AIBackend
 from dm_api.ai.dm_orchestrator import DMOrchestrator
 from dm_api.config import settings
 from dm_api.db.models.chat import ChatMessage, ChatMessageCreate, ChatMessageRead
@@ -17,8 +17,12 @@ from dm_api.db.session import get_db
 router = APIRouter()
 
 
-def _get_anthropic_client() -> anthropic.AsyncAnthropic:
-    return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+def _get_backend() -> AIBackend:
+    from dm_api.ai.backends.factory import create_backend
+    return create_backend(
+        provider=settings.ai_provider,
+        api_key=settings.anthropic_api_key,
+    )
 
 
 class ChatRequest(BaseModel):
@@ -117,10 +121,10 @@ async def session_chat(
     ]
 
     # Call DM Orchestrator
-    anthropic_client = _get_anthropic_client()
     orchestrator = DMOrchestrator(
-        anthropic_client=anthropic_client,
-        model=settings.orchestrator_model,
+        backend=_get_backend(),
+        orchestrator_model=settings.orchestrator_model,
+        generation_model=settings.generation_model,
     )
     result = await orchestrator.handle_message(
         message=payload.message,
@@ -186,23 +190,15 @@ async def end_session(
 
     if messages:
         try:
-            anthropic_client = _get_anthropic_client()
+            orchestrator = DMOrchestrator(
+                backend=_get_backend(),
+                orchestrator_model=settings.orchestrator_model,
+                generation_model=settings.generation_model,
+            )
             summary_text = "\n".join(
                 f"{m.role.upper()}: {m.content}" for m in messages[-20:]
             )
-            summary_response = await anthropic_client.messages.create(
-                model=settings.fast_model,
-                max_tokens=512,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Summarize this D&D session in 2-3 sentences:\n\n{summary_text}"
-                        ),
-                    }
-                ],
-            )
-            session.session_summary = summary_response.content[0].text
+            session.session_summary = await orchestrator.summarize(summary_text)
         except Exception:
             # Non-fatal: summary generation failure should not block ending a session
             session.session_summary = "Session ended."

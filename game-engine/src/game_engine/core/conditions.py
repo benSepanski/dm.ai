@@ -7,140 +7,124 @@ exhaustion levels, and helper functions to query a character's condition state.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
+from game_engine.types import Ability, CharacterSheet, Condition, DamageType
+
+
 # ---------------------------------------------------------------------------
-# Condition data
+# ConditionEffect dataclass
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ConditionEffect:
+    """Mechanical effects associated with a single D&D condition.
+
+    Attributes:
+        description: Plain-English summary of the condition.
+        can_act: Whether the creature can take actions/reactions.
+        attack_modifier: ``"advantage"``, ``"disadvantage"``, or ``None``.
+        attack_against_modifier: Modifier on rolls *against* this creature.
+        auto_fail_saves: Abilities that auto-fail saves while in this condition.
+        speed_zero: Whether the condition sets movement speed to 0.
+        immunity_types: Damage types the creature is immune to (condition-based).
+    """
+
+    description: str = ""
+    can_act: bool = True
+    attack_modifier: str | None = None
+    attack_against_modifier: str | None = None
+    auto_fail_saves: list[Ability] = field(default_factory=list)
+    speed_zero: bool = False
+    immunity_types: list[DamageType] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Condition effect data
 # ---------------------------------------------------------------------------
 
 #: Mechanical effects for each of the 15 standard D&D conditions.
-#:
-#: Keys per condition:
-#:   description          – plain-English summary of the condition
-#:   immunity_types       – damage types the creature is immune to while in
-#:                          this condition (rarely used, but e.g. petrified →
-#:                          poison is not an immunity here; kept for completeness)
-#:   auto_fail_saves      – ability score names that automatically fail saves
-#:   attack_modifier      – "advantage", "disadvantage", or "none" on attack rolls
-#:   attack_against_modifier – modifier applied to attack rolls *against* this creature
-#:   speed_zero           – whether the condition sets movement speed to 0
-#:   can_act              – whether the creature can take actions / reactions
-CONDITION_EFFECTS: dict[str, dict] = {
-    "blinded": {
-        "description": (
+CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
+    Condition.BLINDED: ConditionEffect(
+        description=(
             "A blinded creature can't see and automatically fails any ability "
             "check that requires sight. Attack rolls against the creature have "
             "advantage, and the creature's attack rolls have disadvantage."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "disadvantage",
-        "attack_against_modifier": "advantage",
-        "speed_zero": False,
-        "can_act": True,
-    },
-    "charmed": {
-        "description": (
+        can_act=True,
+        attack_modifier="disadvantage",
+        attack_against_modifier="advantage",
+    ),
+    Condition.CHARMED: ConditionEffect(
+        description=(
             "A charmed creature can't attack the charmer or target the charmer "
             "with harmful abilities or magical effects. The charmer has advantage "
             "on ability checks to interact socially with the creature."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "none",
-        "attack_against_modifier": "none",
-        "speed_zero": False,
-        "can_act": True,
-    },
-    "deafened": {
-        "description": (
+        can_act=True,
+    ),
+    Condition.DEAFENED: ConditionEffect(
+        description=(
             "A deafened creature can't hear and automatically fails any ability "
             "check that requires hearing."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "none",
-        "attack_against_modifier": "none",
-        "speed_zero": False,
-        "can_act": True,
-    },
-    "exhaustion": {
-        "description": (
+        can_act=True,
+    ),
+    Condition.EXHAUSTION: ConditionEffect(
+        description=(
             "Exhaustion is measured in six levels. An exhausted creature suffers "
             "cumulative penalties based on its exhaustion level."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "none",
-        "attack_against_modifier": "none",
-        "speed_zero": False,  # speed halved at level 2; zero at level 5
-        "can_act": True,
-    },
-    "frightened": {
-        "description": (
+        can_act=True,
+    ),
+    Condition.FRIGHTENED: ConditionEffect(
+        description=(
             "A frightened creature has disadvantage on ability checks and attack "
             "rolls while the source of its fear is within line of sight. The "
             "creature can't willingly move closer to the source of its fear."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "disadvantage",
-        "attack_against_modifier": "none",
-        "speed_zero": False,
-        "can_act": True,
-    },
-    "grappled": {
-        "description": (
+        can_act=True,
+        attack_modifier="disadvantage",
+    ),
+    Condition.GRAPPLED: ConditionEffect(
+        description=(
             "A grappled creature's speed becomes 0, and it can't benefit from "
             "any bonus to its speed. The condition ends if the grappler is "
             "incapacitated. It also ends if an effect removes the grappled "
             "creature from the reach of the grappler or grappling effect."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "none",
-        "attack_against_modifier": "none",
-        "speed_zero": True,
-        "can_act": True,
-    },
-    "incapacitated": {
-        "description": (
-            "An incapacitated creature can't take actions or reactions."
-        ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "none",
-        "attack_against_modifier": "none",
-        "speed_zero": False,
-        "can_act": False,
-    },
-    "invisible": {
-        "description": (
+        can_act=True,
+        speed_zero=True,
+    ),
+    Condition.INCAPACITATED: ConditionEffect(
+        description="An incapacitated creature can't take actions or reactions.",
+        can_act=False,
+    ),
+    Condition.INVISIBLE: ConditionEffect(
+        description=(
             "An invisible creature is impossible to see without the aid of magic "
             "or a special sense. The creature's attacks have advantage, and attack "
             "rolls against the creature have disadvantage."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "advantage",
-        "attack_against_modifier": "disadvantage",
-        "speed_zero": False,
-        "can_act": True,
-    },
-    "paralyzed": {
-        "description": (
+        can_act=True,
+        attack_modifier="advantage",
+        attack_against_modifier="disadvantage",
+    ),
+    Condition.PARALYZED: ConditionEffect(
+        description=(
             "A paralyzed creature is incapacitated and can't move or speak. It "
             "automatically fails Strength and Dexterity saving throws. Attack "
             "rolls against the creature have advantage. Any attack that hits the "
             "creature is a critical hit if the attacker is within 5 feet."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": ["strength", "dexterity"],
-        "attack_modifier": "none",
-        "attack_against_modifier": "advantage",
-        "speed_zero": True,
-        "can_act": False,
-    },
-    "petrified": {
-        "description": (
+        can_act=False,
+        attack_against_modifier="advantage",
+        auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
+        speed_zero=True,
+    ),
+    Condition.PETRIFIED: ConditionEffect(
+        description=(
             "A petrified creature is transformed, along with any nonmagical object "
             "it is wearing or carrying, into a solid inanimate substance (usually "
             "stone). Its weight increases by a factor of ten, and it ceases aging. "
@@ -149,66 +133,54 @@ CONDITION_EFFECTS: dict[str, dict] = {
             "automatically fails Strength and Dexterity saving throws. It has "
             "resistance to all damage."
         ),
-        "immunity_types": ["poison", "psychic"],
-        "auto_fail_saves": ["strength", "dexterity"],
-        "attack_modifier": "none",
-        "attack_against_modifier": "advantage",
-        "speed_zero": True,
-        "can_act": False,
-    },
-    "poisoned": {
-        "description": (
+        can_act=False,
+        attack_against_modifier="advantage",
+        auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
+        speed_zero=True,
+        immunity_types=[DamageType.POISON, DamageType.PSYCHIC],
+    ),
+    Condition.POISONED: ConditionEffect(
+        description=(
             "A poisoned creature has disadvantage on attack rolls and ability checks."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "disadvantage",
-        "attack_against_modifier": "none",
-        "speed_zero": False,
-        "can_act": True,
-    },
-    "prone": {
-        "description": (
+        can_act=True,
+        attack_modifier="disadvantage",
+    ),
+    Condition.PRONE: ConditionEffect(
+        description=(
             "A prone creature's only movement option is to crawl. An attack roll "
             "against the creature has advantage if the attacker is within 5 feet, "
             "otherwise the attack roll has disadvantage. The creature has "
             "disadvantage on attack rolls."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "disadvantage",
-        "attack_against_modifier": "advantage",  # within 5 ft; disadvantage beyond
-        "speed_zero": False,
-        "can_act": True,
-    },
-    "restrained": {
-        "description": (
+        can_act=True,
+        attack_modifier="disadvantage",
+        attack_against_modifier="advantage",  # within 5 ft; disadvantage beyond
+    ),
+    Condition.RESTRAINED: ConditionEffect(
+        description=(
             "A restrained creature's speed becomes 0. Attack rolls against it have "
             "advantage, and its attack rolls have disadvantage. It has disadvantage "
             "on Dexterity saving throws."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": [],
-        "attack_modifier": "disadvantage",
-        "attack_against_modifier": "advantage",
-        "speed_zero": True,
-        "can_act": True,
-    },
-    "stunned": {
-        "description": (
+        can_act=True,
+        attack_modifier="disadvantage",
+        attack_against_modifier="advantage",
+        speed_zero=True,
+    ),
+    Condition.STUNNED: ConditionEffect(
+        description=(
             "A stunned creature is incapacitated, can't move, and can speak only "
             "falteringly. It automatically fails Strength and Dexterity saving "
             "throws. Attack rolls against it have advantage."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": ["strength", "dexterity"],
-        "attack_modifier": "none",
-        "attack_against_modifier": "advantage",
-        "speed_zero": True,
-        "can_act": False,
-    },
-    "unconscious": {
-        "description": (
+        can_act=False,
+        attack_against_modifier="advantage",
+        auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
+        speed_zero=True,
+    ),
+    Condition.UNCONSCIOUS: ConditionEffect(
+        description=(
             "An unconscious creature is incapacitated, can't move or speak, and "
             "is unaware of its surroundings. It drops whatever it's holding and "
             "falls prone. It automatically fails Strength and Dexterity saving "
@@ -216,13 +188,11 @@ CONDITION_EFFECTS: dict[str, dict] = {
             "that hits the creature is a critical hit if the attacker is within "
             "5 feet of the creature."
         ),
-        "immunity_types": [],
-        "auto_fail_saves": ["strength", "dexterity"],
-        "attack_modifier": "none",
-        "attack_against_modifier": "advantage",
-        "speed_zero": True,
-        "can_act": False,
-    },
+        can_act=False,
+        attack_against_modifier="advantage",
+        auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
+        speed_zero=True,
+    ),
 }
 
 #: Exhaustion levels 1-6 and their mechanical penalties.
@@ -289,61 +259,80 @@ EXHAUSTION_LEVELS: list[dict] = [
     },
 ]
 
+
 # ---------------------------------------------------------------------------
-# Helper functions
+# Helper functions (typed)
 # ---------------------------------------------------------------------------
 
-#: Conditions that prevent a creature from taking actions.
-_INCAPACITATING_CONDITIONS: frozenset[str] = frozenset(
-    {
-        "incapacitated",
-        "paralyzed",
-        "petrified",
-        "stunned",
-        "unconscious",
-    }
-)
 
-
-def is_immune_to_condition(char: dict, condition: str) -> bool:
+def is_immune_to_condition(
+    char: CharacterSheet | dict, condition: Condition | str
+) -> bool:
     """Return True if *char* is immune to *condition*.
 
-    Checks the ``condition_immunities`` list on the character sheet dict.
+    Accepts both a :class:`~game_engine.types.CharacterSheet` and a raw dict
+    for backward compatibility.
 
     Args:
-        char: Character sheet dict.  May contain ``condition_immunities: list[str]``.
-        condition: The condition name to check (case-insensitive).
+        char: Character sheet or dict containing ``condition_immunities``.
+        condition: The condition enum or name (case-insensitive).
 
     Returns:
         True if the character is immune to the condition.
     """
+    if isinstance(condition, str):
+        try:
+            condition = Condition(condition.lower())
+        except ValueError:
+            return False
+
+    if isinstance(char, CharacterSheet):
+        return condition in char.condition_immunities
+
+    # Legacy dict path
     immunities: list[str] = char.get("condition_immunities", [])
-    return condition.lower() in {c.lower() for c in immunities}
+    return condition.value in {c.lower() for c in immunities}
 
 
-def get_active_conditions(char: dict) -> list[str]:
+def get_active_conditions(
+    char: CharacterSheet | dict,
+) -> list[Condition]:
     """Return the list of conditions currently affecting *char*.
 
     Args:
-        char: Character sheet dict.  May contain ``conditions: list[str]``.
+        char: Character sheet or dict.
 
     Returns:
-        List of active condition name strings (may be empty).
+        List of active :class:`~game_engine.types.Condition` values.
     """
-    return list(char.get("conditions", []))
+    if isinstance(char, CharacterSheet):
+        return list(char.conditions)
+
+    # Legacy dict path — coerce strings to Condition enums where possible
+    raw: list[str] = char.get("conditions", [])
+    result: list[Condition] = []
+    for c in raw:
+        try:
+            result.append(Condition(c.lower()))
+        except ValueError:
+            pass
+    return result
 
 
-def condition_prevents_action(char: dict) -> bool:
+def condition_prevents_action(char: CharacterSheet | dict) -> bool:
     """Return True if any active condition prevents the character from acting.
 
     A character cannot act if they have any of the incapacitating conditions:
     incapacitated, paralyzed, petrified, stunned, or unconscious.
 
     Args:
-        char: Character sheet dict.
+        char: Character sheet or dict.
 
     Returns:
         True if the character cannot take actions.
     """
-    active = {c.lower() for c in get_active_conditions(char)}
-    return bool(active & _INCAPACITATING_CONDITIONS)
+    if isinstance(char, CharacterSheet):
+        return not char.can_act
+
+    active = get_active_conditions(char)
+    return any(Condition.prevents_action(c) for c in active)

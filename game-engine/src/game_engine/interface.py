@@ -8,6 +8,17 @@ used to communicate results between the engine and the game layer.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
+from game_engine.types import (
+    ActionType,
+    AttackDetails,
+    CharacterSheet,
+    CombatStateData,
+    Condition,
+    DamageType,
+    Skill,
+    Ability,
+)
+
 
 @dataclass
 class CheckResult:
@@ -20,6 +31,7 @@ class CheckResult:
         dc: The difficulty class that was set for this check.
         margin: total - dc; positive means success by that amount.
     """
+
     success: bool
     roll: int
     total: int
@@ -34,15 +46,16 @@ class ActionResult:
     Attributes:
         success: Whether the action succeeded (e.g. attack hit).
         damage: Total damage dealt (0 if not applicable).
-        damage_type: The type of damage dealt (e.g. "fire", "slashing").
-        conditions_applied: Names of any conditions applied to the target.
+        damage_type: The type of damage dealt.
+        conditions_applied: Conditions applied to the target.
         flavor_text: Human-readable narrative of what happened.
         log_entry: Structured dict suitable for the combat log / API.
     """
+
     success: bool
     damage: int
-    damage_type: str
-    conditions_applied: list[str]
+    damage_type: DamageType | str
+    conditions_applied: list[Condition]
     flavor_text: str
     log_entry: dict
 
@@ -55,6 +68,7 @@ class ValidationResult:
         valid: Whether the sheet passed all validation rules.
         errors: List of human-readable error messages (empty when valid).
     """
+
     valid: bool
     errors: list[str] = field(default_factory=list)
 
@@ -64,31 +78,31 @@ class Action:
     """A player or NPC action to be resolved by the rule engine.
 
     Attributes:
-        action_type: Type of action (e.g. "Attack", "Dash", "CastSpell").
+        action_type: Type of action (e.g. ActionType.ATTACK).
         actor_id: ID of the character performing the action.
         target_id: ID of the target character, or None for untargeted actions.
         details: Rule-specific payload (weapon info, spell name, etc.).
     """
-    action_type: str
+
+    action_type: ActionType | str
     actor_id: str
     target_id: str | None
-    details: dict = field(default_factory=dict)
+    details: AttackDetails | dict = field(default_factory=dict)
 
 
 class RuleEngine(ABC):
     """Abstract base class for rule system implementations.
 
     Every rule system (D&D 5.5e, Pathfinder, etc.) must implement all of
-    these methods.  The engine operates on plain dicts representing character
-    sheets and combat state so that no rule-specific classes bleed into the
-    generic game layer.
+    these methods.  The engine operates on :class:`~game_engine.types.CharacterSheet`
+    and :class:`~game_engine.types.CombatStateData` typed objects.
     """
 
     @abstractmethod
     def roll_check(
         self,
-        char: dict,
-        skill: str,
+        char: CharacterSheet,
+        skill: Skill | Ability | str,
         dc: int,
         advantage: bool = False,
         disadvantage: bool = False,
@@ -96,8 +110,8 @@ class RuleEngine(ABC):
         """Roll a skill or ability check against a DC.
 
         Args:
-            char: Character sheet dict.
-            skill: Skill or ability name (e.g. "Perception", "Strength").
+            char: Character sheet.
+            skill: Skill or ability (enum or string name).
             dc: Difficulty class to meet or exceed.
             advantage: Roll two dice and take the higher.
             disadvantage: Roll two dice and take the lower.
@@ -107,57 +121,68 @@ class RuleEngine(ABC):
         """
 
     @abstractmethod
-    def apply_damage(self, target: dict, damage: int, damage_type: str) -> dict:
+    def apply_damage(
+        self,
+        target: CharacterSheet,
+        damage: int,
+        damage_type: DamageType | str,
+    ) -> CharacterSheet:
         """Apply damage to a character, accounting for resistances/immunities.
 
         Args:
-            target: Character sheet dict (modified in place and returned).
+            target: Character sheet (modified in place and returned).
             damage: Raw damage amount before resistance calculations.
-            damage_type: Damage type string (e.g. "fire", "piercing").
+            damage_type: Damage type enum or string (e.g. DamageType.FIRE).
 
         Returns:
-            Updated character sheet dict.
+            Updated character sheet.
         """
 
     @abstractmethod
     def apply_condition(
         self,
-        target: dict,
-        condition: str,
+        target: CharacterSheet,
+        condition: Condition | str,
         duration_rounds: int | None = None,
-    ) -> dict:
+    ) -> CharacterSheet:
         """Apply a condition to a character.
 
         Args:
-            target: Character sheet dict.
-            condition: Condition name (e.g. "poisoned", "stunned").
+            target: Character sheet.
+            condition: Condition enum or name string.
             duration_rounds: How many rounds the condition lasts; None = indefinite.
 
         Returns:
-            Updated character sheet dict.
+            Updated character sheet.
         """
 
     @abstractmethod
-    def remove_condition(self, target: dict, condition: str) -> dict:
+    def remove_condition(
+        self,
+        target: CharacterSheet,
+        condition: Condition | str,
+    ) -> CharacterSheet:
         """Remove a condition from a character.
 
         Args:
-            target: Character sheet dict.
-            condition: Condition name to remove.
+            target: Character sheet.
+            condition: Condition enum or name to remove.
 
         Returns:
-            Updated character sheet dict.
+            Updated character sheet.
         """
 
     @abstractmethod
     def get_available_actions(
-        self, char: dict, combat_state: dict
+        self,
+        char: CharacterSheet,
+        combat_state: CombatStateData,
     ) -> list[Action]:
         """Return the list of actions available to a character this turn.
 
         Args:
-            char: Character sheet dict.
-            combat_state: Current combat state dict.
+            char: Character sheet.
+            combat_state: Current combat state.
 
         Returns:
             List of Action objects the character may legally take.
@@ -165,35 +190,37 @@ class RuleEngine(ABC):
 
     @abstractmethod
     def resolve_action(
-        self, action: Action, combat_state: dict
+        self,
+        action: Action,
+        combat_state: CombatStateData,
     ) -> ActionResult:
         """Resolve an action and return the outcome.
 
         Args:
             action: The Action to resolve.
-            combat_state: Current combat state dict (may be mutated).
+            combat_state: Current combat state (may be mutated).
 
         Returns:
             ActionResult describing what happened.
         """
 
     @abstractmethod
-    def roll_initiative(self, char: dict) -> int:
+    def roll_initiative(self, char: CharacterSheet) -> int:
         """Roll initiative for a character.
 
         Args:
-            char: Character sheet dict.
+            char: Character sheet.
 
         Returns:
             Integer initiative total.
         """
 
     @abstractmethod
-    def validate_character(self, sheet: dict) -> ValidationResult:
+    def validate_character(self, sheet: CharacterSheet | dict) -> ValidationResult:
         """Validate a character sheet for completeness and legality.
 
         Args:
-            sheet: Character sheet dict to validate.
+            sheet: Character sheet or raw dict to validate.
 
         Returns:
             ValidationResult with valid flag and any error messages.
