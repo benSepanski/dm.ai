@@ -13,11 +13,11 @@ export default function NewSessionForm() {
     setLoading(true);
     setError(null);
     try {
-      const world = (await api.createWorld({ name: worldName })) as { id: string };
-      const session = (await api.createSession({
+      const world = await api.createWorld({ name: worldName });
+      const session = await api.createSession({
         world_id: world.id,
         name: sessionName,
-      })) as { id: string };
+      });
       setSession(session.id, world.id);
     } catch (err) {
       console.error("Failed to start session:", err);
@@ -26,6 +26,8 @@ export default function NewSessionForm() {
       setLoading(false);
     }
   };
+
+  const isDisabled = loading || !worldName.trim() || !sessionName.trim();
 
   return (
     <div
@@ -117,22 +119,16 @@ export default function NewSessionForm() {
 
         <button
           onClick={handleStart}
-          disabled={loading || !worldName.trim() || !sessionName.trim()}
+          disabled={isDisabled}
           style={{
             width: "100%",
             padding: "10px 0",
-            background:
-              loading || !worldName.trim() || !sessionName.trim()
-                ? "#444"
-                : "#7c6af7",
+            background: isDisabled ? "#444" : "#7c6af7",
             color: "#fff",
             border: "none",
             borderRadius: 4,
             fontSize: 15,
-            cursor:
-              loading || !worldName.trim() || !sessionName.trim()
-                ? "not-allowed"
-                : "pointer",
+            cursor: isDisabled ? "not-allowed" : "pointer",
             fontWeight: "bold",
           }}
         >

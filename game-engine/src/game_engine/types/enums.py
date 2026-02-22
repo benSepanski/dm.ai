@@ -256,6 +256,13 @@ class CreatureType(str, Enum):
     UNDEAD = "undead"
 
 
+class AdvantageType(str, Enum):
+    """Whether a roll has advantage or disadvantage."""
+
+    ADVANTAGE = "advantage"
+    DISADVANTAGE = "disadvantage"
+
+
 class ArmorCategory(str, Enum):
     """Armor weight categories in D&D 5.5e."""
 

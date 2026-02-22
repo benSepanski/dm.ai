@@ -1,66 +1,82 @@
 const BASE_URL = "/api";
 
+// ---- Request/Response types ----
+
+export interface CreateWorldRequest {
+  name: string;
+  setting_description?: string;
+}
+
+export interface CreateSessionRequest {
+  world_id: string;
+  name: string;
+}
+
+export interface ChatResponse {
+  response: string;
+  proposal?: Record<string, unknown> | null;
+}
+
+export interface CombatStateResponse {
+  id: string;
+  round_number: number;
+  current_turn_index: number;
+  combatants: Array<{
+    char_id: string;
+    name: string;
+    hp_current: number;
+    hp_max: number;
+    ac: number;
+    initiative: number;
+    is_current_turn: boolean;
+  }> | null;
+}
+
+export interface CombatActionRequest {
+  action_type: string;
+  actor_id?: string;
+  target_id?: string;
+}
+
+// ---- HTTP helper ----
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const { headers: extraHeaders, ...rest } = options ?? {};
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
+    ...rest,
+    headers: { "Content-Type": "application/json", ...(extraHeaders as Record<string, string>) },
   });
   if (!res.ok) {
-    throw new Error(`API ${res.status}: ${res.statusText}`);
+    const body = await res.text().catch(() => "");
+    throw new Error(body || `API ${res.status}: ${res.statusText}`);
   }
   return res.json() as Promise<T>;
 }
 
+// ---- API client ----
+
 export const api = {
   // Worlds
-  createWorld: (data: Record<string, unknown>) =>
-    request("/worlds/", { method: "POST", body: JSON.stringify(data) }),
-  getWorld: (id: string) => request(`/worlds/${id}`),
+  createWorld: (data: CreateWorldRequest) =>
+    request<{ id: string }>("/worlds/", { method: "POST", body: JSON.stringify(data) }),
 
   // Sessions
-  createSession: (data: Record<string, unknown>) =>
-    request("/sessions/", { method: "POST", body: JSON.stringify(data) }),
-  getSession: (id: string) => request(`/sessions/${id}`),
+  createSession: (data: CreateSessionRequest) =>
+    request<{ id: string }>("/sessions/", { method: "POST", body: JSON.stringify(data) }),
   chat: (sessionId: string, message: string) =>
-    request<{ response: string; proposal?: Record<string, unknown> | null }>(
+    request<ChatResponse>(
       `/sessions/${sessionId}/chat`,
       { method: "POST", body: JSON.stringify({ message }) },
     ),
-  endSession: (id: string) =>
-    request(`/sessions/${id}/end`, { method: "PUT" }),
-
-  // Characters
-  createCharacter: (data: Record<string, unknown>) =>
-    request("/characters/", { method: "POST", body: JSON.stringify(data) }),
-  getCharacter: (id: string) => request(`/characters/${id}`),
-
-  // Locations
-  createLocation: (data: Record<string, unknown>) =>
-    request("/locations/", { method: "POST", body: JSON.stringify(data) }),
-  getLocation: (id: string) => request(`/locations/${id}`),
 
   // Combat
   startCombat: (sessionId: string) =>
-    request(`/sessions/${sessionId}/combat`, { method: "POST" }),
-  getCombat: (sessionId: string) =>
-    request(`/sessions/${sessionId}/combat`),
-  submitAction: (sessionId: string, action: Record<string, unknown>) =>
-    request(`/sessions/${sessionId}/combat/action`, {
+    request<CombatStateResponse>(`/sessions/${sessionId}/combat`, { method: "POST" }),
+  submitAction: (sessionId: string, action: CombatActionRequest) =>
+    request<CombatStateResponse>(`/sessions/${sessionId}/combat/action`, {
       method: "POST",
       body: JSON.stringify(action),
     }),
   endCombat: (sessionId: string) =>
-    request(`/sessions/${sessionId}/combat/end`, { method: "PUT" }),
-
-  // Proposals
-  acceptProposal: (id: string, data?: Record<string, unknown>) =>
-    request(`/ai/proposals/${id}/accept`, {
-      method: "POST",
-      body: JSON.stringify(data ?? {}),
-    }),
-  rejectProposal: (id: string, data?: Record<string, unknown>) =>
-    request(`/ai/proposals/${id}/reject`, {
-      method: "POST",
-      body: JSON.stringify(data ?? {}),
-    }),
+    request<CombatStateResponse>(`/sessions/${sessionId}/combat/end`, { method: "PUT" }),
 };

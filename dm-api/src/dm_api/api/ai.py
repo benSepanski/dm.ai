@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from game_engine.types import ProposalStatus
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,10 +47,10 @@ async def accept_proposal(
     proposal = result.scalar_one_or_none()
     if proposal is None:
         raise HTTPException(status_code=404, detail="Proposal not found")
-    if proposal.status != "pending":
+    if proposal.status != ProposalStatus.PENDING:
         raise HTTPException(status_code=409, detail="Proposal is not pending")
 
-    proposal.status = "accepted"
+    proposal.status = ProposalStatus.ACCEPTED
     if payload.dm_notes:
         proposal.dm_notes = payload.dm_notes
     if payload.modifications:
@@ -71,10 +72,10 @@ async def reject_proposal(
     proposal = result.scalar_one_or_none()
     if proposal is None:
         raise HTTPException(status_code=404, detail="Proposal not found")
-    if proposal.status != "pending":
+    if proposal.status != ProposalStatus.PENDING:
         raise HTTPException(status_code=409, detail="Proposal is not pending")
 
-    proposal.status = "rejected"
+    proposal.status = ProposalStatus.REJECTED
     if payload.dm_notes:
         proposal.dm_notes = payload.dm_notes
 

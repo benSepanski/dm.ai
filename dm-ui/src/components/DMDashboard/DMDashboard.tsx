@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { useGameStore } from "../../store/gameStore";
 import CharacterCard from "../CharacterCard/CharacterCard";
@@ -26,8 +26,13 @@ export default function DMDashboard() {
   const [showMap, setShowMap] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll when messages change
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
+
   const sendMessage = useCallback(async () => {
-    if (!sessionId || !input.trim()) return;
+    if (!sessionId || !input.trim() || isLoading) return;
     const text = input.trim();
     setInput("");
     setLoading(true);
@@ -56,9 +61,8 @@ export default function DMDashboard() {
       });
     } finally {
       setLoading(false);
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [sessionId, input, addMessage, setLoading]);
+  }, [sessionId, input, isLoading, addMessage, setLoading]);
 
   if (!sessionId) {
     return (
@@ -203,9 +207,7 @@ export default function DMDashboard() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder={
-              sessionId ? "Describe what happens…" : "Start a session first"
-            }
+            placeholder="Describe what happens…"
             disabled={!sessionId || isLoading}
           />
           <button

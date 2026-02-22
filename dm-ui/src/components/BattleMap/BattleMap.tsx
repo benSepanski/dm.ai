@@ -51,7 +51,7 @@ function TokenShape({
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     const gx = Math.max(0, Math.min(COLS - 1, Math.round(e.target.x() / CELL)));
     const gy = Math.max(0, Math.min(ROWS - 1, Math.round(e.target.y() / CELL)));
-    e.target.setAttrs({ x: gx * CELL, y: gy * CELL });
+    e.target.setAttrs({ x: gx * CELL + CELL / 2, y: gy * CELL + CELL / 2 });
     onMove(token.id, gx, gy);
   };
 

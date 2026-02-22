@@ -58,12 +58,10 @@ interface GameState {
 
   setSession: (sessionId: string, worldId: string) => void;
   addMessage: (msg: ChatMessage) => void;
-  setMessages: (msgs: ChatMessage[]) => void;
   setLoading: (loading: boolean) => void;
   setCombat: (combat: ActiveCombat | null) => void;
   setLocation: (location: LocationData | null) => void;
   setCharacters: (characters: CharacterData[]) => void;
-  reset: () => void;
 }
 
 const initialState = {
@@ -80,10 +78,8 @@ export const useGameStore = create<GameState>((set) => ({
   ...initialState,
   setSession: (sessionId, worldId) => set({ sessionId, worldId }),
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
-  setMessages: (msgs) => set({ messages: msgs }),
   setLoading: (loading) => set({ isLoading: loading }),
   setCombat: (combat) => set({ combat }),
   setLocation: (location) => set({ currentLocation: location }),
   setCharacters: (characters) => set({ characters }),
-  reset: () => set(initialState),
 }));

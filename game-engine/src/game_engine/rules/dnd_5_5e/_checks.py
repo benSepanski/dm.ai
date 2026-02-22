@@ -70,17 +70,16 @@ def _calc_prof_bonus(level: int) -> int:
 
 
 def _roll_initiative_impl(char: CharacterSheet) -> int:
-    """Roll initiative: d20 + Dexterity modifier.
+    """Roll initiative: raw d20 roll (DEX modifier added by the initiative tracker).
 
     Args:
         char: Character sheet.
 
     Returns:
-        Integer initiative total.
+        The raw d20 roll (not including DEX modifier).
     """
-    dex_mod = char.ability_scores.modifier(Ability.DEXTERITY)
     raw, _ = roll_dice(1, 20)
-    return raw + dex_mod
+    return raw
 
 
 def _roll_check_impl(
@@ -126,9 +125,11 @@ def _roll_check_impl(
     prof_bonus = _calc_prof_bonus(char.level)
 
     # Proficiency check: match against skill name or ability name
-    is_proficient = char.is_proficient(
-        Skill(skill_key) if skill_key in Skill._value2member_map_ else ability
-    )
+    try:
+        proficiency_key: Skill | Ability = Skill(skill_key)
+    except ValueError:
+        proficiency_key = ability
+    is_proficient = char.is_proficient(proficiency_key)
     total_mod = ability_mod + (prof_bonus if is_proficient else 0)
 
     # Roll d20

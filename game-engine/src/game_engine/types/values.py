@@ -19,10 +19,10 @@ class DiceNotation(str):
     """A validated dice notation string (e.g. '2d6+3', 'd20', '1d8-1').
 
     Inherits from ``str`` so it can be used anywhere a string is expected.
-    Validates format on construction.
+    Validates format on construction and caches parsed components.
     """
 
-    __slots__ = ()
+    __slots__ = ("_num_dice", "_sides", "_modifier")
 
     def __new__(cls, value: str) -> DiceNotation:
         value = str(value).strip()
@@ -36,27 +36,25 @@ class DiceNotation(str):
         if sides < 1:
             raise ValueError(f"Dice must have at least 1 side, got {sides}.")
         count = int(match.group("count")) if match.group("count") else 1
-        if count < 0:
-            raise ValueError(f"Dice count cannot be negative, got {count}.")
-        return str.__new__(cls, value)
+        instance = str.__new__(cls, value)
+        # Cache parsed components to avoid re-parsing on every property access
+        object.__setattr__(instance, "_num_dice", count)
+        object.__setattr__(instance, "_sides", sides)
+        mod = int(match.group("mod")) if match.group("mod") else 0
+        object.__setattr__(instance, "_modifier", mod)
+        return instance
 
     @property
     def num_dice(self) -> int:
-        match = _NOTATION_RE.match(self)
-        assert match is not None
-        return int(match.group("count")) if match.group("count") else 1
+        return int(self._num_dice)  # type: ignore[attr-defined]
 
     @property
     def sides(self) -> int:
-        match = _NOTATION_RE.match(self)
-        assert match is not None
-        return int(match.group("sides"))
+        return int(self._sides)  # type: ignore[attr-defined]
 
     @property
     def modifier(self) -> int:
-        match = _NOTATION_RE.match(self)
-        assert match is not None
-        return int(match.group("mod")) if match.group("mod") else 0
+        return int(self._modifier)  # type: ignore[attr-defined]
 
     def parsed(self) -> tuple[int, int, int]:
         """Return (count, sides, modifier) tuple."""

@@ -53,10 +53,3 @@ class WorldRead(BaseModel):
     lore_summary: str | None
     created_at: datetime
     updated_at: datetime
-
-
-class WorldUpdate(BaseModel):
-    name: str | None = None
-    setting_description: str | None = None
-    themes: list[dict[str, Any]] | None = None
-    lore_summary: str | None = None

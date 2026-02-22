@@ -84,18 +84,15 @@ async def submit_combat_action(
     if combat is None:
         raise HTTPException(status_code=404, detail="No active combat for this session")
 
-    # Append action to combat log
-    log = combat.combat_log or []
-    log.append(
-        {
-            "round": combat.round_number,
-            "turn": combat.current_turn_index,
-            "actor_id": payload.actor_id,
-            "action_type": payload.action_type,
-            "target_id": payload.target_id,
-        }
-    )
-    combat.combat_log = log
+    # Append action to combat log (always create new list for SQLAlchemy change detection)
+    new_entry = {
+        "round": combat.round_number,
+        "turn": combat.current_turn_index,
+        "actor_id": payload.actor_id,
+        "action_type": payload.action_type,
+        "target_id": payload.target_id,
+    }
+    combat.combat_log = [*(combat.combat_log or []), new_entry]
 
     await db.commit()
     await db.refresh(combat)

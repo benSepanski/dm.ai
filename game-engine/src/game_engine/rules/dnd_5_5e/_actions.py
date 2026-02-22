@@ -32,9 +32,6 @@ _ALL_BASIC_ACTIONS: list[ActionType] = [
     ActionType.USE_OBJECT,
 ]
 
-#: Actions that require the character to be able to act.
-_REQUIRES_ABILITY_TO_ACT: set[ActionType] = set(_ALL_BASIC_ACTIONS)
-
 _DEFAULT_ATTACK = AttackDetails()
 
 
@@ -53,20 +50,13 @@ def _get_available_actions_impl(
     Returns:
         List of :class:`~game_engine.interface.Action` objects.
     """
-    available: list[Action] = []
+    if not char.can_act:
+        return []
 
-    for action_type in _ALL_BASIC_ACTIONS:
-        if action_type in _REQUIRES_ABILITY_TO_ACT and not char.can_act:
-            continue
-        available.append(
-            Action(
-                action_type=action_type,
-                actor_id=char.id,
-                target_id=None,
-            )
-        )
-
-    return available
+    return [
+        Action(action_type=action_type, actor_id=char.id, target_id=None)
+        for action_type in _ALL_BASIC_ACTIONS
+    ]
 
 
 def _resolve_action_impl(
@@ -118,7 +108,9 @@ def _resolve_attack(
     else:
         actor_name = actor.name
         actor_level = actor.level
-        actor_ability_mod = 0
+        actor_ability_mod = actor.ability_scores.modifier(
+            (action.details or _DEFAULT_ATTACK).attack_ability
+        )
 
     if target is None:
         return ActionResult(
@@ -136,12 +128,9 @@ def _resolve_attack(
     target_ac = target.ac
 
     details = action.details or _DEFAULT_ATTACK
-    attack_ability = details.attack_ability
     damage_dice = details.damage_dice
     damage_type = details.damage_type
 
-    if actor is not None:
-        actor_ability_mod = actor.ability_scores.modifier(attack_ability)
     prof_bonus = _calc_prof_bonus(actor_level)
 
     # Roll to hit
@@ -178,7 +167,7 @@ def _resolve_attack(
     if critical:
         dmg1, _ = dice_roll(damage_dice)
         dmg2, _ = dice_roll(damage_dice)
-        total_damage = dmg1 + dmg2 + damage_mod
+        total_damage = max(0, dmg1 + dmg2 + damage_mod)
     else:
         raw_dmg, _ = dice_roll(damage_dice)
         total_damage = max(0, raw_dmg + damage_mod)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from game_engine.types import Ability, CharacterSheet, Condition, DamageType
+from game_engine.types import Ability, AdvantageType, CharacterSheet, Condition, DamageType
 
 # ---------------------------------------------------------------------------
 # ConditionEffect dataclass
@@ -32,8 +32,8 @@ class ConditionEffect:
 
     description: str = ""
     can_act: bool = True
-    attack_modifier: str | None = None
-    attack_against_modifier: str | None = None
+    attack_modifier: AdvantageType | None = None
+    attack_against_modifier: AdvantageType | None = None
     auto_fail_saves: list[Ability] = field(default_factory=list)
     speed_zero: bool = False
     immunity_types: list[DamageType] = field(default_factory=list)
@@ -52,8 +52,8 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "advantage, and the creature's attack rolls have disadvantage."
         ),
         can_act=True,
-        attack_modifier="disadvantage",
-        attack_against_modifier="advantage",
+        attack_modifier=AdvantageType.DISADVANTAGE,
+        attack_against_modifier=AdvantageType.ADVANTAGE,
     ),
     Condition.CHARMED: ConditionEffect(
         description=(
@@ -84,7 +84,7 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "creature can't willingly move closer to the source of its fear."
         ),
         can_act=True,
-        attack_modifier="disadvantage",
+        attack_modifier=AdvantageType.DISADVANTAGE,
     ),
     Condition.GRAPPLED: ConditionEffect(
         description=(
@@ -107,8 +107,8 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "rolls against the creature have disadvantage."
         ),
         can_act=True,
-        attack_modifier="advantage",
-        attack_against_modifier="disadvantage",
+        attack_modifier=AdvantageType.ADVANTAGE,
+        attack_against_modifier=AdvantageType.DISADVANTAGE,
     ),
     Condition.PARALYZED: ConditionEffect(
         description=(
@@ -118,7 +118,7 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "creature is a critical hit if the attacker is within 5 feet."
         ),
         can_act=False,
-        attack_against_modifier="advantage",
+        attack_against_modifier=AdvantageType.ADVANTAGE,
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
         speed_zero=True,
     ),
@@ -133,7 +133,7 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "resistance to all damage."
         ),
         can_act=False,
-        attack_against_modifier="advantage",
+        attack_against_modifier=AdvantageType.ADVANTAGE,
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
         speed_zero=True,
         immunity_types=[DamageType.POISON, DamageType.PSYCHIC],
@@ -141,7 +141,7 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
     Condition.POISONED: ConditionEffect(
         description=("A poisoned creature has disadvantage on attack rolls and ability checks."),
         can_act=True,
-        attack_modifier="disadvantage",
+        attack_modifier=AdvantageType.DISADVANTAGE,
     ),
     Condition.PRONE: ConditionEffect(
         description=(
@@ -151,8 +151,8 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "disadvantage on attack rolls."
         ),
         can_act=True,
-        attack_modifier="disadvantage",
-        attack_against_modifier="advantage",  # within 5 ft; disadvantage beyond
+        attack_modifier=AdvantageType.DISADVANTAGE,
+        attack_against_modifier=AdvantageType.ADVANTAGE,  # within 5 ft; disadvantage beyond
     ),
     Condition.RESTRAINED: ConditionEffect(
         description=(
@@ -161,8 +161,8 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "on Dexterity saving throws."
         ),
         can_act=True,
-        attack_modifier="disadvantage",
-        attack_against_modifier="advantage",
+        attack_modifier=AdvantageType.DISADVANTAGE,
+        attack_against_modifier=AdvantageType.ADVANTAGE,
         speed_zero=True,
     ),
     Condition.STUNNED: ConditionEffect(
@@ -172,7 +172,7 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "throws. Attack rolls against it have advantage."
         ),
         can_act=False,
-        attack_against_modifier="advantage",
+        attack_against_modifier=AdvantageType.ADVANTAGE,
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
         speed_zero=True,
     ),
@@ -186,75 +186,11 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "5 feet of the creature."
         ),
         can_act=False,
-        attack_against_modifier="advantage",
+        attack_against_modifier=AdvantageType.ADVANTAGE,
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
         speed_zero=True,
     ),
 }
-
-#: Exhaustion levels 1-6 and their mechanical penalties.
-EXHAUSTION_LEVELS: list[dict] = [
-    {
-        "level": 1,
-        "penalty": "Disadvantage on ability checks.",
-        "ability_check_disadvantage": True,
-        "speed_halved": False,
-        "attack_save_disadvantage": False,
-        "max_hp_halved": False,
-        "speed_zero": False,
-        "death": False,
-    },
-    {
-        "level": 2,
-        "penalty": "Speed halved.",
-        "ability_check_disadvantage": True,
-        "speed_halved": True,
-        "attack_save_disadvantage": False,
-        "max_hp_halved": False,
-        "speed_zero": False,
-        "death": False,
-    },
-    {
-        "level": 3,
-        "penalty": "Disadvantage on attack rolls and saving throws.",
-        "ability_check_disadvantage": True,
-        "speed_halved": True,
-        "attack_save_disadvantage": True,
-        "max_hp_halved": False,
-        "speed_zero": False,
-        "death": False,
-    },
-    {
-        "level": 4,
-        "penalty": "Hit point maximum halved.",
-        "ability_check_disadvantage": True,
-        "speed_halved": True,
-        "attack_save_disadvantage": True,
-        "max_hp_halved": True,
-        "speed_zero": False,
-        "death": False,
-    },
-    {
-        "level": 5,
-        "penalty": "Speed reduced to 0.",
-        "ability_check_disadvantage": True,
-        "speed_halved": True,
-        "attack_save_disadvantage": True,
-        "max_hp_halved": True,
-        "speed_zero": True,
-        "death": False,
-    },
-    {
-        "level": 6,
-        "penalty": "Death.",
-        "ability_check_disadvantage": True,
-        "speed_halved": True,
-        "attack_save_disadvantage": True,
-        "max_hp_halved": True,
-        "speed_zero": True,
-        "death": True,
-    },
-]
 
 
 # ---------------------------------------------------------------------------
@@ -262,44 +198,14 @@ EXHAUSTION_LEVELS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 
-def is_immune_to_condition(char: CharacterSheet, condition: Condition | str) -> bool:
+def is_immune_to_condition(char: CharacterSheet, condition: Condition) -> bool:
     """Return True if *char* is immune to *condition*.
 
     Args:
         char: Character sheet.
-        condition: The condition enum or name (case-insensitive).
+        condition: The condition enum.
 
     Returns:
         True if the character is immune to the condition.
     """
-    if isinstance(condition, str):
-        try:
-            condition = Condition(condition.lower())
-        except ValueError:
-            return False
-
     return condition in char.condition_immunities
-
-
-def get_active_conditions(char: CharacterSheet) -> list[Condition]:
-    """Return the list of conditions currently affecting *char*.
-
-    Args:
-        char: Character sheet.
-
-    Returns:
-        List of active :class:`~game_engine.types.Condition` values.
-    """
-    return list(char.conditions)
-
-
-def condition_prevents_action(char: CharacterSheet) -> bool:
-    """Return True if any active condition prevents the character from acting.
-
-    Args:
-        char: Character sheet.
-
-    Returns:
-        True if the character cannot take actions.
-    """
-    return not char.can_act

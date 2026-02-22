@@ -128,23 +128,26 @@ class CharacterSheet:
         Tolerant of missing keys — uses sensible defaults for everything.
         """
 
+        def _safe_enum(enum_cls: type, value: str) -> bool:
+            try:
+                enum_cls(value)
+                return True
+            except ValueError:
+                return False
+
         def _conditions(key: str) -> list[Condition]:
             return [
-                Condition(c.lower())
-                for c in d.get(key, [])
-                if c.lower() in Condition._value2member_map_
+                Condition(c.lower()) for c in d.get(key, []) if _safe_enum(Condition, c.lower())
             ]
 
         def _damage_types(key: str) -> list[DamageType]:
             return [
-                DamageType(t.lower())
-                for t in d.get(key, [])
-                if t.lower() in DamageType._value2member_map_
+                DamageType(t.lower()) for t in d.get(key, []) if _safe_enum(DamageType, t.lower())
             ]
 
         profs = d.get("proficiencies", [])
-        skills = [Skill(p.lower()) for p in profs if p.lower() in Skill._value2member_map_]
-        abilities = [Ability(p.lower()) for p in profs if p.lower() in Ability._value2member_map_]
+        skills = [Skill(p.lower()) for p in profs if _safe_enum(Skill, p.lower())]
+        abilities = [Ability(p.lower()) for p in profs if _safe_enum(Ability, p.lower())]
 
         raw_class = d.get("class", "Fighter")
         try:

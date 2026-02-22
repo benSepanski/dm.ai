@@ -84,9 +84,10 @@ class DnD55eEngine(RuleEngine):
             char: Character sheet.
 
         Returns:
-            Integer initiative total.
+            Integer initiative total (raw roll + DEX modifier).
         """
-        return _roll_initiative_impl(char)
+        raw = _roll_initiative_impl(char)
+        return raw + char.ability_scores.modifier(Ability.DEXTERITY)
 
     # ------------------------------------------------------------------
     # Skill / ability checks

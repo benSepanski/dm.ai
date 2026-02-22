@@ -41,7 +41,7 @@ def _apply_damage_impl(
         immunities=target.damage_immunities,
         resistances=resistances,
         vulnerabilities=target.damage_vulnerabilities,
-        dt=damage_type,
+        damage_type=damage_type,
     )
 
     target.hp_current = max(0, target.hp_current - effective_damage)
@@ -53,13 +53,21 @@ def _compute_damage(
     immunities: list[DamageType],
     resistances: list[DamageType],
     vulnerabilities: list[DamageType],
-    dt: DamageType,
+    damage_type: DamageType,
 ) -> int:
-    """Compute effective damage after applying immunities/resistances/vulnerabilities."""
-    if dt in immunities:
+    """Compute effective damage after applying immunities/resistances/vulnerabilities.
+
+    Per D&D 5e rules, resistance and vulnerability cancel each other out.
+    Immunity always takes priority over both.
+    """
+    if damage_type in immunities:
         return 0
-    if dt in resistances:
+    has_resistance = damage_type in resistances
+    has_vulnerability = damage_type in vulnerabilities
+    if has_resistance and has_vulnerability:
+        return damage  # cancel each other out
+    if has_resistance:
         return damage // 2
-    if dt in vulnerabilities:
+    if has_vulnerability:
         return damage * 2
     return damage

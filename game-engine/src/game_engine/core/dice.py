@@ -9,20 +9,18 @@ Supports standard dice notation such as:
 """
 
 import random
-import re
+
+from game_engine.types.values import DiceNotation
 
 # ---------------------------------------------------------------------------
 # Parsing
 # ---------------------------------------------------------------------------
 
-_NOTATION_RE = re.compile(
-    r"^(?P<count>\d+)?d(?P<sides>\d+)(?P<mod>[+-]\d+)?$",
-    re.IGNORECASE,
-)
-
 
 def parse_notation(notation: str) -> tuple[int, int, int]:
     """Parse a dice notation string into its component parts.
+
+    Delegates to :class:`~game_engine.types.values.DiceNotation` for validation.
 
     Args:
         notation: A string like "2d6+3", "d20", "1d8-1".
@@ -41,24 +39,7 @@ def parse_notation(notation: str) -> tuple[int, int, int]:
         >>> parse_notation("3d6-1")
         (3, 6, -1)
     """
-    notation = notation.strip()
-    match = _NOTATION_RE.match(notation)
-    if not match:
-        raise ValueError(
-            f"Invalid dice notation {notation!r}. "
-            "Expected format: [N]dS[+/-M]  e.g. '2d6+3' or 'd20'."
-        )
-
-    count = int(match.group("count")) if match.group("count") else 1
-    sides = int(match.group("sides"))
-    modifier = int(match.group("mod")) if match.group("mod") else 0
-
-    if sides < 1:
-        raise ValueError(f"Dice must have at least 1 side, got {sides}.")
-    if count < 0:
-        raise ValueError(f"Dice count cannot be negative, got {count}.")
-
-    return count, sides, modifier
+    return DiceNotation(notation).parsed()
 
 
 # ---------------------------------------------------------------------------
@@ -172,92 +153,3 @@ def roll_with_disadvantage(sides: int) -> tuple[int, list[int]]:
     roll1 = random.randint(1, sides)
     roll2 = random.randint(1, sides)
     return min(roll1, roll2), [roll1, roll2]
-
-
-# ---------------------------------------------------------------------------
-# Convenience functions for common die sizes
-# ---------------------------------------------------------------------------
-
-
-def d4(modifier: int = 0) -> tuple[int, list[int]]:
-    """Roll a single d4.
-
-    Args:
-        modifier: Flat modifier to add to the roll.
-
-    Returns:
-        A tuple of (total, [roll]).
-    """
-    return roll_dice(1, 4, modifier)
-
-
-def d6(modifier: int = 0) -> tuple[int, list[int]]:
-    """Roll a single d6.
-
-    Args:
-        modifier: Flat modifier to add to the roll.
-
-    Returns:
-        A tuple of (total, [roll]).
-    """
-    return roll_dice(1, 6, modifier)
-
-
-def d8(modifier: int = 0) -> tuple[int, list[int]]:
-    """Roll a single d8.
-
-    Args:
-        modifier: Flat modifier to add to the roll.
-
-    Returns:
-        A tuple of (total, [roll]).
-    """
-    return roll_dice(1, 8, modifier)
-
-
-def d10(modifier: int = 0) -> tuple[int, list[int]]:
-    """Roll a single d10.
-
-    Args:
-        modifier: Flat modifier to add to the roll.
-
-    Returns:
-        A tuple of (total, [roll]).
-    """
-    return roll_dice(1, 10, modifier)
-
-
-def d12(modifier: int = 0) -> tuple[int, list[int]]:
-    """Roll a single d12.
-
-    Args:
-        modifier: Flat modifier to add to the roll.
-
-    Returns:
-        A tuple of (total, [roll]).
-    """
-    return roll_dice(1, 12, modifier)
-
-
-def d20(modifier: int = 0) -> tuple[int, list[int]]:
-    """Roll a single d20.
-
-    Args:
-        modifier: Flat modifier to add to the roll.
-
-    Returns:
-        A tuple of (total, [roll]).
-    """
-    return roll_dice(1, 20, modifier)
-
-
-def d100(modifier: int = 0) -> tuple[int, list[int]]:
-    """Roll a single d100 (percentile die).
-
-    Args:
-        modifier: Flat modifier to add to the roll.
-
-    Returns:
-        A tuple of (total, [roll]).
-    """
-    return roll_dice(1, 100, modifier)

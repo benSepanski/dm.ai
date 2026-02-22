@@ -1,6 +1,24 @@
 import { useCallback } from "react";
-import { api } from "../../api/client";
-import { useGameStore, type Combatant } from "../../store/gameStore";
+import { api, type CombatStateResponse } from "../../api/client";
+import { useGameStore, type ActiveCombat, type Combatant } from "../../store/gameStore";
+
+function mapCombatResponse(result: CombatStateResponse): ActiveCombat {
+  const combatants: Combatant[] = (result.combatants ?? []).map((c, i) => ({
+    char_id: c.char_id,
+    name: c.name,
+    hp_current: c.hp_current,
+    hp_max: c.hp_max,
+    ac: c.ac,
+    initiative: c.initiative,
+    is_current_turn: i === result.current_turn_index,
+  }));
+  return {
+    id: result.id,
+    round_number: result.round_number,
+    current_turn_index: result.current_turn_index,
+    combatants,
+  };
+}
 
 function CombatantRow({ combatant }: { combatant: Combatant }) {
   const pct =
@@ -65,15 +83,18 @@ function ActionButtons({
   sessionId: string;
   disabled: boolean;
 }) {
+  const setCombat = useGameStore((s) => s.setCombat);
+
   const handleAction = useCallback(
     async (action: string) => {
       try {
-        await api.submitAction(sessionId, { action_type: action });
+        const result = await api.submitAction(sessionId, { action_type: action });
+        setCombat(mapCombatResponse(result));
       } catch (err) {
         console.error(`Failed to submit action ${action}:`, err);
       }
     },
-    [sessionId]
+    [sessionId, setCombat]
   );
 
   return (
@@ -107,13 +128,8 @@ export default function CombatTracker() {
   const handleStart = useCallback(async () => {
     if (!sessionId) return;
     try {
-      const result = (await api.startCombat(sessionId)) as Record<string, unknown>;
-      setCombat({
-        id: result.id as string,
-        round_number: (result.round_number as number) ?? 1,
-        current_turn_index: (result.current_turn_index as number) ?? 0,
-        combatants: [],
-      });
+      const result = await api.startCombat(sessionId);
+      setCombat(mapCombatResponse(result));
     } catch (err) {
       console.error("Failed to start combat:", err);
     }
@@ -155,7 +171,7 @@ export default function CombatTracker() {
               cursor: "pointer",
             }}
           >
-            ⚔ Start Combat
+            Start Combat
           </button>
         )}
       </section>

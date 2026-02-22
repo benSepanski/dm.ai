@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from dm_api.ai.backends.base import AIBackend, AIMessage
 from dm_api.ai.prompts.system_prompt import build_system_prompt
 
@@ -42,7 +40,6 @@ class DMOrchestrator:
         session_id: str,
         world_id: str,
         history: list[dict[str, str]],
-        db: AsyncSession,
     ) -> dict[str, Any]:
         """Process a chat message and return the AI DM response.
 

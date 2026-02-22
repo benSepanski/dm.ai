@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import DateTime, ForeignKey, Integer, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,14 +12,12 @@ from dm_api.db.session import Base
 
 class CombatState(Base):
     __tablename__ = "combat_states"
-    __table_args__ = (UniqueConstraint("session_id", name="uq_combat_session"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("sessions.id", ondelete="CASCADE"),
         nullable=False,
-        unique=True,
     )
     location_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

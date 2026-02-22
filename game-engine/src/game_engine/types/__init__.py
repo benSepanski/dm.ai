@@ -13,6 +13,7 @@ regardless of which sub-module *X* lives in.
 from game_engine.types.enums import (
     Ability,
     ActionType,
+    AdvantageType,
     ArmorCategory,
     CharacterClass,
     CharacterType,
@@ -42,6 +43,7 @@ __all__ = [
     # enums
     "Ability",
     "ActionType",
+    "AdvantageType",
     "ArmorCategory",
     "CharacterClass",
     "CharacterType",
