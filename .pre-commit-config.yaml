@@ -14,6 +14,7 @@ repos:
         language: system
         pass_filenames: false
         files: ^game-engine/
+        stages: [commit]
 
       - id: dm-api-lint
         name: dm-api / lint
@@ -28,6 +29,7 @@ repos:
         language: system
         pass_filenames: false
         files: ^dm-api/
+        stages: [commit]
 
       - id: dm-ui-checks
         name: dm-ui / tsc + eslint
@@ -35,3 +37,13 @@ repos:
         language: system
         pass_filenames: false
         files: ^dm-ui/
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-json
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: detect-private-key

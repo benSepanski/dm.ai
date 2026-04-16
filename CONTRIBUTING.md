@@ -65,10 +65,8 @@ dm.ai/
 ├── docker-compose.yml           — postgres (pgvector), redis, api, ui
 ├── .env.example                 — copy to .env and fill in secrets
 ├── docs/
-│   ├── architecture.md          — AI agent design and data flow
-│   ├── api-reference.md         — all REST + WebSocket endpoints
-│   ├── data-models.md           — full schema definitions
-│   └── ai-agents.md             — prompt engineering notes
+│   ├── architecture.md          — system design and data flow
+│   └── api.md                   — all REST + WebSocket endpoints
 ├── game-engine/                 — installable Python package (no FastAPI)
 │   ├── pyproject.toml
 │   ├── tests/
@@ -353,6 +351,5 @@ so you do not need a running Postgres instance to run `dm-api` tests.
 
 - **Bugs / feature requests:** Open a GitHub Issue
 - **System design:** See `docs/architecture.md`
-- **API endpoints:** See `docs/api-reference.md`
-- **Prompt engineering:** See `docs/ai-agents.md`
+- **API endpoints:** See `docs/api.md`
 - **AI agent guidance:** See [AGENTS.md](./AGENTS.md)
