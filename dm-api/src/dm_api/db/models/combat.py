@@ -10,6 +10,36 @@ from sqlalchemy.orm import Mapped, mapped_column
 from dm_api.db.session import Base
 
 
+class CombatStartRequest(BaseModel):
+    """Request body for starting a new combat encounter.
+
+    Combatants are provided as :meth:`CharacterSheet.to_dict` payloads.
+    The engine rolls initiative for each and sorts them automatically.
+    """
+
+    location_id: uuid.UUID | None = None
+    combatants: list[dict[str, Any]] = []
+
+
+class ActionResultSchema(BaseModel):
+    """Wire representation of a resolved :class:`game_engine.interface.ActionResult`."""
+
+    success: bool
+    damage: int
+    damage_type: str
+    conditions_applied: list[str]
+    flavor_text: str
+    log_entry: dict[str, Any]
+
+
+class CombatActionResponse(BaseModel):
+    """Response from submitting a combat action — includes the resolved result
+    and the updated combat state."""
+
+    combat: "CombatStateRead"
+    result: ActionResultSchema
+
+
 class CombatState(Base):
     __tablename__ = "combat_states"
 

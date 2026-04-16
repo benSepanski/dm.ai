@@ -67,6 +67,7 @@ class CharacterSheet:
     ability_scores: AbilityScoreSet = field(default_factory=AbilityScoreSet)
     hp_current: int = 10
     hp_max: int = 10
+    temp_hp: int = 0
     ac: int = 10
     speed: int = 30
     proficient_skills: list[Skill] = field(default_factory=list)
@@ -78,11 +79,28 @@ class CharacterSheet:
     damage_vulnerabilities: list[DamageType] = field(default_factory=list)
     condition_immunities: list[Condition] = field(default_factory=list)
     char_type: CharacterType = CharacterType.PC
+    death_save_successes: int = 0
+    death_save_failures: int = 0
 
     @property
     def is_alive(self) -> bool:
         """Return True if the character has more than 0 hit points."""
         return self.hp_current > 0
+
+    @property
+    def is_dying(self) -> bool:
+        """Return True if the character is at 0 HP and has not yet failed 3 death saves.
+
+        A dying character is unconscious and must make death saving throws each turn.
+        This includes characters who have 3 successes (stable) — they are still dying
+        until healed above 0 HP.
+        """
+        return self.hp_current == 0 and self.death_save_failures < 3
+
+    @property
+    def is_dead(self) -> bool:
+        """Return True if the character has accumulated 3 death save failures."""
+        return self.death_save_failures >= 3
 
     @property
     def can_act(self) -> bool:
@@ -107,6 +125,7 @@ class CharacterSheet:
             "ability_scores": self.ability_scores.to_dict(),
             "hp_current": self.hp_current,
             "hp_max": self.hp_max,
+            "temp_hp": self.temp_hp,
             "ac": self.ac,
             "speed": self.speed,
             "proficiencies": (
@@ -119,6 +138,8 @@ class CharacterSheet:
             "damage_vulnerabilities": [d.value for d in self.damage_vulnerabilities],
             "condition_immunities": [c.value for c in self.condition_immunities],
             "type": self.char_type.value,
+            "death_save_successes": self.death_save_successes,
+            "death_save_failures": self.death_save_failures,
         }
 
     @classmethod
@@ -169,6 +190,7 @@ class CharacterSheet:
             ability_scores=AbilityScoreSet.from_dict(d.get("ability_scores", {})),
             hp_current=int(d.get("hp_current", 10)),
             hp_max=int(d.get("hp_max", 10)),
+            temp_hp=int(d.get("temp_hp", 0)),
             ac=int(d.get("ac", 10)),
             speed=int(d.get("speed", 30)),
             proficient_skills=skills,
@@ -179,6 +201,8 @@ class CharacterSheet:
             damage_vulnerabilities=_damage_types("damage_vulnerabilities"),
             condition_immunities=_conditions("condition_immunities"),
             char_type=char_type,
+            death_save_successes=int(d.get("death_save_successes", 0)),
+            death_save_failures=int(d.get("death_save_failures", 0)),
         )
 
 

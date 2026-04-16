@@ -155,6 +155,7 @@ class ActionType(str, Enum):
     ATTACK = "Attack"
     CAST_SPELL = "CastSpell"
     DASH = "Dash"
+    DEATH_SAVE = "DeathSave"
     DISENGAGE = "Disengage"
     DODGE = "Dodge"
     HELP = "Help"
