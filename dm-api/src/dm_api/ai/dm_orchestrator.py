@@ -8,10 +8,26 @@ separate model roles for different task types.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import Any
+
+from game_engine.types.enums import ChatRole
 
 from dm_api.ai.backends.base import AIBackend, AIMessage
 from dm_api.ai.prompts.system_prompt import build_system_prompt
+
+
+@dataclass
+class ChatHistoryEntry:
+    """A single entry in the chat history."""
+
+    role: ChatRole
+    content: str
+
+
+def _chat_role_to_ai_role(role: ChatRole) -> str:
+    """Map a ChatRole to an AI message role."""
+    return "user" if role == ChatRole.DM else "assistant"
 
 
 class DMOrchestrator:
@@ -39,7 +55,7 @@ class DMOrchestrator:
         message: str,
         session_id: str,
         world_id: str,
-        history: list[dict[str, str]],
+        history: list[ChatHistoryEntry],
     ) -> dict[str, Any]:
         """Process a chat message and return the AI DM response.
 
@@ -77,11 +93,11 @@ class DMOrchestrator:
         )
         return response.content
 
-    def _build_messages(self, history: list[dict[str, str]], latest: str) -> list[AIMessage]:
+    def _build_messages(self, history: list[ChatHistoryEntry], latest: str) -> list[AIMessage]:
         messages = []
         for entry in history:
-            role = "user" if entry["role"] == "dm" else "assistant"
-            messages.append(AIMessage(role=role, content=entry["content"]))
+            role = _chat_role_to_ai_role(entry.role)
+            messages.append(AIMessage(role=role, content=entry.content))
         if not messages or messages[-1].role != "user":
             messages.append(AIMessage(role="user", content=latest))
         return messages
