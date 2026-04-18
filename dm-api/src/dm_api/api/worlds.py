@@ -64,5 +64,5 @@ async def delete_world(
     world = result.scalar_one_or_none()
     if world is None:
         raise HTTPException(status_code=404, detail="World not found")
-    await db.delete(world)
+    db.delete(world)
     await db.commit()

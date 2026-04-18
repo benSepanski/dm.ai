@@ -68,5 +68,5 @@ async def delete_location(
     location = result.scalar_one_or_none()
     if location is None:
         raise HTTPException(status_code=404, detail="Location not found")
-    await db.delete(location)
+    db.delete(location)
     await db.commit()
