@@ -293,16 +293,66 @@ accepted.
 
 ---
 
-## Context Management
+## Context Management — ContextCondenser
 
-Long sessions accumulate chat history that can exhaust the model's context window.
+Long sessions accumulate chat history that can exhaust the model's context
+window. The `ContextCondenser` (`dm_api.ai.condenser`) is a narrow
+harness-engineered sub-agent (per
+<https://openai.com/index/harness-engineering/>) that compresses history
+before the orchestrator call.
 
-`settings.context_token_limit` (default: 180,000 — 80% of the 200k window)
-triggers automatic summarization:
+### Flow
 
-1. Token counts are stored on each `ChatMessage` row (`token_count` column)
-2. When the running total exceeds the limit, `DMOrchestrator.summarize()` condenses
-   older messages using the fast model (Haiku)
-3. The summary replaces the compressed messages in the context window
-4. `settings.context_preserve_last_n` (default: 5) messages are always kept
-   verbatim to preserve immediate conversational continuity
+```
+sessions.session_chat
+   │
+   ▼
+fetch ChatMessage rows → wrap each in HistoryMessage(
+                                 anchor=MessageAnchor(id, ts, role),
+                                 content, token_count)
+   │
+   ▼
+DMOrchestrator.handle_message(history=[HistoryMessage, ...])
+   │
+   ├── ContextCondenser.condense(...)   — Haiku, silent no-op if under budget
+   │     ├─ design   — sum tokens, fast-path if <= limit
+   │     ├─ extract  — split tail (preserved) + head (to-condense)
+   │     ├─ validate — parse sub-agent JSON into _ParsedCondensation
+   │     └─ assemble — CondensedContext(synopsis, key_facts, open_threads,
+   │                                     condensed_span, preserved)
+   │
+   ├── build AIMessage list (condensed sections + preserved tail)
+   ├── backend.complete(model=orchestrator_model)  — Sonnet
+   └── _extract_proposal() — validated [PROPOSAL]...[/PROPOSAL] JSON
+```
+
+### Design properties
+
+| Property | Implementation |
+|----------|----------------|
+| Typed boundaries | `HistoryMessage`, `CondensedContext`, `MessageAnchor`, `DMResponse` — no `dict[str, Any]` at the API |
+| Citation anchors | `msg:<uuid>@<iso-timestamp>` (filepath:line analog), rendered into the sub-agent transcript and preserved in synopsis |
+| Silent on success | Returns a pass-through `CondensedContext` with no AI call when `sum(tokens) <= limit` |
+| Safe degradation | Malformed sub-agent JSON falls back to synopsis-only instead of raising |
+| Fast model | Uses `generation_model` (Haiku); orchestrator keeps Sonnet for narrative |
+| Depth-first | `design → extract → validate → assemble` inside `condense()` |
+
+### Settings (`dm_api.config.Settings`)
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `context_token_limit` | `180_000` | Trigger threshold (≈ 80% of the 200k window) |
+| `context_preserve_last_n` | `5` | Tail messages kept verbatim after condensing |
+
+### Injected context sections
+
+When the condenser fires, the orchestrator receives a lead `user` message
+containing any non-empty of these labelled sections:
+
+- `[CONDENSED SYNOPSIS]` — narrative summary of the condensed range
+- `[ESTABLISHED FACTS]` — world / character / rules facts to persist
+- `[OPEN THREADS]` — unresolved hooks and pending player choices
+- `[SPAN] msg:<id>@<ts> → msg:<id>@<ts>` — bounds of the condensed range
+
+`system_prompt.py` instructs the DM model to treat these as canonical and
+to cite anchors when referring to prior events.

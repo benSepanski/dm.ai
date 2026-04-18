@@ -8,7 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dm_api.ai.backends.base import AIBackend
-from dm_api.ai.dm_orchestrator import ChatHistoryEntry, DMOrchestrator
+from dm_api.ai.condenser import HistoryMessage, MessageAnchor
+from dm_api.ai.dm_orchestrator import DMOrchestrator
 from dm_api.config import settings
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
 from dm_api.db.models.proposal import Proposal, ProposalRead
@@ -107,21 +108,35 @@ async def session_chat(
     db.add(dm_message)
     await db.flush()
 
-    # Fetch recent chat history for context
+    # Fetch chat history as typed HistoryMessage anchors (harness-engineering:
+    # every message carries a citation anchor so the condenser output can be
+    # traced back to source rows).
     history_result = await db.execute(
         select(ChatMessage)
         .where(ChatMessage.session_id == session_id)
         .order_by(ChatMessage.timestamp.asc())
     )
     history = [
-        ChatHistoryEntry(role=m.role, content=m.content) for m in history_result.scalars().all()
+        HistoryMessage(
+            anchor=MessageAnchor(
+                message_id=m.id,
+                timestamp=m.timestamp,
+                role=m.role,
+            ),
+            content=m.content,
+            token_count=m.token_count,
+        )
+        for m in history_result.scalars().all()
     ]
 
-    # Call DM Orchestrator
+    # Call DM Orchestrator — it internally condenses if the running total
+    # exceeds `context_token_limit` and preserves the last N messages verbatim.
     orchestrator = DMOrchestrator(
         backend=_get_backend(),
         orchestrator_model=settings.orchestrator_model,
         generation_model=settings.generation_model,
+        context_token_limit=settings.context_token_limit,
+        context_preserve_last_n=settings.context_preserve_last_n,
     )
     result = await orchestrator.handle_message(
         message=payload.message,
@@ -130,8 +145,8 @@ async def session_chat(
         history=history,
     )
 
-    ai_response_text: str = result["response"]
-    proposal_data: dict | None = result.get("proposal")
+    ai_response_text = result.response
+    proposal_data = result.proposal
 
     # Save AI response
     ai_message = ChatMessage(
