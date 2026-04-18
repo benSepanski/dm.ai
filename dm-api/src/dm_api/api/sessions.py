@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dm_api.ai.backends.base import AIBackend
-from dm_api.ai.dm_orchestrator import DMOrchestrator
+from dm_api.ai.dm_orchestrator import ChatHistoryEntry, DMOrchestrator
 from dm_api.config import settings
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
 from dm_api.db.models.proposal import Proposal, ProposalRead
@@ -113,7 +113,9 @@ async def session_chat(
         .where(ChatMessage.session_id == session_id)
         .order_by(ChatMessage.timestamp.asc())
     )
-    history = [{"role": m.role, "content": m.content} for m in history_result.scalars().all()]
+    history = [
+        ChatHistoryEntry(role=m.role, content=m.content) for m in history_result.scalars().all()
+    ]
 
     # Call DM Orchestrator
     orchestrator = DMOrchestrator(
