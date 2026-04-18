@@ -5,6 +5,47 @@ guidelines see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
+## Harness-Engineering Playbook
+
+We operate this repo the way OpenAI describes in
+<https://openai.com/index/harness-engineering/>. Every AI-related change
+should reinforce the harness, not work around it.
+
+### Golden principles (mechanically enforced)
+
+| # | Rule | How it's enforced |
+|---|------|-------------------|
+| 1 | Repo is the single source of truth | AGENTS.md / CLAUDE.md / structural tests |
+| 2 | Layered architecture: `Types → Config → Repo → Service → Runtime → UI` | Module boundaries + code review |
+| 3 | No `dict[str, Any]` across module boundaries | dataclasses + mypy |
+| 4 | Enum over raw string for domain fields | `game_engine.types.enums` + review |
+| 5 | Files < 400 LoC (test files < 600) | CI check + review |
+| 6 | AI output validated at the boundary | `_parse_*` helpers in `dm_api/ai/*` |
+| 7 | Fast model for narrow sub-tasks | `generation_model` setting (Haiku) |
+| 8 | Silent-on-success hooks | Only emit on non-trivial changes |
+
+### Context engineering
+
+- When a `[CONDENSED SYNOPSIS]`, `[ESTABLISHED FACTS]`, or `[OPEN THREADS]`
+  block is present, treat it as canonical. Cite `msg:<uuid>@<timestamp>`
+  anchors when referencing specific events.
+- The `ContextCondenser` owns all context-window arithmetic. Don't
+  compute token budgets in route handlers or the orchestrator — delegate.
+- The chat history fetch in `sessions.py` wraps each row in a
+  `HistoryMessage(anchor=MessageAnchor(...), content=..., token_count=...)`.
+  Do not strip anchors when passing history downstream.
+
+### When an agent makes a mistake
+
+1. Fix the immediate symptom on the feature branch.
+2. Encode a rule so the mistake can't recur — update AGENTS.md /
+   CLAUDE.md, tighten a type, add a structural test, or add a targeted
+   entry to the reviewer checklist.
+3. If the mistake affects existing code elsewhere, open a separate
+   garbage-collection PR: narrow scope, mechanical fix, one-minute review.
+
+---
+
 ## Repository Layout
 
 ```
@@ -143,9 +184,33 @@ Model roles (override via env vars in `.env`):
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `ORCHESTRATOR_MODEL` | `claude-sonnet-4-6` | Main DM chat responses |
+| `ORCHESTRATOR_MODEL` | `claude-sonnet-4-6` | Main DM chat responses (narrative turn) |
 | `PLANNING_MODEL` | `claude-sonnet-4-6` | World-building, complex reasoning |
-| `GENERATION_MODEL` | `claude-haiku-4-5-20251001` | Quick summaries, flavor text |
+| `GENERATION_MODEL` | `claude-haiku-4-5-20251001` | Condensation, summaries, flavor text |
+
+### AI module map (`dm-api/src/dm_api/ai/`)
+
+```
+ai/
+├── backends/              — Repo/Gateway layer; AIBackend ABC + provider impls
+├── prompts/               — focused sub-agent prompts (one job per prompt)
+│   ├── system_prompt.py   — DM narrative system prompt
+│   └── condense_prompt.py — condensation sub-agent system prompt
+├── condenser.py           — ContextCondenser (typed HistoryMessage → CondensedContext)
+└── dm_orchestrator.py     — DMOrchestrator (Service layer; calls condenser + backend)
+```
+
+### Adding a new AI sub-agent
+
+1. Write the prompt in `prompts/<name>_prompt.py` with an explicit JSON
+   output schema in the prompt text. Keep it < ~60 lines, no role-play.
+2. Define typed input / output dataclasses in a dedicated module.
+3. Parse and validate the model JSON at the boundary (see
+   `condenser._parse_condensation` for the reference pattern).
+4. Wire it behind a typed method on `DMOrchestrator` so route handlers never
+   call the backend directly.
+5. Add tests covering: silent pass-through (if applicable), happy path,
+   malformed JSON degradation, and markdown-fence stripping.
 
 ---
 
