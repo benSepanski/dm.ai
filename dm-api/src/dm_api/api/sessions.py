@@ -209,7 +209,9 @@ async def end_session(
                 orchestrator_model=settings.orchestrator_model,
                 generation_model=settings.generation_model,
             )
-            summary_text = "\n".join(f"{m.role.upper()}: {m.content}" for m in messages[-20:])
+            summary_text = "\n".join(
+                f"{m.role.value.upper()}: {m.content}" for m in messages[-20:]
+            )
             session.session_summary = await orchestrator.summarize(summary_text)
         except Exception:
             # Non-fatal: summary generation failure should not block ending a session

@@ -26,8 +26,12 @@ async def session_websocket(websocket: WebSocket, session_id: uuid.UUID) -> None
     try:
         while True:
             data = await websocket.receive_text()
+            try:
+                message = json.loads(data)
+            except json.JSONDecodeError:
+                await websocket.send_text(json.dumps({"error": "invalid JSON"}))
+                continue
             # Broadcast received messages to all connected clients
-            message = json.loads(data)
             message["session_id"] = key
             for conn in _connections[key]:
                 if conn != websocket:

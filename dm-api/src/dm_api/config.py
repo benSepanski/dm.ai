@@ -14,8 +14,6 @@ class Settings(BaseSettings):
     ai_provider: str = "anthropic"
 
     # Model roles - override per-environment to tune cost/capability tradeoffs
-    # Used for complex reasoning: narrative generation, world-building, proposal creation
-    planning_model: str = "claude-sonnet-4-6"
     # Used for quick tasks: session summaries, NPC dialogue snippets, flavor text
     generation_model: str = "claude-haiku-4-5-20251001"
     # Main orchestrator model (used for session chat responses)
