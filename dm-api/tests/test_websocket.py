@@ -101,3 +101,20 @@ def test_websocket_session_isolation():
                     ws2.send_text(json.dumps({"type": "ping"}))
     finally:
         _cleanup_app(app, engine)
+
+
+def test_websocket_malformed_json():
+    """Sending malformed JSON returns an error frame without disconnecting the client."""
+    app, engine = _make_app()
+    try:
+        session_id = str(uuid.uuid4())
+        with TestClient(app) as client:
+            with client.websocket_connect(f"/api/ws/sessions/{session_id}") as ws:
+                ws.send_text("not valid json {{{{")
+                error_frame = ws.receive_text()
+                data = json.loads(error_frame)
+                assert data == {"error": "invalid JSON"}
+                # Connection is still alive — subsequent valid messages work
+                ws.send_text(json.dumps({"type": "ping"}))
+    finally:
+        _cleanup_app(app, engine)

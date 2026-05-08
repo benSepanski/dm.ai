@@ -59,7 +59,10 @@ dm.ai/
 ├── game-engine/                 — installable Python package (no FastAPI dependency)
 │   ├── pyproject.toml
 │   └── src/game_engine/
-│       ├── types.py             — ALL enums + typed dataclasses (start here)
+│       ├── types/               — ALL enums + typed dataclasses (start here)
+│       │   ├── enums.py         —   Ability, Skill, DamageType, Condition, ActionType, …
+│       │   ├── sheets.py        —   CharacterSheet, AbilityScoreSet, CombatStateData, …
+│       │   └── values.py        —   DiceNotation (validated value type)
 │       ├── interface.py         — RuleEngine ABC
 │       ├── core/                — dice, conditions, initiative, combat, character
 │       └── rules/dnd_5_5e/      — DnD55eEngine (concrete implementation)
@@ -117,7 +120,7 @@ if sheet.char_class == CharacterClass.FIGHTER:
 
 All game concepts with a fixed set of values MUST be `str, Enum` subclasses. This
 enables type-checking, IDE autocomplete, and prevents silent typo bugs. Enum types
-already defined in `game_engine/types.py`:
+already defined in `game_engine/types/enums.py`:
 `CharacterClass`, `Ability`, `Skill`, `DamageType`, `Condition`, `ActionType`,
 `CharacterType`, `LocationType`, `ProposalType`, `ProposalStatus`, `ChatRole`.
 
@@ -130,7 +133,7 @@ def apply_damage(target: dict, damage: int, damage_type: str) -> dict: ...
 def get_actions(char: dict, combat_state: dict) -> list: ...
 ```
 
-**Required:** Use typed dataclasses from `game_engine/types.py`:
+**Required:** Use typed dataclasses from `game_engine/types/sheets.py`:
 ```python
 # GOOD
 def apply_damage(target: CharacterSheet, damage: int, damage_type: DamageType) -> CharacterSheet: ...
@@ -185,7 +188,6 @@ Model roles (override via env vars in `.env`):
 | Env var | Default | Purpose |
 |---|---|---|
 | `ORCHESTRATOR_MODEL` | `claude-sonnet-4-6` | Main DM chat responses (narrative turn) |
-| `PLANNING_MODEL` | `claude-sonnet-4-6` | World-building, complex reasoning |
 | `GENERATION_MODEL` | `claude-haiku-4-5-20251001` | Condensation, summaries, flavor text |
 
 ### AI module map (`dm-api/src/dm_api/ai/`)
@@ -219,7 +221,7 @@ ai/
 1. Create `game_engine/rules/<system_name>/` with `__init__.py` and `engine.py`
 2. Subclass `game_engine.interface.RuleEngine` and implement every abstract method
 3. Register the engine in `game_engine/rules/__init__.py`
-4. Add system-specific enum values to `CharacterClass` in `game_engine/types.py`
+4. Add system-specific enum values to `CharacterClass` in `game_engine/types/enums.py`
    (or create a separate enum that extends it)
 5. Write tests in `game_engine/tests/test_<system_name>_engine.py`
 
