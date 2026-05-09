@@ -22,6 +22,7 @@ Implements OpenAI's harness-engineering principles
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -30,6 +31,8 @@ from game_engine.types import ChatRole
 
 from dm_api.ai.backends.base import AIBackend, AIMessage
 from dm_api.ai.prompts.condense_prompt import build_condense_prompt
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Typed boundaries — no dict[str, Any] crosses the condenser API.
@@ -163,6 +166,12 @@ class ContextCondenser:
         # Stage 1: design — totals and fast path.
         total_tokens = sum(m.token_count for m in messages)
         if total_tokens <= token_limit or len(messages) <= preserve_last_n:
+            logger.debug(
+                "condenser skipped  messages=%d tokens=%d limit=%d",
+                len(messages),
+                total_tokens,
+                token_limit,
+            )
             return CondensedContext(
                 synopsis="",
                 preserved=list(messages),
@@ -175,6 +184,13 @@ class ContextCondenser:
         preserved = messages[-preserve_last_n:]
         first_anchor = to_condense[0].anchor
         last_anchor = to_condense[-1].anchor
+        logger.info(
+            "condenser triggered  messages_total=%d messages_condensed=%d tokens=%d limit=%d",
+            len(messages),
+            len(to_condense),
+            total_tokens,
+            token_limit,
+        )
         transcript = _format_transcript(to_condense)
 
         # Stage 3: validate — call sub-agent and parse typed JSON.
@@ -192,6 +208,13 @@ class ContextCondenser:
             _estimate_tokens(parsed.synopsis)
             + sum(_estimate_tokens(fact) for fact in parsed.key_facts)
             + sum(_estimate_tokens(thread) for thread in parsed.open_threads)
+        )
+        logger.info(
+            "condenser done  tokens_in=%d tokens_out=%d facts=%d threads=%d",
+            total_tokens,
+            artifact_tokens + preserved_tokens,
+            len(parsed.key_facts),
+            len(parsed.open_threads),
         )
         return CondensedContext(
             synopsis=parsed.synopsis,
