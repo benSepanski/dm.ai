@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import logging
+import time
+
 import anthropic
 from anthropic.types import MessageParam, TextBlock
 
 from dm_api.ai.backends.base import AIBackend, AIMessage, AIResponse
+
+logger = logging.getLogger(__name__)
 
 
 class AnthropicBackend(AIBackend):
@@ -29,14 +34,23 @@ class AnthropicBackend(AIBackend):
             {"role": m.role, "content": m.content}  # type: ignore[typeddict-item]
             for m in messages
         ]
+        start = time.monotonic()
         response = await self._client.messages.create(
             model=model,
             max_tokens=max_tokens,
             system=system,
             messages=sdk_messages,
         )
+        duration_ms = int((time.monotonic() - start) * 1000)
         text_blocks = [b for b in response.content if isinstance(b, TextBlock)]
         content = text_blocks[0].text if text_blocks else ""
+        logger.debug(
+            "anthropic complete  model=%s tokens_in=%d tokens_out=%d duration_ms=%d",
+            response.model,
+            response.usage.input_tokens,
+            response.usage.output_tokens,
+            duration_ms,
+        )
         return AIResponse(
             content=content,
             model=response.model,

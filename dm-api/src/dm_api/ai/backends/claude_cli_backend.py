@@ -26,9 +26,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import shutil
+import time
 
 from dm_api.ai.backends.base import AIBackend, AIMessage, AIResponse
+
+logger = logging.getLogger(__name__)
 
 _HISTORY_SEPARATOR = "\n\n---\n\n"
 
@@ -65,18 +69,27 @@ class ClaudeCLIBackend(AIBackend):
             "json",
             prompt,
         ]
+        start = time.monotonic()
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await proc.communicate()
+        duration_ms = int((time.monotonic() - start) * 1000)
 
         if proc.returncode != 0:
             error = stderr.decode().strip()
             raise RuntimeError(f"claude CLI failed (exit {proc.returncode}): {error}")
 
-        return self._parse_output(stdout.decode(), model)
+        result = self._parse_output(stdout.decode(), model)
+        logger.debug(
+            "claude_cli complete  model=%s tokens_out_est=%d duration_ms=%d",
+            model,
+            result.output_tokens,
+            duration_ms,
+        )
+        return result
 
     def _build_prompt(self, messages: list[AIMessage], system: str) -> str:
         """Combine system prompt and history into a single string prompt."""

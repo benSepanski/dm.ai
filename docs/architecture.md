@@ -343,6 +343,7 @@ DMOrchestrator.handle_message(history=[HistoryMessage, ...])
 |---------|---------|---------|
 | `context_token_limit` | `180_000` | Trigger threshold (≈ 80% of the 200k window) |
 | `context_preserve_last_n` | `5` | Tail messages kept verbatim after condensing |
+| `log_level` | `"INFO"` | Python log level; set `LOG_LEVEL=DEBUG` for token-count detail |
 
 ### Injected context sections
 
@@ -356,3 +357,117 @@ containing any non-empty of these labelled sections:
 
 `system_prompt.py` instructs the DM model to treat these as canonical and
 to cite anchors when referring to prior events.
+
+---
+
+## Observability
+
+### Structured Logging
+
+`dm-api` uses Python's standard `logging` module configured in
+`dm_api/logging_config.py`. Call `configure_logging()` once at startup
+(the lifespan hook in `main.py` does this automatically).
+
+**Log format** — human-readable with key=value pairs for machine parsing:
+
+```
+2026-05-09 12:34:56,789 INFO     dm_api.main  request  method=POST path=/api/sessions/abc/chat status=200 duration_ms=1430
+2026-05-09 12:34:56,001 INFO     dm_api.ai.dm_orchestrator  orchestrator start  session_id=abc world_id=xyz history_len=12
+2026-05-09 12:34:56,002 INFO     dm_api.ai.condenser  condenser skipped  messages=12 tokens=45000 limit=180000
+2026-05-09 12:34:57,400 DEBUG    dm_api.ai.backends.anthropic_backend  anthropic complete  model=claude-sonnet-4-6 tokens_in=1480 tokens_out=312 duration_ms=1398
+2026-05-09 12:34:57,401 INFO     dm_api.ai.dm_orchestrator  orchestrator done  session_id=abc model=claude-sonnet-4-6 tokens_in=1480 tokens_out=312 was_condensed=False proposal=none duration_ms=1430
+```
+
+**Log levels by module:**
+
+| Logger | INFO events | DEBUG events |
+|--------|-------------|-------------|
+| `dm_api.main` | every HTTP request (method, path, status, ms) | — |
+| `dm_api.ai.dm_orchestrator` | start + done (session, model, tokens, ms) | — |
+| `dm_api.ai.condenser` | triggered (token counts, messages condensed, facts/threads) | skipped (no-op path) |
+| `dm_api.ai.backends.anthropic_backend` | — | model, tokens in/out, ms |
+| `dm_api.ai.backends.claude_cli_backend` | — | model, estimated tokens, ms |
+
+### Configuring the Log Level
+
+```bash
+# .env or shell export
+LOG_LEVEL=DEBUG   # show AI call details and token counts per request
+LOG_LEVEL=INFO    # (default) major events only
+LOG_LEVEL=WARNING # quiet mode for prod containers
+```
+
+Or pass it to uvicorn at startup:
+
+```bash
+LOG_LEVEL=DEBUG uvicorn dm_api.main:app --reload
+```
+
+### Running Locally
+
+```bash
+# Minimal setup — SQLite + no real AI calls (mock backend in tests)
+cd dm-api
+DATABASE_URL="sqlite+aiosqlite:///:memory:" \
+  AI_PROVIDER="anthropic" \
+  ANTHROPIC_API_KEY="test-key" \
+  LOG_LEVEL=DEBUG \
+  uvicorn dm_api.main:app --reload --port 8000
+```
+
+### Mocking the AI Backend in Tests
+
+The `AIBackend` ABC makes the AI layer fully mockable without patching subprocess
+or network calls. The test suite uses a `_ScriptedBackend` that replays a
+pre-set reply queue:
+
+```python
+from dm_api.ai.backends.base import AIBackend, AIMessage, AIResponse
+from dm_api.ai.dm_orchestrator import DMOrchestrator
+
+class _ScriptedBackend(AIBackend):
+    def __init__(self, replies: list[str]) -> None:
+        self._replies = list(replies)
+        self.calls: list[dict] = []
+
+    async def complete(self, *, messages, system, model, max_tokens=4096):
+        reply = self._replies.pop(0) if self._replies else ""
+        self.calls.append({"messages": messages, "model": model})
+        return AIResponse(content=reply, model=model)
+
+# Usage:
+backend = _ScriptedBackend(["The tavern is quiet tonight."])
+orchestrator = DMOrchestrator(backend=backend, orchestrator_model="main", generation_model="fast")
+result = await orchestrator.handle_message(message="...", session_id="s1", world_id="w1", history=[])
+```
+
+For HTTP-level tests, patch `dm_api.api.sessions.DMOrchestrator`:
+
+```python
+from unittest.mock import AsyncMock, MagicMock, patch
+
+mock_orch = MagicMock()
+mock_orch.handle_message = AsyncMock(return_value=DMResponse(
+    response="You find a chest.", proposal=None, was_condensed=False,
+    tokens_in=100, tokens_out=50,
+))
+with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+    r = await client.post(f"/api/sessions/{session_id}/chat", json={"message": "look around"})
+```
+
+See `dm-api/tests/test_dm_orchestrator.py` and `test_sessions.py` for
+complete examples.
+
+### Running the Full Test Suite
+
+```bash
+# game-engine (no env vars required)
+cd game-engine && pytest tests/ -v
+
+# dm-api (SQLite in-memory, no real AI key needed)
+cd dm-api && \
+  DATABASE_URL="sqlite+aiosqlite:///:memory:" \
+  AI_PROVIDER="anthropic" \
+  ANTHROPIC_API_KEY="test-key" \
+  pytest tests/ -v
+```

@@ -19,12 +19,16 @@ Applies OpenAI's harness-engineering principles
 from __future__ import annotations
 
 import json
+import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
 from dm_api.ai.backends.base import AIBackend, AIMessage
 from dm_api.ai.condenser import CondensedContext, ContextCondenser, HistoryMessage
 from dm_api.ai.prompts.system_prompt import build_system_prompt
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -90,6 +94,14 @@ class DMOrchestrator:
         Returns:
             A typed :class:`DMResponse`.
         """
+        logger.info(
+            "orchestrator start  session_id=%s world_id=%s history_len=%d",
+            session_id,
+            world_id,
+            len(history),
+        )
+        start = time.monotonic()
+
         # Stage 1: condense (silent no-op when under budget).
         condensed = await self._condenser.condense(
             messages=history,
@@ -110,6 +122,18 @@ class DMOrchestrator:
 
         # Stage 4: extract structured proposal (validated at the AI boundary).
         proposal = _extract_proposal(response.content)
+        duration_ms = int((time.monotonic() - start) * 1000)
+        logger.info(
+            "orchestrator done  session_id=%s model=%s tokens_in=%d tokens_out=%d "
+            "was_condensed=%s proposal=%s duration_ms=%d",
+            session_id,
+            response.model,
+            response.input_tokens,
+            response.output_tokens,
+            condensed.was_condensed,
+            proposal.get("type") if proposal else "none",
+            duration_ms,
+        )
         return DMResponse(
             response=response.content,
             proposal=proposal,

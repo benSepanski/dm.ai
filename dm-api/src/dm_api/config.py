@@ -23,5 +23,8 @@ class Settings(BaseSettings):
     context_token_limit: int = 180_000  # trigger summarization at 80% of 200k
     context_preserve_last_n: int = 5
 
+    # Logging — set LOG_LEVEL=DEBUG to see AI call details and token counts
+    log_level: str = "INFO"
+
 
 settings = Settings()
