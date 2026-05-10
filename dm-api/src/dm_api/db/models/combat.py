@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from game_engine.types import Ability, ActionType, DamageType
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import DateTime, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -55,10 +56,41 @@ class CombatStateRead(BaseModel):
     ended_at: datetime | None
 
 
+class StartCombatRequest(BaseModel):
+    """Request body for starting a new combat encounter.
+
+    character_ids: Characters to enroll; initiative is rolled immediately.
+    location_id: Optional location where combat takes place.
+    """
+
+    character_ids: list[uuid.UUID] = []
+    location_id: uuid.UUID | None = None
+
+
+class AttackDetailsRequest(BaseModel):
+    """Typed weapon/attack configuration for an Attack action.
+
+    Replaces the previous untyped ``extra: dict[str, Any]`` field so that
+    no ``dict[str, Any]`` crosses the API boundary (harness-engineering typed
+    boundaries principle).
+    """
+
+    weapon_name: str = "Unarmed Strike"
+    damage_dice: str = "1d4"
+    damage_type: DamageType = DamageType.BLUDGEONING
+    attack_ability: Ability = Ability.STRENGTH
+    is_ranged: bool = False
+
+
 class CombatActionRequest(BaseModel):
+    """Typed request body for submitting a combat action.
+
+    action_type must be a valid :class:`~game_engine.types.ActionType` value
+    (e.g. ``"Attack"``, ``"Dash"``). Validated at the API boundary so invalid
+    types are rejected with 422 before reaching the rule engine.
+    """
+
     actor_id: str
-    action_type: str  # e.g. "attack", "spell", "dash", "dodge", "help", "hide"
+    action_type: ActionType
     target_id: str | None = None
-    spell_name: str | None = None
-    item_name: str | None = None
-    extra: dict[str, Any] | None = None
+    attack_details: AttackDetailsRequest | None = None
