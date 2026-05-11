@@ -4,6 +4,7 @@ from game_engine.interface import (
     Action,
     ActionResult,
     CheckResult,
+    LogEntry,
     RuleEngine,
     ValidationResult,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "Action",
     "ActionResult",
     "CheckResult",
+    "LogEntry",
     "RuleEngine",
     "ValidationResult",
     # types — enums

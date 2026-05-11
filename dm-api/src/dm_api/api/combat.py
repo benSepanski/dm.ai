@@ -10,6 +10,7 @@ Harness-engineering notes:
   load → build-state → resolve → persist stages.
 """
 
+import dataclasses
 import uuid
 from datetime import datetime, timezone
 
@@ -227,12 +228,13 @@ async def submit_combat_action(
     if state.combatants:
         combat.combatants = [s.to_dict() for s in state.combatants]
 
+    engine_log = {k: v for k, v in dataclasses.asdict(outcome.log_entry).items() if v is not None}
     log_entry: dict = {
+        **engine_log,
         "round": combat.round_number,
         "turn": combat.current_turn_index,
         "actor_id": payload.actor_id,
         "action_type": payload.action_type.value,
-        **outcome.log_entry,
     }
     combat.combat_log = [*(combat.combat_log or []), log_entry]
 

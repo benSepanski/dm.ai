@@ -62,15 +62,23 @@ implement:
 | `validate_character` | `(sheet) → ValidationResult` | Legality check for a character sheet |
 | `calculate_proficiency_bonus` | `(level) → int` | Proficiency bonus by level |
 
-Result dataclasses (`CheckResult`, `ActionResult`, `ValidationResult`) and the
-`Action` dataclass are defined in `interface.py` alongside the ABC.
+Result dataclasses (`CheckResult`, `ActionResult`, `ValidationResult`, `LogEntry`)
+and the `Action` dataclass are defined in `interface.py` alongside the ABC.
+`ActionResult.log_entry` is typed as `LogEntry`; the API layer converts it to a
+plain dict with `dataclasses.asdict()` before storing as JSON.
 
 ### D&D 5.5e Engine
 
 `game_engine.rules.dnd_5_5e.DnD55eEngine` is the concrete implementation. It uses
-a **delegation pattern**: each abstract method delegates to a focused helper module
-in `game_engine/core/` (dice, conditions, initiative, combat, character). This
-keeps the engine file short and each helper independently testable.
+a **delegation pattern**: each abstract method delegates to a focused private helper
+module in `game_engine/rules/dnd_5_5e/` (`_checks`, `_damage`, `_conditions`,
+`_actions`, `_validation`). This keeps the engine file short and each helper
+independently testable.
+
+`game_engine/core/` contains rule-agnostic building blocks shared across rule
+systems: `dice` (rolling utilities), `initiative` (turn-order tracker),
+`conditions` (condition-effect data), and `combat` (`AbstractCombat` base class
+for implementing an encounter loop with a concrete rule engine).
 
 Data tables (spells, monsters, weapons, armor) live in
 `game_engine/rules/dnd_5_5e/data/` as Python modules using enum types for all
@@ -274,22 +282,25 @@ messages to the Zustand store.
 
 ---
 
-## World Consistency — pgvector RAG
+## World Consistency — pgvector RAG (planned)
+
+> **Status: schema exists, pipeline not yet implemented.**
+> The embedding columns are present in the DB and the Alembic migration adds
+> them, but the RAG query and embedding-generation pipeline are not yet built.
 
 Three tables carry `embedding vector(1536)` columns: `worlds`, `characters`,
-`locations`. Before generating new content, the orchestrator:
+`locations`. The planned flow before generating new content:
 
-1. Embeds the DM's prompt using the embedding model
-2. Queries pgvector for the nearest-neighbor lore entries
-3. Injects the top-k results into the system prompt as "existing world context"
+1. Embed the DM's prompt using the embedding model
+2. Query pgvector for the nearest-neighbor lore entries
+3. Inject the top-k results into the system prompt as "existing world context"
 
-This prevents contradictions: a settlement described as coastal will remain
+This will prevent contradictions: a settlement described as coastal will remain
 coastal; a character established as antagonistic will be recalled as such in later
 sessions.
 
-The `WorldConsistencyVector` pipeline (in `dm_api/ai/`) handles embedding
-generation and similarity search. Embeddings are updated when proposals are
-accepted.
+When the pipeline is implemented it will live in `dm_api/ai/` and embeddings
+will be updated when proposals are accepted.
 
 ---
 

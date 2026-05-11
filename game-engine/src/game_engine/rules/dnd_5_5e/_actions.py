@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from game_engine.core.dice import roll as dice_roll
 from game_engine.core.dice import roll_dice
-from game_engine.interface import Action, ActionResult
+from game_engine.interface import Action, ActionResult, LogEntry
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
 from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl
 from game_engine.types import (
@@ -85,11 +85,11 @@ def _resolve_action_impl(
         damage_type=DamageType.BLUDGEONING,
         conditions_applied=[],
         flavor_text=f"{action.actor_id} uses {action.action_type.value}.",
-        log_entry={
-            "actor_id": action.actor_id,
-            "action_type": action.action_type.value,
-            "target_id": action.target_id,
-        },
+        log_entry=LogEntry(
+            actor_id=action.actor_id,
+            action_type=action.action_type.value,
+            target_id=action.target_id,
+        ),
     )
 
 
@@ -119,10 +119,10 @@ def _resolve_attack(
             damage_type=DamageType.BLUDGEONING,
             conditions_applied=[],
             flavor_text="No target found.",
-            log_entry={
-                "error": "target_not_found",
-                "target_id": action.target_id,
-            },
+            log_entry=LogEntry(
+                target_id=action.target_id,
+                error="target_not_found",
+            ),
         )
 
     target_ac = target.ac
@@ -152,14 +152,14 @@ def _resolve_attack(
                 f"(rolled {attack_roll_raw} + {actor_ability_mod + prof_bonus} "
                 f"= {attack_total} vs AC {target_ac})"
             ),
-            log_entry={
-                "actor_id": action.actor_id,
-                "target_id": action.target_id,
-                "attack_roll": attack_roll_raw,
-                "attack_total": attack_total,
-                "target_ac": target_ac,
-                "hit": False,
-            },
+            log_entry=LogEntry(
+                actor_id=action.actor_id,
+                target_id=action.target_id,
+                attack_roll=attack_roll_raw,
+                attack_total=attack_total,
+                target_ac=target_ac,
+                hit=False,
+            ),
         )
 
     # Roll damage
@@ -189,16 +189,16 @@ def _resolve_attack(
         damage_type=damage_type,
         conditions_applied=[],
         flavor_text=flavor,
-        log_entry={
-            "actor_id": action.actor_id,
-            "target_id": action.target_id,
-            "attack_roll": attack_roll_raw,
-            "attack_total": attack_total,
-            "target_ac": target_ac,
-            "hit": True,
-            "critical": critical,
-            "damage": total_damage,
-            "damage_type": damage_type.value,
-            "target_hp_remaining": target.hp_current,
-        },
+        log_entry=LogEntry(
+            actor_id=action.actor_id,
+            target_id=action.target_id,
+            attack_roll=attack_roll_raw,
+            attack_total=attack_total,
+            target_ac=target_ac,
+            hit=True,
+            critical=critical,
+            damage=total_damage,
+            damage_type=damage_type.value,
+            target_hp_remaining=target.hp_current,
+        ),
     )

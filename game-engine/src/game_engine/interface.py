@@ -40,6 +40,43 @@ class CheckResult:
 
 
 @dataclass
+class LogEntry:
+    """Typed combat log entry produced by the rule engine.
+
+    All fields except actor_id are optional because their presence depends on
+    the action type (attack vs. non-attack, hit vs. miss, target found vs. not).
+    The API layer converts this to a plain dict before storing as JSON.
+
+    Attributes:
+        actor_id: ID of the acting character (None when the actor could not be resolved).
+        action_type: String value of the ActionType (set for non-attack actions).
+        target_id: ID of the target character.
+        hit: Whether an attack roll hit.
+        critical: Whether the hit was a critical.
+        attack_roll: Raw d20 attack roll.
+        attack_total: Final attack total (roll + modifiers).
+        target_ac: Target's armour class.
+        damage: Damage dealt.
+        damage_type: String value of the DamageType dealt.
+        target_hp_remaining: Target's HP after the attack.
+        error: Error code when an action cannot be resolved (e.g. "target_not_found").
+    """
+
+    actor_id: str | None = None
+    action_type: str | None = None
+    target_id: str | None = None
+    hit: bool | None = None
+    critical: bool | None = None
+    attack_roll: int | None = None
+    attack_total: int | None = None
+    target_ac: int | None = None
+    damage: int | None = None
+    damage_type: str | None = None
+    target_hp_remaining: int | None = None
+    error: str | None = None
+
+
+@dataclass
 class ActionResult:
     """Result of resolving a combat or non-combat action.
 
@@ -49,7 +86,7 @@ class ActionResult:
         damage_type: The type of damage dealt.
         conditions_applied: Conditions applied to the target.
         flavor_text: Human-readable narrative of what happened.
-        log_entry: Structured dict suitable for the combat log / API.
+        log_entry: Typed log entry; convert with dataclasses.asdict() before JSON storage.
     """
 
     success: bool
@@ -57,7 +94,7 @@ class ActionResult:
     damage_type: DamageType
     conditions_applied: list[Condition]
     flavor_text: str
-    log_entry: dict
+    log_entry: LogEntry
 
 
 @dataclass
