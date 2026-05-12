@@ -33,7 +33,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DMResponse:
-    """Typed orchestrator result — no ``dict[str, Any]`` at the API boundary."""
+    """Typed orchestrator result — no ``dict[str, Any]`` at the API boundary.
+
+    Attributes:
+        response: Narrative text returned by the AI model.
+        proposal: Parsed ``[PROPOSAL]`` block (typed dict) or ``None``.
+        was_condensed: True when the context condenser ran before the AI call.
+        tokens_in: Token count of the history *before* condensation (i.e. the
+            full running-total, not the API call's ``input_tokens``).
+        tokens_out: Estimated token count *after* condensation (condensed
+            artifact + preserved tail).  When ``was_condensed`` is False this
+            equals ``tokens_in``.
+    """
 
     response: str
     proposal: dict[str, Any] | None

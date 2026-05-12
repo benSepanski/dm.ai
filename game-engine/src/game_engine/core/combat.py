@@ -10,10 +10,30 @@ from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from enum import Enum, auto
+from typing import Any
 
 from game_engine.core.initiative import InitiativeEntry, InitiativeTracker
 from game_engine.types import Ability, CharacterSheet, CharacterType
+
+
+@dataclass
+class CombatLogEntry:
+    """A single entry in the combat log.
+
+    Typed boundary: replaces the raw ``dict`` that was previously appended to
+    :attr:`AbstractCombat.combat_log`.  The ``result`` field is action-specific
+    and intentionally typed ``dict[str, Any]`` because its key set varies per
+    action type (attack, spell, dash, etc.).
+    """
+
+    timestamp: float
+    round: int
+    actor_id: str
+    action: str
+    result: dict[str, Any] = field(default_factory=dict)
+    flavor: str = ""
 
 
 class CombatPhase(Enum):
@@ -36,7 +56,7 @@ class AbstractCombat(ABC):
             managing turn order.
         round_number: Which round of combat is currently active (starts at 1).
         phase: Current :class:`CombatPhase`.
-        combat_log: Ordered list of structured log entry dicts.
+        combat_log: Ordered list of typed :class:`CombatLogEntry` records.
     """
 
     def __init__(self) -> None:
@@ -44,7 +64,7 @@ class AbstractCombat(ABC):
         self.initiative_tracker: InitiativeTracker = InitiativeTracker()
         self.round_number: int = 0
         self.phase: CombatPhase = CombatPhase.INITIATIVE
-        self.combat_log: list[dict] = []
+        self.combat_log: list[CombatLogEntry] = []
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -97,28 +117,28 @@ class AbstractCombat(ABC):
         self,
         actor_id: str,
         action: str,
-        result: dict,
+        result: dict[str, Any],
         flavor: str = "",
-    ) -> dict:
+    ) -> CombatLogEntry:
         """Append a structured entry to the combat log.
 
         Args:
             actor_id: ID of the character (or "system") performing the action.
             action: Short action identifier string (e.g. "attack", "cast_spell").
-            result: Dict of rule-specific outcome data.
+            result: Action-specific outcome data (keys vary per action type).
             flavor: Optional human-readable narrative string.
 
         Returns:
-            The log entry dict that was appended.
+            The :class:`CombatLogEntry` that was appended.
         """
-        entry: dict = {
-            "timestamp": time.time(),
-            "round": self.round_number,
-            "actor_id": actor_id,
-            "action": action,
-            "result": result,
-            "flavor": flavor,
-        }
+        entry = CombatLogEntry(
+            timestamp=time.time(),
+            round=self.round_number,
+            actor_id=actor_id,
+            action=action,
+            result=result,
+            flavor=flavor,
+        )
         self.combat_log.append(entry)
         return entry
 

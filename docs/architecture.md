@@ -164,16 +164,18 @@ The active backend is selected at runtime by `backends/factory.py` based on
 `dm_api.ai.DMOrchestrator` is stateless and session-scoped. Each call to
 `handle_message()`:
 
-1. Builds a system prompt from `build_system_prompt(world_id, session_id)`
-2. Converts the chat history from DB format to `list[AIMessage]`
-3. Calls `backend.complete()` with the orchestrator model (Sonnet by default)
-4. Scans the response for a `[PROPOSAL]...[/PROPOSAL]` JSON block via
+1. Optionally condenses history via `ContextCondenser` (silent no-op under budget)
+2. Builds backend messages from the condensed context via `_build_messages()`
+3. Builds a system prompt from `build_system_prompt(world_id, session_id)`
+4. Calls `backend.complete()` with the orchestrator model (Sonnet by default)
+5. Scans the response for a `[PROPOSAL]...[/PROPOSAL]` JSON block via
    `_extract_proposal()`
-5. Returns `{"response": str, "proposal": dict | None}`
+6. Returns a typed `DMResponse(response, proposal, was_condensed, tokens_in, tokens_out)`
 
-The session route (`POST /api/sessions/{id}/chat`) persists both the DM message
-and AI response to `chat_messages`, and the proposal (if any) to `proposals`,
-before returning to the client.
+The route handler (`POST /api/sessions/{id}/chat`) is responsible for fetching
+the chat history from the DB, wrapping rows in `HistoryMessage` anchors, and
+passing them to `handle_message()`. It then persists both the DM message and AI
+response to `chat_messages`, and the proposal (if any) to `proposals`.
 
 `summarize()` uses the faster generation model (Haiku) for end-of-session summaries.
 
@@ -252,44 +254,44 @@ messages to the Zustand store.
 
 3. dm-api saves DM ChatMessage to DB
 
-4. DMOrchestrator.handle_message()
+4. Route handler fetches ChatMessage rows → wraps each in HistoryMessage
+   (anchor=MessageAnchor(id, ts, role), content, token_count)
+
+5. DMOrchestrator.handle_message(history=[HistoryMessage, ...])
+   ├─ ContextCondenser.condense(...)  — Haiku, silent no-op if under budget
+   ├─ _build_messages(condensed)      — condensed sections + preserved tail
    ├─ build_system_prompt(world_id, session_id)
-   ├─ fetch chat history from DB
    └─ backend.complete(messages, system, model=orchestrator_model)
 
-5. Claude returns narrative text, optionally with
+6. Claude returns narrative text, optionally with
    [PROPOSAL]{ "type": "location", "content": { ... } }[/PROPOSAL]
 
-6. dm-api saves AI ChatMessage + Proposal (status=pending) to DB
+7. dm-api saves AI ChatMessage + Proposal (status=pending) to DB
 
-7. Response { response, proposal } returned to client
+8. Response { response, proposal } returned to client
 
-8. Client displays AI message; ProposalCard shown if proposal != null
+9. Client displays AI message; ProposalCard shown if proposal != null
 
-9. DM reviews → POST /api/ai/proposals/{id}/accept
-   ├─ dm_notes and modifications merged into proposal.content
-   ├─ proposal.status set to "accepted"
-   └─ (future) Location/Character record created + embedding indexed
+10. DM reviews → POST /api/ai/proposals/{id}/accept
+    ├─ dm_notes and modifications merged into proposal.content
+    └─ proposal.status set to "accepted"
 ```
 
 ---
 
-## World Consistency — pgvector RAG
+## World Consistency — pgvector RAG (planned)
 
 Three tables carry `embedding vector(1536)` columns: `worlds`, `characters`,
-`locations`. Before generating new content, the orchestrator:
+`locations`. The schema is in place; the retrieval pipeline is not yet implemented.
 
-1. Embeds the DM's prompt using the embedding model
-2. Queries pgvector for the nearest-neighbor lore entries
-3. Injects the top-k results into the system prompt as "existing world context"
+Planned flow:
+1. Embed the DM's prompt using an embedding model
+2. Query pgvector for the nearest-neighbor lore entries
+3. Inject the top-k results into the system prompt as "existing world context"
 
-This prevents contradictions: a settlement described as coastal will remain
+This will prevent contradictions: a settlement described as coastal will remain
 coastal; a character established as antagonistic will be recalled as such in later
-sessions.
-
-The `WorldConsistencyVector` pipeline (in `dm_api/ai/`) handles embedding
-generation and similarity search. Embeddings are updated when proposals are
-accepted.
+sessions. Embeddings will be updated when proposals are accepted.
 
 ---
 

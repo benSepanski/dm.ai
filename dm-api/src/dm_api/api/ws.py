@@ -31,12 +31,21 @@ async def session_websocket(websocket: WebSocket, session_id: uuid.UUID) -> None
             except json.JSONDecodeError:
                 await websocket.send_text(json.dumps({"error": "invalid JSON"}))
                 continue
-            # Broadcast received messages to all connected clients
+            # Broadcast to all other clients; prune any that have gone dead.
             message["session_id"] = key
+            dead: list[WebSocket] = []
             for conn in _connections[key]:
                 if conn != websocket:
-                    await conn.send_text(json.dumps(message))
+                    try:
+                        await conn.send_text(json.dumps(message))
+                    except Exception:
+                        dead.append(conn)
+            for conn in dead:
+                _connections[key].remove(conn)
     except WebSocketDisconnect:
-        _connections[key].remove(websocket)
+        pass
+    finally:
+        if websocket in _connections[key]:
+            _connections[key].remove(websocket)
         if not _connections[key]:
             del _connections[key]
