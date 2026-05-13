@@ -1,3 +1,5 @@
+# NOTE: This file intentionally exceeds the 400-line guideline because
+# splitting weapon and armor data across multiple files would impair readability.
 """D&D 5.5e SRD item data — weapons and armor."""
 
 from __future__ import annotations
