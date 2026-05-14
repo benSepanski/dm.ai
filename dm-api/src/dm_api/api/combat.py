@@ -17,7 +17,13 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
 from game_engine.types import Ability as EngineAbility
-from game_engine.types import AttackDetails, CharacterSheet, CombatStateData, DamageType
+from game_engine.types import (
+    AttackDetails,
+    CharacterClass,
+    CharacterSheet,
+    CombatStateData,
+    DamageType,
+)
 from game_engine.types.values import DiceNotation
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +53,7 @@ def _character_to_sheet(character: Character) -> CharacterSheet:
             "id": str(character.id),
             "name": character.name,
             "level": character.level,
-            "class": character.char_class or "Fighter",
+            "class": character.char_class or CharacterClass.FIGHTER.value,
             "ability_scores": stats.get("ability_scores", {}),
             "hp_current": character.hp_current if character.hp_current is not None else 10,
             "hp_max": character.hp_max if character.hp_max is not None else 10,

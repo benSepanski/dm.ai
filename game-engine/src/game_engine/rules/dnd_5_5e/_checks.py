@@ -69,11 +69,8 @@ def _calc_prof_bonus(level: int) -> int:
     return 2 + (level - 1) // 4
 
 
-def _roll_initiative_impl(char: CharacterSheet) -> int:
-    """Roll initiative: raw d20 roll (DEX modifier added by the initiative tracker).
-
-    Args:
-        char: Character sheet.
+def _roll_initiative_impl() -> int:
+    """Roll initiative: raw d20 roll. DEX modifier is added by DnD55eEngine.roll_initiative.
 
     Returns:
         The raw d20 roll (not including DEX modifier).

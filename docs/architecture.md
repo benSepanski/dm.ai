@@ -68,9 +68,21 @@ Result dataclasses (`CheckResult`, `ActionResult`, `ValidationResult`) and the
 ### D&D 5.5e Engine
 
 `game_engine.rules.dnd_5_5e.DnD55eEngine` is the concrete implementation. It uses
-a **delegation pattern**: each abstract method delegates to a focused helper module
-in `game_engine/core/` (dice, conditions, initiative, combat, character). This
-keeps the engine file short and each helper independently testable.
+a **delegation pattern**: each abstract method delegates to a focused private helper
+module inside `game_engine/rules/dnd_5_5e/` (prefixed with `_`):
+
+| Helper module | Responsibilities |
+|---|---|
+| `_checks.py` | Proficiency bonus, initiative roll, skill/ability checks |
+| `_damage.py` | Damage application with resistance/immunity calculations |
+| `_conditions.py` | Condition application and removal |
+| `_actions.py` | Available action enumeration and action resolution |
+| `_validation.py` | Character sheet completeness and legality checks |
+
+These helpers in turn use **lower-level primitives** from `game_engine/core/`:
+- `core/dice.py` — dice notation parsing and rolling (also used by tests directly)
+- `core/initiative.py` — `InitiativeTracker` for managing turn order
+- `core/conditions.py`, `core/combat.py`, `core/character.py` — shared primitives
 
 Data tables (spells, monsters, weapons, armor) live in
 `game_engine/rules/dnd_5_5e/data/` as Python modules using enum types for all

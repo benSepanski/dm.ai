@@ -138,8 +138,8 @@ class DMOrchestrator:
             response=response.content,
             proposal=proposal,
             was_condensed=condensed.was_condensed,
-            tokens_in=condensed.tokens_in,
-            tokens_out=condensed.tokens_out,
+            tokens_in=response.input_tokens,
+            tokens_out=response.output_tokens,
         )
 
     async def condense(

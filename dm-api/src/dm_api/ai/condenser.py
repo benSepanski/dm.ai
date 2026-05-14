@@ -122,7 +122,14 @@ class CondensedContext:
             rendered.append(AIMessage(role="user", content="\n\n".join(sections)))
 
         for message in self.preserved:
-            role = "user" if message.role == ChatRole.DM else "assistant"
+            if message.role == ChatRole.DM:
+                role = "user"
+            elif message.role == ChatRole.AI:
+                role = "assistant"
+            else:
+                # SYSTEM messages are not passed as conversation turns;
+                # system-level instructions belong in the system prompt.
+                continue
             rendered.append(AIMessage(role=role, content=message.content))
 
         return rendered

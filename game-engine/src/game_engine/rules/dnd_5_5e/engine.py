@@ -86,7 +86,7 @@ class DnD55eEngine(RuleEngine):
         Returns:
             Integer initiative total (raw roll + DEX modifier).
         """
-        raw = _roll_initiative_impl(char)
+        raw = _roll_initiative_impl()
         return raw + char.ability_scores.modifier(Ability.DEXTERITY)
 
     # ------------------------------------------------------------------
