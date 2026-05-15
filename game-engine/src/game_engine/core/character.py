@@ -7,6 +7,8 @@ player characters, non-player characters, and monsters.
 
 from __future__ import annotations
 
+import logging
+
 from game_engine.types import (
     Ability,
     AbilityScoreSet,
@@ -249,6 +251,9 @@ class AbstractCharacter:
 # ---------------------------------------------------------------------------
 
 
+_logger = logging.getLogger(__name__)
+
+
 def _coerce_conditions(raw: list) -> list[Condition]:
     """Coerce a list of strings or Condition enums to Condition enums."""
     result: list[Condition] = []
@@ -259,5 +264,5 @@ def _coerce_conditions(raw: list) -> list[Condition]:
             try:
                 result.append(Condition(str(item).lower()))
             except ValueError:
-                pass  # Unknown condition string — silently skip
+                _logger.warning("Dropping unknown condition %r", item)
     return result

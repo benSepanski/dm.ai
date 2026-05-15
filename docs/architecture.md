@@ -164,12 +164,17 @@ The active backend is selected at runtime by `backends/factory.py` based on
 `dm_api.ai.DMOrchestrator` is stateless and session-scoped. Each call to
 `handle_message()`:
 
-1. Builds a system prompt from `build_system_prompt(world_id, session_id)`
-2. Converts the chat history from DB format to `list[AIMessage]`
-3. Calls `backend.complete()` with the orchestrator model (Sonnet by default)
-4. Scans the response for a `[PROPOSAL]...[/PROPOSAL]` JSON block via
-   `_extract_proposal()`
-5. Returns `{"response": str, "proposal": dict | None}`
+1. **Condense** — runs `ContextCondenser.condense()` (Haiku, no-op under budget)
+   to compress history that exceeds `context_token_limit`.
+2. **Build messages** — converts the condensed context to `list[AIMessage]` via
+   `_build_messages()`.
+3. **Build system prompt** — calls `build_system_prompt(world_id, session_id)`.
+4. **Call backend** — calls `backend.complete()` with the orchestrator model (Sonnet
+   by default).
+5. **Extract proposal** — scans the response for a `[PROPOSAL]...[/PROPOSAL]`
+   JSON block via `_extract_proposal()`.
+6. **Return** a typed `DMResponse(response, proposal, was_condensed, tokens_in,
+   tokens_out)` where `tokens_in/out` reflect the actual orchestrator API call.
 
 The session route (`POST /api/sessions/{id}/chat`) persists both the DM message
 and AI response to `chat_messages`, and the proposal (if any) to `proposals`,
