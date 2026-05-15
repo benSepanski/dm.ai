@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
-from game_engine.types import Ability as EngineAbility
 from game_engine.types import AttackDetails, CharacterSheet, CombatStateData, DamageType
 from game_engine.types.values import DiceNotation
 from sqlalchemy import select
@@ -68,19 +67,11 @@ def _build_attack_details(req: AttackDetailsRequest | None) -> AttackDetails | N
     """Convert typed Pydantic request into a game-engine AttackDetails dataclass."""
     if req is None:
         return None
-    try:
-        damage_type = DamageType(req.damage_type.value)
-    except ValueError:
-        damage_type = DamageType.BLUDGEONING
-    try:
-        attack_ability = EngineAbility(req.attack_ability.value)
-    except ValueError:
-        attack_ability = EngineAbility.STRENGTH
     return AttackDetails(
         weapon_name=req.weapon_name,
         damage_dice=DiceNotation(req.damage_dice),
-        damage_type=damage_type,
-        attack_ability=attack_ability,
+        damage_type=req.damage_type,
+        attack_ability=req.attack_ability,
         is_ranged=req.is_ranged,
     )
 
@@ -128,6 +119,14 @@ async def start_combat(
             select(Character).where(Character.id.in_(payload.character_ids))
         )
         characters = list(char_result.scalars().all())
+
+        if len(characters) != len(payload.character_ids):
+            found_ids = {c.id for c in characters}
+            missing = [str(cid) for cid in payload.character_ids if cid not in found_ids]
+            raise HTTPException(
+                status_code=404,
+                detail=f"Characters not found: {missing}",
+            )
 
         rolled: list[tuple[dict, dict]] = []
         for char in characters:
