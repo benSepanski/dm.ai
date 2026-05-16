@@ -57,11 +57,6 @@ _ABILITY_ATTR: dict[str, Ability] = {
     "cha": Ability.CHARISMA,
 }
 
-#: Conditions that prevent a character from acting.
-_INCAPACITATING_CONDITIONS: frozenset[str] = frozenset(
-    {"incapacitated", "paralyzed", "petrified", "stunned", "unconscious"}
-)
-
 
 class AbstractCharacter:
     """Rule-agnostic character sheet.

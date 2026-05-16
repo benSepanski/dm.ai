@@ -6,8 +6,9 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from game_engine.types import ProposalType
 
-from dm_api.ai.dm_orchestrator import DMResponse
+from dm_api.ai.dm_orchestrator import DMResponse, ProposalPayload
 
 
 @pytest.mark.asyncio
@@ -132,7 +133,7 @@ async def test_end_session_not_found(client):
 # ---------------------------------------------------------------------------
 
 
-def _mock_orchestrator(response_text: str, proposal: dict | None = None) -> MagicMock:
+def _mock_orchestrator(response_text: str, proposal: ProposalPayload | None = None) -> MagicMock:
     """Return a DMOrchestrator mock that produces a fixed DMResponse."""
     mock = MagicMock()
     mock.handle_message = AsyncMock(
@@ -203,7 +204,7 @@ async def test_session_chat_creates_pending_proposal(client, world_id):
     )
     session_id = r.json()["id"]
 
-    proposal_payload = {"type": "location", "content": {"name": "Riverbend"}}
+    proposal_payload = ProposalPayload(type=ProposalType.LOCATION, content={"name": "Riverbend"})
     mock_orch = _mock_orchestrator("You discover a new village.", proposal=proposal_payload)
     with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
         r = await client.post(
