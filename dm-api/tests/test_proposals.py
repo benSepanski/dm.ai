@@ -176,9 +176,7 @@ async def test_accept_location_proposal_creates_location(client, world_id, db_se
     assert entity_id is not None
 
     # Verify the Location row exists in the DB.
-    result = await db_session.execute(
-        select(Location).where(Location.id == uuid.UUID(entity_id))
-    )
+    result = await db_session.execute(select(Location).where(Location.id == uuid.UUID(entity_id)))
     loc = result.scalar_one_or_none()
     assert loc is not None
     assert loc.name == "Hidden Cave"
@@ -209,9 +207,7 @@ async def test_accept_location_proposal_applies_dm_modifications(client, world_i
     data = r.json()
     entity_id = data["content"]["created_entity_id"]
 
-    result = await db_session.execute(
-        select(Location).where(Location.id == uuid.UUID(entity_id))
-    )
+    result = await db_session.execute(select(Location).where(Location.id == uuid.UUID(entity_id)))
     loc = result.scalar_one()
     assert loc.name == "Haunted Mine"
     assert loc.description == "Updated description."

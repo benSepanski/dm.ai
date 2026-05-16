@@ -9,8 +9,8 @@ Applies OpenAI's harness-engineering principles
   :class:`dm_api.ai.condenser.ContextCondenser` (Service), never reaching into
   the DB (Repo) or HTTP (Runtime) layers directly.
 - **Typed boundaries.** Inputs and outputs are ``@dataclass`` instances; no
-  ``dict[str, Any]`` crosses this module's public surface except the minimally
-  structured proposal payload parsed from AI output.
+  ``dict[str, Any]`` crosses this module's public surface. The AI proposal is
+  parsed into a typed :class:`ProposalPayload` at the boundary.
 - **Depth-first decomposition.** ``handle_message`` is factored into discrete
   sub-steps (condense → build messages → call backend → extract proposal) that
   are individually testable.
@@ -24,6 +24,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from game_engine.types import ProposalType
+
 from dm_api.ai.backends.base import AIBackend, AIMessage
 from dm_api.ai.condenser import CondensedContext, ContextCondenser, HistoryMessage
 from dm_api.ai.prompts.system_prompt import build_system_prompt
@@ -32,11 +34,24 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class ProposalPayload:
+    """Typed representation of an AI-generated proposal.
+
+    Parsed and validated at the AI boundary inside ``_extract_proposal``.
+    The ``content`` field is free-form JSON (varies by proposal type) and
+    remains untyped, but ``type`` is always a known :class:`ProposalType`.
+    """
+
+    type: ProposalType
+    content: dict[str, Any] | None
+
+
+@dataclass
 class DMResponse:
     """Typed orchestrator result — no ``dict[str, Any]`` at the API boundary."""
 
     response: str
-    proposal: dict[str, Any] | None
+    proposal: ProposalPayload | None
     was_condensed: bool
     tokens_in: int
     tokens_out: int
@@ -131,7 +146,7 @@ class DMOrchestrator:
             response.input_tokens,
             response.output_tokens,
             condensed.was_condensed,
-            proposal.get("type") if proposal else "none",
+            proposal.type.value if proposal else "none",
             duration_ms,
         )
         return DMResponse(
@@ -200,11 +215,11 @@ class DMOrchestrator:
         return messages
 
 
-def _extract_proposal(text: str) -> dict[str, Any] | None:
+def _extract_proposal(text: str) -> ProposalPayload | None:
     """Extract a [PROPOSAL]...[/PROPOSAL] JSON block from AI response text.
 
-    Validates at the AI boundary: silently drops malformed JSON rather than
-    raising, so a single bad proposal never breaks the chat flow.
+    Validates at the AI boundary: silently drops malformed JSON or unknown
+    proposal types rather than raising, so a bad proposal never breaks chat.
     """
     start = text.find("[PROPOSAL]")
     if start == -1:
@@ -214,6 +229,16 @@ def _extract_proposal(text: str) -> dict[str, Any] | None:
         return None
     json_str = text[start + len("[PROPOSAL]") : end].strip()
     try:
-        return json.loads(json_str)
+        raw = json.loads(json_str)
     except json.JSONDecodeError:
         return None
+    if not isinstance(raw, dict):
+        return None
+    try:
+        proposal_type = ProposalType(raw.get("type", ""))
+    except ValueError:
+        return None
+    content = raw.get("content")
+    return ProposalPayload(
+        type=proposal_type, content=content if isinstance(content, dict) else None
+    )

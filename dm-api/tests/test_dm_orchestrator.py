@@ -6,11 +6,11 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-from game_engine.types import ChatRole
+from game_engine.types import ChatRole, ProposalType
 
 from dm_api.ai.backends.base import AIBackend, AIMessage, AIResponse
 from dm_api.ai.condenser import HistoryMessage, MessageAnchor
-from dm_api.ai.dm_orchestrator import DMOrchestrator
+from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
 
 
 class _ScriptedBackend(AIBackend):
@@ -92,7 +92,9 @@ async def test_handle_message_extracts_proposal() -> None:
         history=_history(1),
     )
 
-    assert result.proposal == {"type": "location", "content": {"name": "Glenbrook"}}
+    assert result.proposal == ProposalPayload(
+        type=ProposalType.LOCATION, content={"name": "Glenbrook"}
+    )
 
 
 @pytest.mark.asyncio
@@ -120,3 +122,41 @@ async def test_handle_message_condenses_when_over_budget() -> None:
     # 2 backend calls: condenser (fast) + orchestrator (main).
     assert [c["model"] for c in backend.calls] == ["fast", "main"]
     assert result.response == "narrative reply"
+
+
+@pytest.mark.asyncio
+async def test_extract_proposal_unknown_type_returns_none() -> None:
+    """Unknown proposal type is silently dropped rather than raising."""
+    body = (
+        "Response text.\n"
+        "[PROPOSAL]"
+        '{"type": "invalid_type", "content": {"foo": "bar"}}'
+        "[/PROPOSAL]"
+    )
+    backend = _ScriptedBackend([body])
+    orchestrator = DMOrchestrator(
+        backend=backend, orchestrator_model="main", generation_model="fast"
+    )
+    result = await orchestrator.handle_message(
+        message="test", session_id="s1", world_id="w1", history=_history(1)
+    )
+    assert result.proposal is None
+
+
+@pytest.mark.asyncio
+async def test_extract_proposal_non_dict_content_is_none() -> None:
+    """Non-dict content is coerced to None rather than leaking an untyped value."""
+    body = (
+        "Response text.\n"
+        "[PROPOSAL]"
+        '{"type": "location", "content": "not-a-dict"}'
+        "[/PROPOSAL]"
+    )
+    backend = _ScriptedBackend([body])
+    orchestrator = DMOrchestrator(
+        backend=backend, orchestrator_model="main", generation_model="fast"
+    )
+    result = await orchestrator.handle_message(
+        message="test", session_id="s1", world_id="w1", history=_history(1)
+    )
+    assert result.proposal == ProposalPayload(type=ProposalType.LOCATION, content=None)

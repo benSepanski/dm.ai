@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from game_engine.types import ChatRole, ProposalStatus, ProposalType
+from game_engine.types import ChatRole, ProposalStatus
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -160,16 +160,11 @@ async def session_chat(
     # Persist proposal if generated
     proposal_read: ProposalRead | None = None
     if proposal_data:
-        raw_type = proposal_data.get("type", ProposalType.LOCATION.value)
-        try:
-            proposal_type = ProposalType(raw_type)
-        except ValueError:
-            proposal_type = ProposalType.LOCATION
         proposal = Proposal(
             session_id=session_id,
             world_id=game_session.world_id,
-            type=proposal_type,
-            content=proposal_data.get("content"),
+            type=proposal_data.type,
+            content=proposal_data.content,
             status=ProposalStatus.PENDING,
         )
         db.add(proposal)
