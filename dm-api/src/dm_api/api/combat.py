@@ -16,13 +16,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
-from game_engine.types import (
-    AttackDetails,
-    CharacterClass,
-    CharacterSheet,
-    CombatStateData,
-    DamageType,
-)
+from game_engine.types import AttackDetails, CharacterClass, CharacterSheet, CombatStateData
 from game_engine.types.values import DiceNotation
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

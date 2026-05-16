@@ -24,7 +24,7 @@ repos:
 
       - id: dm-api-test
         name: dm-api / pytest
-        entry: bash -c 'cd dm-api && python -m pytest tests/ -q'
+        entry: bash -c 'cd dm-api && DATABASE_URL="sqlite+aiosqlite:///:memory:" AI_PROVIDER="anthropic" ANTHROPIC_API_KEY="test-key" python -m pytest tests/ -q'
         language: system
         pass_filenames: false
         files: ^dm-api/
