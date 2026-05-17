@@ -31,8 +31,7 @@ class AnthropicBackend(AIBackend):
         max_tokens: int = 4096,
     ) -> AIResponse:
         sdk_messages: list[MessageParam] = [
-            {"role": m.role, "content": m.content}  # type: ignore[typeddict-item]
-            for m in messages
+            {"role": m.role, "content": m.content} for m in messages
         ]
         start = time.monotonic()
         response = await self._client.messages.create(

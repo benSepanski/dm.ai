@@ -1,7 +1,8 @@
 import logging
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable, Coroutine
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,10 +43,13 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def log_requests(request: Request, call_next: object) -> Response:
+async def log_requests(
+    request: Request,
+    call_next: Callable[[Request], Coroutine[Any, Any, Response]],
+) -> Response:
     """Log method, path, status code, and wall-clock duration for every request."""
     start = time.monotonic()
-    response: Response = await call_next(request)  # type: ignore[operator]
+    response = await call_next(request)
     duration_ms = int((time.monotonic() - start) * 1000)
     logger.info(
         "request  method=%s path=%s status=%s duration_ms=%d",
