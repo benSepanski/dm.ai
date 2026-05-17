@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Literal
 
 
 @dataclass
 class AIMessage:
     """A single message in a conversation."""
 
-    role: str  # "user" or "assistant"
+    role: Literal["user", "assistant"]
     content: str
 
 

@@ -1,9 +1,12 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Set ANTHROPIC_API_KEY in .env when AI_PROVIDER="anthropic" (the default).
     anthropic_api_key: str = ""
     database_url: str = "postgresql+asyncpg://dmuser:dmpass@localhost:5432/dmdb"
     redis_url: str = "redis://localhost:6379"
@@ -11,7 +14,7 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
 
     # AI provider: "anthropic" (uses ANTHROPIC_API_KEY) or "claude_cli" (uses installed claude CLI)
-    ai_provider: str = "anthropic"
+    ai_provider: Literal["anthropic", "claude_cli"] = "anthropic"
 
     # Model roles - override per-environment to tune cost/capability tradeoffs
     # Used for quick tasks: session summaries, NPC dialogue snippets, flavor text
@@ -24,7 +27,7 @@ class Settings(BaseSettings):
     context_preserve_last_n: int = 5
 
     # Logging — set LOG_LEVEL=DEBUG to see AI call details and token counts
-    log_level: str = "INFO"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
 
 settings = Settings()

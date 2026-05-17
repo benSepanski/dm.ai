@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -9,13 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dm_api.ai.backends.base import AIBackend
 from dm_api.ai.condenser import HistoryMessage, MessageAnchor
-from dm_api.ai.dm_orchestrator import DMOrchestrator
+from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
 from dm_api.config import settings
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
 from dm_api.db.models.proposal import Proposal, ProposalRead
 from dm_api.db.models.session import GameSession, SessionCreate, SessionRead
 from dm_api.db.session import get_db
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -26,6 +28,65 @@ def _get_backend() -> AIBackend:
         provider=settings.ai_provider,
         api_key=settings.anthropic_api_key,
     )
+
+
+def _make_orchestrator() -> DMOrchestrator:
+    return DMOrchestrator(
+        backend=_get_backend(),
+        orchestrator_model=settings.orchestrator_model,
+        generation_model=settings.generation_model,
+        context_token_limit=settings.context_token_limit,
+        context_preserve_last_n=settings.context_preserve_last_n,
+    )
+
+
+async def _fetch_session_or_404(db: AsyncSession, session_id: uuid.UUID) -> GameSession:
+    result = await db.execute(select(GameSession).where(GameSession.id == session_id))
+    session = result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
+async def _fetch_history(db: AsyncSession, session_id: uuid.UUID) -> list[HistoryMessage]:
+    result = await db.execute(
+        select(ChatMessage)
+        .where(ChatMessage.session_id == session_id)
+        .order_by(ChatMessage.timestamp.asc())
+    )
+    return [
+        HistoryMessage(
+            anchor=MessageAnchor(
+                message_id=m.id,
+                timestamp=m.timestamp,
+                role=m.role,
+            ),
+            content=m.content,
+            token_count=m.token_count,
+        )
+        for m in result.scalars().all()
+    ]
+
+
+async def _persist_proposal(
+    db: AsyncSession,
+    session_id: uuid.UUID,
+    world_id: uuid.UUID,
+    proposal_data: ProposalPayload | None,
+) -> ProposalRead | None:
+    if proposal_data is None:
+        return None
+    proposal = Proposal(
+        session_id=session_id,
+        world_id=world_id,
+        type=proposal_data.type,
+        content=proposal_data.content,
+        status=ProposalStatus.PENDING,
+    )
+    db.add(proposal)
+    await db.flush()
+    await db.refresh(proposal)
+    return ProposalRead.model_validate(proposal)
 
 
 class ChatRequest(BaseModel):
@@ -60,10 +121,7 @@ async def get_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> SessionRead:
-    result = await db.execute(select(GameSession).where(GameSession.id == session_id))
-    session = result.scalar_one_or_none()
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
+    session = await _fetch_session_or_404(db, session_id)
     return SessionRead.model_validate(session)
 
 
@@ -72,18 +130,13 @@ async def get_session_messages(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> list[ChatMessageRead]:
-    # Verify session exists
-    session_result = await db.execute(select(GameSession).where(GameSession.id == session_id))
-    if session_result.scalar_one_or_none() is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-
+    await _fetch_session_or_404(db, session_id)
     result = await db.execute(
         select(ChatMessage)
         .where(ChatMessage.session_id == session_id)
         .order_by(ChatMessage.timestamp.asc())
     )
-    messages = result.scalars().all()
-    return [ChatMessageRead.model_validate(m) for m in messages]
+    return [ChatMessageRead.model_validate(m) for m in result.scalars().all()]
 
 
 @router.post("/{session_id}/chat", response_model=ChatResponse)
@@ -92,89 +145,39 @@ async def session_chat(
     payload: ChatRequest,
     db: AsyncSession = Depends(get_db),
 ) -> ChatResponse:
-    # Fetch session
-    session_result = await db.execute(select(GameSession).where(GameSession.id == session_id))
-    game_session = session_result.scalar_one_or_none()
-    if game_session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
+    game_session = await _fetch_session_or_404(db, session_id)
 
-    # Save DM message
-    dm_message = ChatMessage(
-        session_id=session_id,
-        role=ChatRole.DM,
-        content=payload.message,
-        token_count=len(payload.message) // 4,
+    db.add(
+        ChatMessage(
+            session_id=session_id,
+            role=ChatRole.DM,
+            content=payload.message,
+            token_count=len(payload.message) // 4,
+        )
     )
-    db.add(dm_message)
     await db.flush()
 
-    # Fetch chat history as typed HistoryMessage anchors (harness-engineering:
-    # every message carries a citation anchor so the condenser output can be
-    # traced back to source rows).
-    history_result = await db.execute(
-        select(ChatMessage)
-        .where(ChatMessage.session_id == session_id)
-        .order_by(ChatMessage.timestamp.asc())
-    )
-    history = [
-        HistoryMessage(
-            anchor=MessageAnchor(
-                message_id=m.id,
-                timestamp=m.timestamp,
-                role=m.role,
-            ),
-            content=m.content,
-            token_count=m.token_count,
-        )
-        for m in history_result.scalars().all()
-    ]
+    history = await _fetch_history(db, session_id)
 
-    # Call DM Orchestrator — it internally condenses if the running total
-    # exceeds `context_token_limit` and preserves the last N messages verbatim.
-    orchestrator = DMOrchestrator(
-        backend=_get_backend(),
-        orchestrator_model=settings.orchestrator_model,
-        generation_model=settings.generation_model,
-        context_token_limit=settings.context_token_limit,
-        context_preserve_last_n=settings.context_preserve_last_n,
-    )
-    result = await orchestrator.handle_message(
+    # Condense → build messages → call backend → extract proposal.
+    result = await _make_orchestrator().handle_message(
         message=payload.message,
         session_id=str(session_id),
         world_id=str(game_session.world_id),
         history=history,
     )
 
-    ai_response_text = result.response
-    proposal_data = result.proposal
-
-    # Save AI response
-    ai_message = ChatMessage(
-        session_id=session_id,
-        role=ChatRole.AI,
-        content=ai_response_text,
-        token_count=len(ai_response_text) // 4,
-    )
-    db.add(ai_message)
-
-    # Persist proposal if generated
-    proposal_read: ProposalRead | None = None
-    if proposal_data:
-        proposal = Proposal(
+    db.add(
+        ChatMessage(
             session_id=session_id,
-            world_id=game_session.world_id,
-            type=proposal_data.type,
-            content=proposal_data.content,
-            status=ProposalStatus.PENDING,
+            role=ChatRole.AI,
+            content=result.response,
+            token_count=len(result.response) // 4,
         )
-        db.add(proposal)
-        await db.flush()
-        await db.refresh(proposal)
-        proposal_read = ProposalRead.model_validate(proposal)
-
+    )
+    proposal_read = await _persist_proposal(db, session_id, game_session.world_id, result.proposal)
     await db.commit()
-
-    return ChatResponse(response=ai_response_text, proposal=proposal_read)
+    return ChatResponse(response=result.response, proposal=proposal_read)
 
 
 @router.put("/{session_id}/end", response_model=SessionRead)
@@ -182,14 +185,9 @@ async def end_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> SessionRead:
-    result = await db.execute(select(GameSession).where(GameSession.id == session_id))
-    session = result.scalar_one_or_none()
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-
+    session = await _fetch_session_or_404(db, session_id)
     session.ended_at = datetime.now(tz=timezone.utc)
 
-    # Generate a brief session summary from chat history
     history_result = await db.execute(
         select(ChatMessage)
         .where(ChatMessage.session_id == session_id)
@@ -199,17 +197,12 @@ async def end_session(
 
     if messages:
         try:
-            orchestrator = DMOrchestrator(
-                backend=_get_backend(),
-                orchestrator_model=settings.orchestrator_model,
-                generation_model=settings.generation_model,
-            )
             summary_text = "\n".join(
                 f"{m.role.value.upper()}: {m.content}" for m in messages[-20:]
             )
-            session.session_summary = await orchestrator.summarize(summary_text)
+            session.session_summary = await _make_orchestrator().summarize(summary_text)
         except Exception:
-            # Non-fatal: summary generation failure should not block ending a session
+            logger.exception("session summary failed session_id=%s", session_id)
             session.session_summary = "Session ended."
 
     await db.commit()
