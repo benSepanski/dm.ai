@@ -17,6 +17,7 @@ from game_engine.types import CharacterType, LocationType, ProposalStatus, Propo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.api.ws import broadcast_to_session
 from dm_api.db.models.character import Character
 from dm_api.db.models.location import Location
 from dm_api.db.models.proposal import Proposal, ProposalAccept, ProposalRead, ProposalReject
@@ -203,7 +204,36 @@ async def accept_proposal(
 
     await db.commit()
     await db.refresh(proposal)
-    return ProposalRead.model_validate(proposal)
+    result_read = ProposalRead.model_validate(proposal)
+
+    # Notify clients: proposal status changed; if an entity was created, also emit entity_update.
+    session_id_str = str(proposal.session_id)
+    try:
+        await broadcast_to_session(
+            session_id_str,
+            {
+                "type": "proposal_ready",
+                "session_id": session_id_str,
+                "proposal_id": str(proposal.id),
+                "proposal_type": proposal.type.value,
+                "status": ProposalStatus.ACCEPTED.value,
+            },
+        )
+        if created_id is not None:
+            entity_type = "location" if proposal.type == ProposalType.LOCATION else "character"
+            await broadcast_to_session(
+                session_id_str,
+                {
+                    "type": "entity_update",
+                    "session_id": session_id_str,
+                    "entity_type": entity_type,
+                    "entity_id": str(created_id),
+                },
+            )
+    except Exception:
+        logger.exception("ws broadcast failed proposal_id=%s", proposal_id)
+
+    return result_read
 
 
 @router.post("/proposals/{proposal_id}/reject", response_model=ProposalRead)
@@ -225,4 +255,20 @@ async def reject_proposal(
 
     await db.commit()
     await db.refresh(proposal)
-    return ProposalRead.model_validate(proposal)
+    result_read = ProposalRead.model_validate(proposal)
+
+    try:
+        await broadcast_to_session(
+            str(proposal.session_id),
+            {
+                "type": "proposal_ready",
+                "session_id": str(proposal.session_id),
+                "proposal_id": str(proposal.id),
+                "proposal_type": proposal.type.value,
+                "status": ProposalStatus.REJECTED.value,
+            },
+        )
+    except Exception:
+        logger.exception("ws broadcast failed proposal_id=%s", proposal_id)
+
+    return result_read

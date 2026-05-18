@@ -184,19 +184,36 @@ before returning to the client.
 
 ### WebSocket and Real-time Events
 
-`/ws/sessions/{session_id}` is a pure WebSocket endpoint. The current
-implementation maintains an in-memory connection registry (`dict[str, list[WebSocket]]`)
-and broadcasts messages from one client to all other clients in the same session.
+`/ws/sessions/{session_id}` maintains an in-memory connection registry
+(`dict[str, list[WebSocket]]`). It serves two roles:
 
-Planned message types (defined in `dm-ui/src/api/ws.ts`):
+1. **Server-push broadcast** — HTTP endpoints call `broadcast_to_session()` after
+   committing state changes so all connected clients receive live updates without
+   polling.
+2. **Peer relay** — messages sent by one client are forwarded to all other clients
+   in the same session (e.g. cursor moves, battle-map drags).
+
+`broadcast_to_session(session_id, event)` in `dm_api.api.ws` is the sole
+server-push entry point. Dead connections are pruned silently on each call.
+
+**Server-push event types (implemented):**
+
+| Type | Emitted by | Payload |
+|---|---|---|
+| `chat_message` | `POST /sessions/{id}/chat` | `session_id`, `role="ai"`, `content` |
+| `proposal_ready` | `POST /sessions/{id}/chat`, `POST /ai/proposals/{id}/accept`, `POST /ai/proposals/{id}/reject` | `session_id`, `proposal_id`, `proposal_type`, `status` |
+| `combat_update` | `POST /sessions/{id}/combat`, `POST /sessions/{id}/combat/action`, `POST /sessions/{id}/combat/next-turn`, `PUT /sessions/{id}/combat/end` | `session_id`, `combat` (full `CombatStateRead`) |
+| `entity_update` | `POST /ai/proposals/{id}/accept` (when a LOCATION or CHARACTER entity is created) | `session_id`, `entity_type`, `entity_id` |
+
+**Planned (not yet implemented):**
 
 | Type | Direction | Purpose |
 |---|---|---|
 | `map_update` | server → client | Token positions, fog-of-war reveal |
-| `combat_update` | server → client | Initiative order, HP, conditions |
-| `chat_message` | server → client | New AI or DM message |
-| `proposal_ready` | server → client | New proposal awaiting DM review |
-| `entity_update` | server → client | Character or location field change |
+
+**Multi-process note:** The connection registry is process-local. A multi-worker
+deployment requires a shared pub/sub broker (e.g. Redis) to propagate events
+across workers. See `config.py` → `redis_url` for the intended connection string.
 
 ---
 

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dm_api.ai.backends.base import AIBackend
 from dm_api.ai.condenser import HistoryMessage, MessageAnchor
 from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
+from dm_api.api.ws import broadcast_to_session
 from dm_api.config import settings
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
 from dm_api.db.models.proposal import Proposal, ProposalRead
@@ -177,6 +178,31 @@ async def session_chat(
     )
     proposal_read = await _persist_proposal(db, session_id, game_session.world_id, result.proposal)
     await db.commit()
+
+    # Notify all connected WebSocket clients about the new AI message and any proposal.
+    try:
+        await broadcast_to_session(
+            session_id,
+            {
+                "type": "chat_message",
+                "session_id": str(session_id),
+                "role": "ai",
+                "content": result.response,
+            },
+        )
+        if proposal_read is not None:
+            await broadcast_to_session(
+                session_id,
+                {
+                    "type": "proposal_ready",
+                    "session_id": str(session_id),
+                    "proposal_id": str(proposal_read.id),
+                    "proposal_type": proposal_read.type.value,
+                },
+            )
+    except Exception:
+        logger.exception("ws broadcast failed session_id=%s", session_id)
+
     return ChatResponse(response=result.response, proposal=proposal_read)
 
 
