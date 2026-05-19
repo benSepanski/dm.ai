@@ -38,6 +38,7 @@ def _location_type_from_content(content: dict[str, Any]) -> LocationType:
     try:
         return LocationType(raw)
     except ValueError:
+        logger.warning("accept_proposal: unknown location type %r — defaulting to BUILDING", raw)
         return LocationType.BUILDING
 
 
@@ -47,6 +48,7 @@ def _character_type_from_content(content: dict[str, Any]) -> CharacterType:
     try:
         return CharacterType(raw)
     except ValueError:
+        logger.warning("accept_proposal: unknown character type %r — defaulting to NPC", raw)
         return CharacterType.NPC
 
 
@@ -59,7 +61,7 @@ async def _create_location_from_proposal(
     Returns the new Location's UUID, or None if the content lacks a name.
     """
     content: dict[str, Any] = proposal.content or {}
-    name: str | None = content.get("name")
+    name: str | None = (content.get("name") or "").strip() or None
     if not name:
         logger.warning(
             "accept_proposal: LOCATION proposal %s has no name — skipping entity creation",
@@ -95,7 +97,7 @@ async def _create_character_from_proposal(
     Returns the new Character's UUID, or None if the content lacks a name.
     """
     content: dict[str, Any] = proposal.content or {}
-    name: str | None = content.get("name")
+    name: str | None = (content.get("name") or "").strip() or None
     if not name:
         logger.warning(
             "accept_proposal: CHARACTER proposal %s has no name — skipping entity creation",
@@ -105,7 +107,7 @@ async def _create_character_from_proposal(
 
     level_raw = content.get("level", 1)
     try:
-        level = int(level_raw)
+        level = max(1, min(20, int(level_raw)))
     except (TypeError, ValueError):
         level = 1
 

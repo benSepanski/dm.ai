@@ -26,6 +26,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Literal
 
 from game_engine.types import ChatRole
 
@@ -122,7 +123,9 @@ class CondensedContext:
             rendered.append(AIMessage(role="user", content="\n\n".join(sections)))
 
         for message in self.preserved:
-            role = "user" if message.role == ChatRole.DM else "assistant"
+            role: Literal["user", "assistant"] = (
+                "user" if message.role == ChatRole.DM else "assistant"
+            )
             rendered.append(AIMessage(role=role, content=message.content))
 
         return rendered

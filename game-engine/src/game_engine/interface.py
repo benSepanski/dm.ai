@@ -46,7 +46,7 @@ class ActionResult:
     Attributes:
         success: Whether the action succeeded (e.g. attack hit).
         damage: Total damage dealt (0 if not applicable).
-        damage_type: The type of damage dealt.
+        damage_type: The type of damage dealt; None for non-damage actions.
         conditions_applied: Conditions applied to the target.
         flavor_text: Human-readable narrative of what happened.
         log_entry: Structured dict suitable for the combat log / API.
@@ -54,7 +54,7 @@ class ActionResult:
 
     success: bool
     damage: int
-    damage_type: DamageType
+    damage_type: DamageType | None
     conditions_applied: list[Condition]
     flavor_text: str
     log_entry: dict

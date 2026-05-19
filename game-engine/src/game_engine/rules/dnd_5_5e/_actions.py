@@ -78,11 +78,11 @@ def _resolve_action_impl(
     if action.action_type == ActionType.ATTACK:
         return _resolve_attack(action, combat_state)
 
-    # Generic non-attack action — simply succeeds.
+    # Generic non-attack action — simply succeeds with no damage.
     return ActionResult(
         success=True,
         damage=0,
-        damage_type=DamageType.BLUDGEONING,
+        damage_type=None,
         conditions_applied=[],
         flavor_text=f"{action.actor_id} uses {action.action_type.value}.",
         log_entry={
@@ -116,7 +116,7 @@ def _resolve_attack(
         return ActionResult(
             success=False,
             damage=0,
-            damage_type=DamageType.BLUDGEONING,
+            damage_type=None,
             conditions_applied=[],
             flavor_text="No target found.",
             log_entry={
