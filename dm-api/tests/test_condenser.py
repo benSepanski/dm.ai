@@ -140,7 +140,11 @@ async def test_condense_strips_markdown_fences() -> None:
 
 
 def test_as_ai_messages_renders_sections_and_anchors() -> None:
-    """Condensed context renders with citation anchors visible to the model."""
+    """Condensed context renders with citation anchors visible to the model.
+
+    When the only preserved message is a DM turn, the synopsis is merged into
+    it to avoid two consecutive user messages (Anthropic API contract).
+    """
     now = datetime(2026, 1, 1, tzinfo=timezone.utc)
     first = MessageAnchor(message_id=uuid.uuid4(), timestamp=now, role=ChatRole.DM)
     last = MessageAnchor(message_id=uuid.uuid4(), timestamp=now, role=ChatRole.AI)
@@ -161,7 +165,9 @@ def test_as_ai_messages_renders_sections_and_anchors() -> None:
     )
 
     messages = ctx.as_ai_messages()
-    assert len(messages) == 2
+    # Synopsis is merged into the first (and only) DM message to avoid two
+    # consecutive user turns.
+    assert len(messages) == 1
     head = messages[0]
     assert head.role == "user"
     assert "[CONDENSED SYNOPSIS]" in head.content
@@ -169,10 +175,8 @@ def test_as_ai_messages_renders_sections_and_anchors() -> None:
     assert "[OPEN THREADS]" in head.content
     assert first.to_citation() in head.content
     assert last.to_citation() in head.content
-
-    tail = messages[1]
-    assert tail.role == "user"
-    assert tail.content == "hello"
+    # The preserved DM message content is fused into the same message
+    assert "hello" in head.content
 
 
 def test_message_anchor_citation_format() -> None:
@@ -181,3 +185,109 @@ def test_message_anchor_citation_format() -> None:
     ts = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
     anchor = MessageAnchor(message_id=mid, timestamp=ts, role=ChatRole.DM)
     assert anchor.to_citation() == f"msg:{mid}@{ts.isoformat()}"
+
+
+def _mk_anchor(role: ChatRole) -> MessageAnchor:
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    return MessageAnchor(message_id=uuid.uuid4(), timestamp=now, role=role)
+
+
+def _mk_msg(content: str, role: ChatRole) -> HistoryMessage:
+    return HistoryMessage(anchor=_mk_anchor(role), content=content, token_count=10)
+
+
+def test_as_ai_messages_merges_synopsis_with_first_dm_message() -> None:
+    """When synopsis is non-empty and first preserved message is a DM turn,
+    the synopsis is merged into that message to avoid two consecutive user turns,
+    which would violate the Anthropic API's alternating-turn contract.
+    """
+    first_anchor = _mk_anchor(ChatRole.DM)
+    last_anchor = _mk_anchor(ChatRole.AI)
+
+    # Preserved tail: DM message first (role == ChatRole.DM → "user")
+    preserved = [
+        _mk_msg("Player asks about the quest.", ChatRole.DM),
+        _mk_msg("The quest leads north.", ChatRole.AI),
+    ]
+
+    ctx = CondensedContext(
+        synopsis="Party defeated the bandits.",
+        key_facts=["Lyra is the party leader"],
+        open_threads=[],
+        condensed_span=(first_anchor, last_anchor),
+        preserved=preserved,
+        tokens_in=500,
+        tokens_out=100,
+    )
+
+    messages = ctx.as_ai_messages()
+
+    # Must not have two consecutive user messages
+    roles = [m.role for m in messages]
+    for i in range(len(roles) - 1):
+        assert not (
+            roles[i] == "user" and roles[i + 1] == "user"
+        ), f"Consecutive user messages at indices {i} and {i+1}: {roles}"
+
+    # Synopsis content and the DM message content must be fused in the first message
+    assert messages[0].role == "user"
+    assert "[CONDENSED SYNOPSIS]" in messages[0].content
+    assert "Party defeated the bandits." in messages[0].content
+    assert "Player asks about the quest." in messages[0].content
+
+    # Remaining preserved message follows as assistant
+    assert messages[1].role == "assistant"
+    assert messages[1].content == "The quest leads north."
+
+    assert len(messages) == 2
+
+
+def test_as_ai_messages_synopsis_standalone_when_first_preserved_is_ai() -> None:
+    """When the first preserved message is an AI turn, the synopsis is emitted
+    as a standalone user message followed by the assistant message — no merging
+    needed because the turns already alternate correctly.
+    """
+    first_anchor = _mk_anchor(ChatRole.DM)
+    last_anchor = _mk_anchor(ChatRole.AI)
+
+    # Preserved tail: AI message first (role == ChatRole.AI → "assistant")
+    preserved = [
+        _mk_msg("The quest leads north.", ChatRole.AI),
+        _mk_msg("Player asks about the quest.", ChatRole.DM),
+    ]
+
+    ctx = CondensedContext(
+        synopsis="Party defeated the bandits.",
+        key_facts=[],
+        open_threads=["Who hired the bandits?"],
+        condensed_span=(first_anchor, last_anchor),
+        preserved=preserved,
+        tokens_in=300,
+        tokens_out=80,
+    )
+
+    messages = ctx.as_ai_messages()
+
+    # Must not have two consecutive user messages
+    roles = [m.role for m in messages]
+    for i in range(len(roles) - 1):
+        assert not (
+            roles[i] == "user" and roles[i + 1] == "user"
+        ), f"Consecutive user messages at indices {i} and {i+1}: {roles}"
+
+    # Synopsis is emitted as its own user message
+    assert messages[0].role == "user"
+    assert "[CONDENSED SYNOPSIS]" in messages[0].content
+    assert "Party defeated the bandits." in messages[0].content
+    # The DM message content is NOT merged into the synopsis message
+    assert "The quest leads north." not in messages[0].content
+
+    # Next message is the AI turn (assistant), NOT merged
+    assert messages[1].role == "assistant"
+    assert messages[1].content == "The quest leads north."
+
+    # Final message is the DM turn (user)
+    assert messages[2].role == "user"
+    assert messages[2].content == "Player asks about the quest."
+
+    assert len(messages) == 3

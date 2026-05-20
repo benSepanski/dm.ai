@@ -178,4 +178,11 @@ class AbstractCombat(ABC):
 
         Returns:
             The raw d20 initiative roll (not including DEX modifier).
+            ``AbstractCombat.start`` fetches the character's DEX modifier
+            and passes it separately to ``InitiativeTracker.add_combatant``,
+            so it is added once there.
+
+            Do NOT call :meth:`~game_engine.interface.RuleEngine.roll_initiative`
+            here — that method already includes the DEX modifier and would
+            cause it to be counted twice.
         """

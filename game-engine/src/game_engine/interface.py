@@ -5,6 +5,8 @@ This module defines the abstract base class RuleEngine and the data classes
 used to communicate results between the engine and the game layer.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 

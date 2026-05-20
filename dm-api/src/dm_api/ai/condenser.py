@@ -118,10 +118,21 @@ class CondensedContext:
             first, last = self.condensed_span
             sections.append(f"[SPAN] {first.to_citation()} → {last.to_citation()}")
 
-        if sections:
-            rendered.append(AIMessage(role="user", content="\n\n".join(sections)))
+        synopsis_content = "\n\n".join(sections) if sections else ""
 
-        for message in self.preserved:
+        # Build the preserved tail, merging synopsis into the first user message
+        # to avoid two consecutive "user" turns (violates the Anthropic API contract).
+        start_idx = 0
+        if synopsis_content and self.preserved and self.preserved[0].role == ChatRole.DM:
+            first = self.preserved[0]
+            rendered.append(
+                AIMessage(role="user", content=synopsis_content + "\n\n" + first.content)
+            )
+            start_idx = 1
+        elif synopsis_content:
+            rendered.append(AIMessage(role="user", content=synopsis_content))
+
+        for message in self.preserved[start_idx:]:
             role = "user" if message.role == ChatRole.DM else "assistant"
             rendered.append(AIMessage(role=role, content=message.content))
 
