@@ -77,27 +77,29 @@ class Skill(str, Enum):
     @property
     def governing_ability(self) -> "Ability":
         """Return the ability score that governs this skill."""
-        _MAP: dict[Skill, Ability] = {
-            Skill.ACROBATICS: Ability.DEXTERITY,
-            Skill.ANIMAL_HANDLING: Ability.WISDOM,
-            Skill.ARCANA: Ability.INTELLIGENCE,
-            Skill.ATHLETICS: Ability.STRENGTH,
-            Skill.DECEPTION: Ability.CHARISMA,
-            Skill.HISTORY: Ability.INTELLIGENCE,
-            Skill.INSIGHT: Ability.WISDOM,
-            Skill.INTIMIDATION: Ability.CHARISMA,
-            Skill.INVESTIGATION: Ability.INTELLIGENCE,
-            Skill.MEDICINE: Ability.WISDOM,
-            Skill.NATURE: Ability.INTELLIGENCE,
-            Skill.PERCEPTION: Ability.WISDOM,
-            Skill.PERFORMANCE: Ability.CHARISMA,
-            Skill.PERSUASION: Ability.CHARISMA,
-            Skill.RELIGION: Ability.INTELLIGENCE,
-            Skill.SLEIGHT_OF_HAND: Ability.DEXTERITY,
-            Skill.STEALTH: Ability.DEXTERITY,
-            Skill.SURVIVAL: Ability.WISDOM,
-        }
-        return _MAP[self]
+        return _SKILL_ABILITY_MAP[self]
+
+
+_SKILL_ABILITY_MAP: dict[Skill, Ability] = {
+    Skill.ACROBATICS: Ability.DEXTERITY,
+    Skill.ANIMAL_HANDLING: Ability.WISDOM,
+    Skill.ARCANA: Ability.INTELLIGENCE,
+    Skill.ATHLETICS: Ability.STRENGTH,
+    Skill.DECEPTION: Ability.CHARISMA,
+    Skill.HISTORY: Ability.INTELLIGENCE,
+    Skill.INSIGHT: Ability.WISDOM,
+    Skill.INTIMIDATION: Ability.CHARISMA,
+    Skill.INVESTIGATION: Ability.INTELLIGENCE,
+    Skill.MEDICINE: Ability.WISDOM,
+    Skill.NATURE: Ability.INTELLIGENCE,
+    Skill.PERCEPTION: Ability.WISDOM,
+    Skill.PERFORMANCE: Ability.CHARISMA,
+    Skill.PERSUASION: Ability.CHARISMA,
+    Skill.RELIGION: Ability.INTELLIGENCE,
+    Skill.SLEIGHT_OF_HAND: Ability.DEXTERITY,
+    Skill.STEALTH: Ability.DEXTERITY,
+    Skill.SURVIVAL: Ability.WISDOM,
+}
 
 
 class DamageType(str, Enum):
@@ -140,13 +142,18 @@ class Condition(str, Enum):
     @classmethod
     def prevents_action(cls, condition: "Condition") -> bool:
         """Return True if *condition* prevents the character from acting."""
-        return condition in {
-            cls.INCAPACITATED,
-            cls.PARALYZED,
-            cls.PETRIFIED,
-            cls.STUNNED,
-            cls.UNCONSCIOUS,
-        }
+        return condition in _ACTION_BLOCKING_CONDITIONS
+
+
+_ACTION_BLOCKING_CONDITIONS: frozenset[Condition] = frozenset(
+    {
+        Condition.INCAPACITATED,
+        Condition.PARALYZED,
+        Condition.PETRIFIED,
+        Condition.STUNNED,
+        Condition.UNCONSCIOUS,
+    }
+)
 
 
 class ActionType(str, Enum):
