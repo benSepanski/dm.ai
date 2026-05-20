@@ -26,6 +26,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Literal
 
 from game_engine.types import ChatRole
 
@@ -124,17 +125,19 @@ class CondensedContext:
         # to avoid two consecutive "user" turns (violates the Anthropic API contract).
         start_idx = 0
         if synopsis_content and self.preserved and self.preserved[0].role == ChatRole.DM:
-            first = self.preserved[0]
+            first_preserved = self.preserved[0]
             rendered.append(
-                AIMessage(role="user", content=synopsis_content + "\n\n" + first.content)
+                AIMessage(role="user", content=synopsis_content + "\n\n" + first_preserved.content)
             )
             start_idx = 1
         elif synopsis_content:
             rendered.append(AIMessage(role="user", content=synopsis_content))
 
         for message in self.preserved[start_idx:]:
-            role = "user" if message.role == ChatRole.DM else "assistant"
-            rendered.append(AIMessage(role=role, content=message.content))
+            msg_role: Literal["user", "assistant"] = (
+                "user" if message.role == ChatRole.DM else "assistant"
+            )
+            rendered.append(AIMessage(role=msg_role, content=message.content))
 
         return rendered
 
