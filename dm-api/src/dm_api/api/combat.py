@@ -8,8 +8,11 @@ Harness-engineering notes:
   action so HP, conditions, etc. survive between requests.
 - Depth-first decomposition: ``submit_combat_action`` is split into
   load → build-state → resolve → persist stages.
+- WebSocket broadcasts: every state-mutating endpoint emits a ``combat_update``
+  event to all connected clients so the UI stays in sync without polling.
 """
 
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -21,6 +24,7 @@ from game_engine.types.values import DiceNotation
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.api.ws import broadcast_to_session
 from dm_api.db.models.character import Character
 from dm_api.db.models.combat import (
     AttackDetailsRequest,
@@ -32,10 +36,31 @@ from dm_api.db.models.combat import (
 from dm_api.db.models.session import GameSession
 from dm_api.db.session import get_db
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 # Stateless engine — safe to share across requests.
 _engine = DnD55eEngine()
+
+
+async def _broadcast_combat(session_id: uuid.UUID, state: CombatStateRead) -> None:
+    """Emit a ``combat_update`` WebSocket event after every state-mutating endpoint.
+
+    Failures are logged but never propagate to the HTTP response — the DB
+    write already succeeded so the caller gets the correct result regardless.
+    """
+    try:
+        await broadcast_to_session(
+            session_id,
+            {
+                "type": "combat_update",
+                "session_id": str(session_id),
+                "combat": state.model_dump(mode="json"),
+            },
+        )
+    except Exception:
+        logger.exception("combat broadcast failed session_id=%s", session_id)
 
 
 def _character_to_sheet(character: Character) -> CharacterSheet:
@@ -152,7 +177,9 @@ async def start_combat(
     db.add(combat)
     await db.commit()
     await db.refresh(combat)
-    return CombatStateRead.model_validate(combat)
+    result_read = CombatStateRead.model_validate(combat)
+    await _broadcast_combat(session_id, result_read)
+    return result_read
 
 
 @router.get(
@@ -237,7 +264,9 @@ async def submit_combat_action(
 
     await db.commit()
     await db.refresh(combat)
-    return CombatStateRead.model_validate(combat)
+    result_read = CombatStateRead.model_validate(combat)
+    await _broadcast_combat(session_id, result_read)
+    return result_read
 
 
 @router.post(
@@ -275,7 +304,9 @@ async def next_turn(
 
     await db.commit()
     await db.refresh(combat)
-    return CombatStateRead.model_validate(combat)
+    result_read = CombatStateRead.model_validate(combat)
+    await _broadcast_combat(session_id, result_read)
+    return result_read
 
 
 @router.put(
@@ -299,4 +330,6 @@ async def end_combat(
     combat.ended_at = datetime.now(tz=timezone.utc)
     await db.commit()
     await db.refresh(combat)
-    return CombatStateRead.model_validate(combat)
+    result_read = CombatStateRead.model_validate(combat)
+    await _broadcast_combat(session_id, result_read)
+    return result_read
