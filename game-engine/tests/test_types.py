@@ -357,6 +357,38 @@ class TestCharacterSheet:
         assert restored.hp_max == original.hp_max
         assert restored.ac == original.ac
 
+    def test_condition_durations_survive_round_trip(self):
+        """condition_durations must be preserved through to_dict / from_dict."""
+        original = CharacterSheet(
+            id="hero-1",
+            name="Aria",
+            level=3,
+            char_class=CharacterClass.FIGHTER,
+            conditions=[Condition.POISONED, Condition.PRONE],
+            condition_durations={Condition.POISONED: 3},
+        )
+        restored = CharacterSheet.from_dict(original.to_dict())
+
+        assert restored.condition_durations == {Condition.POISONED: 3}
+        assert Condition.PRONE not in restored.condition_durations
+
+    def test_condition_durations_unknown_key_skipped(self):
+        """from_dict must skip unrecognised condition names in condition_durations."""
+        d = {
+            "id": "hero-1",
+            "name": "Hero",
+            "level": 1,
+            "class": "Fighter",
+            "condition_durations": {"not_a_real_condition": 5, "poisoned": 2},
+        }
+        sheet = CharacterSheet.from_dict(d)
+        assert sheet.condition_durations == {Condition.POISONED: 2}
+
+    def test_condition_durations_empty_by_default(self):
+        """Sheets without condition_durations in the dict default to empty."""
+        sheet = CharacterSheet.from_dict({"id": "x", "name": "X", "level": 1, "class": "Fighter"})
+        assert sheet.condition_durations == {}
+
     def test_char_type_default_pc(self):
         sheet = CharacterSheet(
             id="hero-1", name="Hero", level=1, char_class=CharacterClass.FIGHTER
