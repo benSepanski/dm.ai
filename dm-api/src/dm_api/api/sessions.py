@@ -1,3 +1,4 @@
+import functools
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -22,7 +23,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@functools.lru_cache(maxsize=1)
 def _get_backend() -> AIBackend:
+    """Return the process-wide singleton AI backend.
+
+    Cached so the AnthropicBackend (and its underlying HTTP connection pool)
+    is created once per process rather than once per request.
+    """
     from dm_api.ai.backends.factory import create_backend
 
     return create_backend(
@@ -32,6 +39,11 @@ def _get_backend() -> AIBackend:
 
 
 def _make_orchestrator() -> DMOrchestrator:
+    """Return a fresh DMOrchestrator using the cached backend singleton.
+
+    DMOrchestrator is stateless and cheap to construct; only the backend
+    (which holds the HTTP connection pool) is cached.
+    """
     return DMOrchestrator(
         backend=_get_backend(),
         orchestrator_model=settings.orchestrator_model,

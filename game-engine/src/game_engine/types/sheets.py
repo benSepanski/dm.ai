@@ -114,6 +114,7 @@ class CharacterSheet:
                 + [a.value for a in self.proficient_abilities]
             ),
             "conditions": [c.value for c in self.conditions],
+            "condition_durations": {c.value: n for c, n in self.condition_durations.items()},
             "damage_resistances": [d.value for d in self.damage_resistances],
             "damage_immunities": [d.value for d in self.damage_immunities],
             "damage_vulnerabilities": [d.value for d in self.damage_vulnerabilities],
@@ -161,6 +162,15 @@ class CharacterSheet:
         except ValueError:
             char_type = CharacterType.PC
 
+        raw_durations: dict = d.get("condition_durations", {})
+        condition_durations: dict[Condition, int] = {}
+        for cond_str, rounds in raw_durations.items():
+            if _safe_enum(Condition, cond_str.lower()):
+                try:
+                    condition_durations[Condition(cond_str.lower())] = int(rounds)
+                except (ValueError, TypeError):
+                    pass
+
         return cls(
             id=d.get("id", ""),
             name=d.get("name", ""),
@@ -174,6 +184,7 @@ class CharacterSheet:
             proficient_skills=skills,
             proficient_abilities=abilities,
             conditions=_conditions("conditions"),
+            condition_durations=condition_durations,
             damage_resistances=_damage_types("damage_resistances"),
             damage_immunities=_damage_types("damage_immunities"),
             damage_vulnerabilities=_damage_types("damage_vulnerabilities"),

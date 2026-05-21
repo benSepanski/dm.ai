@@ -44,6 +44,15 @@ should reinforce the harness, not work around it.
 3. If the mistake affects existing code elsewhere, open a separate
    garbage-collection PR: narrow scope, mechanical fix, one-minute review.
 
+### Serialization completeness rule (learned from `condition_durations` bug)
+
+When adding a new field to a dataclass that has `to_dict()` and `from_dict()`:
+- Add a serialization entry in `to_dict()` immediately.
+- Add a deserialization entry in `from_dict()` immediately.
+- Add a round-trip test in the corresponding test file.
+
+Omitting any of these three steps silently drops data on every DB persist cycle.
+
 ---
 
 ## Repository Layout
@@ -255,6 +264,7 @@ Before treating any task as done, verify:
 - [ ] No file exceeds 400 LoC without a noted exception comment at the top
 - [ ] All new public functions and methods have full type annotations
 - [ ] All new features have corresponding tests; new bug fixes have regression tests
+- [ ] New dataclass fields appear in BOTH `to_dict()` AND `from_dict()` (plus a round-trip test)
 - [ ] `pytest tests/ -v` passes in both `game-engine/` and `dm-api/`
 - [ ] `npx tsc --noEmit` passes in `dm-ui/`
 - [ ] `npm run lint` passes with zero warnings in `dm-ui/`
