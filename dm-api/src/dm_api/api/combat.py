@@ -80,6 +80,7 @@ def _character_to_sheet(character: Character) -> CharacterSheet:
             "type": character.type.value,
             "proficiencies": stats.get("proficiencies", []),
             "conditions": stats.get("conditions", []),
+            "condition_durations": stats.get("condition_durations", {}),
             "damage_resistances": stats.get("damage_resistances", []),
             "damage_immunities": stats.get("damage_immunities", []),
             "damage_vulnerabilities": stats.get("damage_vulnerabilities", []),

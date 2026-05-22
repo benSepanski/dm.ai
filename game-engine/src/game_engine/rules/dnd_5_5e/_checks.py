@@ -70,13 +70,17 @@ def _calc_prof_bonus(level: int) -> int:
 
 
 def _roll_initiative_impl(char: CharacterSheet) -> int:
-    """Roll initiative: raw d20 roll (DEX modifier added by the initiative tracker).
+    """Roll the raw d20 for initiative.
+
+    The caller (``DnD55eEngine.roll_initiative``) adds the DEX modifier to
+    produce the final total; this function returns only the raw roll so the
+    engine can expose both values if needed (e.g., for tie-breaking storage).
 
     Args:
-        char: Character sheet.
+        char: Character sheet (unused here; retained for interface symmetry).
 
     Returns:
-        The raw d20 roll (not including DEX modifier).
+        Raw d20 roll (1-20), without any modifier applied.
     """
     raw, _ = roll_dice(1, 20)
     return raw

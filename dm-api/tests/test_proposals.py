@@ -252,7 +252,7 @@ async def test_accept_character_proposal_creates_character(client, world_id, db_
             "name": "Elara Dawnwhisper",
             "type": "npc",
             "race": "Elf",
-            "char_class": "Wizard",
+            "class": "Wizard",
             "level": 5,
             "personality_traits": "Curious and bookish.",
         },
@@ -321,3 +321,33 @@ async def test_accept_character_proposal_no_name_skips_entity(client, world_id, 
     r = await client.post(f"/api/ai/proposals/{proposal_id}/accept", json={})
     assert r.status_code == 200
     assert "created_entity_id" not in (r.json().get("content") or {})
+
+
+@pytest.mark.asyncio
+async def test_accept_character_proposal_uses_class_key_not_char_class(
+    client, world_id, db_session
+):
+    """The canonical proposal content key for character class is ``"class"``,
+    not ``"char_class"``. Regression test ensuring the backward-compat fallback
+    was removed and the system prompt schema is enforced.
+    """
+    from sqlalchemy import select
+
+    session_id = await _make_session(client, world_id, "ClassKeyReg")
+    proposal_id = await _insert_proposal(
+        db_session,
+        world_id=world_id,
+        session_id=session_id,
+        ptype=ProposalType.CHARACTER,
+        content={"name": "Bard McBardson", "class": "Bard", "level": 3},
+    )
+
+    r = await client.post(f"/api/ai/proposals/{proposal_id}/accept", json={})
+    assert r.status_code == 200
+    entity_id = r.json()["content"]["created_entity_id"]
+
+    result = await db_session.execute(
+        select(Character).where(Character.id == uuid.UUID(entity_id))
+    )
+    char = result.scalar_one()
+    assert char.char_class == "Bard"
