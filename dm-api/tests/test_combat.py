@@ -336,3 +336,62 @@ async def test_next_turn_no_active_combat(client, world_id):
     session_id = await _create_session(client, world_id)
     r = await client.post(f"/api/sessions/{session_id}/combat/next-turn")
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Regression: condition_durations must survive the DB→engine round-trip
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_condition_durations_preserved_through_combat(client, world_id):
+    """Characters enrolled with condition_durations in stats keep those
+    durations when loaded into the rule engine for action resolution.
+
+    Regression test for the bug where _character_to_sheet omitted
+    ``condition_durations`` from the dict passed to CharacterSheet.from_dict,
+    silently resetting all timed conditions to indefinite.
+    """
+    session_id = await _create_session(client, world_id)
+
+    # Create a character that is already poisoned (3 rounds remaining)
+    char_id = await client.post(
+        "/api/characters/",
+        json={
+            "world_id": world_id,
+            "type": "PC",
+            "name": "Cursed Hero",
+            "level": 1,
+            "char_class": "Fighter",
+            "hp_current": 20,
+            "hp_max": 20,
+            "ac": 14,
+            "stats": {
+                "ability_scores": {
+                    "strength": 16,
+                    "dexterity": 12,
+                    "constitution": 14,
+                    "intelligence": 10,
+                    "wisdom": 10,
+                    "charisma": 10,
+                },
+                "conditions": ["poisoned"],
+                "condition_durations": {"poisoned": 3},
+            },
+        },
+    )
+    assert char_id.status_code == 201
+    char_id = char_id.json()["id"]
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [char_id]},
+    )
+    assert r.status_code == 201
+
+    # The combatant stored in the combat state must carry the condition_durations
+    combatants = r.json()["combatants"]
+    assert combatants is not None and len(combatants) == 1
+    combatant = combatants[0]
+    assert "poisoned" in combatant.get("conditions", [])
+    assert combatant.get("condition_durations", {}).get("poisoned") == 3

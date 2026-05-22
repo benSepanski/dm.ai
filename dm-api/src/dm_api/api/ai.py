@@ -115,7 +115,7 @@ async def _create_character_from_proposal(
         type=_character_type_from_content(content),
         name=name,
         race=content.get("race"),
-        char_class=content.get("char_class") or content.get("class"),
+        char_class=content.get("class"),
         level=level,
         alignment=content.get("alignment"),
         personality_traits=content.get("personality_traits"),

@@ -53,6 +53,22 @@ When adding a new field to a dataclass that has `to_dict()` and `from_dict()`:
 
 Omitting any of these three steps silently drops data on every DB persist cycle.
 
+When bridging a DB model to a game-engine dataclass (e.g., `_character_to_sheet`
+in `combat.py`), ensure **all** fields from the target dataclass's `from_dict`
+are populated — not just the obvious combat stats. Check `CharacterSheet.from_dict`
+for the full field list whenever this bridge is modified.
+
+### Proposal content schema rule (learned from `char_class` vs `"class"` bug)
+
+AI proposal content uses the **same field names** as `CharacterSheet.to_dict()` /
+`CharacterSheet.from_dict()`:
+- `"class"` — not `"char_class"` — for character class
+- `"type"` — for `CharacterType` and `LocationType`
+
+The system prompt in `dm_api/ai/prompts/system_prompt.py` documents the canonical
+schema. No backward-compat fallbacks (`content.get("char_class") or content.get("class")`
+style). If the AI uses a wrong key, fix the system prompt, not the parser.
+
 ---
 
 ## Repository Layout
