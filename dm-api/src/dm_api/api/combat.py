@@ -297,7 +297,18 @@ async def next_turn(
             detail="No combatants registered; add combatants before advancing turns",
         )
 
-    next_index = combat.current_turn_index + 1
+    # Tick condition durations for the combatant whose turn is ending.
+    # Indices in combatants[] are aligned with initiative_order[] (both sorted
+    # by initiative in start_combat and never reordered after that).
+    current_idx = combat.current_turn_index
+    combatants = list(combat.combatants or [])
+    if current_idx < len(combatants):
+        sheet = CharacterSheet.from_dict(combatants[current_idx])
+        _engine.tick_condition_durations(sheet)
+        combatants[current_idx] = sheet.to_dict()
+        combat.combatants = combatants
+
+    next_index = current_idx + 1
     if next_index >= order_len:
         combat.round_number += 1
         next_index = 0

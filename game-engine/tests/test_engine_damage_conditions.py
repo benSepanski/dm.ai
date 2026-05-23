@@ -323,3 +323,61 @@ class TestRemoveCondition:
         assert fighter.conditions == []
         engine.remove_condition(fighter, Condition.PRONE)
         assert fighter.conditions == []
+
+
+# ---------------------------------------------------------------------------
+# tick_condition_durations
+# ---------------------------------------------------------------------------
+
+
+class TestTickConditionDurations:
+    def test_decrements_timed_condition(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        engine.apply_condition(fighter, Condition.FRIGHTENED, duration_rounds=3)
+        engine.tick_condition_durations(fighter)
+        assert fighter.condition_durations[Condition.FRIGHTENED] == 2
+
+    def test_expires_condition_with_duration_one(
+        self, engine: DnD55eEngine, fighter: CharacterSheet
+    ):
+        engine.apply_condition(fighter, Condition.BLINDED, duration_rounds=1)
+        engine.tick_condition_durations(fighter)
+        assert Condition.BLINDED not in fighter.conditions
+        assert Condition.BLINDED not in fighter.condition_durations
+
+    def test_indefinite_condition_not_removed(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        engine.apply_condition(fighter, Condition.POISONED)  # no duration
+        engine.tick_condition_durations(fighter)
+        assert Condition.POISONED in fighter.conditions
+        assert Condition.POISONED not in fighter.condition_durations
+
+    def test_only_expired_condition_removed(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        engine.apply_condition(fighter, Condition.BLINDED, duration_rounds=1)
+        engine.apply_condition(fighter, Condition.PRONE, duration_rounds=3)
+        engine.tick_condition_durations(fighter)
+        assert Condition.BLINDED not in fighter.conditions
+        assert Condition.PRONE in fighter.conditions
+        assert fighter.condition_durations[Condition.PRONE] == 2
+
+    def test_returns_character_sheet(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        result = engine.tick_condition_durations(fighter)
+        assert result is fighter
+
+    def test_noop_when_no_timed_conditions(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        engine.apply_condition(fighter, Condition.CHARMED)  # indefinite
+        engine.tick_condition_durations(fighter)
+        assert Condition.CHARMED in fighter.conditions
+
+    def test_multiple_expirations_in_one_tick(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        engine.apply_condition(fighter, Condition.BLINDED, duration_rounds=1)
+        engine.apply_condition(fighter, Condition.PRONE, duration_rounds=1)
+        engine.tick_condition_durations(fighter)
+        assert Condition.BLINDED not in fighter.conditions
+        assert Condition.PRONE not in fighter.conditions
+        assert fighter.condition_durations == {}
+
+    def test_zero_duration_condition_removed(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        """A duration of 0 is treated as already expired — removed immediately."""
+        engine.apply_condition(fighter, Condition.STUNNED, duration_rounds=1)
+        fighter.condition_durations[Condition.STUNNED] = 0
+        engine.tick_condition_durations(fighter)
+        assert Condition.STUNNED not in fighter.conditions

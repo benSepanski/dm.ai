@@ -66,3 +66,29 @@ def _remove_condition_impl(
     target.conditions = [c for c in target.conditions if c != condition]
     target.condition_durations.pop(condition, None)
     return target
+
+
+def _tick_condition_durations_impl(target: CharacterSheet) -> CharacterSheet:
+    """Decrement timed condition durations at end of a combatant's turn.
+
+    Conditions whose remaining duration reaches zero are removed entirely.
+    Indefinite conditions (not tracked in ``condition_durations``) are not
+    affected. Called by the rule engine once per ``next_turn`` transition.
+
+    Args:
+        target: Character sheet. Modified in-place and returned.
+
+    Returns:
+        Updated character sheet.
+    """
+    # Collect conditions that expire this turn (duration ≤ 1).
+    expired = [c for c, n in target.condition_durations.items() if n <= 1]
+    for cond in expired:
+        target.conditions = [c for c in target.conditions if c != cond]
+        del target.condition_durations[cond]
+
+    # Decrement remaining timed conditions.
+    for cond in list(target.condition_durations):
+        target.condition_durations[cond] -= 1
+
+    return target

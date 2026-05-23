@@ -94,10 +94,17 @@ async def session_websocket(websocket: WebSocket, session_id: uuid.UUID) -> None
                 await websocket.send_text(json.dumps({"error": "invalid JSON"}))
                 continue
             # Relay to other clients in the same session.
+            # Per-connection errors are swallowed: a dead relay target must not
+            # terminate the sending client's connection. Stale entries are pruned
+            # by broadcast_to_session on the next server-push event.
             message["session_id"] = key
-            for conn in _connections[key]:
+            payload = json.dumps(message)
+            for conn in list(_connections[key]):
                 if conn != websocket:
-                    await conn.send_text(json.dumps(message))
+                    try:
+                        await conn.send_text(payload)
+                    except Exception:
+                        pass
     except WebSocketDisconnect:
         _connections[key].remove(websocket)
         if not _connections[key]:
