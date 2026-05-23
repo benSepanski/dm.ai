@@ -19,7 +19,10 @@ from game_engine.types import (
     DamageType,
 )
 
-#: All basic combat actions available in D&D 5.5e.
+# All basic combat actions available to any character this turn.
+# ActionType.CAST_SPELL is intentionally excluded: spell resolution requires
+# per-spell slot tracking and effect tables that are beyond the base engine's
+# scope. Spell casting is handled at the API/orchestrator layer.
 _ALL_BASIC_ACTIONS: list[ActionType] = [
     ActionType.ATTACK,
     ActionType.DASH,

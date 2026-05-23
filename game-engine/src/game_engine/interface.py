@@ -229,6 +229,21 @@ class RuleEngine(ABC):
         """
 
     @abstractmethod
+    def tick_condition_durations(self, target: CharacterSheet) -> CharacterSheet:
+        """Decrement timed condition durations at end of a combatant's turn.
+
+        Conditions whose remaining duration reaches zero are removed. Indefinite
+        conditions (those without a duration entry) are not affected. Call once
+        per combatant per turn, at the moment the turn advances.
+
+        Args:
+            target: Character sheet.
+
+        Returns:
+            Updated character sheet.
+        """
+
+    @abstractmethod
     def calculate_proficiency_bonus(self, level: int) -> int:
         """Return the proficiency bonus for the given character level.
 

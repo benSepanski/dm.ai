@@ -118,3 +118,25 @@ def test_websocket_malformed_json():
                 ws.send_text(json.dumps({"type": "ping"}))
     finally:
         _cleanup_app(app, engine)
+
+
+def test_websocket_relay_dead_target_does_not_kill_sender():
+    """A dead relay target must not terminate the sending client's connection.
+
+    Regression test for the bug where per-connection errors in the relay loop
+    propagated to the outer handler and terminated the sender's WebSocket.
+    """
+    app, engine = _make_app()
+    try:
+        session_id = str(uuid.uuid4())
+        with TestClient(app) as client:
+            with client.websocket_connect(f"/api/ws/sessions/{session_id}") as ws1:
+                with client.websocket_connect(f"/api/ws/sessions/{session_id}") as ws2:
+                    # Force ws2 to disconnect first (it becomes a dead relay target)
+                    ws2.close()
+
+                    # ws1 sends a message — should NOT raise even though ws2 is dead
+                    ws1.send_text(json.dumps({"type": "ping", "data": "still alive"}))
+                    # If we reach here without exception, the bug is fixed.
+    finally:
+        _cleanup_app(app, engine)

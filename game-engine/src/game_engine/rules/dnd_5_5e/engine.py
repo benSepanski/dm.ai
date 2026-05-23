@@ -34,6 +34,7 @@ from game_engine.rules.dnd_5_5e._checks import (
 from game_engine.rules.dnd_5_5e._conditions import (
     _apply_condition_impl,
     _remove_condition_impl,
+    _tick_condition_durations_impl,
 )
 from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl
 from game_engine.rules.dnd_5_5e._validation import _validate_character_impl
@@ -177,6 +178,20 @@ class DnD55eEngine(RuleEngine):
             Updated character sheet.
         """
         return _remove_condition_impl(target, condition)
+
+    def tick_condition_durations(self, target: CharacterSheet) -> CharacterSheet:
+        """Decrement timed condition durations at end of a combatant's turn.
+
+        Conditions whose remaining duration reaches zero are removed. Call once
+        per combatant per turn (at ``next_turn`` time).
+
+        Args:
+            target: Character sheet.
+
+        Returns:
+            Updated character sheet.
+        """
+        return _tick_condition_durations_impl(target)
 
     # ------------------------------------------------------------------
     # Available actions

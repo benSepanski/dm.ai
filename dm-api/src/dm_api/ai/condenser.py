@@ -134,8 +134,10 @@ class CondensedContext:
             rendered.append(AIMessage(role="user", content=synopsis_content))
 
         for message in self.preserved[start_idx:]:
+            # SYSTEM messages are injected as user-role context (not possible via
+            # normal session_chat, but guarded explicitly for correctness).
             msg_role: Literal["user", "assistant"] = (
-                "user" if message.role == ChatRole.DM else "assistant"
+                "assistant" if message.role == ChatRole.AI else "user"
             )
             rendered.append(AIMessage(role=msg_role, content=message.content))
 

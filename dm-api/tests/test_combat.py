@@ -395,3 +395,100 @@ async def test_condition_durations_preserved_through_combat(client, world_id):
     combatant = combatants[0]
     assert "poisoned" in combatant.get("conditions", [])
     assert combatant.get("condition_durations", {}).get("poisoned") == 3
+
+
+# ---------------------------------------------------------------------------
+# Condition duration ticking via next_turn
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_next_turn_ticks_condition_duration(client, world_id):
+    """next_turn decrements timed conditions on the combatant whose turn just ended."""
+    session_id = await _create_session(client, world_id)
+
+    # Enroll a character with a 2-round poisoned condition
+    char_id = (
+        await client.post(
+            "/api/characters/",
+            json={
+                "world_id": world_id,
+                "type": "PC",
+                "name": "Poisoned Fighter",
+                "level": 1,
+                "char_class": "Fighter",
+                "hp_current": 20,
+                "hp_max": 20,
+                "ac": 14,
+                "stats": {
+                    "ability_scores": {
+                        "strength": 16,
+                        "dexterity": 12,
+                        "constitution": 14,
+                        "intelligence": 10,
+                        "wisdom": 10,
+                        "charisma": 10,
+                    },
+                    "conditions": ["poisoned"],
+                    "condition_durations": {"poisoned": 2},
+                },
+            },
+        )
+    ).json()["id"]
+
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [char_id]},
+    )
+
+    # Advance past the character's turn — duration should decrement from 2 to 1
+    r = await client.post(f"/api/sessions/{session_id}/combat/next-turn")
+    assert r.status_code == 200
+    combatant = r.json()["combatants"][0]
+    assert "poisoned" in combatant["conditions"]
+    assert combatant["condition_durations"]["poisoned"] == 1
+
+
+@pytest.mark.asyncio
+async def test_next_turn_expires_condition_with_duration_one(client, world_id):
+    """A condition with duration 1 is removed when the combatant's turn ends."""
+    session_id = await _create_session(client, world_id)
+
+    char_id = (
+        await client.post(
+            "/api/characters/",
+            json={
+                "world_id": world_id,
+                "type": "PC",
+                "name": "Blinded Fighter",
+                "level": 1,
+                "char_class": "Fighter",
+                "hp_current": 20,
+                "hp_max": 20,
+                "ac": 14,
+                "stats": {
+                    "ability_scores": {
+                        "strength": 16,
+                        "dexterity": 12,
+                        "constitution": 14,
+                        "intelligence": 10,
+                        "wisdom": 10,
+                        "charisma": 10,
+                    },
+                    "conditions": ["blinded"],
+                    "condition_durations": {"blinded": 1},
+                },
+            },
+        )
+    ).json()["id"]
+
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [char_id]},
+    )
+
+    r = await client.post(f"/api/sessions/{session_id}/combat/next-turn")
+    assert r.status_code == 200
+    combatant = r.json()["combatants"][0]
+    assert "blinded" not in combatant["conditions"]
+    assert "blinded" not in combatant.get("condition_durations", {})
