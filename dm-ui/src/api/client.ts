@@ -17,24 +17,43 @@ export interface ChatResponse {
   proposal?: Record<string, unknown> | null;
 }
 
+// Entry in initiative_order — one per combatant, sorted by initiative desc.
+export interface InitiativeEntry {
+  character_id: string;
+  name: string;
+  initiative: number;
+}
+
+// Entry in combatants — CharacterSheet.to_dict() shape from the rule engine.
+// Indices align 1:1 with initiative_order after initiative is rolled.
+export interface CombatantState {
+  id: string;
+  name: string;
+  hp_current: number;
+  hp_max: number;
+  ac: number;
+  speed: number;
+  level: number;
+  conditions: string[];
+  condition_durations: Record<string, number>;
+}
+
 export interface CombatStateResponse {
   id: string;
+  session_id: string;
+  location_id: string | null;
   round_number: number;
   current_turn_index: number;
-  combatants: Array<{
-    char_id: string;
-    name: string;
-    hp_current: number;
-    hp_max: number;
-    ac: number;
-    initiative: number;
-    is_current_turn: boolean;
-  }> | null;
+  initiative_order: InitiativeEntry[] | null;
+  combatants: CombatantState[] | null;
+  combat_log: Record<string, unknown>[] | null;
+  started_at: string;
+  ended_at: string | null;
 }
 
 export interface CombatActionRequest {
+  actor_id: string;
   action_type: string;
-  actor_id?: string;
   target_id?: string;
 }
 
@@ -77,6 +96,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify(action),
     }),
+  nextTurn: (sessionId: string) =>
+    request<CombatStateResponse>(`/sessions/${sessionId}/combat/next-turn`, { method: "POST" }),
   endCombat: (sessionId: string) =>
     request<CombatStateResponse>(`/sessions/${sessionId}/combat/end`, { method: "PUT" }),
 };

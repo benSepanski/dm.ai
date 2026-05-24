@@ -10,15 +10,15 @@
     "lint": "eslint src --ext ts,tsx --max-warnings 0"
   },
   "dependencies": {
+    "konva": "^9.3.15",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^6.27.0",
-    "konva": "^9.3.15",
     "react-konva": "^19.0.0-0",
+    "react-router-dom": "^6.27.0",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
+    "@eslint/js": "^9.39.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",

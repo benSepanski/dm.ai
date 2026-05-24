@@ -42,7 +42,7 @@ export interface CharacterData {
   hp_current: number | null;
   hp_max: number | null;
   ac: number | null;
-  stats: Record<string, number> | null;
+  stats: Record<string, unknown> | null;
 }
 
 // ---- Store shape ----
