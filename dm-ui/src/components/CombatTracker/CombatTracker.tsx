@@ -2,14 +2,19 @@ import { useCallback } from "react";
 import { api, type CombatStateResponse } from "../../api/client";
 import { useGameStore, type ActiveCombat, type Combatant } from "../../store/gameStore";
 
+// Build the ActiveCombat view by zipping initiative_order (has initiative score)
+// with combatants (has hp/ac). Both lists share the same index order set by
+// start_combat and never reordered afterward.
 function mapCombatResponse(result: CombatStateResponse): ActiveCombat {
-  const combatants: Combatant[] = (result.combatants ?? []).map((c, i) => ({
-    char_id: c.char_id,
-    name: c.name,
-    hp_current: c.hp_current,
-    hp_max: c.hp_max,
-    ac: c.ac,
-    initiative: c.initiative,
+  const order = result.initiative_order ?? [];
+  const data = result.combatants ?? [];
+  const combatants: Combatant[] = order.map((entry, i) => ({
+    char_id: entry.character_id,
+    name: entry.name,
+    hp_current: data[i]?.hp_current ?? 0,
+    hp_max: data[i]?.hp_max ?? 0,
+    ac: data[i]?.ac ?? 10,
+    initiative: entry.initiative,
     is_current_turn: i === result.current_turn_index,
   }));
   return {
@@ -70,54 +75,89 @@ function CombatantRow({ combatant }: { combatant: Combatant }) {
   );
 }
 
+// ActionType enum values from the backend (case must match exactly).
 const ACTION_BUTTONS = [
-  { label: "Attack", action: "attack" },
-  { label: "Dash", action: "dash" },
-  { label: "Dodge", action: "dodge" },
+  { label: "Attack", action: "Attack" },
+  { label: "Dash", action: "Dash" },
+  { label: "Dodge", action: "Dodge" },
 ] as const;
 
-function ActionButtons({
+function CombatActions({
   sessionId,
+  currentActorId,
   disabled,
 }: {
   sessionId: string;
+  currentActorId: string | undefined;
   disabled: boolean;
 }) {
-  const setCombat = useGameStore((s) => s.setCombat);
+  const { setCombat } = useGameStore();
 
   const handleAction = useCallback(
-    async (action: string) => {
+    async (actionType: string) => {
+      if (!currentActorId) return;
       try {
-        const result = await api.submitAction(sessionId, { action_type: action });
+        const result = await api.submitAction(sessionId, {
+          actor_id: currentActorId,
+          action_type: actionType,
+        });
         setCombat(mapCombatResponse(result));
       } catch (err) {
-        console.error(`Failed to submit action ${action}:`, err);
+        console.error(`Failed to submit action ${actionType}:`, err);
       }
     },
-    [sessionId, setCombat]
+    [sessionId, currentActorId, setCombat]
   );
 
+  const handleNextTurn = useCallback(async () => {
+    try {
+      const result = await api.nextTurn(sessionId);
+      setCombat(mapCombatResponse(result));
+    } catch (err) {
+      console.error("Failed to advance turn:", err);
+    }
+  }, [sessionId, setCombat]);
+
   return (
-    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-      {ACTION_BUTTONS.map(({ label, action }) => (
-        <button
-          key={action}
-          onClick={() => handleAction(action)}
-          disabled={disabled}
-          style={{
-            flex: 1,
-            padding: "5px 0",
-            background: disabled ? "#333" : "#2c3e50",
-            color: disabled ? "#666" : "#fff",
-            border: "1px solid #444",
-            borderRadius: 4,
-            cursor: disabled ? "not-allowed" : "pointer",
-            fontSize: 12,
-          }}
-        >
-          {label}
-        </button>
-      ))}
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: "flex", gap: 6 }}>
+        {ACTION_BUTTONS.map(({ label, action }) => (
+          <button
+            key={action}
+            onClick={() => handleAction(action)}
+            disabled={disabled || !currentActorId}
+            style={{
+              flex: 1,
+              padding: "5px 0",
+              background: disabled || !currentActorId ? "#333" : "#2c3e50",
+              color: disabled || !currentActorId ? "#666" : "#fff",
+              border: "1px solid #444",
+              borderRadius: 4,
+              cursor: disabled || !currentActorId ? "not-allowed" : "pointer",
+              fontSize: 12,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={handleNextTurn}
+        disabled={disabled}
+        style={{
+          width: "100%",
+          marginTop: 6,
+          padding: "5px 0",
+          background: disabled ? "#333" : "#1a5276",
+          color: disabled ? "#666" : "#fff",
+          border: "1px solid #444",
+          borderRadius: 4,
+          cursor: disabled ? "not-allowed" : "pointer",
+          fontSize: 12,
+        }}
+      >
+        Next Turn ▶
+      </button>
     </div>
   );
 }
@@ -178,6 +218,8 @@ export default function CombatTracker() {
     );
   }
 
+  const currentActorId = combat.combatants[combat.current_turn_index]?.char_id;
+
   return (
     <section>
       <div
@@ -214,7 +256,11 @@ export default function CombatTracker() {
         ))
       )}
       {sessionId && (
-        <ActionButtons sessionId={sessionId} disabled={combat.combatants.length === 0} />
+        <CombatActions
+          sessionId={sessionId}
+          currentActorId={currentActorId}
+          disabled={combat.combatants.length === 0}
+        />
       )}
     </section>
   );

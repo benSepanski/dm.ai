@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
+import { useSessionWebSocket } from "../../api/ws";
 import { useGameStore } from "../../store/gameStore";
 import CharacterCard from "../CharacterCard/CharacterCard";
 import CombatTracker from "../CombatTracker/CombatTracker";
@@ -25,6 +26,9 @@ export default function DMDashboard() {
   const [input, setInput] = useState("");
   const [showMap, setShowMap] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Real-time updates from the server via WebSocket.
+  useSessionWebSocket(sessionId);
 
   // Auto-scroll when messages change
   useEffect(() => {

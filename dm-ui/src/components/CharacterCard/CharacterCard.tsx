@@ -25,9 +25,10 @@ function HpBar({ current, max }: { current: number | null; max: number | null })
   );
 }
 
-function AbilityGrid({ stats }: { stats: Record<string, number> | null }) {
+function AbilityGrid({ stats }: { stats: Record<string, unknown> | null }) {
   const abilities = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"];
   const labels = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
+  const abilityScores = stats?.ability_scores as Record<string, number> | undefined;
   return (
     <div
       style={{
@@ -38,7 +39,7 @@ function AbilityGrid({ stats }: { stats: Record<string, number> | null }) {
       }}
     >
       {abilities.map((ab, i) => {
-        const score = stats?.[ab] ?? null;
+        const score = abilityScores?.[ab] ?? null;
         return (
           <div
             key={ab}
