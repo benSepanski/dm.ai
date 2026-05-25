@@ -10,6 +10,8 @@ Harness-engineering notes:
   load → build-state → resolve → persist stages.
 - WebSocket broadcasts: every state-mutating endpoint emits a ``combat_update``
   event to all connected clients so the UI stays in sync without polling.
+- HP/condition sync: ``end_combat`` writes final combat state back to the
+  Character DB rows so damage and condition changes persist across sessions.
 """
 
 import logging
@@ -61,6 +63,39 @@ async def _broadcast_combat(session_id: uuid.UUID, state: CombatStateRead) -> No
         )
     except Exception:
         logger.exception("combat broadcast failed session_id=%s", session_id)
+
+
+async def _sync_combatants_to_db(
+    db: AsyncSession,
+    combatants: list[dict],
+) -> None:
+    """Write updated HP and conditions from combat state back to Character DB rows.
+
+    Called by ``end_combat`` to make combat damage and condition changes
+    persistent.  Combatants whose ``id`` does not resolve to a ``Character``
+    row (e.g. ad-hoc monsters not stored in DB) are skipped silently.
+    """
+    for combatant in combatants:
+        char_id_str = combatant.get("id", "")
+        try:
+            char_uuid = uuid.UUID(char_id_str)
+        except (ValueError, AttributeError):
+            continue
+
+        result = await db.execute(select(Character).where(Character.id == char_uuid))
+        character = result.scalar_one_or_none()
+        if character is None:
+            continue
+
+        hp_current = combatant.get("hp_current")
+        if hp_current is not None:
+            character.hp_current = int(hp_current)
+
+        stats: dict = dict(character.stats or {})
+        for field in ("conditions", "condition_durations"):
+            if field in combatant:
+                stats[field] = combatant[field]
+        character.stats = stats
 
 
 def _character_to_sheet(character: Character) -> CharacterSheet:
@@ -340,6 +375,8 @@ async def end_combat(
         raise HTTPException(status_code=404, detail="No active combat for this session")
 
     combat.ended_at = datetime.now(tz=timezone.utc)
+    if combat.combatants:
+        await _sync_combatants_to_db(db, combat.combatants)
     await db.commit()
     await db.refresh(combat)
     result_read = CombatStateRead.model_validate(combat)

@@ -65,10 +65,8 @@ dm.ai/
 ├── docker-compose.yml           — postgres (pgvector), redis, api, ui
 ├── .env.example                 — copy to .env and fill in secrets
 ├── docs/
-│   ├── architecture.md          — AI agent design and data flow
-│   ├── api-reference.md         — all REST + WebSocket endpoints
-│   ├── data-models.md           — full schema definitions
-│   └── ai-agents.md             — prompt engineering notes
+│   ├── architecture.md          — AI agent design, data flow, and layer map
+│   └── api.md                   — all REST + WebSocket endpoints
 ├── game-engine/                 — installable Python package (no FastAPI)
 │   ├── pyproject.toml
 │   ├── tests/
@@ -106,14 +104,18 @@ dm.ai/
 ```bash
 # game-engine unit tests
 cd game-engine
+pip install -e ".[dev]"
 pytest tests/ -v
 
-# dm-api tests — uses SQLite in-memory; no running Postgres needed
+# dm-api tests — uses SQLite in-memory; no running Postgres or AI key needed
 cd dm-api
-DATABASE_URL=sqlite+aiosqlite:///:memory: pytest tests/ -v
+pip install -e "../game-engine"
+pip install -e ".[dev]"
+DATABASE_URL="sqlite+aiosqlite:///:memory:" AI_PROVIDER="anthropic" ANTHROPIC_API_KEY="test-key" pytest tests/ -v
 
 # dm-ui — type check + lint (no test runner yet)
 cd dm-ui
+npm install
 npx tsc --noEmit
 npm run lint
 ```
@@ -353,6 +355,6 @@ so you do not need a running Postgres instance to run `dm-api` tests.
 
 - **Bugs / feature requests:** Open a GitHub Issue
 - **System design:** See `docs/architecture.md`
-- **API endpoints:** See `docs/api-reference.md`
-- **Prompt engineering:** See `docs/ai-agents.md`
+- **API endpoints:** See `docs/api.md` (interactive docs also at `GET /docs` when the server is running)
+- **Prompt engineering / AI layer:** See the AI Layer section in `docs/architecture.md`
 - **AI agent guidance:** See [AGENTS.md](./AGENTS.md)
