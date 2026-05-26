@@ -215,11 +215,23 @@ class DMOrchestrator:
         return messages
 
 
+def _strip_json_fences(text: str) -> str:
+    """Strip ``` or ```json markdown fences, returning the JSON object content."""
+    if not text.startswith("```"):
+        return text
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        return text
+    return text[start : end + 1]
+
+
 def _extract_proposal(text: str) -> ProposalPayload | None:
     """Extract a [PROPOSAL]...[/PROPOSAL] JSON block from AI response text.
 
     Validates at the AI boundary: silently drops malformed JSON or unknown
     proposal types rather than raising, so a bad proposal never breaks chat.
+    Handles models that wrap the JSON in markdown fences despite instructions.
     """
     start = text.find("[PROPOSAL]")
     if start == -1:
@@ -227,7 +239,7 @@ def _extract_proposal(text: str) -> ProposalPayload | None:
     end = text.find("[/PROPOSAL]", start)
     if end == -1:
         return None
-    json_str = text[start + len("[PROPOSAL]") : end].strip()
+    json_str = _strip_json_fences(text[start + len("[PROPOSAL]") : end].strip())
     try:
         raw = json.loads(json_str)
     except json.JSONDecodeError:

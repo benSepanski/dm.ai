@@ -202,8 +202,20 @@ class TestApplyDamagePetrified:
         engine.apply_damage(char, 10, DamageType.SLASHING)
         assert char.hp_current == 39  # 10 // 2 = 5 → 44 - 5
 
-    def test_petrified_immune_to_poison(self, engine: DnD55eEngine):
-        """Petrified condition makes creature immune to poison & psychic per CONDITION_EFFECTS."""
+    def test_petrified_immune_to_poison_via_condition_effects(self, engine: DnD55eEngine):
+        """PETRIFIED immunity_types from CONDITION_EFFECTS grants poison immunity."""
+        char = make_fighter(conditions=[Condition.PETRIFIED])
+        engine.apply_damage(char, 20, DamageType.POISON)
+        assert char.hp_current == 44  # immune, not just resistant
+
+    def test_petrified_immune_to_psychic_via_condition_effects(self, engine: DnD55eEngine):
+        """PETRIFIED immunity_types from CONDITION_EFFECTS grants psychic immunity."""
+        char = make_fighter(conditions=[Condition.PETRIFIED])
+        engine.apply_damage(char, 20, DamageType.PSYCHIC)
+        assert char.hp_current == 44  # immune, not just resistant
+
+    def test_petrified_immune_to_poison_explicit_immunities_still_work(self, engine: DnD55eEngine):
+        """Explicit damage_immunities stack correctly with petrified condition."""
         char = make_fighter(
             conditions=[Condition.PETRIFIED],
             damage_immunities=[DamageType.POISON],

@@ -144,6 +144,29 @@ async def test_extract_proposal_unknown_type_returns_none() -> None:
 
 
 @pytest.mark.asyncio
+async def test_extract_proposal_strips_markdown_fences() -> None:
+    """Proposals wrapped in ```json fences are parsed correctly."""
+    body = (
+        "You arrive at a village.\n"
+        "[PROPOSAL]\n"
+        "```json\n"
+        '{"type": "location", "content": {"name": "Maplewood"}}\n'
+        "```\n"
+        "[/PROPOSAL]"
+    )
+    backend = _ScriptedBackend([body])
+    orchestrator = DMOrchestrator(
+        backend=backend, orchestrator_model="main", generation_model="fast"
+    )
+    result = await orchestrator.handle_message(
+        message="Where are we?", session_id="s1", world_id="w1", history=_history(1)
+    )
+    assert result.proposal == ProposalPayload(
+        type=ProposalType.LOCATION, content={"name": "Maplewood"}
+    )
+
+
+@pytest.mark.asyncio
 async def test_extract_proposal_non_dict_content_is_none() -> None:
     """Non-dict content is coerced to None rather than leaking an untyped value."""
     body = (
