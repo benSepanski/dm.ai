@@ -14,9 +14,12 @@ Harness-engineering notes:
   Character DB rows so damage and condition changes persist across sessions.
 """
 
+from __future__ import annotations
+
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
@@ -67,7 +70,7 @@ async def _broadcast_combat(session_id: uuid.UUID, state: CombatStateRead) -> No
 
 async def _sync_combatants_to_db(
     db: AsyncSession,
-    combatants: list[dict],
+    combatants: list[dict[str, Any]],
 ) -> None:
     """Write updated HP and conditions from combat state back to Character DB rows.
 
@@ -91,7 +94,7 @@ async def _sync_combatants_to_db(
         if hp_current is not None:
             character.hp_current = int(hp_current)
 
-        stats: dict = dict(character.stats or {})
+        stats: dict[str, Any] = dict(character.stats or {})
         for field in ("conditions", "condition_durations"):
             if field in combatant:
                 stats[field] = combatant[field]
@@ -172,8 +175,8 @@ async def start_combat(
             status_code=409, detail="Active combat already exists for this session"
         )
 
-    initiative_order: list[dict] = []
-    combatants: list[dict] = []
+    initiative_order: list[dict[str, Any]] = []
+    combatants: list[dict[str, Any]] = []
 
     if payload.character_ids:
         char_result = await db.execute(
@@ -189,7 +192,7 @@ async def start_combat(
                 detail=f"Characters not found: {missing}",
             )
 
-        rolled: list[tuple[dict, dict]] = []
+        rolled: list[tuple[dict[str, Any], dict[str, Any]]] = []
         for char in characters:
             sheet = _character_to_sheet(char)
             initiative = _engine.roll_initiative(sheet)
@@ -289,7 +292,7 @@ async def submit_combat_action(
     if state.combatants:
         combat.combatants = [s.to_dict() for s in state.combatants]
 
-    log_entry: dict = {
+    log_entry: dict[str, Any] = {
         "round": combat.round_number,
         "turn": combat.current_turn_index,
         "actor_id": payload.actor_id,
@@ -339,7 +342,7 @@ async def next_turn(
     combatants = list(combat.combatants or [])
     if current_idx < len(combatants):
         sheet = CharacterSheet.from_dict(combatants[current_idx])
-        _engine.tick_condition_durations(sheet)
+        sheet = _engine.tick_condition_durations(sheet)
         combatants[current_idx] = sheet.to_dict()
         combat.combatants = combatants
 

@@ -8,6 +8,8 @@ Supports standard dice notation such as:
     "3d6-1"     -> 3d6-1
 """
 
+from __future__ import annotations
+
 import random
 
 from game_engine.types.values import DiceNotation
