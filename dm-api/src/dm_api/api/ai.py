@@ -220,13 +220,12 @@ async def accept_proposal(
             },
         )
         if created_id is not None:
-            entity_type = "location" if proposal.type == ProposalType.LOCATION else "character"
             await broadcast_to_session(
                 session_id_str,
                 {
                     "type": "entity_update",
                     "session_id": session_id_str,
-                    "entity_type": entity_type,
+                    "entity_type": proposal.type.value,
                     "entity_id": str(created_id),
                 },
             )

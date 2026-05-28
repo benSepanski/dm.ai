@@ -13,9 +13,20 @@ https://openai.com/index/harness-engineering/):
   injected upstream by the condenser.
 - **Concise, role-neutral system text.** Kept short per the harness guidance
   that ``AGENTS.md``-style instructions perform best at < ~60 lines.
+- **No raw-string enum drift.** Proposal types, location types, and character
+  types are generated from their respective enum classes so the prompt
+  automatically stays in sync with ``game_engine.types.enums``.
 """
 
 from __future__ import annotations
+
+from game_engine.types import CharacterType, LocationType, ProposalType
+
+# Build enum value lists once at module load time so the prompt is always in
+# sync with the canonical enum definitions in game_engine.types.enums.
+_PROPOSAL_TYPES = "|".join(pt.value for pt in ProposalType)
+_LOCATION_TYPES = "|".join(lt.value for lt in LocationType)
+_CHARACTER_TYPES = "|".join(ct.value for ct in CharacterType)
 
 
 def build_system_prompt(*, world_id: str, session_id: str) -> str:
@@ -50,7 +61,7 @@ def build_system_prompt(*, world_id: str, session_id: str) -> str:
         "can review it:\n"
         "\n"
         "  [PROPOSAL]\n"
-        '  {"type": "<location|character|dungeon|dialogue|combat_action>",\n'
+        f'  {{"type": "<{_PROPOSAL_TYPES}>",\n'
         '   "content": { ... typed payload ... }}\n'
         "  [/PROPOSAL]\n"
         "\n"
@@ -59,9 +70,9 @@ def build_system_prompt(*, world_id: str, session_id: str) -> str:
         "- Do not wrap the block in markdown fences.\n"
         "\n"
         "PROPOSAL CONTENT SCHEMAS (required field names)\n"
-        "location: {name, type (room|building|district|town|region|country|realm|dungeon|wilderness),\n"
+        f"location: {{name, type ({_LOCATION_TYPES}),\n"
         "           description, lore, history}\n"
-        "character: {name, type (PC|NPC|MONSTER), race, class, level, alignment,\n"
+        f"character: {{name, type ({_CHARACTER_TYPES}), race, class, level, alignment,\n"
         "            personality_traits, ideals, bonds, flaws}\n"
         "dungeon/dialogue/combat_action: free-form but must be a JSON object.\n"
         "\n"

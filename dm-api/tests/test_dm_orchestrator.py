@@ -6,11 +6,12 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-from game_engine.types import ChatRole, ProposalType
+from game_engine.types import CharacterType, ChatRole, LocationType, ProposalType
 
 from dm_api.ai.backends.base import AIBackend, AIMessage, AIResponse
 from dm_api.ai.condenser import HistoryMessage, MessageAnchor
 from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
+from dm_api.ai.prompts.system_prompt import build_system_prompt
 
 
 class _ScriptedBackend(AIBackend):
@@ -141,6 +142,20 @@ async def test_extract_proposal_unknown_type_returns_none() -> None:
         message="test", session_id="s1", world_id="w1", history=_history(1)
     )
     assert result.proposal is None
+
+
+def test_system_prompt_contains_all_enum_values() -> None:
+    """Verify the system prompt lists every ProposalType, LocationType, and CharacterType value.
+
+    This guards against enum additions that are not reflected in the prompt.
+    """
+    prompt = build_system_prompt(world_id="test-world", session_id="test-session")
+    for pt in ProposalType:
+        assert pt.value in prompt, f"ProposalType.{pt.name} ({pt.value!r}) missing from prompt"
+    for lt in LocationType:
+        assert lt.value in prompt, f"LocationType.{lt.name} ({lt.value!r}) missing from prompt"
+    for ct in CharacterType:
+        assert ct.value in prompt, f"CharacterType.{ct.name} ({ct.value!r}) missing from prompt"
 
 
 @pytest.mark.asyncio
