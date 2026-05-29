@@ -56,6 +56,7 @@ implement:
 | `apply_damage` | `(target, damage, damage_type) → CharacterSheet` | Damage with resistance calculation |
 | `apply_condition` | `(target, condition, duration_rounds) → CharacterSheet` | Apply a status condition |
 | `remove_condition` | `(target, condition) → CharacterSheet` | Remove a status condition |
+| `tick_condition_durations` | `(target) → CharacterSheet` | Decrement timed conditions; remove expired ones |
 | `get_available_actions` | `(char, combat_state) → list[Action]` | Legal actions for a character's turn |
 | `resolve_action` | `(action, combat_state) → ActionResult` | Resolve and narrate an action |
 | `roll_initiative` | `(char) → int` | Initiative roll |
@@ -68,9 +69,11 @@ Result dataclasses (`CheckResult`, `ActionResult`, `ValidationResult`) and the
 ### D&D 5.5e Engine
 
 `game_engine.rules.dnd_5_5e.DnD55eEngine` is the concrete implementation. It uses
-a **delegation pattern**: each abstract method delegates to a focused helper module
-in `game_engine/core/` (dice, conditions, initiative, combat, character). This
-keeps the engine file short and each helper independently testable.
+a **delegation pattern**: each abstract method delegates to a focused private helper
+module in `game_engine/rules/dnd_5_5e/` (`_checks.py`, `_actions.py`,
+`_conditions.py`, `_damage.py`, `_validation.py`). Those helpers in turn use shared
+utilities from `game_engine/core/` (dice, conditions, initiative). This keeps the
+engine file short and each helper independently testable.
 
 Data tables (spells, monsters, weapons, armor) live in
 `game_engine/rules/dnd_5_5e/data/` as Python modules using enum types for all
@@ -103,7 +106,7 @@ typed fields.
 ### Extending with a New Rule System
 
 1. Create `game_engine/rules/<system>/` with `__init__.py` and `engine.py`
-2. Subclass `RuleEngine` and implement all nine abstract methods
+2. Subclass `RuleEngine` and implement all ten abstract methods
 3. Register the engine in `game_engine/rules/__init__.py`
 4. Add system-specific classes to `CharacterClass` (or create a new enum subclass)
 5. Write tests in `game_engine/tests/test_<system>_engine.py`
