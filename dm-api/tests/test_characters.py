@@ -140,3 +140,11 @@ async def test_list_world_characters(client, world_id):
     names = [c["name"] for c in r.json()]
     assert "Legolas" in names
     assert "Gimli" in names
+
+
+@pytest.mark.asyncio
+async def test_list_world_characters_world_not_found(client):
+    fake_id = str(uuid.uuid4())
+    r = await client.get(f"/api/characters/world/{fake_id}")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "World not found"

@@ -10,6 +10,7 @@ from dm_api.db.models.character import (
     CharacterRead,
     CharacterUpdate,
 )
+from dm_api.db.models.world import World
 from dm_api.db.session import get_db
 
 router = APIRouter()
@@ -64,6 +65,9 @@ async def list_world_characters(
     world_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ) -> list[CharacterRead]:
+    world_result = await db.execute(select(World).where(World.id == world_id))
+    if world_result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="World not found")
     result = await db.execute(select(Character).where(Character.world_id == world_id))
     characters = result.scalars().all()
     return [CharacterRead.model_validate(c) for c in characters]
