@@ -12,6 +12,8 @@ Event shape (server → client):
   {"type": "entity_update",  "session_id": "...", "entity_type": "...", "entity_id": "..."}
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import uuid

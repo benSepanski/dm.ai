@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastapi import APIRouter
 
 from dm_api.api import ai, characters, combat, locations, sessions, worlds, ws

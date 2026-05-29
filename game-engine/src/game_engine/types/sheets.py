@@ -8,6 +8,7 @@ details in a fully typed, enum-keyed format for use by the rule engine.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from game_engine.types.enums import (
     Ability,
@@ -44,7 +45,7 @@ class AbilityScoreSet:
         return {a.value: self.get(a) for a in Ability}
 
     @classmethod
-    def from_dict(cls, d: dict) -> "AbilityScoreSet":
+    def from_dict(cls, d: dict[str, Any]) -> "AbilityScoreSet":
         """Create an :class:`AbilityScoreSet` from a dict.
 
         Accepts both full names (``"strength"``) and short forms (``"str"``).
@@ -97,7 +98,7 @@ class CharacterSheet:
             return skill_or_ability in self.proficient_skills
         return skill_or_ability in self.proficient_abilities
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serialisable dict representation of this character."""
         return {
             "id": self.id,
@@ -123,7 +124,7 @@ class CharacterSheet:
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> "CharacterSheet":
+    def from_dict(cls, d: dict[str, Any]) -> "CharacterSheet":
         """Create a :class:`CharacterSheet` from a dict.
 
         Tolerant of missing keys — uses sensible defaults for everything.
@@ -162,7 +163,7 @@ class CharacterSheet:
         except ValueError:
             char_type = CharacterType.PC
 
-        raw_durations: dict = d.get("condition_durations", {})
+        raw_durations: dict[str, Any] = d.get("condition_durations", {})
         condition_durations: dict[Condition, int] = {}
         for cond_str, rounds in raw_durations.items():
             if _safe_enum(Condition, cond_str.lower()):

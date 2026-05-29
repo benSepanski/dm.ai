@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Any
 
 from game_engine.types import (
     Ability,
@@ -59,7 +60,7 @@ class ActionResult:
     damage_type: DamageType
     conditions_applied: list[Condition]
     flavor_text: str
-    log_entry: dict
+    log_entry: dict[str, Any]
 
 
 @dataclass
