@@ -227,6 +227,39 @@ async def test_session_chat_creates_pending_proposal(client, world_id):
 
 
 @pytest.mark.asyncio
+async def test_session_chat_ai_message_uses_actual_token_count(client, world_id):
+    """AI message token_count must come from DMResponse.tokens_out, not len()/4 estimate.
+
+    The condenser's budget arithmetic depends on per-message token counts stored in
+    the DB.  Using the API-reported count (tokens_out=50) rather than a
+    character-length estimate ensures the budget is accurate.
+    """
+    r = await client.post(
+        "/api/sessions/",
+        json={"world_id": world_id, "name": "Token Count Test"},
+    )
+    session_id = r.json()["id"]
+
+    response_text = "Short reply."
+    # tokens_out=50 != len("Short reply.") // 4 == 3
+    mock_orch = _mock_orchestrator(response_text)  # tokens_out=50 is hardcoded in helper
+
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        await client.post(
+            f"/api/sessions/{session_id}/chat",
+            json={"message": "Hello."},
+        )
+
+    r = await client.get(f"/api/sessions/{session_id}/messages")
+    messages = r.json()
+    ai_msg = next(m for m in messages if m["role"] == "ai")
+    assert ai_msg["token_count"] == 50, (
+        f"Expected token_count=50 (from tokens_out), got {ai_msg['token_count']}. "
+        "AI message token count must use DMResponse.tokens_out, not len(content)//4."
+    )
+
+
+@pytest.mark.asyncio
 async def test_session_chat_not_found(client):
     r = await client.post(
         f"/api/sessions/{uuid.uuid4()}/chat",

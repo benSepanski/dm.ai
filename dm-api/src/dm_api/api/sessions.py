@@ -185,7 +185,7 @@ async def session_chat(
             session_id=session_id,
             role=ChatRole.AI,
             content=result.response,
-            token_count=len(result.response) // 4,
+            token_count=result.tokens_out,
         )
     )
     proposal_read = await _persist_proposal(db, session_id, game_session.world_id, result.proposal)
