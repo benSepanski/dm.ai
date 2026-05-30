@@ -1,3 +1,6 @@
+# NOTE: This file intentionally exceeds the 600-line test guideline because
+# splitting the combat integration tests would lose the shared fixture context
+# and make it harder to follow the start → action → next-turn → end lifecycle.
 """Tests for the combat API endpoints."""
 
 import uuid

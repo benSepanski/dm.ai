@@ -17,7 +17,6 @@ from game_engine.types import (
     CharacterClass,
     CharacterSheet,
     Condition,
-    DamageType,
 )
 
 # ---------------------------------------------------------------------------
@@ -117,10 +116,15 @@ class TestConditionEffectsDict:
         effect = CONDITION_EFFECTS[Condition.CHARMED]
         assert effect.can_act is True
 
-    def test_petrified_immunity_types(self) -> None:
+    def test_petrified_prevents_action(self) -> None:
+        """PETRIFIED should block actions (can_act=False)."""
         effect = CONDITION_EFFECTS[Condition.PETRIFIED]
-        assert DamageType.POISON in effect.immunity_types
-        assert DamageType.PSYCHIC in effect.immunity_types
+        assert effect.can_act is False
+
+    def test_petrified_speed_zero(self) -> None:
+        """PETRIFIED sets speed to 0."""
+        effect = CONDITION_EFFECTS[Condition.PETRIFIED]
+        assert effect.speed_zero is True
 
 
 # ---------------------------------------------------------------------------

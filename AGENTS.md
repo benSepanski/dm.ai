@@ -58,6 +58,18 @@ in `combat.py`), ensure **all** fields from the target dataclass's `from_dict`
 are populated — not just the obvious combat stats. Check `CharacterSheet.from_dict`
 for the full field list whenever this bridge is modified.
 
+### Condition damage mechanics rule (learned from PETRIFIED `immunity_types` bug)
+
+`ConditionEffect` is a **reference data struct** (description, can_act, attack
+modifiers, auto_fail_saves, speed_zero). It does NOT store damage immunities or
+resistances — those are handled directly in `_apply_damage_impl`:
+- PETRIFIED → resistance to all damage (check `Condition.PETRIFIED in target.conditions`)
+- All other condition-based resistances/immunities → add to the character sheet's
+  own `damage_resistances` / `damage_immunities` lists at the point of application.
+
+Never add `immunity_types` or `resistance_types` fields to `ConditionEffect` —
+they would be dead data because `_apply_damage_impl` never reads `CONDITION_EFFECTS`.
+
 ### Proposal content schema rule (learned from `char_class` vs `"class"` bug)
 
 AI proposal content uses the **same field names** as `CharacterSheet.to_dict()` /

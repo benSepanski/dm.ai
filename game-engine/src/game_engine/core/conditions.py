@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from game_engine.types import Ability, AdvantageType, CharacterSheet, Condition, DamageType
+from game_engine.types import Ability, AdvantageType, CharacterSheet, Condition
 
 # ---------------------------------------------------------------------------
 # ConditionEffect dataclass
@@ -27,7 +27,13 @@ class ConditionEffect:
         attack_against_modifier: Modifier on rolls *against* this creature.
         auto_fail_saves: Abilities that auto-fail saves while in this condition.
         speed_zero: Whether the condition sets movement speed to 0.
-        immunity_types: Damage types the creature is immune to (condition-based).
+
+    Note:
+        Damage resistances/immunities granted by conditions are handled directly
+        in ``_apply_damage_impl`` (e.g. PETRIFIED → resistance to all damage).
+        There is no ``immunity_types`` field here because the engine always
+        checks the character sheet's own ``damage_immunities`` list; storing
+        immunity data on the condition effect would duplicate logic and drift.
     """
 
     description: str = ""
@@ -36,7 +42,6 @@ class ConditionEffect:
     attack_against_modifier: AdvantageType | None = None
     auto_fail_saves: list[Ability] = field(default_factory=list)
     speed_zero: bool = False
-    immunity_types: list[DamageType] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -130,13 +135,12 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "It is incapacitated, can't move or speak, and is unaware of its "
             "surroundings. Attack rolls against the creature have advantage. It "
             "automatically fails Strength and Dexterity saving throws. It has "
-            "resistance to all damage."
+            "resistance to all damage (applied by the engine in _apply_damage_impl)."
         ),
         can_act=False,
         attack_against_modifier=AdvantageType.ADVANTAGE,
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
         speed_zero=True,
-        immunity_types=[DamageType.POISON, DamageType.PSYCHIC],
     ),
     Condition.POISONED: ConditionEffect(
         description=("A poisoned creature has disadvantage on attack rolls and ability checks."),

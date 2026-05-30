@@ -218,25 +218,36 @@ class DMOrchestrator:
 def _extract_proposal(text: str) -> ProposalPayload | None:
     """Extract a [PROPOSAL]...[/PROPOSAL] JSON block from AI response text.
 
-    Validates at the AI boundary: silently drops malformed JSON or unknown
-    proposal types rather than raising, so a bad proposal never breaks chat.
+    Validates at the AI boundary: drops malformed JSON or unknown proposal types
+    rather than raising, so a bad proposal never breaks chat. Logs a warning
+    when a [PROPOSAL] block is present but fails to parse, so drift in the
+    system prompt can be caught during review.
     """
     start = text.find("[PROPOSAL]")
     if start == -1:
         return None
     end = text.find("[/PROPOSAL]", start)
     if end == -1:
+        logger.warning("_extract_proposal: found [PROPOSAL] without closing [/PROPOSAL]")
         return None
     json_str = text[start + len("[PROPOSAL]") : end].strip()
     try:
         raw = json.loads(json_str)
     except json.JSONDecodeError:
+        logger.warning(
+            "_extract_proposal: [PROPOSAL] block contains invalid JSON (first 120 chars: %r)",
+            json_str[:120],
+        )
         return None
     if not isinstance(raw, dict):
+        logger.warning(
+            "_extract_proposal: [PROPOSAL] JSON is not a dict (type=%s)", type(raw).__name__
+        )
         return None
     try:
         proposal_type = ProposalType(raw.get("type", ""))
     except ValueError:
+        logger.warning("_extract_proposal: unknown proposal type %r", raw.get("type"))
         return None
     content = raw.get("content")
     return ProposalPayload(

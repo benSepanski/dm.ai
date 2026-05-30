@@ -286,6 +286,11 @@ def _parse_condensation(text: str) -> _ParsedCondensation:
     try:
         data = json.loads(stripped)
     except json.JSONDecodeError:
+        logger.warning(
+            "condenser: sub-agent returned invalid JSON; degrading to synopsis-only "
+            "(first 120 chars: %r)",
+            stripped[:120],
+        )
         return _ParsedCondensation(
             synopsis=_clip(stripped, max_chars=2000),
             key_facts=[],
@@ -293,6 +298,10 @@ def _parse_condensation(text: str) -> _ParsedCondensation:
         )
 
     if not isinstance(data, dict):
+        logger.warning(
+            "condenser: sub-agent returned non-dict JSON type=%s; degrading",
+            type(data).__name__,
+        )
         return _ParsedCondensation(
             synopsis=_clip(str(data), max_chars=2000),
             key_facts=[],
