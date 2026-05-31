@@ -48,6 +48,13 @@ router = APIRouter()
 # Stateless engine — safe to share across requests.
 _engine = DnD55eEngine()
 
+# CharacterSheet defaults applied when the DB column is NULL.
+# These match the CharacterSheet dataclass defaults so engine output
+# is consistent whether or not the character was given explicit values.
+_DEFAULT_HP = 10
+_DEFAULT_AC = 10
+_DEFAULT_SPEED = 30
+
 
 async def _broadcast_combat(session_id: uuid.UUID, state: CombatStateRead) -> None:
     """Emit a ``combat_update`` WebSocket event after every state-mutating endpoint.
@@ -111,10 +118,12 @@ def _character_to_sheet(character: Character) -> CharacterSheet:
             "level": character.level,
             "class": character.char_class or CharacterClass.FIGHTER.value,
             "ability_scores": stats.get("ability_scores", {}),
-            "hp_current": character.hp_current if character.hp_current is not None else 10,
-            "hp_max": character.hp_max if character.hp_max is not None else 10,
-            "ac": character.ac if character.ac is not None else 10,
-            "speed": character.speed if character.speed is not None else 30,
+            "hp_current": (
+                character.hp_current if character.hp_current is not None else _DEFAULT_HP
+            ),
+            "hp_max": character.hp_max if character.hp_max is not None else _DEFAULT_HP,
+            "ac": character.ac if character.ac is not None else _DEFAULT_AC,
+            "speed": character.speed if character.speed is not None else _DEFAULT_SPEED,
             "type": character.type.value,
             "proficiencies": stats.get("proficiencies", []),
             "conditions": stats.get("conditions", []),

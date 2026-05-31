@@ -23,6 +23,10 @@ class SpellData:
     save: Ability | None  # e.g. Ability.DEXTERITY, Ability.CONSTITUTION
     classes: list[CharacterClass]
     description: str
+    # Some spells deal two damage types (e.g. Ice Storm: cold + bludgeoning).
+    # The primary type covers the dominant effect; secondary captures the rest.
+    secondary_damage_type: DamageType | None = None
+    secondary_damage_dice: DiceNotation | None = None
 
 
 SPELLS: list[SpellData] = [
@@ -389,8 +393,10 @@ SPELLS: list[SpellData] = [
         duration="instantaneous",
         concentration=False,
         components=["V", "S", "M"],
-        damage_type=DamageType.BLUDGEONING,
-        damage_dice=DiceNotation("2d8"),
+        damage_type=DamageType.COLD,
+        damage_dice=DiceNotation("4d6"),
+        secondary_damage_type=DamageType.BLUDGEONING,
+        secondary_damage_dice=DiceNotation("2d8"),
         save=Ability.DEXTERITY,
         classes=[CharacterClass.DRUID, CharacterClass.SORCERER, CharacterClass.WIZARD],
         description=(
