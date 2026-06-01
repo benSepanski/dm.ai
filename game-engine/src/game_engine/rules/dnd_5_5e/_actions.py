@@ -44,11 +44,14 @@ def _get_available_actions_impl(
 ) -> list[Action]:
     """Return the list of actions the character may legally take.
 
-    Actions are filtered by the character's current conditions.
+    Actions are filtered by the character's current conditions. Returned
+    ``Action`` objects have ``target_id=None``; the caller must supply a
+    concrete target when submitting the action for resolution.
 
     Args:
         char: Character sheet.
-        combat_state: Current combat state (used to look up targets).
+        combat_state: Current combat state (passed for interface symmetry;
+            target enumeration is handled at the API layer).
 
     Returns:
         List of :class:`~game_engine.interface.Action` objects.

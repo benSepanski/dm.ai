@@ -212,6 +212,7 @@ async def session_chat(
                     "session_id": str(session_id),
                     "proposal_id": str(proposal_read.id),
                     "proposal_type": proposal_read.type.value,
+                    "status": ProposalStatus.PENDING.value,
                 },
             )
     except Exception:

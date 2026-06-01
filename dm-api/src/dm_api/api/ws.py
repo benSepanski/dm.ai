@@ -8,7 +8,7 @@ forwarded to all other clients in the same session.
 Event shape (server → client):
   {"type": "chat_message", "session_id": "...", "role": "ai", "content": "..."}
   {"type": "combat_update", "session_id": "...", "combat": {...}}
-  {"type": "proposal_ready", "session_id": "...", "proposal_id": "...", "proposal_type": "..."}
+  {"type": "proposal_ready", "session_id": "...", "proposal_id": "...", "proposal_type": "...", "status": "..."}
   {"type": "entity_update",  "session_id": "...", "entity_type": "...", "entity_id": "..."}
 """
 

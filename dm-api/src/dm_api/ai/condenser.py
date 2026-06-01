@@ -141,6 +141,12 @@ class CondensedContext:
             )
             rendered.append(AIMessage(role=msg_role, content=message.content))
 
+        # The Anthropic API requires the first message to be a user turn.
+        # Guard against edge cases (e.g. a session whose first persisted message
+        # is an AI turn) so a bad history never causes a 400 from the backend.
+        if rendered and rendered[0].role == "assistant":
+            rendered.insert(0, AIMessage(role="user", content="[Session start]"))
+
         return rendered
 
 

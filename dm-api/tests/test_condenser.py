@@ -179,6 +179,50 @@ def test_as_ai_messages_renders_sections_and_anchors() -> None:
     assert "hello" in head.content
 
 
+def test_as_ai_messages_guards_against_assistant_first_message() -> None:
+    """as_ai_messages must never return a list whose first message is 'assistant'.
+
+    If the preserved tail starts with an AI turn and there is no condensed
+    synopsis to prepend a user message, the Anthropic API would reject the
+    request with a 400. The guard inserts a minimal [Session start] user
+    message to maintain the invariant.
+    """
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    # Edge case: no condensation (empty synopsis), first preserved msg is AI.
+    ctx = CondensedContext(
+        synopsis="",
+        key_facts=[],
+        open_threads=[],
+        condensed_span=None,
+        preserved=[
+            HistoryMessage(
+                anchor=MessageAnchor(message_id=uuid.uuid4(), timestamp=now, role=ChatRole.AI),
+                content="I am the Dungeon Master.",
+                token_count=5,
+            ),
+            HistoryMessage(
+                anchor=MessageAnchor(message_id=uuid.uuid4(), timestamp=now, role=ChatRole.DM),
+                content="What do I see?",
+                token_count=5,
+            ),
+        ],
+        tokens_in=10,
+        tokens_out=10,
+    )
+
+    messages = ctx.as_ai_messages()
+
+    assert messages, "as_ai_messages must return at least one message"
+    assert messages[0].role == "user", (
+        f"First message role must be 'user', got '{messages[0].role}'"
+    )
+    # Verify alternation invariant
+    for i in range(len(messages) - 1):
+        assert not (messages[i].role == "user" and messages[i + 1].role == "user"), (
+            f"Consecutive user messages at indices {i} and {i+1}"
+        )
+
+
 def test_message_anchor_citation_format() -> None:
     """The citation format matches filepath:lineno style: msg:<id>@<ts>."""
     mid = uuid.UUID("12345678-1234-5678-1234-567812345678")

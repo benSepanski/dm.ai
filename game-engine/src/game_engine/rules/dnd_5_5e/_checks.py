@@ -14,42 +14,14 @@ from game_engine.types import Ability, CharacterSheet, Skill
 # Skill → ability map (includes raw ability checks)
 # ---------------------------------------------------------------------------
 
-#: Maps every D&D 5e skill to its governing ability score.
+# Built from the canonical Skill enum so a new skill added to enums.py is
+# automatically picked up here — no second place to update.
 SKILL_ABILITY_MAP: dict[str, Ability] = {
-    # Skills
-    "acrobatics": Ability.DEXTERITY,
-    "animal handling": Ability.WISDOM,
-    "arcana": Ability.INTELLIGENCE,
-    "athletics": Ability.STRENGTH,
-    "deception": Ability.CHARISMA,
-    "history": Ability.INTELLIGENCE,
-    "insight": Ability.WISDOM,
-    "intimidation": Ability.CHARISMA,
-    "investigation": Ability.INTELLIGENCE,
-    "medicine": Ability.WISDOM,
-    "nature": Ability.INTELLIGENCE,
-    "perception": Ability.WISDOM,
-    "performance": Ability.CHARISMA,
-    "persuasion": Ability.CHARISMA,
-    "religion": Ability.INTELLIGENCE,
-    "sleight of hand": Ability.DEXTERITY,
-    "stealth": Ability.DEXTERITY,
-    "survival": Ability.WISDOM,
-    # Raw ability checks
-    "strength": Ability.STRENGTH,
-    "dexterity": Ability.DEXTERITY,
-    "constitution": Ability.CONSTITUTION,
-    "intelligence": Ability.INTELLIGENCE,
-    "wisdom": Ability.WISDOM,
-    "charisma": Ability.CHARISMA,
-    # Short-form ability names
-    "str": Ability.STRENGTH,
-    "dex": Ability.DEXTERITY,
-    "con": Ability.CONSTITUTION,
-    "int": Ability.INTELLIGENCE,
-    "wis": Ability.WISDOM,
-    "cha": Ability.CHARISMA,
+    skill.value: skill.governing_ability for skill in Skill
 }
+# Raw ability name lookups (full and 3-letter short form).
+SKILL_ABILITY_MAP.update({ability.value: ability for ability in Ability})
+SKILL_ABILITY_MAP.update({ability.short: ability for ability in Ability})
 
 
 def _calc_prof_bonus(level: int) -> int:
