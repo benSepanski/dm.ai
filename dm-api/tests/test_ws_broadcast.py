@@ -254,6 +254,86 @@ def test_combat_start_broadcasts_update():
         _cleanup_sync_app(app, engine)
 
 
+def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
+    """A chat response that includes a proposal emits a proposal_ready event
+    with a 'status' field set to 'pending'.
+
+    Regression test: the initial proposal_ready broadcast was missing 'status',
+    while accept/reject broadcasts included it, causing inconsistency on the
+    client side.
+    """
+    from game_engine.types import ProposalType
+
+    from dm_api.ai.dm_orchestrator import DMResponse, ProposalPayload
+
+    app, engine = _make_sync_app()
+    try:
+        with TestClient(app) as http:
+            world_r = http.post("/api/worlds/", json={"name": "Proposal Status World"})
+            assert world_r.status_code == 201
+            world_id = world_r.json()["id"]
+
+            session_r = http.post(
+                "/api/sessions/",
+                json={"world_id": world_id, "name": "Proposal Status Session"},
+            )
+            assert session_r.status_code == 201
+            session_id = session_r.json()["id"]
+
+            # Collect both WS events: chat_message + proposal_ready.
+            received: queue.Queue = queue.Queue()
+
+            def ws_listener():
+                with http.websocket_connect(f"/api/ws/sessions/{session_id}") as ws:
+                    received.put("ready")
+                    for _ in range(2):  # chat_message + proposal_ready
+                        received.put(json.loads(ws.receive_text()))
+
+            t = threading.Thread(target=ws_listener, daemon=True)
+            t.start()
+            assert received.get(timeout=5) == "ready"
+
+            mock_orch = MagicMock()
+            mock_orch.handle_message = AsyncMock(
+                return_value=DMResponse(
+                    response="You find a hidden village.",
+                    proposal=ProposalPayload(
+                        type=ProposalType.LOCATION,
+                        content={"name": "Hidden Village"},
+                    ),
+                    was_condensed=False,
+                    tokens_in=10,
+                    tokens_out=15,
+                )
+            )
+
+            with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+                chat_r = http.post(
+                    f"/api/sessions/{session_id}/chat",
+                    json={"message": "Explore the forest."},
+                )
+            assert chat_r.status_code == 200
+
+            ev1 = received.get(timeout=5)
+            ev2 = received.get(timeout=5)
+            events_by_type = {ev1["type"]: ev1, ev2["type"]: ev2}
+
+            assert "proposal_ready" in events_by_type, (
+                f"Expected a 'proposal_ready' event; got: {list(events_by_type)}"
+            )
+            proposal_event = events_by_type["proposal_ready"]
+            assert "status" in proposal_event, (
+                "proposal_ready event must include 'status' field"
+            )
+            assert proposal_event["status"] == "pending", (
+                f"Expected status='pending', got status={proposal_event['status']!r}"
+            )
+
+            t.join(timeout=1)
+    finally:
+        _cleanup_sync_app(app, engine)
+
+
 def test_chat_broadcasts_chat_message():
     """A successful chat call emits a chat_message event to WS clients."""
     from dm_api.ai.dm_orchestrator import DMResponse
