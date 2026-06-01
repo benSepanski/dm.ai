@@ -5,7 +5,8 @@ from datetime import datetime
 from typing import Any
 
 from game_engine.types import Ability, ActionType, DamageType
-from pydantic import BaseModel, ConfigDict
+from game_engine.types.values import DiceNotation
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import DateTime, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -82,6 +83,12 @@ class AttackDetailsRequest(BaseModel):
     damage_type: DamageType = DamageType.BLUDGEONING
     attack_ability: Ability = Ability.STRENGTH
     is_ranged: bool = False
+
+    @field_validator("damage_dice")
+    @classmethod
+    def validate_damage_dice(cls, v: str) -> str:
+        DiceNotation(v)  # raises ValueError on invalid notation → 422 response
+        return v
 
 
 class CombatActionRequest(BaseModel):

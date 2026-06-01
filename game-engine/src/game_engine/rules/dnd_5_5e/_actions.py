@@ -6,6 +6,8 @@ Internal module — import via :class:`DnD55eEngine`.
 
 from __future__ import annotations
 
+import logging
+
 from game_engine.core.dice import roll as dice_roll
 from game_engine.core.dice import roll_dice
 from game_engine.interface import Action, ActionResult
@@ -16,8 +18,9 @@ from game_engine.types import (
     AttackDetails,
     CharacterSheet,
     CombatStateData,
-    DamageType,
 )
+
+logger = logging.getLogger(__name__)
 
 # All basic combat actions available to any character this turn.
 # ActionType.CAST_SPELL is intentionally excluded: spell resolution requires
@@ -84,11 +87,11 @@ def _resolve_action_impl(
     if action.action_type == ActionType.ATTACK:
         return _resolve_attack(action, combat_state)
 
-    # Generic non-attack action — simply succeeds.
+    # Generic non-attack action — simply succeeds with no damage.
     return ActionResult(
         success=True,
         damage=0,
-        damage_type=DamageType.BLUDGEONING,
+        damage_type=None,
         conditions_applied=[],
         flavor_text=f"{action.actor_id} uses {action.action_type.value}.",
         log_entry={
@@ -108,6 +111,9 @@ def _resolve_attack(
     target = combat_state.get_combatant(action.target_id) if action.target_id else None
 
     if actor is None:
+        logger.warning(
+            "actor %s not found in combat state; using level 1 defaults", action.actor_id
+        )
         actor_name = action.actor_id
         actor_level = 1
         actor_ability_mod = 0
@@ -122,7 +128,7 @@ def _resolve_attack(
         return ActionResult(
             success=False,
             damage=0,
-            damage_type=DamageType.BLUDGEONING,
+            damage_type=None,
             conditions_applied=[],
             flavor_text="No target found.",
             log_entry={

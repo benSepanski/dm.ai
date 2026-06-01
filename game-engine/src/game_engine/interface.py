@@ -57,7 +57,7 @@ class ActionResult:
 
     success: bool
     damage: int
-    damage_type: DamageType
+    damage_type: DamageType | None  # None when the action deals no damage
     conditions_applied: list[Condition]
     flavor_text: str
     log_entry: dict[str, Any]
