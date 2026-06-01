@@ -123,8 +123,10 @@ def _resolve_attack(
             conditions_applied=[],
             flavor_text="No target found.",
             log_entry={
-                "error": "target_not_found",
+                "actor_id": action.actor_id,
+                "action_type": action.action_type.value,
                 "target_id": action.target_id,
+                "error": "target_not_found",
             },
         )
 
@@ -157,6 +159,7 @@ def _resolve_attack(
             ),
             log_entry={
                 "actor_id": action.actor_id,
+                "action_type": action.action_type.value,
                 "target_id": action.target_id,
                 "attack_roll": attack_roll_raw,
                 "attack_total": attack_total,
@@ -194,6 +197,7 @@ def _resolve_attack(
         flavor_text=flavor,
         log_entry={
             "actor_id": action.actor_id,
+            "action_type": action.action_type.value,
             "target_id": action.target_id,
             "attack_roll": attack_roll_raw,
             "attack_total": attack_total,

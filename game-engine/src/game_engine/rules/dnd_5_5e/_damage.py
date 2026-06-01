@@ -6,6 +6,7 @@ Internal module — import via :class:`DnD55eEngine`.
 
 from __future__ import annotations
 
+from game_engine.core.conditions import CONDITION_EFFECTS
 from game_engine.types import CharacterSheet, Condition, DamageType
 
 
@@ -17,10 +18,10 @@ def _apply_damage_impl(
     """Apply damage to *target*, respecting resistances and immunities.
 
     Damage calculations:
-    - **Immunity** → damage = 0
+    - **Immunity** → damage = 0 (character immunities AND condition-based immunities)
     - **Resistance** → damage = damage // 2
     - **Vulnerability** → damage = damage * 2
-    - Petrified creatures have resistance to all damage.
+    - Petrified creatures have resistance to all damage and immunity to poison/psychic.
 
     Args:
         target: Character sheet. Modified in-place and returned.
@@ -30,6 +31,12 @@ def _apply_damage_impl(
     Returns:
         Updated character sheet.
     """
+    # Condition-based immunities (e.g. PETRIFIED → immune to POISON and PSYCHIC).
+    for cond in target.conditions:
+        effect = CONDITION_EFFECTS.get(cond)
+        if effect and damage_type in effect.immunity_types:
+            return target
+
     # Petrified → resistance to all damage
     is_petrified = Condition.PETRIFIED in target.conditions
     resistances = list(target.damage_resistances)
