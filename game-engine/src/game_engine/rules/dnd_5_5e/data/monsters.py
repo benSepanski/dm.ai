@@ -20,7 +20,7 @@ class MonsterAction:
     name: str
     attack_bonus: int | None
     damage_dice: DiceNotation | None
-    damage_type: DamageType
+    damage_type: DamageType | None  # None for non-damaging actions
     reach_ft: int
     description: str
 
@@ -316,7 +316,7 @@ MONSTERS: list[MonsterData] = [
                 "Web",
                 None,
                 None,
-                DamageType.BLUDGEONING,
+                None,
                 5,
                 "Ranged attack, range 30/60 ft. Target is restrained (DC 12 Strength to escape).",
             ),
@@ -377,7 +377,7 @@ MONSTERS: list[MonsterData] = [
         cr=2.0,
         size=CreatureSize.MEDIUM,
         type=CreatureType.UNDEAD,
-        hp_dice=DiceNotation("5d8+5"),
+        hp_dice=DiceNotation("5d8"),
         hp_avg=22,
         ac=12,
         speed_ft=30,
@@ -551,7 +551,7 @@ MONSTERS: list[MonsterData] = [
                 "Multiattack",
                 None,
                 None,
-                DamageType.SLASHING,
+                None,
                 5,
                 "Makes two attacks: one with its beak and one with its claws.",
             ),
@@ -618,7 +618,7 @@ MONSTERS: list[MonsterData] = [
                 "Horrifying Visage",
                 None,
                 None,
-                DamageType.PSYCHIC,
+                None,
                 30,
                 "Each non-undead within 60 ft that can see the banshee makes DC 13 Wisdom save or is frightened for 1 minute.",
             ),
@@ -626,7 +626,7 @@ MONSTERS: list[MonsterData] = [
                 "Wail",
                 None,
                 None,
-                DamageType.PSYCHIC,
+                None,
                 30,
                 "Each non-undead creature within 30 ft that can hear the wail makes DC 13 Constitution save or drops to 0 HP.",
             ),
@@ -662,7 +662,7 @@ MONSTERS: list[MonsterData] = [
                 "Multiattack",
                 None,
                 None,
-                DamageType.SLASHING,
+                None,
                 5,
                 "Makes three attacks: one with its bite and two with its claws.",
             ),
@@ -704,7 +704,7 @@ MONSTERS: list[MonsterData] = [
                 "Multiattack",
                 None,
                 None,
-                DamageType.PIERCING,
+                None,
                 5,
                 "Makes two attacks: one with its bite and one with its stinger. While flying, may substitute a claw attack.",
             ),
@@ -756,7 +756,7 @@ MONSTERS: list[MonsterData] = [
                 "Multiattack",
                 None,
                 None,
-                DamageType.PIERCING,
+                None,
                 10,
                 "Makes three attacks: one with its bite and two with its claws.",
             ),
@@ -818,7 +818,7 @@ MONSTERS: list[MonsterData] = [
                 "Multiattack",
                 None,
                 None,
-                DamageType.BLUDGEONING,
+                None,
                 5,
                 "Makes two attacks, only one of which can be a bite.",
             ),
@@ -878,7 +878,7 @@ MONSTERS: list[MonsterData] = [
                 "Eye Rays",
                 None,
                 None,
-                DamageType.PSYCHIC,
+                None,
                 120,
                 "Shoots 3 random eye rays at targets within 120 ft. Effects vary by ray.",
             ),

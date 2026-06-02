@@ -213,14 +213,14 @@ def test_as_ai_messages_guards_against_assistant_first_message() -> None:
     messages = ctx.as_ai_messages()
 
     assert messages, "as_ai_messages must return at least one message"
-    assert messages[0].role == "user", (
-        f"First message role must be 'user', got '{messages[0].role}'"
-    )
+    assert (
+        messages[0].role == "user"
+    ), f"First message role must be 'user', got '{messages[0].role}'"
     # Verify alternation invariant
     for i in range(len(messages) - 1):
-        assert not (messages[i].role == "user" and messages[i + 1].role == "user"), (
-            f"Consecutive user messages at indices {i} and {i+1}"
-        )
+        assert not (
+            messages[i].role == "user" and messages[i + 1].role == "user"
+        ), f"Consecutive user messages at indices {i} and {i+1}"
 
 
 def test_message_anchor_citation_format() -> None:

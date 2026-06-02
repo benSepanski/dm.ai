@@ -16,9 +16,7 @@ from game_engine.types import Ability, CharacterSheet, Skill
 
 # Built from the canonical Skill enum so a new skill added to enums.py is
 # automatically picked up here — no second place to update.
-SKILL_ABILITY_MAP: dict[str, Ability] = {
-    skill.value: skill.governing_ability for skill in Skill
-}
+SKILL_ABILITY_MAP: dict[str, Ability] = {skill.value: skill.governing_ability for skill in Skill}
 # Raw ability name lookups (full and 3-letter short form).
 SKILL_ABILITY_MAP.update({ability.value: ability for ability in Ability})
 SKILL_ABILITY_MAP.update({ability.short: ability for ability in Ability})

@@ -151,7 +151,8 @@ def _resolve_attack(
     attack_roll_raw, _ = roll_dice(1, 20)
     attack_total = attack_roll_raw + actor_ability_mod + prof_bonus
 
-    hit = attack_roll_raw == 20 or attack_total >= target_ac
+    # Natural 1 always misses; natural 20 always hits (D&D 5e core rules).
+    hit = attack_roll_raw == 20 or (attack_roll_raw != 1 and attack_total >= target_ac)
     critical = attack_roll_raw == 20
     target_name = target.name
 
