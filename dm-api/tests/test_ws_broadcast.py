@@ -318,16 +318,14 @@ def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
             ev2 = received.get(timeout=5)
             events_by_type = {ev1["type"]: ev1, ev2["type"]: ev2}
 
-            assert "proposal_ready" in events_by_type, (
-                f"Expected a 'proposal_ready' event; got: {list(events_by_type)}"
-            )
+            assert (
+                "proposal_ready" in events_by_type
+            ), f"Expected a 'proposal_ready' event; got: {list(events_by_type)}"
             proposal_event = events_by_type["proposal_ready"]
-            assert "status" in proposal_event, (
-                "proposal_ready event must include 'status' field"
-            )
-            assert proposal_event["status"] == "pending", (
-                f"Expected status='pending', got status={proposal_event['status']!r}"
-            )
+            assert "status" in proposal_event, "proposal_ready event must include 'status' field"
+            assert (
+                proposal_event["status"] == "pending"
+            ), f"Expected status='pending', got status={proposal_event['status']!r}"
 
             t.join(timeout=1)
     finally:

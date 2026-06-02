@@ -108,9 +108,14 @@ async def session_websocket(websocket: WebSocket, session_id: uuid.UUID) -> None
                     except Exception:
                         pass
     except WebSocketDisconnect:
-        _connections[key].remove(websocket)
-        if not _connections[key]:
-            del _connections[key]
+        # broadcast_to_session may have already pruned this connection if it
+        # failed a send_text while receive_text was suspended — guard defensively.
+        try:
+            _connections[key].remove(websocket)
+        except ValueError:
+            pass
+        if not _connections.get(key):
+            _connections.pop(key, None)
         logger.debug(
             "ws disconnect  session_id=%s remaining=%d",
             key,
