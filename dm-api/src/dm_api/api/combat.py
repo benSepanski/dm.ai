@@ -1,3 +1,6 @@
+# NOTE: This file is at ~400 LoC. The next feature addition should split it —
+# e.g. extract _character_to_sheet/_sync_combatants_to_db/_broadcast_combat into
+# a combat_utils.py helper so endpoint handlers stay thin.
 """Combat API endpoints — wired to the DnD55eEngine rule engine.
 
 Harness-engineering notes:

@@ -85,7 +85,7 @@ async def session_websocket(websocket: WebSocket, session_id: uuid.UUID) -> None
     await websocket.accept()
     key = str(session_id)
     _connections[key].append(websocket)
-    logger.debug("ws connect  session_id=%s total=%d", key, len(_connections[key]))
+    logger.info("ws connect  session_id=%s total=%d", key, len(_connections[key]))
 
     try:
         while True:
@@ -116,7 +116,7 @@ async def session_websocket(websocket: WebSocket, session_id: uuid.UUID) -> None
             pass
         if not _connections.get(key):
             _connections.pop(key, None)
-        logger.debug(
+        logger.info(
             "ws disconnect  session_id=%s remaining=%d",
             key,
             len(_connections.get(key, [])),
