@@ -7,7 +7,7 @@ dm.ai is composed of three deployable units and one installable Python library.
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  dm-ui  (React 19 + Vite + react-konva, port 5173)                  │
-│  ChatPanel · BattleMap · ProposalCard · CombatTracker · LocationPanel│
+│  DMDashboard · BattleMap · CombatTracker · LocationPanel · CharacterCard│
 └──────────────────────────────┬──────────────────────────────────────┘
                                │ HTTP REST  +  WebSocket
                                │ prefix: /api
@@ -228,14 +228,14 @@ The frontend is a React 19 + Vite + TypeScript application with strict mode enab
 
 ```
 App
-└── DMDashboard
-    ├── NewSessionForm          (shown when no sessionId in store)
+└── DMDashboard             (owns chat input/output and layout)
+    ├── NewSessionForm       (shown when no sessionId in store)
     ├── aside (left)
     │   ├── LocationPanel
     │   └── CharacterCard
     ├── main
-    │   ├── BattleMap           (react-konva, collapsible)
-    │   └── ChatPanel           (messages + input bar)
+    │   ├── BattleMap        (react-konva, collapsible via "Show Map" toggle)
+    │   └── (inline) Chat    (message list + input bar — lives in DMDashboard.tsx)
     └── aside (right)
         └── CombatTracker
 ```
@@ -277,9 +277,11 @@ messages to the Zustand store.
 
 3. dm-api saves DM ChatMessage to DB
 
-4. DMOrchestrator.handle_message()
+4. dm-api: persist DM message, fetch chat history from DB, then
+   DMOrchestrator.handle_message(message, history)
+   ├─ ContextCondenser.condense(history)  — Haiku, no-op under budget
+   ├─ _build_messages(condensed)
    ├─ build_system_prompt(world_id, session_id)
-   ├─ fetch chat history from DB
    └─ backend.complete(messages, system, model=orchestrator_model)
 
 5. Claude returns narrative text, optionally with
@@ -294,27 +296,27 @@ messages to the Zustand store.
 9. DM reviews → POST /api/ai/proposals/{id}/accept
    ├─ dm_notes and modifications merged into proposal.content
    ├─ proposal.status set to "accepted"
-   └─ (future) Location/Character record created + embedding indexed
+   ├─ For LOCATION/CHARACTER proposals: concrete DB record created immediately;
+   │  created_entity_id written into proposal.content for citation traceability
+   └─ (future) embedding indexed for RAG similarity search
 ```
 
 ---
 
-## World Consistency — pgvector RAG
+## World Consistency — pgvector RAG (planned)
 
 Three tables carry `embedding vector(1536)` columns: `worlds`, `characters`,
-`locations`. Before generating new content, the orchestrator:
+`locations`. The schema is in place; the RAG pipeline is not yet implemented.
 
-1. Embeds the DM's prompt using the embedding model
-2. Queries pgvector for the nearest-neighbor lore entries
-3. Injects the top-k results into the system prompt as "existing world context"
+Planned flow (once implemented):
 
-This prevents contradictions: a settlement described as coastal will remain
+1. Embed the DM's prompt using an embedding model
+2. Query pgvector for nearest-neighbor lore entries
+3. Inject top-k results into the system prompt as "existing world context"
+
+This will prevent contradictions: a settlement described as coastal will remain
 coastal; a character established as antagonistic will be recalled as such in later
-sessions.
-
-The `WorldConsistencyVector` pipeline (in `dm_api/ai/`) handles embedding
-generation and similarity search. Embeddings are updated when proposals are
-accepted.
+sessions. Embeddings will be generated and indexed when proposals are accepted.
 
 ---
 
@@ -396,11 +398,13 @@ to cite anchors when referring to prior events.
 **Log format** — human-readable with key=value pairs for machine parsing:
 
 ```
+2026-05-09 12:34:55,600 INFO     dm_api.api.ws  ws connect  session_id=abc total=1
 2026-05-09 12:34:56,789 INFO     dm_api.main  request  method=POST path=/api/sessions/abc/chat status=200 duration_ms=1430
 2026-05-09 12:34:56,001 INFO     dm_api.ai.dm_orchestrator  orchestrator start  session_id=abc world_id=xyz history_len=12
-2026-05-09 12:34:56,002 INFO     dm_api.ai.condenser  condenser skipped  messages=12 tokens=45000 limit=180000
+2026-05-09 12:34:56,002 DEBUG    dm_api.ai.condenser  condenser skipped  messages=12 tokens=45000 limit=180000
 2026-05-09 12:34:57,400 DEBUG    dm_api.ai.backends.anthropic_backend  anthropic complete  model=claude-sonnet-4-6 tokens_in=1480 tokens_out=312 duration_ms=1398
 2026-05-09 12:34:57,401 INFO     dm_api.ai.dm_orchestrator  orchestrator done  session_id=abc model=claude-sonnet-4-6 tokens_in=1480 tokens_out=312 was_condensed=False proposal=none duration_ms=1430
+2026-05-09 12:34:58,000 INFO     dm_api.api.ws  ws disconnect  session_id=abc remaining=0
 ```
 
 **Log levels by module:**
@@ -408,6 +412,7 @@ to cite anchors when referring to prior events.
 | Logger | INFO events | DEBUG events |
 |--------|-------------|-------------|
 | `dm_api.main` | every HTTP request (method, path, status, ms) | — |
+| `dm_api.api.ws` | connect (session, total connections), disconnect (session, remaining) | dead-connection pruned |
 | `dm_api.ai.dm_orchestrator` | start + done (session, model, tokens, ms) | — |
 | `dm_api.ai.condenser` | triggered (token counts, messages condensed, facts/threads) | skipped (no-op path) |
 | `dm_api.ai.backends.anthropic_backend` | — | model, tokens in/out, ms |

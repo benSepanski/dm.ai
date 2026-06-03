@@ -8,7 +8,9 @@ Log format
 ----------
 Each line looks like::
 
-    2026-05-09 12:34:56,789 INFO     dm_api.ai.condenser  condensed=false tokens=45000/180000
+    2026-05-09 12:34:55,600 INFO     dm_api.api.ws  ws connect  session_id=abc total=1
+    2026-05-09 12:34:56,789 INFO     dm_api.main  request  method=POST path=/api/sessions/abc/chat status=200 duration_ms=1430
+    2026-05-09 12:34:57,401 INFO     dm_api.ai.dm_orchestrator  orchestrator done  session_id=abc ... duration_ms=1430
 
 Key=value pairs in the message body are machine-readable so log aggregators
 (Loki, CloudWatch Insights, Datadog, etc.) can extract fields without custom
