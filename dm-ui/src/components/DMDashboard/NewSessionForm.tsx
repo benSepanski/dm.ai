@@ -7,7 +7,7 @@ export default function NewSessionForm() {
   const [sessionName, setSessionName] = useState("Session 1");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { setSession } = useGameStore();
+  const { setSession, setCharacters } = useGameStore();
 
   const handleStart = async () => {
     setLoading(true);
@@ -18,6 +18,21 @@ export default function NewSessionForm() {
         world_id: world.id,
         name: sessionName,
       });
+      // Seed the store with any characters that already exist in the world.
+      const chars = await api.listWorldCharacters(world.id).catch(() => []);
+      setCharacters(
+        chars.map((c) => ({
+          id: c.id,
+          name: c.name,
+          char_class: c.char_class,
+          race: c.race,
+          level: c.level,
+          hp_current: c.hp_current,
+          hp_max: c.hp_max,
+          ac: c.ac,
+          stats: c.stats,
+        }))
+      );
       setSession(session.id, world.id);
     } catch (err) {
       console.error("Failed to start session:", err);
