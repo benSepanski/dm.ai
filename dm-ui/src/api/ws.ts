@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { type CombatStateResponse } from "./client";
+import { api, type CombatStateResponse } from "./client";
 import { useGameStore } from "../store/gameStore";
 
 const WS_BASE = "/ws";
@@ -31,7 +31,8 @@ function mapCombatFromWs(combat: CombatStateResponse) {
 }
 
 export function useSessionWebSocket(sessionId: string | null): void {
-  const { addMessage, setCombat } = useGameStore();
+  const { addMessage, setCombat, addProposal, updateProposal, upsertCharacter, setLocation } =
+    useGameStore();
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -57,6 +58,48 @@ export function useSessionWebSocket(sessionId: string | null): void {
         });
       } else if (event.type === "combat_update") {
         setCombat(mapCombatFromWs(event.combat));
+      } else if (event.type === "proposal_ready") {
+        const status = event.status;
+        if (!status || status === "pending") {
+          // Fetch full proposal data and add to store.
+          api.getProposal(event.proposal_id).then(addProposal).catch(console.error);
+        } else {
+          // Proposal was accepted or rejected — update existing store entry.
+          updateProposal(event.proposal_id, {
+            status: status as "accepted" | "rejected" | "modified",
+          });
+        }
+      } else if (event.type === "entity_update") {
+        if (event.entity_type === "character") {
+          api
+            .getCharacter(event.entity_id)
+            .then((char) =>
+              upsertCharacter({
+                id: char.id,
+                name: char.name,
+                char_class: char.char_class,
+                race: char.race,
+                level: char.level,
+                hp_current: char.hp_current,
+                hp_max: char.hp_max,
+                ac: char.ac,
+                stats: char.stats,
+              })
+            )
+            .catch(console.error);
+        } else if (event.entity_type === "location") {
+          api
+            .getLocation(event.entity_id)
+            .then((loc) =>
+              setLocation({
+                id: loc.id,
+                name: loc.name,
+                type: loc.type,
+                description: loc.description,
+              })
+            )
+            .catch(console.error);
+        }
       }
     };
 
@@ -64,5 +107,5 @@ export function useSessionWebSocket(sessionId: string | null): void {
       ws.close();
       wsRef.current = null;
     };
-  }, [sessionId, addMessage, setCombat]);
+  }, [sessionId, addMessage, setCombat, addProposal, updateProposal, upsertCharacter, setLocation]);
 }

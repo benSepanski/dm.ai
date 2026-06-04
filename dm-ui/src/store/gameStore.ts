@@ -45,6 +45,17 @@ export interface CharacterData {
   stats: Record<string, unknown> | null;
 }
 
+export interface ProposalData {
+  id: string;
+  session_id: string | null;
+  world_id: string;
+  type: string;
+  content: Record<string, unknown> | null;
+  status: "pending" | "accepted" | "rejected" | "modified";
+  dm_notes: string | null;
+  created_at: string;
+}
+
 // ---- Store shape ----
 
 interface GameState {
@@ -55,6 +66,7 @@ interface GameState {
   combat: ActiveCombat | null;
   currentLocation: LocationData | null;
   characters: CharacterData[];
+  proposals: ProposalData[];
 
   setSession: (sessionId: string, worldId: string) => void;
   addMessage: (msg: ChatMessage) => void;
@@ -62,6 +74,9 @@ interface GameState {
   setCombat: (combat: ActiveCombat | null) => void;
   setLocation: (location: LocationData | null) => void;
   setCharacters: (characters: CharacterData[]) => void;
+  upsertCharacter: (char: CharacterData) => void;
+  addProposal: (proposal: ProposalData) => void;
+  updateProposal: (proposalId: string, updates: Partial<ProposalData>) => void;
 }
 
 const initialState = {
@@ -72,6 +87,7 @@ const initialState = {
   combat: null,
   currentLocation: null,
   characters: [],
+  proposals: [],
 };
 
 export const useGameStore = create<GameState>((set) => ({
@@ -82,4 +98,28 @@ export const useGameStore = create<GameState>((set) => ({
   setCombat: (combat) => set({ combat }),
   setLocation: (location) => set({ currentLocation: location }),
   setCharacters: (characters) => set({ characters }),
+  upsertCharacter: (char) =>
+    set((s) => {
+      const idx = s.characters.findIndex((c) => c.id === char.id);
+      if (idx >= 0) {
+        const updated = [...s.characters];
+        updated[idx] = char;
+        return { characters: updated };
+      }
+      return { characters: [...s.characters, char] };
+    }),
+  addProposal: (proposal) =>
+    set((s) => {
+      const idx = s.proposals.findIndex((p) => p.id === proposal.id);
+      if (idx >= 0) {
+        const updated = [...s.proposals];
+        updated[idx] = proposal;
+        return { proposals: updated };
+      }
+      return { proposals: [...s.proposals, proposal] };
+    }),
+  updateProposal: (proposalId, updates) =>
+    set((s) => ({
+      proposals: s.proposals.map((p) => (p.id === proposalId ? { ...p, ...updates } : p)),
+    })),
 }));

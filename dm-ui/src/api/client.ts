@@ -14,7 +14,53 @@ export interface CreateSessionRequest {
 
 export interface ChatResponse {
   response: string;
-  proposal?: Record<string, unknown> | null;
+  proposal?: ProposalResponse | null;
+}
+
+export type ProposalStatus = "pending" | "accepted" | "rejected" | "modified";
+
+export interface ProposalResponse {
+  id: string;
+  session_id: string | null;
+  world_id: string;
+  type: string;
+  content: Record<string, unknown> | null;
+  status: ProposalStatus;
+  dm_notes: string | null;
+  created_at: string;
+}
+
+export interface CharacterResponse {
+  id: string;
+  world_id: string;
+  type: string;
+  name: string;
+  race: string | null;
+  char_class: string | null;
+  level: number;
+  alignment: string | null;
+  stats: Record<string, unknown> | null;
+  hp_current: number | null;
+  hp_max: number | null;
+  ac: number | null;
+  speed: number | null;
+}
+
+export interface LocationResponse {
+  id: string;
+  world_id: string;
+  type: string;
+  name: string;
+  description: string | null;
+}
+
+export interface AcceptProposalRequest {
+  dm_notes?: string;
+  modifications?: Record<string, unknown>;
+}
+
+export interface RejectProposalRequest {
+  dm_notes?: string;
 }
 
 // Entry in initiative_order — one per combatant, sorted by initiative desc.
@@ -100,4 +146,30 @@ export const api = {
     request<CombatStateResponse>(`/sessions/${sessionId}/combat/next-turn`, { method: "POST" }),
   endCombat: (sessionId: string) =>
     request<CombatStateResponse>(`/sessions/${sessionId}/combat/end`, { method: "PUT" }),
+
+  // Proposals
+  getProposal: (proposalId: string) =>
+    request<ProposalResponse>(`/ai/proposals/${proposalId}`),
+  listSessionProposals: (sessionId: string) =>
+    request<ProposalResponse[]>(`/ai/sessions/${sessionId}/proposals`),
+  acceptProposal: (proposalId: string, opts: AcceptProposalRequest = {}) =>
+    request<ProposalResponse>(`/ai/proposals/${proposalId}/accept`, {
+      method: "POST",
+      body: JSON.stringify(opts),
+    }),
+  rejectProposal: (proposalId: string, opts: RejectProposalRequest = {}) =>
+    request<ProposalResponse>(`/ai/proposals/${proposalId}/reject`, {
+      method: "POST",
+      body: JSON.stringify(opts),
+    }),
+
+  // Characters
+  listWorldCharacters: (worldId: string) =>
+    request<CharacterResponse[]>(`/characters/world/${worldId}`),
+  getCharacter: (charId: string) =>
+    request<CharacterResponse>(`/characters/${charId}`),
+
+  // Locations
+  getLocation: (locId: string) =>
+    request<LocationResponse>(`/locations/${locId}`),
 };

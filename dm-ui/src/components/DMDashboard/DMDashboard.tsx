@@ -6,6 +6,7 @@ import CharacterCard from "../CharacterCard/CharacterCard";
 import CombatTracker from "../CombatTracker/CombatTracker";
 import LocationPanel from "../LocationPanel/LocationPanel";
 import BattleMap from "../BattleMap/BattleMap";
+import ProposalCard from "../ProposalCard/ProposalCard";
 import NewSessionForm from "./NewSessionForm";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -21,7 +22,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function DMDashboard() {
-  const { sessionId, messages, isLoading, addMessage, setLoading } =
+  const { sessionId, messages, isLoading, addMessage, setLoading, proposals, addProposal } =
     useGameStore();
   const [input, setInput] = useState("");
   const [showMap, setShowMap] = useState(false);
@@ -29,6 +30,15 @@ export default function DMDashboard() {
 
   // Real-time updates from the server via WebSocket.
   useSessionWebSocket(sessionId);
+
+  // Load any existing proposals for this session on mount.
+  useEffect(() => {
+    if (!sessionId) return;
+    api
+      .listSessionProposals(sessionId)
+      .then((list) => list.forEach(addProposal))
+      .catch(console.error);
+  }, [sessionId, addProposal]);
 
   // Auto-scroll when messages change
   useEffect(() => {
@@ -56,6 +66,11 @@ export default function DMDashboard() {
         content: res.response,
         timestamp: new Date().toISOString(),
       });
+      // If the HTTP response already carries the proposal, add it immediately
+      // rather than waiting for the WebSocket event.
+      if (res.proposal) {
+        addProposal(res.proposal);
+      }
     } catch (err) {
       addMessage({
         id: crypto.randomUUID(),
@@ -66,7 +81,7 @@ export default function DMDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, input, isLoading, addMessage, setLoading]);
+  }, [sessionId, input, isLoading, addMessage, setLoading, addProposal]);
 
   if (!sessionId) {
     return (
@@ -82,6 +97,9 @@ export default function DMDashboard() {
       </div>
     );
   }
+
+  const pendingProposals = proposals.filter((p) => p.status === "pending");
+  const resolvedProposals = proposals.filter((p) => p.status !== "pending");
 
   return (
     <div
@@ -239,9 +257,52 @@ export default function DMDashboard() {
           borderLeft: "1px solid #333",
           padding: 16,
           overflow: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
         }}
       >
         <CombatTracker />
+
+        {/* Proposals panel */}
+        {proposals.length > 0 && (
+          <section>
+            <h3
+              style={{
+                margin: "0 0 8px",
+                fontSize: 14,
+                color: "#ccc",
+                textTransform: "uppercase",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              Proposals
+              {pendingProposals.length > 0 && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    padding: "2px 6px",
+                    borderRadius: 10,
+                    background: "#7c6af733",
+                    color: "#7c6af7",
+                  }}
+                >
+                  {pendingProposals.length} pending
+                </span>
+              )}
+            </h3>
+            {/* Pending proposals first */}
+            {pendingProposals.map((p) => (
+              <ProposalCard key={p.id} proposal={p} />
+            ))}
+            {/* Resolved proposals (collapsed appearance) */}
+            {resolvedProposals.map((p) => (
+              <ProposalCard key={p.id} proposal={p} />
+            ))}
+          </section>
+        )}
       </aside>
     </div>
   );
