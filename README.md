@@ -141,8 +141,7 @@ fill in the values relevant to your setup.
 | `AI_PROVIDER` | `anthropic` | `anthropic` (API key) or `claude_cli` (local CLI) |
 | `ANTHROPIC_API_KEY` | — | Required when `AI_PROVIDER=anthropic` |
 | `ORCHESTRATOR_MODEL` | `claude-sonnet-4-6` | Main chat / proposal model |
-| `PLANNING_MODEL` | `claude-sonnet-4-6` | World-building and complex reasoning |
-| `GENERATION_MODEL` | `claude-haiku-4-5-20251001` | Fast tasks: summaries, dialogue |
+| `GENERATION_MODEL` | `claude-haiku-4-5-20251001` | Fast tasks: summaries, dialogue, condensation |
 | `DATABASE_URL` | `postgresql+asyncpg://dmuser:dmpass@localhost:5432/dmdb` | PostgreSQL (asyncpg) |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection |
 | `SECRET_KEY` | `dev-secret-key` | FastAPI signing key (change in production) |
