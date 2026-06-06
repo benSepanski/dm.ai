@@ -132,7 +132,7 @@ jobs:
         run: pytest tests/ -v --tb=short
 
   dm-ui-checks:
-    name: dm-ui / tsc + eslint
+    name: dm-ui / tsc + eslint + tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -147,8 +147,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: TypeScript type check
-        run: npx tsc --noEmit
+      - name: TypeScript type check (app)
+        # Uses tsconfig.app.json directly — the root solution tsconfig has
+        # "files": [] and only project references, so tsc --noEmit on it is a
+        # no-op without --build.  Running per-project is the correct check.
+        run: npx tsc --project tsconfig.app.json --noEmit
+
+      - name: TypeScript type check (tests)
+        run: npx tsc --project tsconfig.test.json --noEmit
 
       - name: ESLint
         run: npm run lint
+
+      - name: Vitest
+        run: npm test

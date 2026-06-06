@@ -91,13 +91,14 @@ export default function ProposalCard({ proposal }: ProposalCardProps) {
     }
   };
 
-  const statusBadge = !isPending
-    ? {
-        accepted: { label: "Accepted", color: "#27ae60" },
-        rejected: { label: "Rejected", color: "#c0392b" },
-        modified: { label: "Modified", color: "#e67e22" },
-      }[proposal.status]
-    : null;
+  // TypeScript doesn't narrow proposal.status through the isPending alias in a
+  // ternary, so we use a Record<string, …> to allow the full union as a key.
+  const STATUS_BADGES: Record<string, { label: string; color: string }> = {
+    accepted: { label: "Accepted", color: "#27ae60" },
+    rejected: { label: "Rejected", color: "#c0392b" },
+    modified: { label: "Modified", color: "#e67e22" },
+  };
+  const statusBadge = isPending ? null : (STATUS_BADGES[proposal.status] ?? null);
 
   return (
     <div

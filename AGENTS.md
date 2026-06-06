@@ -102,10 +102,12 @@ dm.ai/
 │       └── ai/                  — DM orchestrator, AI backends, prompts
 └── dm-ui/                       — React 19 + Vite + Konva frontend
     ├── package.json
-    ├── tsconfig.app.json        — strict mode enabled
+    ├── tsconfig.app.json        — strict mode (excludes test files)
+    ├── tsconfig.test.json       — extends app; adds vitest/globals for test files
     └── src/
-        ├── api/                 — REST client
+        ├── api/                 — REST client (client.ts) + WebSocket hook (ws.ts)
         ├── store/gameStore.ts   — Zustand store (single source of truth)
+        ├── test/setup.ts        — Vitest + @testing-library/jest-dom setup
         └── components/          — BattleMap, CombatTracker, DMDashboard, etc.
 ```
 
@@ -115,10 +117,24 @@ dm.ai/
 
 - Run `pytest tests/ -v` inside `game-engine/` — all tests must pass
 - Run `pytest tests/ -v` inside `dm-api/` — all tests must pass
-- Run `npx tsc --noEmit` inside `dm-ui/` — zero type errors
+- Run `npx tsc --project tsconfig.app.json --noEmit` inside `dm-ui/` — zero type errors in app code
+- Run `npx tsc --project tsconfig.test.json --noEmit` inside `dm-ui/` — zero type errors in test code
 - Run `npm run lint` inside `dm-ui/` — zero ESLint warnings or errors
+- Run `npm test` inside `dm-ui/` — all 73+ Vitest tests must pass
 - Run `git status` — no untracked files accidentally left behind
 - Never commit `.env` files, API keys, or any secrets
+
+### dm-ui test structure
+
+Tests live co-located with source files: `ComponentName/ComponentName.test.tsx`.
+Test framework: **Vitest** + **@testing-library/react** + **@testing-library/jest-dom**.
+
+Key conventions:
+- Reset Zustand store state in `beforeEach` using `useGameStore.setState(RESET)` where `RESET: Partial<ReturnType<typeof useGameStore.getState>>`.
+- Mock API calls with `vi.mock('../../api/client', () => ({ api: { methodName: vi.fn() } }))` and assert with `vi.mocked(api.methodName)`.
+- Mock `WebSocket` with a stub class assigned via `vi.stubGlobal('WebSocket', MockWebSocket)`.
+- Mock `fetch` with `vi.stubGlobal('fetch', vi.fn().mockResolvedValue(...))`.
+- Prefer `container.toHaveTextContent('...')` over `getByText` when text spans multiple React text nodes.
 
 ---
 
@@ -282,6 +298,8 @@ Before treating any task as done, verify:
 - [ ] All new features have corresponding tests; new bug fixes have regression tests
 - [ ] New dataclass fields appear in BOTH `to_dict()` AND `from_dict()` (plus a round-trip test)
 - [ ] `pytest tests/ -v` passes in both `game-engine/` and `dm-api/`
-- [ ] `npx tsc --noEmit` passes in `dm-ui/`
+- [ ] `npx tsc --project tsconfig.app.json --noEmit` passes in `dm-ui/`
+- [ ] `npx tsc --project tsconfig.test.json --noEmit` passes in `dm-ui/`
+- [ ] `npm test` passes in `dm-ui/` (73+ Vitest tests)
 - [ ] `npm run lint` passes with zero warnings in `dm-ui/`
 - [ ] No secrets or `.env` files staged for commit
