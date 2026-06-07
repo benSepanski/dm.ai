@@ -184,6 +184,13 @@ async def accept_proposal(
     if proposal.status != ProposalStatus.PENDING:
         raise HTTPException(status_code=409, detail="Proposal is not pending")
 
+    logger.info(
+        "accept_proposal start  proposal_id=%s type=%s session_id=%s",
+        proposal_id,
+        proposal.type.value,
+        proposal.session_id,
+    )
+
     # Apply DM modifications before entity creation so the entity reflects
     # any changes the DM made at review time.
     proposal.status = ProposalStatus.ACCEPTED
@@ -204,6 +211,12 @@ async def accept_proposal(
 
     await db.commit()
     await db.refresh(proposal)
+    logger.info(
+        "accept_proposal done  proposal_id=%s type=%s entity_id=%s",
+        proposal_id,
+        proposal.type.value,
+        created_id,
+    )
     result_read = ProposalRead.model_validate(proposal)
 
     # Notify clients: proposal status changed; if an entity was created, also emit entity_update.
@@ -247,6 +260,13 @@ async def reject_proposal(
         raise HTTPException(status_code=404, detail="Proposal not found")
     if proposal.status != ProposalStatus.PENDING:
         raise HTTPException(status_code=409, detail="Proposal is not pending")
+
+    logger.info(
+        "reject_proposal  proposal_id=%s type=%s session_id=%s",
+        proposal_id,
+        proposal.type.value,
+        proposal.session_id,
+    )
 
     proposal.status = ProposalStatus.REJECTED
     if payload.dm_notes:

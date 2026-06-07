@@ -15,8 +15,9 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-key"
     frontend_url: str = "http://localhost:5173"
 
-    # AI provider: "anthropic" (uses ANTHROPIC_API_KEY) or "claude_cli" (uses installed claude CLI)
-    ai_provider: Literal["anthropic", "claude_cli"] = "anthropic"
+    # AI provider: "anthropic" (uses ANTHROPIC_API_KEY), "claude_cli" (uses installed claude CLI),
+    # or "mock" (scripted canned responses — no credentials required, dev/test only).
+    ai_provider: Literal["anthropic", "claude_cli", "mock"] = "anthropic"
 
     # Model roles - override per-environment to tune cost/capability tradeoffs
     # Used for quick tasks: session summaries, NPC dialogue snippets, flavor text

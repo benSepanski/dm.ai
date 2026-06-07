@@ -9,15 +9,15 @@ def create_backend(provider: str, api_key: str = "") -> AIBackend:
     """Create and return the configured AI backend.
 
     Args:
-        provider: "anthropic" or "claude_cli"
-        api_key: Anthropic API key (only required for "anthropic" provider)
+        provider: ``"anthropic"``, ``"claude_cli"``, or ``"mock"``
+        api_key: Anthropic API key (only required for ``"anthropic"`` provider)
 
     Returns:
         Configured AIBackend instance.
 
     Raises:
         ValueError: If provider is not recognized.
-        RuntimeError: If "claude_cli" is selected but `claude` is not on PATH.
+        RuntimeError: If ``"claude_cli"`` is selected but ``claude`` is not on PATH.
     """
     if provider == "anthropic":
         from dm_api.ai.backends.anthropic_backend import AnthropicBackend
@@ -27,6 +27,10 @@ def create_backend(provider: str, api_key: str = "") -> AIBackend:
         from dm_api.ai.backends.claude_cli_backend import ClaudeCLIBackend
 
         return ClaudeCLIBackend()
+    if provider == "mock":
+        from dm_api.ai.backends.mock_backend import MockBackend
+
+        return MockBackend()
     raise ValueError(
-        f"Unknown AI provider {provider!r}. " "Valid options: 'anthropic', 'claude_cli'"
+        f"Unknown AI provider {provider!r}. " "Valid options: 'anthropic', 'claude_cli', 'mock'"
     )

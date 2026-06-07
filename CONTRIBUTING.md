@@ -246,12 +246,31 @@ is acceptable when the logic is short and self-explanatory.
 
 ## AI Configuration
 
-Two backends are supported, controlled by the `AI_PROVIDER` env var in `.env`:
+Three backends are supported, controlled by the `AI_PROVIDER` env var in `.env`:
 
 | `AI_PROVIDER` | Authentication | How to set up |
 |---|---|---|
 | `anthropic` (default) | `ANTHROPIC_API_KEY=sk-...` | Get a key from [console.anthropic.com](https://console.anthropic.com) |
 | `claude_cli` | None (uses local auth) | `npm install -g @anthropic-ai/claude-code`, then run `claude` to authenticate |
+| `mock` | None | No setup needed — returns scripted canned responses |
+
+### Running without an API key (`AI_PROVIDER=mock`)
+
+The `mock` backend lets you explore the full UI, WebSocket flow, and proposal
+lifecycle without burning API quota or setting up credentials.  It cycles
+through a list of canned DM responses so all endpoints behave correctly.
+
+```bash
+# .env (or inline env)
+AI_PROVIDER=mock
+
+# Or inline when starting the server:
+AI_PROVIDER=mock uvicorn dm_api.main:app --reload --port 8000
+```
+
+The mock response includes a visible notice that it is synthetic, so it is
+easy to tell apart from real AI output during manual testing.  The `mock`
+backend is **not** suitable for production — it never calls Claude.
 
 Model roles — override in `.env` to tune cost/capability tradeoffs:
 

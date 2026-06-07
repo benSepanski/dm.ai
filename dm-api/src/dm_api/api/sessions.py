@@ -174,6 +174,14 @@ async def session_chat(
 
     history = await _fetch_history(db, session_id)
 
+    logger.info(
+        "session_chat start  session_id=%s world_id=%s message_len=%d history_len=%d",
+        session_id,
+        game_session.world_id,
+        len(payload.message),
+        len(history),
+    )
+
     # Condense → build messages → call backend → extract proposal.
     result = await _make_orchestrator().handle_message(
         message=payload.message,
