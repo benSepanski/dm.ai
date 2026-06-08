@@ -291,7 +291,13 @@ def _parse_condensation(text: str) -> _ParsedCondensation:
     stripped = _strip_fences(text.strip())
     try:
         data = json.loads(stripped)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        logger.warning(
+            "condenser: sub-agent returned non-JSON; falling back to synopsis-only. "
+            "raw_length=%d error=%s",
+            len(stripped),
+            exc,
+        )
         return _ParsedCondensation(
             synopsis=_clip(stripped, max_chars=2000),
             key_facts=[],
@@ -299,6 +305,10 @@ def _parse_condensation(text: str) -> _ParsedCondensation:
         )
 
     if not isinstance(data, dict):
+        logger.warning(
+            "condenser: sub-agent returned non-dict JSON; falling back. type=%s",
+            type(data).__name__,
+        )
         return _ParsedCondensation(
             synopsis=_clip(str(data), max_chars=2000),
             key_facts=[],
@@ -308,6 +318,19 @@ def _parse_condensation(text: str) -> _ParsedCondensation:
     synopsis_raw = data.get("synopsis", "")
     facts_raw = data.get("key_facts", [])
     threads_raw = data.get("open_threads", [])
+
+    if not isinstance(synopsis_raw, str):
+        logger.warning(
+            "condenser: 'synopsis' field is %s, expected str", type(synopsis_raw).__name__
+        )
+    if not isinstance(facts_raw, list):
+        logger.warning(
+            "condenser: 'key_facts' field is %s, expected list", type(facts_raw).__name__
+        )
+    if not isinstance(threads_raw, list):
+        logger.warning(
+            "condenser: 'open_threads' field is %s, expected list", type(threads_raw).__name__
+        )
 
     synopsis = synopsis_raw if isinstance(synopsis_raw, str) else ""
     key_facts = [f for f in facts_raw if isinstance(f, str)] if isinstance(facts_raw, list) else []

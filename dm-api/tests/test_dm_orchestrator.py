@@ -198,3 +198,60 @@ async def test_extract_proposal_non_dict_content_is_none() -> None:
         message="test", session_id="s1", world_id="w1", history=_history(1)
     )
     assert result.proposal == ProposalPayload(type=ProposalType.LOCATION, content=None)
+
+
+@pytest.mark.asyncio
+async def test_summarize_returns_backend_content() -> None:
+    """summarize() uses the fast (generation) model and returns its text."""
+    backend = _ScriptedBackend(["The party explored the dungeon and defeated the lich."])
+    orchestrator = DMOrchestrator(
+        backend=backend,
+        orchestrator_model="main",
+        generation_model="fast",
+    )
+
+    result = await orchestrator.summarize("Long session transcript here.")
+
+    assert result == "The party explored the dungeon and defeated the lich."
+    assert len(backend.calls) == 1
+    assert backend.calls[0]["model"] == "fast"
+
+
+@pytest.mark.asyncio
+async def test_summarize_uses_generation_model_not_orchestrator() -> None:
+    """summarize() must use the generation (fast) model, not the orchestrator model."""
+    backend = _ScriptedBackend(["Summary text."])
+    orchestrator = DMOrchestrator(
+        backend=backend,
+        orchestrator_model="expensive-main",
+        generation_model="cheap-fast",
+    )
+
+    await orchestrator.summarize("session text")
+
+    assert backend.calls[0]["model"] == "cheap-fast"
+
+
+@pytest.mark.asyncio
+async def test_condense_method_delegates_to_condenser() -> None:
+    """The public condense() method returns a CondensedContext from the condenser sub-agent."""
+    from dm_api.ai.condenser import CondensedContext
+
+    condense_json = '{"synopsis": "Heroes saved the village.", "key_facts": ["Tavern burned down"], "open_threads": ["Where did the dragon go?"]}'
+    backend = _ScriptedBackend([condense_json])
+    orchestrator = DMOrchestrator(
+        backend=backend,
+        orchestrator_model="main",
+        generation_model="fast",
+        context_token_limit=100,
+        context_preserve_last_n=1,
+    )
+
+    history = _history(4, tokens_each=50)
+    result = await orchestrator.condense(history=history)
+
+    assert isinstance(result, CondensedContext)
+    assert result.was_condensed is True
+    assert result.synopsis == "Heroes saved the village."
+    assert "Tavern burned down" in result.key_facts
+    assert "Where did the dragon go?" in result.open_threads

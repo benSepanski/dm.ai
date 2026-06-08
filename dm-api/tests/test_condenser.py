@@ -223,6 +223,39 @@ def test_as_ai_messages_guards_against_assistant_first_message() -> None:
         ), f"Consecutive user messages at indices {i} and {i+1}"
 
 
+@pytest.mark.asyncio
+async def test_condense_logs_warning_on_malformed_json(caplog: pytest.LogCaptureFixture) -> None:
+    """A sub-agent returning invalid JSON triggers a warning log, not a silent drop."""
+    import logging
+
+    backend = _StubBackend(reply="this is definitely not json {{{")
+    condenser = ContextCondenser(backend=backend, model="fast-model")
+
+    history = _mk_history(6, tokens_each=100)
+    with caplog.at_level(logging.WARNING, logger="dm_api.ai.condenser"):
+        result = await condenser.condense(messages=history, token_limit=200, preserve_last_n=2)
+
+    assert result.was_condensed is True
+    assert result.synopsis != ""
+    assert any("non-JSON" in r.message or "non-JSON" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_condense_logs_warning_on_non_dict_json(caplog: pytest.LogCaptureFixture) -> None:
+    """A sub-agent returning a JSON array (not object) triggers a warning log."""
+    import logging
+
+    backend = _StubBackend(reply='["not", "a", "dict"]')
+    condenser = ContextCondenser(backend=backend, model="fast-model")
+
+    history = _mk_history(6, tokens_each=100)
+    with caplog.at_level(logging.WARNING, logger="dm_api.ai.condenser"):
+        result = await condenser.condense(messages=history, token_limit=200, preserve_last_n=2)
+
+    assert result.was_condensed is True
+    assert any("non-dict" in r.message or "non-dict" in r.getMessage() for r in caplog.records)
+
+
 def test_message_anchor_citation_format() -> None:
     """The citation format matches filepath:lineno style: msg:<id>@<ts>."""
     mid = uuid.UUID("12345678-1234-5678-1234-567812345678")

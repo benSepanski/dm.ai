@@ -66,7 +66,7 @@ async def broadcast_to_session(session_id: str | uuid.UUID, event: dict[str, Any
         del _connections[key]
 
     if dead:
-        logger.debug(
+        logger.info(
             "broadcast_to_session: removed %d dead connection(s) session_id=%s",
             len(dead),
             key,
