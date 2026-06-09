@@ -6,11 +6,14 @@ from collections.abc import AsyncIterator, Callable, Coroutine
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from dm_api.api.router import router
 from dm_api.config import settings
+from dm_api.db.session import get_db
 from dm_api.logging_config import configure_logging
 
 logger = logging.getLogger(__name__)
@@ -69,3 +72,20 @@ app.include_router(router, prefix="/api")
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": "dm-api"}
+
+
+@app.get("/health/ready")
+async def health_ready(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
+    """Readiness probe — returns 200 only when the database is reachable.
+
+    Use this endpoint for Kubernetes/Docker readiness checks and load-balancer
+    health gates.  The liveness probe (``/health``) is a no-dep fast check;
+    this one actually touches the DB so it can detect connection pool exhaustion
+    or misconfigured DATABASE_URL.
+    """
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception as exc:
+        logger.warning("readiness check failed  error=%s", exc)
+        raise HTTPException(status_code=503, detail="database unavailable") from exc
+    return {"status": "ok", "db": "connected"}

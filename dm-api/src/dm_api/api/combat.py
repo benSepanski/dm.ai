@@ -1,6 +1,3 @@
-# NOTE: This file is at ~400 LoC. The next feature addition should split it —
-# e.g. extract _character_to_sheet/_sync_combatants_to_db/_broadcast_combat into
-# a combat_utils.py helper so endpoint handlers stay thin.
 """Combat API endpoints — wired to the DnD55eEngine rule engine.
 
 Harness-engineering notes:
@@ -27,15 +24,18 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
-from game_engine.types import AttackDetails, CharacterClass, CharacterSheet, CombatStateData
-from game_engine.types.values import DiceNotation
+from game_engine.types import CharacterSheet, CombatStateData
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from dm_api.api.ws import broadcast_to_session
+from dm_api.api.combat_utils import (
+    broadcast_combat,
+    build_attack_details,
+    character_to_sheet,
+    sync_combatants_to_db,
+)
 from dm_api.db.models.character import Character
 from dm_api.db.models.combat import (
-    AttackDetailsRequest,
     CombatActionRequest,
     CombatState,
     CombatStateRead,
@@ -50,106 +50,6 @@ router = APIRouter()
 
 # Stateless engine — safe to share across requests.
 _engine = DnD55eEngine()
-
-# CharacterSheet defaults applied when the DB column is NULL.
-# These match the CharacterSheet dataclass defaults so engine output
-# is consistent whether or not the character was given explicit values.
-_DEFAULT_HP = 10
-_DEFAULT_AC = 10
-_DEFAULT_SPEED = 30
-
-
-async def _broadcast_combat(session_id: uuid.UUID, state: CombatStateRead) -> None:
-    """Emit a ``combat_update`` WebSocket event after every state-mutating endpoint.
-
-    Failures are logged but never propagate to the HTTP response — the DB
-    write already succeeded so the caller gets the correct result regardless.
-    """
-    try:
-        await broadcast_to_session(
-            session_id,
-            {
-                "type": "combat_update",
-                "session_id": str(session_id),
-                "combat": state.model_dump(mode="json"),
-            },
-        )
-    except Exception:
-        logger.exception("combat broadcast failed session_id=%s", session_id)
-
-
-async def _sync_combatants_to_db(
-    db: AsyncSession,
-    combatants: list[dict[str, Any]],
-) -> None:
-    """Write updated HP and conditions from combat state back to Character DB rows.
-
-    Called by ``end_combat`` to make combat damage and condition changes
-    persistent.  Combatants whose ``id`` does not resolve to a ``Character``
-    row (e.g. ad-hoc monsters not stored in DB) are skipped silently.
-    """
-    for combatant in combatants:
-        char_id_str = combatant.get("id", "")
-        try:
-            char_uuid = uuid.UUID(char_id_str)
-        except (ValueError, AttributeError):
-            continue
-
-        result = await db.execute(select(Character).where(Character.id == char_uuid))
-        character = result.scalar_one_or_none()
-        if character is None:
-            continue
-
-        hp_current = combatant.get("hp_current")
-        if hp_current is not None:
-            character.hp_current = int(hp_current)
-
-        stats: dict[str, Any] = dict(character.stats or {})
-        for field in ("conditions", "condition_durations"):
-            if field in combatant:
-                stats[field] = combatant[field]
-        character.stats = stats
-
-
-def _character_to_sheet(character: Character) -> CharacterSheet:
-    """Bridge DB Character row → typed CharacterSheet for the rule engine."""
-    stats = character.stats or {}
-    return CharacterSheet.from_dict(
-        {
-            "id": str(character.id),
-            "name": character.name,
-            "level": character.level,
-            "class": character.char_class or CharacterClass.FIGHTER.value,
-            "ability_scores": stats.get("ability_scores", {}),
-            "hp_current": (
-                character.hp_current if character.hp_current is not None else _DEFAULT_HP
-            ),
-            "hp_max": character.hp_max if character.hp_max is not None else _DEFAULT_HP,
-            "ac": character.ac if character.ac is not None else _DEFAULT_AC,
-            "speed": character.speed if character.speed is not None else _DEFAULT_SPEED,
-            "type": character.type.value,
-            "proficiencies": stats.get("proficiencies", []),
-            "conditions": stats.get("conditions", []),
-            "condition_durations": stats.get("condition_durations", {}),
-            "damage_resistances": stats.get("damage_resistances", []),
-            "damage_immunities": stats.get("damage_immunities", []),
-            "damage_vulnerabilities": stats.get("damage_vulnerabilities", []),
-            "condition_immunities": stats.get("condition_immunities", []),
-        }
-    )
-
-
-def _build_attack_details(req: AttackDetailsRequest | None) -> AttackDetails | None:
-    """Convert typed Pydantic request into a game-engine AttackDetails dataclass."""
-    if req is None:
-        return None
-    return AttackDetails(
-        weapon_name=req.weapon_name,
-        damage_dice=DiceNotation(req.damage_dice),
-        damage_type=req.damage_type,
-        attack_ability=req.attack_ability,
-        is_ranged=req.is_ranged,
-    )
 
 
 @router.post(
@@ -206,7 +106,7 @@ async def start_combat(
 
         rolled: list[tuple[dict[str, Any], dict[str, Any]]] = []
         for char in characters:
-            sheet = _character_to_sheet(char)
+            sheet = character_to_sheet(char)
             initiative = _engine.roll_initiative(sheet)
             rolled.append(
                 (
@@ -229,7 +129,7 @@ async def start_combat(
     await db.commit()
     await db.refresh(combat)
     result_read = CombatStateRead.model_validate(combat)
-    await _broadcast_combat(session_id, result_read)
+    await broadcast_combat(session_id, result_read)
     return result_read
 
 
@@ -296,7 +196,7 @@ async def submit_combat_action(
         action_type=payload.action_type,
         actor_id=payload.actor_id,
         target_id=payload.target_id,
-        details=_build_attack_details(payload.attack_details),
+        details=build_attack_details(payload.attack_details),
     )
     outcome = _engine.resolve_action(action, state)
 
@@ -316,7 +216,7 @@ async def submit_combat_action(
     await db.commit()
     await db.refresh(combat)
     result_read = CombatStateRead.model_validate(combat)
-    await _broadcast_combat(session_id, result_read)
+    await broadcast_combat(session_id, result_read)
     return result_read
 
 
@@ -367,7 +267,7 @@ async def next_turn(
     await db.commit()
     await db.refresh(combat)
     result_read = CombatStateRead.model_validate(combat)
-    await _broadcast_combat(session_id, result_read)
+    await broadcast_combat(session_id, result_read)
     return result_read
 
 
@@ -391,9 +291,9 @@ async def end_combat(
 
     combat.ended_at = datetime.now(tz=timezone.utc)
     if combat.combatants:
-        await _sync_combatants_to_db(db, combat.combatants)
+        await sync_combatants_to_db(db, combat.combatants)
     await db.commit()
     await db.refresh(combat)
     result_read = CombatStateRead.model_validate(combat)
-    await _broadcast_combat(session_id, result_read)
+    await broadcast_combat(session_id, result_read)
     return result_read

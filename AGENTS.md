@@ -58,6 +58,26 @@ in `combat.py`), ensure **all** fields from the target dataclass's `from_dict`
 are populated — not just the obvious combat stats. Check `CharacterSheet.from_dict`
 for the full field list whenever this bridge is modified.
 
+### Structural tests (mechanically enforce golden principles)
+
+`game-engine/tests/test_structure.py` and `dm-api/tests/test_structure.py` run in
+CI and enforce the golden principles without needing a human reviewer:
+
+| Test | What it checks |
+|---|---|
+| `test_file_within_400_lines` | Every production file ≤ 400 lines (data files with a `# NOTE: exceeds 400 LoC` comment are exempt) |
+| `test_future_annotations_present` | Every non-`__init__` source file has `from __future__ import annotations` |
+| `test_no_upward_imports_in_game_engine` | `game_engine` never imports from `dm_api` (layer order preserved) |
+
+When adding a large data file that legitimately must exceed 400 lines, add as
+the very first line of the file:
+
+```python
+# NOTE: exceeds 400 LoC — <one-line reason>
+```
+
+Any other violation is a refactor opportunity, not a reason to disable the test.
+
 ### Proposal content schema rule (learned from `char_class` vs `"class"` bug)
 
 AI proposal content uses the **same field names** as `CharacterSheet.to_dict()` /
@@ -113,12 +133,15 @@ dm.ai/
 
 ## Before Every Commit
 
-- Run `pytest tests/ -v` inside `game-engine/` — all tests must pass
-- Run `pytest tests/ -v` inside `dm-api/` — all tests must pass
+- Run `python -m pytest tests/ -v` inside `game-engine/` — all tests must pass (includes structural tests)
+- Run `python -m pytest tests/ -v` inside `dm-api/` — all tests must pass (includes structural tests)
 - Run `npx tsc --noEmit` inside `dm-ui/` — zero type errors
 - Run `npm run lint` inside `dm-ui/` — zero ESLint warnings or errors
 - Run `git status` — no untracked files accidentally left behind
 - Never commit `.env` files, API keys, or any secrets
+
+Note: use `python -m pytest` (not bare `pytest`) when running from the package
+root so that the installed editable package is on `sys.path`.
 
 ---
 
