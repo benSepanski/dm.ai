@@ -6,8 +6,10 @@ Internal module — import via :class:`DnD55eEngine`.
 
 from __future__ import annotations
 
+from typing import Any
+
 from game_engine.core.conditions import CONDITION_EFFECTS
-from game_engine.types import CharacterSheet, Condition, DamageType
+from game_engine.types import Ability, CharacterSheet, Condition, DamageType, Feat
 
 
 def _apply_damage_impl(
@@ -160,3 +162,41 @@ def _compute_damage(
     if has_vulnerability:
         return damage * 2
     return damage
+
+
+def _concentration_check_impl(
+    target: CharacterSheet,
+    actual_damage: int,
+    log: dict[str, Any],
+) -> None:
+    """Roll the CON save to maintain concentration after taking damage.
+
+    ``actual_damage`` must be the hit points actually lost (after resistances,
+    immunities, and temp-HP absorption — NOT the raw attack roll damage).
+    Using the post-resistance value ensures:
+    - Immune creatures never roll (actual_damage == 0 → early return).
+    - Resistant creatures face the correct lower DC (2024 PHB: DC = max(10, damage_taken // 2)).
+
+    Modifies ``target.concentrating_on`` in-place if the save fails.
+    Results are written into ``log`` under ``"concentration_save"`` and
+    (on failure) ``"concentration_broken"``.
+    """
+    # Lazy import avoids a module-level circular dependency:
+    # _damage ← _saves ← _checks ← (no _damage import).
+    from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
+
+    if target.concentrating_on is None or actual_damage <= 0 or target.is_dying:
+        return
+    spell_name = target.concentrating_on
+    dc = concentration_save_dc(actual_damage)
+    advantage = Feat.WAR_CASTER in target.feats
+    save = _roll_saving_throw_impl(target, Ability.CONSTITUTION, dc, advantage=advantage)
+    log["concentration_save"] = {
+        "spell": spell_name,
+        "dc": dc,
+        "total": save.total,
+        "success": save.success,
+    }
+    if not save.success:
+        log["concentration_broken"] = spell_name
+        target.concentrating_on = None

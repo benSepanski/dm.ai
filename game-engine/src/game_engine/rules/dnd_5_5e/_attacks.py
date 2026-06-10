@@ -18,7 +18,7 @@ from game_engine.core.dice import roll as dice_roll
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import Action, ActionResult
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
-from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl, concentration_save_dc
+from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl, _concentration_check_impl
 from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
 from game_engine.types import (
     Ability,
@@ -157,24 +157,6 @@ def _apply_mastery_effects(
     return applied
 
 
-def _concentration_check(target: CharacterSheet, damage: int, log: dict[str, Any]) -> None:
-    """Roll the CON save to maintain concentration after taking damage."""
-    if target.concentrating_on is None or damage <= 0 or target.is_dying:
-        return
-    dc = concentration_save_dc(damage)
-    advantage = Feat.WAR_CASTER in target.feats
-    save = _roll_saving_throw_impl(target, Ability.CONSTITUTION, dc, advantage=advantage)
-    log["concentration_save"] = {
-        "spell": target.concentrating_on,
-        "dc": dc,
-        "total": save.total,
-        "success": save.success,
-    }
-    if not save.success:
-        log["concentration_broken"] = target.concentrating_on
-        target.concentrating_on = None
-
-
 def _resolve_unarmed_special(
     action: Action,
     actor: CharacterSheet,
@@ -282,8 +264,10 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
         if details.mastery is WeaponMastery.GRAZE and _has_mastery(actor, details):
             graze_damage = max(0, ability_mod)
             if graze_damage:
+                hp_and_temp_before = target.hp_current + target.temp_hp
                 _apply_damage_impl(target, graze_damage, details.damage_type)
-                _concentration_check(target, graze_damage, log)
+                actual_graze = max(0, hp_and_temp_before - (target.hp_current + target.temp_hp))
+                _concentration_check_impl(target, actual_graze, log)
                 log["graze_damage"] = graze_damage
         flavor = (
             f"{actor.name} misses {target.name}! "
@@ -312,8 +296,10 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
     total_damage = max(0, dice_total + damage_mod)
 
     was_dying = target.hp_current <= 0
+    hp_and_temp_before = target.hp_current + target.temp_hp
     _apply_damage_impl(target, total_damage, details.damage_type, critical=critical)
-    _concentration_check(target, total_damage, log)
+    actual_damage = max(0, hp_and_temp_before - (target.hp_current + target.temp_hp))
+    _concentration_check_impl(target, actual_damage, log)
 
     conditions_applied: list[Condition] = []
     if target.hp_current == 0 and not was_dying and Condition.UNCONSCIOUS in target.conditions:

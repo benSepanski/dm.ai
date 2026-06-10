@@ -245,6 +245,40 @@ class TestCasting:
         cast_spell(caster, spell, Ability.INTELLIGENCE, state, [])
         assert caster.concentrating_on == spell.name
 
+    def test_spell_damage_triggers_target_concentration_check(self):
+        """When a spell damages a concentrating target, it rolls a concentration save."""
+        caster = _caster()
+        state = self._state(caster)
+        target = state.get_combatant("t")
+        assert target is not None
+        target.concentrating_on = "Bless"
+        # Damage spell with no save (auto-hits).
+        spell = _spell(damage_dice=DiceNotation("1d6"), damage_type=DamageType.FIRE)
+        with (
+            patch(f"{RES}.roll_dice", return_value=(8, [8])),
+            # Con save roll low → breaks concentration.
+            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(1, [1])),
+        ):
+            result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert result.success
+        assert result.outcomes[0].concentration_broken is True
+        assert target.concentrating_on is None
+
+    def test_spell_damage_immune_target_no_concentration_check(self):
+        """An immune target never rolls a concentration save."""
+        caster = _caster()
+        state = self._state(caster)
+        target = state.get_combatant("t")
+        assert target is not None
+        target.concentrating_on = "Bless"
+        target.damage_immunities = [DamageType.FIRE]
+        spell = _spell(damage_dice=DiceNotation("1d6"), damage_type=DamageType.FIRE)
+        with patch(f"{RES}.roll_dice", return_value=(8, [8])):
+            result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert result.success
+        assert result.outcomes[0].concentration_broken is False
+        assert target.concentrating_on == "Bless"
+
     def test_ritual_consumes_no_slot(self):
         caster = _caster()
         state = self._state(caster)

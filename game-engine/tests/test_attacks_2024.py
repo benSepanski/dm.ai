@@ -260,6 +260,49 @@ class TestActionEconomyAndConcentration:
         assert result.log_entry["concentration_broken"] == "Bless"
         assert target.concentrating_on is None
 
+    def test_concentration_save_uses_actual_damage_with_resistance(self, engine, state):
+        """Concentration DC is based on damage AFTER resistance, not raw attack damage."""
+        target = state.get_combatant("b")
+        target.concentrating_on = "Hold Person"
+        # Give the target resistance to slashing damage (halves damage taken).
+        target.damage_resistances = [DamageType.SLASHING]
+        target.hp_current = 30
+        # Attack roll hits (15), damage roll = 20.  Effective damage = 10 (halved).
+        # DC should be max(10, 10 // 2) = 10, NOT max(10, 20 // 2) = 10.
+        # To distinguish: use a case where the raw DC would differ — raw=20 → DC=10,
+        # actual=10 → DC=10 (same here). Test with very high raw damage:
+        # raw=40 → DC=20, actual=20 (halved) → DC=10.
+        with (
+            patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
+            patch(f"{ATTACKS}.dice_roll", return_value=(40, [40])),
+            # Con save roll = 7.  Succeeds vs DC 10 (actual) but fails vs DC 20 (raw).
+            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(7, [7])),
+        ):
+            result = engine.resolve_action(_attack(), state)
+        # The save DC was 10 (based on 20 actual damage, halved from 40).
+        # Roll 7 + 0 (no prof, no CON mod) = 7 < 10 → fails → concentration broken.
+        # If we had incorrectly used raw damage (40), DC = 20 and roll 7 still fails.
+        # The important assertion is that the save DC logged is 10 (not 20).
+        assert "concentration_save" in result.log_entry
+        assert result.log_entry["concentration_save"]["dc"] == 10
+
+    def test_concentration_immune_target_skips_save(self, engine, state):
+        """Immune targets never roll concentration saves (actual damage == 0)."""
+        target = state.get_combatant("b")
+        target.concentrating_on = "Bless"
+        target.damage_immunities = [DamageType.SLASHING]
+        target.hp_current = 30
+        # Attack hits; immunity absorbs all damage → no concentration check.
+        with (
+            patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
+            patch(f"{ATTACKS}.dice_roll", return_value=(10, [10])),
+        ):
+            result = engine.resolve_action(_attack(), state)
+        # Immune: HP unchanged, and no concentration check rolled.
+        assert target.hp_current == 30
+        assert target.concentrating_on == "Bless"
+        assert "concentration_save" not in result.log_entry
+
     def test_disengage_suppresses_opportunity_attacks(self, engine, state):
         assert provokes_opportunity_attack("a", state) is True
         engine.resolve_action(Action(ActionType.DISENGAGE, "a", None), state)

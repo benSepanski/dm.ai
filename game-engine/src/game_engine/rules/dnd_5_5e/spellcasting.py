@@ -200,6 +200,7 @@ class SpellTargetOutcome:
     damage: int = 0
     healing: int = 0
     conditions_applied: list[Condition] = field(default_factory=list)
+    concentration_broken: bool = False
 
 
 @dataclass

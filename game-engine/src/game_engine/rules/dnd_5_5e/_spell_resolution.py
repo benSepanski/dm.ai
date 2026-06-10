@@ -8,7 +8,11 @@ Internal module — import :func:`cast_spell` via
 from __future__ import annotations
 
 from game_engine.core.dice import roll_dice
-from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl, _apply_healing_impl
+from game_engine.rules.dnd_5_5e._damage import (
+    _apply_damage_impl,
+    _apply_healing_impl,
+    _concentration_check_impl,
+)
 from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
 from game_engine.rules.dnd_5_5e.data.spells import SpellData
 from game_engine.rules.dnd_5_5e.spellcasting import (
@@ -151,10 +155,22 @@ def cast_spell(
             secondary = 0
 
         if damage > 0 and spell.damage_type is not None:
+            hp_before = target.hp_current + target.temp_hp
             _apply_damage_impl(target, damage, spell.damage_type)
+            actual = max(0, hp_before - (target.hp_current + target.temp_hp))
+            conc_log: dict[str, object] = {}
+            _concentration_check_impl(target, actual, conc_log)
+            if "concentration_broken" in conc_log:
+                outcome.concentration_broken = True
             outcome.damage += damage
         if secondary > 0 and spell.secondary_damage_type is not None:
+            hp_before = target.hp_current + target.temp_hp
             _apply_damage_impl(target, secondary, spell.secondary_damage_type)
+            actual = max(0, hp_before - (target.hp_current + target.temp_hp))
+            conc_log = {}
+            _concentration_check_impl(target, actual, conc_log)
+            if "concentration_broken" in conc_log:
+                outcome.concentration_broken = True
             outcome.damage += secondary
 
         healing = _roll_damage(
