@@ -1,6 +1,3 @@
-# NOTE: This file is at ~400 LoC. The next feature addition should split it —
-# e.g. extract _character_to_sheet/_sync_combatants_to_db/_broadcast_combat into
-# a combat_utils.py helper so endpoint handlers stay thin.
 """Combat API endpoints — wired to the DnD55eEngine rule engine.
 
 Harness-engineering notes:
@@ -14,7 +11,9 @@ Harness-engineering notes:
 - WebSocket broadcasts: every state-mutating endpoint emits a ``combat_update``
   event to all connected clients so the UI stays in sync without polling.
 - HP/condition sync: ``end_combat`` writes final combat state back to the
-  Character DB rows so damage and condition changes persist across sessions.
+  Character DB rows so damage and condition changes persist across sessions,
+  and appends a SYSTEM chat message so the AI DM sees the outcome.
+- Bridging/serialisation helpers live in ``combat_utils.py``.
 """
 
 from __future__ import annotations
@@ -27,15 +26,22 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
-from game_engine.types import AttackDetails, CharacterClass, CharacterSheet, CombatStateData
-from game_engine.types.values import DiceNotation
+from game_engine.types import CharacterSheet, ChatRole, CombatStateData
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.api.combat_utils import (
+    broadcast_combat,
+    build_attack_details,
+    character_to_sheet,
+    combat_summary_text,
+    missing_combat_stats,
+    sync_combatants_to_db,
+)
 from dm_api.api.ws import broadcast_to_session
 from dm_api.db.models.character import Character
+from dm_api.db.models.chat import ChatMessage
 from dm_api.db.models.combat import (
-    AttackDetailsRequest,
     CombatActionRequest,
     CombatState,
     CombatStateRead,
@@ -50,106 +56,6 @@ router = APIRouter()
 
 # Stateless engine — safe to share across requests.
 _engine = DnD55eEngine()
-
-# CharacterSheet defaults applied when the DB column is NULL.
-# These match the CharacterSheet dataclass defaults so engine output
-# is consistent whether or not the character was given explicit values.
-_DEFAULT_HP = 10
-_DEFAULT_AC = 10
-_DEFAULT_SPEED = 30
-
-
-async def _broadcast_combat(session_id: uuid.UUID, state: CombatStateRead) -> None:
-    """Emit a ``combat_update`` WebSocket event after every state-mutating endpoint.
-
-    Failures are logged but never propagate to the HTTP response — the DB
-    write already succeeded so the caller gets the correct result regardless.
-    """
-    try:
-        await broadcast_to_session(
-            session_id,
-            {
-                "type": "combat_update",
-                "session_id": str(session_id),
-                "combat": state.model_dump(mode="json"),
-            },
-        )
-    except Exception:
-        logger.exception("combat broadcast failed session_id=%s", session_id)
-
-
-async def _sync_combatants_to_db(
-    db: AsyncSession,
-    combatants: list[dict[str, Any]],
-) -> None:
-    """Write updated HP and conditions from combat state back to Character DB rows.
-
-    Called by ``end_combat`` to make combat damage and condition changes
-    persistent.  Combatants whose ``id`` does not resolve to a ``Character``
-    row (e.g. ad-hoc monsters not stored in DB) are skipped silently.
-    """
-    for combatant in combatants:
-        char_id_str = combatant.get("id", "")
-        try:
-            char_uuid = uuid.UUID(char_id_str)
-        except (ValueError, AttributeError):
-            continue
-
-        result = await db.execute(select(Character).where(Character.id == char_uuid))
-        character = result.scalar_one_or_none()
-        if character is None:
-            continue
-
-        hp_current = combatant.get("hp_current")
-        if hp_current is not None:
-            character.hp_current = int(hp_current)
-
-        stats: dict[str, Any] = dict(character.stats or {})
-        for field in ("conditions", "condition_durations"):
-            if field in combatant:
-                stats[field] = combatant[field]
-        character.stats = stats
-
-
-def _character_to_sheet(character: Character) -> CharacterSheet:
-    """Bridge DB Character row → typed CharacterSheet for the rule engine."""
-    stats = character.stats or {}
-    return CharacterSheet.from_dict(
-        {
-            "id": str(character.id),
-            "name": character.name,
-            "level": character.level,
-            "class": character.char_class or CharacterClass.FIGHTER.value,
-            "ability_scores": stats.get("ability_scores", {}),
-            "hp_current": (
-                character.hp_current if character.hp_current is not None else _DEFAULT_HP
-            ),
-            "hp_max": character.hp_max if character.hp_max is not None else _DEFAULT_HP,
-            "ac": character.ac if character.ac is not None else _DEFAULT_AC,
-            "speed": character.speed if character.speed is not None else _DEFAULT_SPEED,
-            "type": character.type.value,
-            "proficiencies": stats.get("proficiencies", []),
-            "conditions": stats.get("conditions", []),
-            "condition_durations": stats.get("condition_durations", {}),
-            "damage_resistances": stats.get("damage_resistances", []),
-            "damage_immunities": stats.get("damage_immunities", []),
-            "damage_vulnerabilities": stats.get("damage_vulnerabilities", []),
-            "condition_immunities": stats.get("condition_immunities", []),
-        }
-    )
-
-
-def _build_attack_details(req: AttackDetailsRequest | None) -> AttackDetails | None:
-    """Convert typed Pydantic request into a game-engine AttackDetails dataclass."""
-    if req is None:
-        return None
-    return AttackDetails(
-        weapon_name=req.weapon_name,
-        damage_dice=DiceNotation(req.damage_dice),
-        damage_type=req.damage_type,
-        attack_ability=req.attack_ability,
-        is_ranged=req.is_ranged,
-    )
 
 
 @router.post(
@@ -204,9 +110,22 @@ async def start_combat(
                 detail=f"Characters not found: {missing}",
             )
 
+        # Loud failure beats silent placeholders: AI-proposed NPCs are created
+        # with roleplay fields only, and enrolling one used to fabricate a
+        # 10 HP / AC 10 combatant without telling the DM.
+        stat_less = missing_combat_stats(characters)
+        if stat_less:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Characters missing combat stats (hp_max/ac): {stat_less}. "
+                    "Set them via PATCH /api/characters/{id} before starting combat."
+                ),
+            )
+
         rolled: list[tuple[dict[str, Any], dict[str, Any]]] = []
         for char in characters:
-            sheet = _character_to_sheet(char)
+            sheet = character_to_sheet(char)
             initiative = _engine.roll_initiative(sheet)
             rolled.append(
                 (
@@ -229,7 +148,7 @@ async def start_combat(
     await db.commit()
     await db.refresh(combat)
     result_read = CombatStateRead.model_validate(combat)
-    await _broadcast_combat(session_id, result_read)
+    await broadcast_combat(session_id, result_read)
     return result_read
 
 
@@ -284,6 +203,14 @@ async def submit_combat_action(
     # Stage 1: load — deserialise stored CharacterSheets.
     sheets: list[CharacterSheet] = [CharacterSheet.from_dict(c) for c in (combat.combatants or [])]
 
+    # Reject unknown actors/targets up front: a typo'd UUID must surface as a
+    # client error, not as a permanent "actor_not_found" row in the combat log.
+    combatant_ids = {s.id for s in sheets}
+    if payload.actor_id not in combatant_ids:
+        raise HTTPException(status_code=404, detail="Actor is not a combatant in this combat")
+    if payload.target_id is not None and payload.target_id not in combatant_ids:
+        raise HTTPException(status_code=404, detail="Target is not a combatant in this combat")
+
     # Stage 2: build-state.
     state = CombatStateData(
         combatants=sheets,
@@ -296,7 +223,7 @@ async def submit_combat_action(
         action_type=payload.action_type,
         actor_id=payload.actor_id,
         target_id=payload.target_id,
-        details=_build_attack_details(payload.attack_details),
+        details=build_attack_details(payload.attack_details),
     )
     outcome = _engine.resolve_action(action, state)
 
@@ -316,7 +243,7 @@ async def submit_combat_action(
     await db.commit()
     await db.refresh(combat)
     result_read = CombatStateRead.model_validate(combat)
-    await _broadcast_combat(session_id, result_read)
+    await broadcast_combat(session_id, result_read)
     return result_read
 
 
@@ -356,7 +283,6 @@ async def next_turn(
         sheet = CharacterSheet.from_dict(combatants[current_idx])
         sheet = _engine.tick_condition_durations(sheet)
         combatants[current_idx] = sheet.to_dict()
-        combat.combatants = combatants
 
     next_index = current_idx + 1
     if next_index >= order_len:
@@ -364,10 +290,37 @@ async def next_turn(
         next_index = 0
     combat.current_turn_index = next_index
 
+    # A dying creature makes a death save at the start of its turn (2024 PHB).
+    # Rolled automatically here so "PC down" is playable without an extra
+    # endpoint; the result lands in combat_log for the table to see.
+    if next_index < len(combatants):
+        sheet = CharacterSheet.from_dict(combatants[next_index])
+        if sheet.is_dying:
+            save = _engine.roll_death_save(sheet)
+            combatants[next_index] = sheet.to_dict()
+            combat.combat_log = [
+                *(combat.combat_log or []),
+                {
+                    "round": combat.round_number,
+                    "turn": next_index,
+                    "actor_id": sheet.id,
+                    "event": "death_save",
+                    "roll": save.roll,
+                    "outcome": save.outcome.value,
+                    "successes": save.successes,
+                    "failures": save.failures,
+                    "is_stable": save.is_stable,
+                    "is_dead": save.is_dead,
+                    "regained_hp": save.regained_hp,
+                },
+            ]
+
+    combat.combatants = combatants
+
     await db.commit()
     await db.refresh(combat)
     result_read = CombatStateRead.model_validate(combat)
-    await _broadcast_combat(session_id, result_read)
+    await broadcast_combat(session_id, result_read)
     return result_read
 
 
@@ -390,10 +343,39 @@ async def end_combat(
         raise HTTPException(status_code=404, detail="No active combat for this session")
 
     combat.ended_at = datetime.now(tz=timezone.utc)
+    summary: str | None = None
+    summary_message_id: str | None = None
     if combat.combatants:
-        await _sync_combatants_to_db(db, combat.combatants)
+        await sync_combatants_to_db(db, combat.combatants)
+        # Persist a mechanical outcome summary into the chat history. The AI
+        # DM never sees the combat log, so without this it confabulates the
+        # result when narration resumes.
+        summary = combat_summary_text(combat.round_number, combat.combatants)
+        summary_message = ChatMessage(
+            session_id=session_id,
+            role=ChatRole.SYSTEM,
+            content=summary,
+            token_count=len(summary) // 4,
+        )
+        db.add(summary_message)
+        await db.flush()
+        summary_message_id = str(summary_message.id)
     await db.commit()
     await db.refresh(combat)
     result_read = CombatStateRead.model_validate(combat)
-    await _broadcast_combat(session_id, result_read)
+    await broadcast_combat(session_id, result_read)
+    if summary is not None:
+        try:
+            await broadcast_to_session(
+                session_id,
+                {
+                    "type": "chat_message",
+                    "session_id": str(session_id),
+                    "message_id": summary_message_id,
+                    "role": ChatRole.SYSTEM.value,
+                    "content": summary,
+                },
+            )
+        except Exception:
+            logger.exception("combat summary broadcast failed session_id=%s", session_id)
     return result_read

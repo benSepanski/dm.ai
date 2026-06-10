@@ -286,7 +286,7 @@ def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
             def ws_listener():
                 with http.websocket_connect(f"/api/ws/sessions/{session_id}") as ws:
                     received.put("ready")
-                    for _ in range(2):  # chat_message + proposal_ready
+                    for _ in range(3):  # dm chat_message + ai chat_message + proposal_ready
                         received.put(json.loads(ws.receive_text()))
 
             t = threading.Thread(target=ws_listener, daemon=True)
@@ -297,10 +297,12 @@ def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
             mock_orch.handle_message = AsyncMock(
                 return_value=DMResponse(
                     response="You find a hidden village.",
-                    proposal=ProposalPayload(
-                        type=ProposalType.LOCATION,
-                        content={"name": "Hidden Village"},
-                    ),
+                    proposals=[
+                        ProposalPayload(
+                            type=ProposalType.LOCATION,
+                            content={"name": "Hidden Village"},
+                        )
+                    ],
                     was_condensed=False,
                     tokens_in=10,
                     tokens_out=15,
@@ -314,9 +316,8 @@ def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
                 )
             assert chat_r.status_code == 200
 
-            ev1 = received.get(timeout=5)
-            ev2 = received.get(timeout=5)
-            events_by_type = {ev1["type"]: ev1, ev2["type"]: ev2}
+            events = [received.get(timeout=5) for _ in range(3)]
+            events_by_type = {ev["type"]: ev for ev in events}
 
             assert (
                 "proposal_ready" in events_by_type
@@ -333,7 +334,9 @@ def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
 
 
 def test_chat_broadcasts_chat_message():
-    """A successful chat call emits a chat_message event to WS clients."""
+    """A successful chat call emits chat_message events for BOTH the DM echo
+    (so other clients see what the DM typed, immediately) and the AI reply.
+    Both carry a message_id so clients can dedupe."""
     from dm_api.ai.dm_orchestrator import DMResponse
 
     app, engine = _make_sync_app()
@@ -355,8 +358,8 @@ def test_chat_broadcasts_chat_message():
             def ws_listener():
                 with http.websocket_connect(f"/api/ws/sessions/{session_id}") as ws:
                     received.put("ready")
-                    msg = ws.receive_text()
-                    received.put(json.loads(msg))
+                    for _ in range(2):  # dm echo + ai reply
+                        received.put(json.loads(ws.receive_text()))
 
             t = threading.Thread(target=ws_listener, daemon=True)
             t.start()
@@ -366,7 +369,7 @@ def test_chat_broadcasts_chat_message():
             mock_orch.handle_message = AsyncMock(
                 return_value=DMResponse(
                     response="The tavern is quiet.",
-                    proposal=None,
+                    proposals=[],
                     was_condensed=False,
                     tokens_in=10,
                     tokens_out=10,
@@ -381,11 +384,19 @@ def test_chat_broadcasts_chat_message():
                 )
             assert chat_r.status_code == 200
 
-            event = received.get(timeout=5)
-            assert event["type"] == "chat_message"
-            assert event["role"] == "ai"
-            assert event["content"] == "The tavern is quiet."
-            assert event["session_id"] == session_id
+            dm_event = received.get(timeout=5)
+            assert dm_event["type"] == "chat_message"
+            assert dm_event["role"] == "dm"
+            assert dm_event["content"] == "Look around."
+            assert dm_event["session_id"] == session_id
+            assert "message_id" in dm_event
+
+            ai_event = received.get(timeout=5)
+            assert ai_event["type"] == "chat_message"
+            assert ai_event["role"] == "ai"
+            assert ai_event["content"] == "The tavern is quiet."
+            assert ai_event["session_id"] == session_id
+            assert "message_id" in ai_event
 
             t.join(timeout=1)
     finally:

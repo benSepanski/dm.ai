@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api/client";
+import { mapCharacterResponse, mapCombatResponse } from "../../api/mappers";
 import { useSessionWebSocket } from "../../api/ws";
 import { useGameStore } from "../../store/gameStore";
 import CharacterCard from "../CharacterCard/CharacterCard";
@@ -7,7 +9,6 @@ import CombatTracker from "../CombatTracker/CombatTracker";
 import LocationPanel from "../LocationPanel/LocationPanel";
 import BattleMap from "../BattleMap/BattleMap";
 import ProposalCard from "../ProposalCard/ProposalCard";
-import NewSessionForm from "./NewSessionForm";
 
 const ROLE_COLORS: Record<string, string> = {
   dm: "#16213e",
@@ -22,16 +23,88 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function DMDashboard() {
-  const { sessionId, messages, isLoading, addMessage, setLoading, proposals, addProposal } =
-    useGameStore();
+  const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
+  const {
+    sessionId,
+    messages,
+    isLoading,
+    addMessage,
+    setLoading,
+    proposals,
+    addProposal,
+    setSession,
+    clearSession,
+    setMessages,
+    setCharacters,
+    setCombat,
+    setLocation,
+    moveToken,
+  } = useGameStore();
   const [input, setInput] = useState("");
   const [showMap, setShowMap] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  // Real-time updates from the server via WebSocket.
-  useSessionWebSocket(sessionId);
+  // Load (or re-load) all session state from the server. Runs on mount and
+  // URL change, and again after a WebSocket reconnect to catch up on events
+  // missed while the socket was down (laptop sleep, server restart).
+  const hydrateSession = useCallback(async () => {
+    if (!routeSessionId) return;
+    try {
+      const session = await api.getSession(routeSessionId);
+      const [msgs, chars, combat, location] = await Promise.all([
+        api.getSessionMessages(routeSessionId),
+        api.listWorldCharacters(session.world_id).catch(() => []),
+        api
+          .getCombat(routeSessionId)
+          .then(mapCombatResponse)
+          .catch(() => null),
+        session.current_location_id
+          ? api.getLocation(session.current_location_id).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+      setSession(session.id, session.world_id);
+      setMessages(
+        msgs.map((m) => ({ id: m.id, role: m.role, content: m.content, timestamp: m.timestamp }))
+      );
+      setCharacters(chars.map(mapCharacterResponse));
+      setCombat(combat);
+      setLocation(
+        location
+          ? {
+              id: location.id,
+              name: location.name,
+              type: location.type,
+              description: location.description,
+            }
+          : null
+      );
+    } catch {
+      // The session no longer exists (e.g. the database was reset) — forget
+      // it and return to the new-session screen.
+      clearSession();
+      navigate("/", { replace: true });
+    }
+  }, [
+    routeSessionId,
+    setSession,
+    setMessages,
+    setCharacters,
+    setCombat,
+    setLocation,
+    clearSession,
+    navigate,
+  ]);
 
-  // Load any existing proposals for this session on mount.
+  useEffect(() => {
+    void hydrateSession();
+  }, [hydrateSession]);
+
+  // Real-time updates from the server via WebSocket; re-hydrate on reconnect.
+  const sendWsEvent = useSessionWebSocket(sessionId, hydrateSession);
+
+  // Load any existing proposals for this session.
   useEffect(() => {
     if (!sessionId) return;
     api
@@ -51,26 +124,13 @@ export default function DMDashboard() {
     setInput("");
     setLoading(true);
 
-    addMessage({
-      id: crypto.randomUUID(),
-      role: "dm",
-      content: text,
-      timestamp: new Date().toISOString(),
-    });
-
     try {
+      // The DM echo and AI reply both arrive via the WebSocket broadcast
+      // (with server-assigned ids, deduped in the store) so every connected
+      // client renders the same conversation. The HTTP response only needs
+      // to surface the proposals immediately.
       const res = await api.chat(sessionId, text);
-      addMessage({
-        id: crypto.randomUUID(),
-        role: "ai",
-        content: res.response,
-        timestamp: new Date().toISOString(),
-      });
-      // If the HTTP response already carries the proposal, add it immediately
-      // rather than waiting for the WebSocket event.
-      if (res.proposal) {
-        addProposal(res.proposal);
-      }
+      res.proposals.forEach(addProposal);
     } catch (err) {
       addMessage({
         id: crypto.randomUUID(),
@@ -83,17 +143,49 @@ export default function DMDashboard() {
     }
   }, [sessionId, input, isLoading, addMessage, setLoading, addProposal]);
 
+  const handleTokenMove = useCallback(
+    (tokenId: string, x: number, y: number) => {
+      moveToken(tokenId, x, y);
+      sendWsEvent({ type: "map_token_move", token_id: tokenId, x, y });
+    },
+    [moveToken, sendWsEvent]
+  );
+
+  const copyInviteLink = useCallback(() => {
+    const url = window.location.href;
+    if (navigator.clipboard) {
+      navigator.clipboard
+        .writeText(url)
+        .then(() => {
+          setLinkCopied(true);
+          window.setTimeout(() => setLinkCopied(false), 1500);
+        })
+        .catch(() => window.prompt("Copy this link:", url));
+    } else {
+      // Clipboard API needs a secure context; plain-HTTP LAN pages fall back.
+      window.prompt("Copy this link:", url);
+    }
+  }, []);
+
+  const startNewSession = useCallback(() => {
+    clearSession();
+    navigate("/", { replace: true });
+  }, [clearSession, navigate]);
+
   if (!sessionId) {
     return (
       <div
         style={{
           height: "100vh",
           background: "#0d0d1a",
-          color: "#fff",
+          color: "#888",
           fontFamily: "sans-serif",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <NewSessionForm />
+        Loading session…
       </div>
     );
   }
@@ -154,6 +246,37 @@ export default function DMDashboard() {
           >
             {showMap ? "Hide Map" : "Show Map"}
           </button>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={copyInviteLink}
+            title="Share this link with players on your network so they can watch the session"
+            style={{
+              padding: "4px 10px",
+              background: linkCopied ? "#2e7d32" : "#333",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            {linkCopied ? "Copied!" : "Copy Invite Link"}
+          </button>
+          <button
+            onClick={startNewSession}
+            title="Leave this session and start a new one (this session stays saved on the server)"
+            style={{
+              padding: "4px 10px",
+              background: "#333",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: 12,
+            }}
+          >
+            New Session
+          </button>
         </div>
 
         {/* Battle map (collapsible) */}
@@ -166,7 +289,7 @@ export default function DMDashboard() {
               background: "#111",
             }}
           >
-            <BattleMap />
+            <BattleMap onTokenMove={handleTokenMove} />
           </div>
         )}
 

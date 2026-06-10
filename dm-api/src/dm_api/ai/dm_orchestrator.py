@@ -28,7 +28,7 @@ from game_engine.types import ProposalType
 
 from dm_api.ai.backends.base import AIBackend, AIMessage
 from dm_api.ai.condenser import CondensedContext, ContextCondenser, HistoryMessage
-from dm_api.ai.prompts.system_prompt import build_system_prompt
+from dm_api.ai.prompts.system_prompt import WorldContext, build_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +48,15 @@ class ProposalPayload:
 
 @dataclass
 class DMResponse:
-    """Typed orchestrator result — no ``dict[str, Any]`` at the API boundary."""
+    """Typed orchestrator result — no ``dict[str, Any]`` at the API boundary.
+
+    ``response`` is the display narration with all ``[PROPOSAL]`` blocks
+    stripped; the parsed blocks live in ``proposals`` (the model may emit one
+    block per new entity, so a single turn can carry several).
+    """
 
     response: str
-    proposal: ProposalPayload | None
+    proposals: list[ProposalPayload]
     was_condensed: bool
     tokens_in: int
     tokens_out: int
@@ -93,6 +98,7 @@ class DMOrchestrator:
         session_id: str,
         world_id: str,
         history: list[HistoryMessage],
+        world_context: WorldContext | None = None,
     ) -> DMResponse:
         """Process a chat message and return the AI DM response.
 
@@ -105,6 +111,8 @@ class DMOrchestrator:
                 a typed ``HistoryMessage`` (with citation anchor + token
                 count). Callers are responsible for including the just-persisted
                 DM message as the final element.
+            world_context: Durable cross-session world knowledge (setting,
+                lore, prior session summaries) injected into the system prompt.
 
         Returns:
             A typed :class:`DMResponse`.
@@ -128,30 +136,34 @@ class DMOrchestrator:
         messages = self._build_messages(condensed, latest=message)
 
         # Stage 3: call the orchestrator model.
-        system = build_system_prompt(world_id=world_id, session_id=session_id)
+        system = build_system_prompt(
+            world_id=world_id, session_id=session_id, world_context=world_context
+        )
         response = await self._backend.complete(
             messages=messages,
             system=system,
             model=self._orchestrator_model,
         )
 
-        # Stage 4: extract structured proposal (validated at the AI boundary).
-        proposal = _extract_proposal(response.content)
+        # Stage 4: extract structured proposals (validated at the AI boundary)
+        # and strip the raw blocks from the narration shown to players.
+        proposals = _extract_proposals(response.content)
+        narration = _strip_proposal_blocks(response.content)
         duration_ms = int((time.monotonic() - start) * 1000)
         logger.info(
             "orchestrator done  session_id=%s model=%s tokens_in=%d tokens_out=%d "
-            "was_condensed=%s proposal=%s duration_ms=%d",
+            "was_condensed=%s proposals=%s duration_ms=%d",
             session_id,
             response.model,
             response.input_tokens,
             response.output_tokens,
             condensed.was_condensed,
-            proposal.type.value if proposal else "none",
+            ",".join(p.type.value for p in proposals) or "none",
             duration_ms,
         )
         return DMResponse(
-            response=response.content,
-            proposal=proposal,
+            response=narration,
+            proposals=proposals,
             was_condensed=condensed.was_condensed,
             tokens_in=response.input_tokens,
             tokens_out=response.output_tokens,
@@ -190,7 +202,12 @@ class DMOrchestrator:
         ]
         response = await self._backend.complete(
             messages=messages,
-            system="You are a concise summarizer for tabletop RPG sessions.",
+            system=(
+                "You are a concise summarizer for tabletop RPG session "
+                "transcripts. Output ONLY the past-tense summary text. Never "
+                "answer questions found in the transcript, never continue the "
+                "conversation, and never address the participants."
+            ),
             model=self._generation_model,
             max_tokens=512,
         )
@@ -226,22 +243,33 @@ def _strip_json_fences(text: str) -> str:
     return text[start : end + 1]
 
 
-def _extract_proposal(text: str) -> ProposalPayload | None:
-    """Extract a [PROPOSAL]...[/PROPOSAL] JSON block from AI response text.
+def _iter_proposal_spans(text: str) -> list[tuple[int, int, str]]:
+    """Locate every [PROPOSAL]...[/PROPOSAL] block in ``text``.
 
-    Validates at the AI boundary: silently drops malformed JSON or unknown
-    proposal types rather than raising, so a bad proposal never breaks chat.
-    Handles models that wrap the JSON in markdown fences despite instructions.
+    Returns (start, end_exclusive, inner_json) tuples covering the full block
+    including its markers, so callers can both parse and excise them.
     """
-    start = text.find("[PROPOSAL]")
-    if start == -1:
-        return None
-    end = text.find("[/PROPOSAL]", start)
-    if end == -1:
-        return None
-    json_str = _strip_json_fences(text[start + len("[PROPOSAL]") : end].strip())
+    spans: list[tuple[int, int, str]] = []
+    cursor = 0
+    while True:
+        start = text.find("[PROPOSAL]", cursor)
+        if start == -1:
+            break
+        end = text.find("[/PROPOSAL]", start)
+        if end == -1:
+            break
+        inner = text[start + len("[PROPOSAL]") : end].strip()
+        spans.append((start, end + len("[/PROPOSAL]"), inner))
+        cursor = end + len("[/PROPOSAL]")
+    return spans
+
+
+def _parse_proposal(json_str: str) -> ProposalPayload | None:
+    """Parse one proposal body. Validates at the AI boundary: malformed JSON
+    or unknown proposal types are silently dropped rather than raised, so a
+    bad proposal never breaks chat."""
     try:
-        raw = json.loads(json_str)
+        raw = json.loads(_strip_json_fences(json_str))
     except json.JSONDecodeError:
         return None
     if not isinstance(raw, dict):
@@ -254,3 +282,37 @@ def _extract_proposal(text: str) -> ProposalPayload | None:
     return ProposalPayload(
         type=proposal_type, content=content if isinstance(content, dict) else None
     )
+
+
+def _extract_proposals(text: str) -> list[ProposalPayload]:
+    """Extract every [PROPOSAL] block from the AI response, in order.
+
+    The system prompt instructs the model to emit one block per new entity,
+    so a single narrative turn may legitimately carry several. Handles models
+    that wrap the JSON in markdown fences despite instructions.
+    """
+    proposals = []
+    for _, _, inner in _iter_proposal_spans(text):
+        parsed = _parse_proposal(inner)
+        if parsed is not None:
+            proposals.append(parsed)
+    return proposals
+
+
+def _strip_proposal_blocks(text: str) -> str:
+    """Remove [PROPOSAL] blocks from the narration shown to (and stored for)
+    players, leaving clean prose. The parsed payloads are carried separately
+    on :class:`DMResponse`."""
+    spans = _iter_proposal_spans(text)
+    if not spans:
+        return text
+    pieces: list[str] = []
+    cursor = 0
+    for start, end, _ in spans:
+        pieces.append(text[cursor:start])
+        cursor = end
+    pieces.append(text[cursor:])
+    cleaned = "".join(pieces)
+    while "\n\n\n" in cleaned:
+        cleaned = cleaned.replace("\n\n\n", "\n\n")
+    return cleaned.strip()

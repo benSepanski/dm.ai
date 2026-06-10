@@ -58,8 +58,10 @@ Returns all `ChatMessage` rows for the session, ordered by timestamp ascending.
 
 ### POST /api/sessions/{session_id}/chat — main AI interaction
 
-Send a DM message; get an AI narrative response and an optional world-building
-proposal.
+Send a DM message; get an AI narrative response plus any world-building
+proposals (one per entity the AI introduced — a single turn can carry
+several). `response` is clean narration: the raw `[PROPOSAL]` blocks are
+stripped before persisting and returning.
 
 **Body:** `{ "message": "The players arrive at Saltmere." }`
 
@@ -67,14 +69,16 @@ proposal.
 ```json
 {
   "response": "The salty air hits the party...",
-  "proposal": {
-    "id": "uuid", "type": "location",
-    "content": { "name": "Saltmere", ... },
-    "status": "pending", "dm_notes": null, "created_at": "..."
-  }
+  "proposals": [
+    {
+      "id": "uuid", "type": "location",
+      "content": { "name": "Saltmere", ... },
+      "status": "pending", "dm_notes": null, "created_at": "..."
+    }
+  ]
 }
 ```
-`proposal` is `null` when no world-building proposal was generated.
+`proposals` is `[]` when no world-building proposal was generated.
 
 ### PUT /api/sessions/{session_id}/end — end session
 
@@ -144,7 +148,13 @@ Commonly used to write `map_data` after the DM edits the battle map.
 
 ### POST /api/sessions/{session_id}/combat — start combat
 
-Returns **409** if active combat already exists for the session.
+**Body (optional):** `{ "character_ids": [...], "location_id": "..." }` —
+initiative is rolled for the listed characters.
+
+Returns **409** if active combat already exists for the session, **404** if a
+character id doesn't exist, and **422** if an enrolled character has no
+combat stats (`hp_max`/`ac` null — typical for characters created from AI
+proposals; PATCH the character first).
 
 **201** → `CombatStateRead`: `id`, `session_id`, `location_id`, `round_number` (1),
 `current_turn_index` (0), `initiative_order`, `combatants`, `combat_log`,
@@ -164,9 +174,26 @@ Appends the action to `combat_log`.
 
 **200** → `CombatStateRead` with updated `combat_log`
 
+### POST /api/sessions/{session_id}/combat/next-turn — advance the turn
+
+Ticks condition durations for the combatant whose turn is ending, advances
+`current_turn_index` (incrementing `round_number` on wrap), and — when the
+creature whose turn begins is dying (0 HP, not stable, not dead) — rolls its
+death saving throw automatically (2024 PHB: a dying creature saves at the
+start of its turn). The result is appended to `combat_log` as an
+`{"event": "death_save", roll, outcome, successes, failures, is_stable,
+is_dead, regained_hp}` entry; a natural 20 brings the creature back up at
+1 HP.
+
+**200** → `CombatStateRead` | **404** no active combat | **409** no combatants
+
 ### PUT /api/sessions/{session_id}/combat/end — end combat
 
-Sets `ended_at`.
+Sets `ended_at`, syncs final HP/conditions/death-save state back to the
+character rows, and — when combatants were enrolled — appends a SYSTEM chat
+message summarizing the mechanical outcome (rounds, final HP, who went down
+or died, death-save tallies). That summary enters the chat history, so the
+AI DM knows the result when narration resumes.
 
 **200** → `CombatStateRead` | **404**
 
@@ -201,33 +228,33 @@ DM can optionally override fields before accepting.
 
 ---
 
-## WebSocket  `/ws/sessions/{session_id}`
+## WebSocket  `/api/ws/sessions/{session_id}`
 
 Connect to receive real-time session events. Any JSON message sent by a client
-is broadcast to all other clients in the same session. The server injects
+is relayed to all other clients in the same session. The server injects
 `"session_id"` into each forwarded envelope.
 
-**URL:** `ws://localhost:8000/ws/sessions/{session_id}`
+**URL:** `ws://localhost:8000/api/ws/sessions/{session_id}`
 
 ### Message types
 
 | `type` | Direction | Key payload fields | Purpose |
 |---|---|---|---|
-| `map_update` | server → client | `tokens`, `revealed_cells` | Token positions or fog reveal |
-| `combat_update` | server → client | `initiative_order`, `combatants`, `round_number` | Combat state change |
-| `chat_message` | server → client | `role`, `content`, `timestamp` | New message in session |
-| `proposal_ready` | server → client | `proposal_id`, `proposal_type` | Proposal awaiting DM review |
-| `entity_update` | server → client | `entity_type`, `entity_id`, `fields` | Character/location field changed |
+| `chat_message` | server → client | `message_id`, `role` (`dm`\|`ai`\|`system`), `content` | DM echo (sent immediately), AI reply, or system notice (end-of-combat summary); clients dedupe on `message_id` |
+| `combat_update` | server → client | `combat` (full `CombatStateRead`) | Combat state change |
+| `proposal_ready` | server → client | `proposal_id`, `proposal_type`, `status` | Proposal awaiting DM review / resolved |
+| `entity_update` | server → client | `entity_type`, `entity_id` | Character/location created or changed |
+| `map_token_move` | client → other clients (peer relay) | `token_id`, `x`, `y` | Battle-map token drag, mirrored on every screen |
 
 ### JavaScript example
 
 ```javascript
-const ws = new WebSocket(`ws://localhost:8000/ws/sessions/${sessionId}`);
+const ws = new WebSocket(`ws://localhost:8000/api/ws/sessions/${sessionId}`);
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   if (msg.type === "proposal_ready") { /* show proposal card */ }
 };
-ws.send(JSON.stringify({ type: "map_update", tokens: [...] }));
+ws.send(JSON.stringify({ type: "map_token_move", token_id: "...", x: 3, y: 4 }));
 ```
 
 ---

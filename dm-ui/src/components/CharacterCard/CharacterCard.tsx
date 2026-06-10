@@ -87,6 +87,8 @@ function CharacterEntry({ char }: { char: CharacterData }) {
 
 export default function CharacterCard() {
   const { characters } = useGameStore();
+  // The world roster includes NPCs and monsters; the party panel is PCs only.
+  const party = characters.filter((c) => c.type === "PC");
   return (
     <section style={{ marginTop: 16 }}>
       <h3
@@ -97,12 +99,12 @@ export default function CharacterCard() {
           textTransform: "uppercase",
         }}
       >
-        Party ({characters.length})
+        Party ({party.length})
       </h3>
-      {characters.length === 0 ? (
+      {party.length === 0 ? (
         <p style={{ color: "#555", fontSize: 13 }}>No characters loaded.</p>
       ) : (
-        characters.map((c) => <CharacterEntry key={c.id} char={c} />)
+        party.map((c) => <CharacterEntry key={c.id} char={c} />)
       )}
     </section>
   );

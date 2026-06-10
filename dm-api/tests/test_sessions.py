@@ -133,13 +133,15 @@ async def test_end_session_not_found(client):
 # ---------------------------------------------------------------------------
 
 
-def _mock_orchestrator(response_text: str, proposal: ProposalPayload | None = None) -> MagicMock:
+def _mock_orchestrator(
+    response_text: str, proposals: list[ProposalPayload] | None = None
+) -> MagicMock:
     """Return a DMOrchestrator mock that produces a fixed DMResponse."""
     mock = MagicMock()
     mock.handle_message = AsyncMock(
         return_value=DMResponse(
             response=response_text,
-            proposal=proposal,
+            proposals=proposals or [],
             was_condensed=False,
             tokens_in=100,
             tokens_out=50,
@@ -167,7 +169,7 @@ async def test_session_chat_returns_ai_response(client, world_id):
     assert r.status_code == 200
     data = r.json()
     assert data["response"] == "The tavern smells of pipe smoke and old ale."
-    assert data["proposal"] is None
+    assert data["proposals"] == []
 
 
 @pytest.mark.asyncio
@@ -204,8 +206,11 @@ async def test_session_chat_creates_pending_proposal(client, world_id):
     )
     session_id = r.json()["id"]
 
-    proposal_payload = ProposalPayload(type=ProposalType.LOCATION, content={"name": "Riverbend"})
-    mock_orch = _mock_orchestrator("You discover a new village.", proposal=proposal_payload)
+    payloads = [
+        ProposalPayload(type=ProposalType.LOCATION, content={"name": "Riverbend"}),
+        ProposalPayload(type=ProposalType.CHARACTER, content={"name": "Old Tom"}),
+    ]
+    mock_orch = _mock_orchestrator("You discover a new village.", proposals=payloads)
     with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
         r = await client.post(
             f"/api/sessions/{session_id}/chat",
@@ -214,16 +219,18 @@ async def test_session_chat_creates_pending_proposal(client, world_id):
 
     assert r.status_code == 200
     data = r.json()
-    assert data["proposal"] is not None
-    assert data["proposal"]["type"] == "location"
-    assert data["proposal"]["status"] == "pending"
+    assert len(data["proposals"]) == 2
+    assert data["proposals"][0]["type"] == "location"
+    assert data["proposals"][1]["type"] == "character"
+    assert all(p["status"] == "pending" for p in data["proposals"])
 
-    # The proposal is listed under the session
+    # Every proposal is listed under the session (regression: blocks after
+    # the first used to be silently dropped).
     r = await client.get(f"/api/ai/sessions/{session_id}/proposals")
     assert r.status_code == 200
     proposals = r.json()
-    assert len(proposals) == 1
-    assert proposals[0]["type"] == "location"
+    assert len(proposals) == 2
+    assert {p["type"] for p in proposals} == {"location", "character"}
 
 
 @pytest.mark.asyncio
@@ -257,6 +264,40 @@ async def test_session_chat_ai_message_uses_actual_token_count(client, world_id)
         f"Expected token_count=50 (from tokens_out), got {ai_msg['token_count']}. "
         "AI message token count must use DMResponse.tokens_out, not len(content)//4."
     )
+
+
+@pytest.mark.asyncio
+async def test_session_chat_includes_world_context(client):
+    """The orchestrator receives world lore + prior session summaries."""
+    r = await client.post(
+        "/api/worlds/",
+        json={
+            "name": "Lore World",
+            "setting_description": "A frozen wasteland.",
+            "lore_summary": "The Ice Court rules from Glacier Keep.",
+        },
+    )
+    world = r.json()["id"]
+
+    # A finished earlier session whose summary should be carried forward.
+    r = await client.post("/api/sessions/", json={"world_id": world, "name": "Session One"})
+    first_session = r.json()["id"]
+    mock_orch = _mock_orchestrator("You brave the tundra.")
+    mock_orch.summarize = AsyncMock(return_value="The party crossed the tundra.")
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        await client.post(f"/api/sessions/{first_session}/chat", json={"message": "Onward."})
+        await client.put(f"/api/sessions/{first_session}/end")
+
+    r = await client.post("/api/sessions/", json={"world_id": world, "name": "Session Two"})
+    second_session = r.json()["id"]
+    mock_orch2 = _mock_orchestrator("Welcome back.")
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch2):
+        await client.post(f"/api/sessions/{second_session}/chat", json={"message": "Recap?"})
+
+    ctx = mock_orch2.handle_message.call_args.kwargs["world_context"]
+    assert ctx.setting_description == "A frozen wasteland."
+    assert ctx.lore_summary == "The Ice Court rules from Glacier Keep."
+    assert ctx.prior_session_summaries == ("Session One: The party crossed the tundra.",)
 
 
 @pytest.mark.asyncio

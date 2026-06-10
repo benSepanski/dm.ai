@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
+import { mapCharacterResponse } from "../../api/mappers";
 import { useGameStore } from "../../store/gameStore";
 
 export default function NewSessionForm() {
@@ -8,6 +10,7 @@ export default function NewSessionForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { setSession, setCharacters } = useGameStore();
+  const navigate = useNavigate();
 
   const handleStart = async () => {
     setLoading(true);
@@ -20,20 +23,9 @@ export default function NewSessionForm() {
       });
       // Seed the store with any characters that already exist in the world.
       const chars = await api.listWorldCharacters(world.id).catch(() => []);
-      setCharacters(
-        chars.map((c) => ({
-          id: c.id,
-          name: c.name,
-          char_class: c.char_class,
-          race: c.race,
-          level: c.level,
-          hp_current: c.hp_current,
-          hp_max: c.hp_max,
-          ac: c.ac,
-          stats: c.stats,
-        }))
-      );
+      setCharacters(chars.map(mapCharacterResponse));
       setSession(session.id, world.id);
+      navigate(`/session/${session.id}`, { replace: true });
     } catch (err) {
       console.error("Failed to start session:", err);
       setError(err instanceof Error ? err.message : "Failed to start session");

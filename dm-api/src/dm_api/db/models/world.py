@@ -41,7 +41,7 @@ class World(Base):
 class WorldCreate(BaseModel):
     name: str
     setting_description: str | None = None
-    themes: list[dict[str, Any]] | None = None
+    themes: list[str] | None = None
     lore_summary: str | None = None
 
 
@@ -51,7 +51,7 @@ class WorldRead(BaseModel):
     id: uuid.UUID
     name: str
     setting_description: str | None
-    themes: list[dict[str, Any]] | None
+    themes: list[str] | None
     lore_summary: str | None
     created_at: datetime
     updated_at: datetime
