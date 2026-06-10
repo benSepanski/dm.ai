@@ -297,10 +297,12 @@ def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
             mock_orch.handle_message = AsyncMock(
                 return_value=DMResponse(
                     response="You find a hidden village.",
-                    proposal=ProposalPayload(
-                        type=ProposalType.LOCATION,
-                        content={"name": "Hidden Village"},
-                    ),
+                    proposals=[
+                        ProposalPayload(
+                            type=ProposalType.LOCATION,
+                            content={"name": "Hidden Village"},
+                        )
+                    ],
                     was_condensed=False,
                     tokens_in=10,
                     tokens_out=15,
@@ -367,7 +369,7 @@ def test_chat_broadcasts_chat_message():
             mock_orch.handle_message = AsyncMock(
                 return_value=DMResponse(
                     response="The tavern is quiet.",
-                    proposal=None,
+                    proposals=[],
                     was_condensed=False,
                     tokens_in=10,
                     tokens_out=10,

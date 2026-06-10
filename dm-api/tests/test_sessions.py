@@ -133,13 +133,15 @@ async def test_end_session_not_found(client):
 # ---------------------------------------------------------------------------
 
 
-def _mock_orchestrator(response_text: str, proposal: ProposalPayload | None = None) -> MagicMock:
+def _mock_orchestrator(
+    response_text: str, proposals: list[ProposalPayload] | None = None
+) -> MagicMock:
     """Return a DMOrchestrator mock that produces a fixed DMResponse."""
     mock = MagicMock()
     mock.handle_message = AsyncMock(
         return_value=DMResponse(
             response=response_text,
-            proposal=proposal,
+            proposals=proposals or [],
             was_condensed=False,
             tokens_in=100,
             tokens_out=50,
@@ -167,7 +169,7 @@ async def test_session_chat_returns_ai_response(client, world_id):
     assert r.status_code == 200
     data = r.json()
     assert data["response"] == "The tavern smells of pipe smoke and old ale."
-    assert data["proposal"] is None
+    assert data["proposals"] == []
 
 
 @pytest.mark.asyncio
@@ -204,8 +206,11 @@ async def test_session_chat_creates_pending_proposal(client, world_id):
     )
     session_id = r.json()["id"]
 
-    proposal_payload = ProposalPayload(type=ProposalType.LOCATION, content={"name": "Riverbend"})
-    mock_orch = _mock_orchestrator("You discover a new village.", proposal=proposal_payload)
+    payloads = [
+        ProposalPayload(type=ProposalType.LOCATION, content={"name": "Riverbend"}),
+        ProposalPayload(type=ProposalType.CHARACTER, content={"name": "Old Tom"}),
+    ]
+    mock_orch = _mock_orchestrator("You discover a new village.", proposals=payloads)
     with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
         r = await client.post(
             f"/api/sessions/{session_id}/chat",
@@ -214,16 +219,18 @@ async def test_session_chat_creates_pending_proposal(client, world_id):
 
     assert r.status_code == 200
     data = r.json()
-    assert data["proposal"] is not None
-    assert data["proposal"]["type"] == "location"
-    assert data["proposal"]["status"] == "pending"
+    assert len(data["proposals"]) == 2
+    assert data["proposals"][0]["type"] == "location"
+    assert data["proposals"][1]["type"] == "character"
+    assert all(p["status"] == "pending" for p in data["proposals"])
 
-    # The proposal is listed under the session
+    # Every proposal is listed under the session (regression: blocks after
+    # the first used to be silently dropped).
     r = await client.get(f"/api/ai/sessions/{session_id}/proposals")
     assert r.status_code == 200
     proposals = r.json()
-    assert len(proposals) == 1
-    assert proposals[0]["type"] == "location"
+    assert len(proposals) == 2
+    assert {p["type"] for p in proposals} == {"location", "character"}
 
 
 @pytest.mark.asyncio

@@ -119,25 +119,26 @@ async def _fetch_world_context(
     )
 
 
-async def _persist_proposal(
+async def _persist_proposals(
     db: AsyncSession,
     session_id: uuid.UUID,
     world_id: uuid.UUID,
-    proposal_data: ProposalPayload | None,
-) -> ProposalRead | None:
-    if proposal_data is None:
-        return None
-    proposal = Proposal(
-        session_id=session_id,
-        world_id=world_id,
-        type=proposal_data.type,
-        content=proposal_data.content,
-        status=ProposalStatus.PENDING,
-    )
-    db.add(proposal)
-    await db.flush()
-    await db.refresh(proposal)
-    return ProposalRead.model_validate(proposal)
+    payloads: list[ProposalPayload],
+) -> list[ProposalRead]:
+    persisted: list[ProposalRead] = []
+    for payload in payloads:
+        proposal = Proposal(
+            session_id=session_id,
+            world_id=world_id,
+            type=payload.type,
+            content=payload.content,
+            status=ProposalStatus.PENDING,
+        )
+        db.add(proposal)
+        await db.flush()
+        await db.refresh(proposal)
+        persisted.append(ProposalRead.model_validate(proposal))
+    return persisted
 
 
 class ChatRequest(BaseModel):
@@ -146,7 +147,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
-    proposal: ProposalRead | None = None
+    proposals: list[ProposalRead] = []
 
 
 @router.post("/", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
@@ -245,10 +246,12 @@ async def session_chat(
     db.add(ai_message)
     await db.flush()
     ai_message_id = str(ai_message.id)
-    proposal_read = await _persist_proposal(db, session_id, game_session.world_id, result.proposal)
+    proposals_read = await _persist_proposals(
+        db, session_id, game_session.world_id, result.proposals
+    )
     await db.commit()
 
-    # Notify all connected WebSocket clients about the new AI message and any proposal.
+    # Notify all connected WebSocket clients about the new AI message and any proposals.
     try:
         await broadcast_to_session(
             session_id,
@@ -260,7 +263,7 @@ async def session_chat(
                 "content": result.response,
             },
         )
-        if proposal_read is not None:
+        for proposal_read in proposals_read:
             await broadcast_to_session(
                 session_id,
                 {
@@ -274,7 +277,7 @@ async def session_chat(
     except Exception:
         logger.exception("ws broadcast failed session_id=%s", session_id)
 
-    return ChatResponse(response=result.response, proposal=proposal_read)
+    return ChatResponse(response=result.response, proposals=proposals_read)
 
 
 @router.put("/{session_id}/end", response_model=SessionRead)

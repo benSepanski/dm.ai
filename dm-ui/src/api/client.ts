@@ -14,7 +14,7 @@ export interface CreateSessionRequest {
 
 export interface ChatResponse {
   response: string;
-  proposal?: ProposalResponse | null;
+  proposals: ProposalResponse[];
 }
 
 export type ProposalStatus = "pending" | "accepted" | "rejected" | "modified";

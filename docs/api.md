@@ -58,8 +58,10 @@ Returns all `ChatMessage` rows for the session, ordered by timestamp ascending.
 
 ### POST /api/sessions/{session_id}/chat — main AI interaction
 
-Send a DM message; get an AI narrative response and an optional world-building
-proposal.
+Send a DM message; get an AI narrative response plus any world-building
+proposals (one per entity the AI introduced — a single turn can carry
+several). `response` is clean narration: the raw `[PROPOSAL]` blocks are
+stripped before persisting and returning.
 
 **Body:** `{ "message": "The players arrive at Saltmere." }`
 
@@ -67,14 +69,16 @@ proposal.
 ```json
 {
   "response": "The salty air hits the party...",
-  "proposal": {
-    "id": "uuid", "type": "location",
-    "content": { "name": "Saltmere", ... },
-    "status": "pending", "dm_notes": null, "created_at": "..."
-  }
+  "proposals": [
+    {
+      "id": "uuid", "type": "location",
+      "content": { "name": "Saltmere", ... },
+      "status": "pending", "dm_notes": null, "created_at": "..."
+    }
+  ]
 }
 ```
-`proposal` is `null` when no world-building proposal was generated.
+`proposals` is `[]` when no world-building proposal was generated.
 
 ### PUT /api/sessions/{session_id}/end — end session
 

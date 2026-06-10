@@ -128,11 +128,9 @@ export default function DMDashboard() {
       // The DM echo and AI reply both arrive via the WebSocket broadcast
       // (with server-assigned ids, deduped in the store) so every connected
       // client renders the same conversation. The HTTP response only needs
-      // to surface the proposal immediately.
+      // to surface the proposals immediately.
       const res = await api.chat(sessionId, text);
-      if (res.proposal) {
-        addProposal(res.proposal);
-      }
+      res.proposals.forEach(addProposal);
     } catch (err) {
       addMessage({
         id: crypto.randomUUID(),
