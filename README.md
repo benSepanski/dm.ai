@@ -133,6 +133,11 @@ npm run dev
 
 ## Playing over a LAN (DM laptop + player devices)
 
+See **[docs/running-a-game.md](./docs/running-a-game.md)** for the full game
+night guide (party creation, the play loop, persistence between sessions,
+troubleshooting) and **[docs/sample-session.md](./docs/sample-session.md)**
+for a real playtest transcript.
+
 The vite dev server binds on all interfaces (`host: true`), so other devices
 on the same network can join a running session:
 
@@ -182,6 +187,8 @@ dm.ai/
 ├── docker-compose.yml
 ├── .env.example
 ├── docs/
+│   ├── running-a-game.md    — DM guide: game night setup, LAN play, persistence
+│   ├── sample-session.md    — annotated transcript from a real playtest
 │   ├── architecture.md      — technical deep-dive
 │   └── api.md               — REST + WebSocket reference
 ├── game-engine/
