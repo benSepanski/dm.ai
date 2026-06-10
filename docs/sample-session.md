@@ -143,13 +143,17 @@ the world's setting/lore plus the summaries of previous ended sessions.
 
 ## Playtest findings
 
-Two playtest agents ran this stack hard — a campaign playthrough (above) and
-a separate combat-mechanics gauntlet (4 rounds, downing a goblin, edge-case
-fuzzing). Full loop verdicts: **zero HTTP 500s, no hangs, no malformed AI
+Three playtest agents ran this stack hard: a campaign playthrough (above), a
+combat-mechanics gauntlet (4 rounds, downing a goblin, edge-case fuzzing),
+and a full stage-change workflow (arrive in town → ask for an inn → AI
+generates inn + innkeeper + rough patrons → dialogue → bar brawl with the
+AI-created NPCs → map sync across two simulated player laptops → aftermath
+narration). Full loop verdicts: **zero HTTP 500s, no hangs, no malformed AI
 JSON**; combat math was rules-correct down to melee-crits-on-unconscious
-counting as two failed death saves.
+counting as two failed death saves; WebSocket fan-out was perfectly
+symmetric across both simulated players (80/80 events).
 
-**Fixed on the spot as a result of this playtest:**
+**Fixed as a result of these playtests:**
 
 - A turn that proposes several entities (like Turn 1's three blocks) only
   captured the *first* proposal; the rest were silently dropped. All blocks
@@ -161,16 +165,32 @@ counting as two failed death saves.
   conversation.
 - A typo'd actor/target id in a combat action returned HTTP 200 and wrote a
   permanent garbage row into the combat log. Now a 404.
+- Hostile NPCs rendered **party-blue** on the battle map (party membership
+  was inferred from "exists in the world" rather than character type). Token
+  color now follows `CharacterType`; the sidebar party panel lists PCs only.
+- Enrolling a stat-less character (the shape an accepted AI proposal
+  creates) silently fabricated a 10 HP / AC 10 placeholder. Combat start now
+  fails loudly with a 422 naming the characters that need stats.
+- **The AI confabulated combat outcomes** — the combat log never enters chat
+  history, so "describe the aftermath" invented a result that contradicted
+  the actual fight. Ending combat now writes a mechanical SYSTEM summary
+  into the chat (rounds, final HP, who went down), and the AI narrates from
+  it accurately.
+- `themes` on world creation required objects instead of plain strings.
 
 **Known issues (open):**
 
+- Combatants are snapshotted at combat start: a PATCH to a character
+  mid-combat doesn't affect the live fight, and ending combat writes the
+  snapshot's HP back over your patch. Set stats *before* starting combat.
 - Monsters at 0 HP get PC-style death saves instead of dying outright.
 - A `char_class` string the engine doesn't recognize silently coerces to
   Fighter when entering combat.
 - `next-turn` doesn't skip dead/unconscious combatants — advance past them
   manually.
 - Initiative ties have no DEX tie-break (insertion order wins).
-- Accepted character proposals have no combat stats until you PATCH them.
-- One narration slip in four turns (called the wizard a fighter, then
-  self-corrected). The AI DM is a strong co-pilot, not an infallible one —
-  which is why the proposal review flow exists.
+- Failed (`cannot_act`) actions still append to the combat log and broadcast.
+- Occasional narration slips (one in four turns called the wizard a fighter,
+  then self-corrected; the AI also names proposed NPCs in prose before
+  you've accepted them). The AI DM is a strong co-pilot, not an infallible
+  one — which is why the proposal review flow exists.

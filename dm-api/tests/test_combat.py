@@ -43,6 +43,17 @@ async def _create_character(client, world_id, *, name: str = "Hero", hp: int = 2
     return r.json()["id"]
 
 
+async def _create_statless_npc(client, world_id, *, name: str = "Tavern Tough"):
+    """An NPC the way an accepted AI character proposal creates it: roleplay
+    fields only, no hp/ac/stats."""
+    r = await client.post(
+        "/api/characters/",
+        json={"world_id": world_id, "type": "NPC", "name": name, "level": 1},
+    )
+    assert r.status_code == 201
+    return r.json()["id"]
+
+
 # ---------------------------------------------------------------------------
 # Basic lifecycle
 # ---------------------------------------------------------------------------
@@ -116,6 +127,68 @@ async def test_end_combat(client, world_id):
 async def test_end_combat_not_found(client, world_id):
     session_id = await _create_session(client, world_id)
     r = await client.put(f"/api/sessions/{session_id}/combat/end")
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_end_combat_writes_system_summary_message(client, world_id):
+    """Ending combat appends a SYSTEM chat message with the mechanical outcome
+    so the AI DM (which never sees the combat log) doesn't confabulate the
+    result when narration resumes."""
+    session_id = await _create_session(client, world_id)
+    char_id = await _create_character(client, world_id, name="Borin", hp=24)
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [char_id]},
+    )
+    assert r.status_code == 201
+
+    r = await client.put(f"/api/sessions/{session_id}/combat/end")
+    assert r.status_code == 200
+
+    r = await client.get(f"/api/sessions/{session_id}/messages")
+    assert r.status_code == 200
+    messages = r.json()
+    assert len(messages) == 1
+    summary = messages[0]
+    assert summary["role"] == "system"
+    assert "Combat ended" in summary["content"]
+    assert "Borin: 24/24 HP" in summary["content"]
+
+
+@pytest.mark.asyncio
+async def test_end_combat_without_combatants_writes_no_summary(client, world_id):
+    """Silent on success: an empty combat produces no system chatter."""
+    session_id = await _create_session(client, world_id)
+    await client.post(f"/api/sessions/{session_id}/combat")
+    r = await client.put(f"/api/sessions/{session_id}/combat/end")
+    assert r.status_code == 200
+
+    r = await client.get(f"/api/sessions/{session_id}/messages")
+    assert r.json() == []
+
+
+@pytest.mark.asyncio
+async def test_start_combat_rejects_statless_characters(client, world_id):
+    """Characters created from AI proposals (null hp/ac) are rejected loudly
+    instead of entering combat as silent 10 HP / AC 10 placeholders."""
+    session_id = await _create_session(client, world_id)
+    pc_id = await _create_character(client, world_id, name="Borin")
+    npc_id = await _create_statless_npc(client, world_id, name="Cutter Voss")
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [pc_id, npc_id]},
+    )
+    assert r.status_code == 422
+    detail = r.json()["detail"]
+    assert "Cutter Voss" in detail
+    assert "Borin" not in detail
+    assert "PATCH /api/characters/" in detail
+
+    # No combat was created.
+    r = await client.get(f"/api/sessions/{session_id}/combat")
     assert r.status_code == 404
 
 

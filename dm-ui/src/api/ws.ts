@@ -64,7 +64,8 @@ export function useSessionWebSocket(
         return;
       }
 
-      if (event.type === "chat_message" && (event.role === "dm" || event.role === "ai")) {
+      if (event.type === "chat_message") {
+        // dm echo, ai reply, or a system notice (e.g. end-of-combat summary).
         addMessage({
           id: event.message_id ?? crypto.randomUUID(),
           role: event.role,

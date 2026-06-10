@@ -91,7 +91,14 @@ Everything is live for every connected browser:
    rolls initiative through the real rules engine. Submit actions, advance
    turns, end combat; HP and conditions sync back to the character records.
    Combat resolution is engine-driven (deterministic dice, 2024 rules), not
-   AI-driven.
+   AI-driven. Two things to know:
+   - Characters created from accepted AI proposals have **no combat stats** —
+     give them hp/ac/stats (PATCH via the Swagger UI) *before* the fight, or
+     combat start will refuse them with a clear 422. Stats can't be changed
+     mid-combat (combatants are snapshotted at initiative).
+   - Ending combat posts a system message into the chat with the mechanical
+     outcome (rounds, final HP, who went down), so the AI DM narrates the
+     aftermath from what actually happened.
 4. **Battle map.** Toggle with "Show Map". Tokens mirror the combatants
    during combat (party = blue, enemies = red, downed = grey) and the party
    roster otherwise. Drag tokens — every connected screen follows. Positions

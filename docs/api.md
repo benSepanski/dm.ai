@@ -148,7 +148,13 @@ Commonly used to write `map_data` after the DM edits the battle map.
 
 ### POST /api/sessions/{session_id}/combat — start combat
 
-Returns **409** if active combat already exists for the session.
+**Body (optional):** `{ "character_ids": [...], "location_id": "..." }` —
+initiative is rolled for the listed characters.
+
+Returns **409** if active combat already exists for the session, **404** if a
+character id doesn't exist, and **422** if an enrolled character has no
+combat stats (`hp_max`/`ac` null — typical for characters created from AI
+proposals; PATCH the character first).
 
 **201** → `CombatStateRead`: `id`, `session_id`, `location_id`, `round_number` (1),
 `current_turn_index` (0), `initiative_order`, `combatants`, `combat_log`,
@@ -170,7 +176,10 @@ Appends the action to `combat_log`.
 
 ### PUT /api/sessions/{session_id}/combat/end — end combat
 
-Sets `ended_at`.
+Sets `ended_at`, syncs final HP/conditions back to the character rows, and —
+when combatants were enrolled — appends a SYSTEM chat message summarizing the
+mechanical outcome (rounds, final HP, who went down). That summary enters the
+chat history, so the AI DM knows the result when narration resumes.
 
 **200** → `CombatStateRead` | **404**
 
@@ -217,7 +226,7 @@ is relayed to all other clients in the same session. The server injects
 
 | `type` | Direction | Key payload fields | Purpose |
 |---|---|---|---|
-| `chat_message` | server → client | `message_id`, `role` (`dm`\|`ai`), `content` | DM echo (sent immediately) and AI reply; clients dedupe on `message_id` |
+| `chat_message` | server → client | `message_id`, `role` (`dm`\|`ai`\|`system`), `content` | DM echo (sent immediately), AI reply, or system notice (end-of-combat summary); clients dedupe on `message_id` |
 | `combat_update` | server → client | `combat` (full `CombatStateRead`) | Combat state change |
 | `proposal_ready` | server → client | `proposal_id`, `proposal_type`, `status` | Proposal awaiting DM review / resolved |
 | `entity_update` | server → client | `entity_type`, `entity_id` | Character/location created or changed |

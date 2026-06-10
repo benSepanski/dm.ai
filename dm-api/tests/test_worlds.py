@@ -12,7 +12,7 @@ async def test_create_world(client):
         json={
             "name": "Middle Earth",
             "setting_description": "A high fantasy world",
-            "themes": [{"name": "adventure"}],
+            "themes": ["adventure", "found family"],
             "lore_summary": "Hobbits, elves, and dark lords.",
         },
     )
@@ -20,6 +20,7 @@ async def test_create_world(client):
     data = r.json()
     assert data["name"] == "Middle Earth"
     assert data["setting_description"] == "A high fantasy world"
+    assert data["themes"] == ["adventure", "found family"]
     assert "id" in data
     assert "created_at" in data
     assert "updated_at" in data

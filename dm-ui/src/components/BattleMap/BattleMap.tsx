@@ -106,8 +106,10 @@ export default function BattleMap({ onTokenMove }: BattleMapProps) {
   const tokenPositions = useGameStore((s) => s.tokenPositions);
 
   // During combat, tokens mirror the combatants in initiative order; outside
-  // combat, show the party roster so the DM can stage a scene.
-  const partyIds = new Set(characters.map((c) => c.id));
+  // combat, show the world roster so the DM can stage a scene. Party blue is
+  // reserved for PCs — listWorldCharacters returns NPCs and monsters too, so
+  // membership in the character list must not be treated as "party".
+  const partyIds = new Set(characters.filter((c) => c.type === "PC").map((c) => c.id));
   const sources = combat
     ? combat.combatants.map((c) => ({
         id: c.char_id,
@@ -118,7 +120,7 @@ export default function BattleMap({ onTokenMove }: BattleMapProps) {
     : characters.map((c) => ({
         id: c.id,
         name: c.name,
-        isParty: true,
+        isParty: partyIds.has(c.id),
         isDowned: (c.hp_current ?? 1) <= 0,
       }));
 

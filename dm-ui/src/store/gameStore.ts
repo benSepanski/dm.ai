@@ -36,6 +36,8 @@ export interface LocationData {
 
 export interface CharacterData {
   id: string;
+  // CharacterType enum value from the backend: "PC" | "NPC" | "MONSTER".
+  type: string;
   name: string;
   char_class: string | null;
   race: string | null;

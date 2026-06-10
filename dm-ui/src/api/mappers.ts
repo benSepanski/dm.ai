@@ -7,6 +7,7 @@ import type { ActiveCombat, CharacterData } from "../store/gameStore";
 export function mapCharacterResponse(char: CharacterResponse): CharacterData {
   return {
     id: char.id,
+    type: char.type,
     name: char.name,
     char_class: char.char_class,
     race: char.race,
