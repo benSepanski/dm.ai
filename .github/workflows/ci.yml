@@ -82,11 +82,16 @@ jobs:
           cache: pip
           cache-dependency-path: dm-api/pyproject.toml
 
-      - name: Install game-engine
-        run: pip install -e "../game-engine"
-
       - name: Install dm-api dependencies
         run: pip install -e ".[dev]"
+
+      # Install game-engine editable LAST so the live workspace source always
+      # wins. dm-api depends on game-engine via a direct path reference, so the
+      # step above reinstalls it non-editably from a (potentially stale) cached
+      # wheel — the version is pinned at 0.1.0, so pip's wheel cache happily
+      # serves an old build. Re-installing editable here guarantees current src.
+      - name: Install game-engine (editable, current source)
+        run: pip install -e "../game-engine" --force-reinstall --no-deps
 
       - name: black (check)
         run: black --check src/ tests/
@@ -122,11 +127,16 @@ jobs:
           cache: pip
           cache-dependency-path: dm-api/pyproject.toml
 
-      - name: Install game-engine
-        run: pip install -e "../game-engine"
-
       - name: Install dm-api dependencies
         run: pip install -e ".[dev]"
+
+      # Install game-engine editable LAST so the live workspace source always
+      # wins. dm-api depends on game-engine via a direct path reference, so the
+      # step above reinstalls it non-editably from a (potentially stale) cached
+      # wheel — the version is pinned at 0.1.0, so pip's wheel cache happily
+      # serves an old build. Re-installing editable here guarantees current src.
+      - name: Install game-engine (editable, current source)
+        run: pip install -e "../game-engine" --force-reinstall --no-deps
 
       - name: Run tests
         run: pytest tests/ -v --tb=short
