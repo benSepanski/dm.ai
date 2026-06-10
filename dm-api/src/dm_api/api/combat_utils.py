@@ -76,7 +76,7 @@ async def sync_combatants_to_db(
             character.hp_current = int(hp_current)
 
         stats: dict[str, Any] = dict(character.stats or {})
-        for field in ("conditions", "condition_durations"):
+        for field in ("conditions", "condition_durations", "death_saves"):
             if field in combatant:
                 stats[field] = combatant[field]
         character.stats = stats
@@ -93,6 +93,22 @@ def missing_combat_stats(characters: list[Character]) -> list[str]:
     return [c.name for c in characters if c.hp_max is None or c.ac is None]
 
 
+def _normalize_char_class(raw: str | None) -> str:
+    """Map a free-form class string onto the canonical CharacterClass value.
+
+    The characters API accepts any string for ``char_class`` (raw user/AI
+    input), but the sheet serde is case-sensitive — ``"wizard"`` used to
+    silently coerce to Fighter inside combat. Unknown strings are passed
+    through unchanged (the engine's own fallback remains a known issue).
+    """
+    if raw is None:
+        return CharacterClass.FIGHTER.value
+    for cls in CharacterClass:
+        if cls.value.lower() == raw.strip().lower():
+            return cls.value
+    return raw
+
+
 def character_to_sheet(character: Character) -> CharacterSheet:
     """Bridge DB Character row → typed CharacterSheet for the rule engine."""
     stats = character.stats or {}
@@ -102,7 +118,7 @@ def character_to_sheet(character: Character) -> CharacterSheet:
             "id": str(character.id),
             "name": character.name,
             "level": character.level,
-            "class": character.char_class or CharacterClass.FIGHTER.value,
+            "class": _normalize_char_class(character.char_class),
             "ability_scores": stats.get("ability_scores", {}),
             "hp_current": character.hp_current if character.hp_current is not None else hp_max,
             "hp_max": hp_max,
@@ -112,6 +128,7 @@ def character_to_sheet(character: Character) -> CharacterSheet:
             "proficiencies": stats.get("proficiencies", []),
             "conditions": stats.get("conditions", []),
             "condition_durations": stats.get("condition_durations", {}),
+            "death_saves": stats.get("death_saves", {}),
             "damage_resistances": stats.get("damage_resistances", []),
             "damage_immunities": stats.get("damage_immunities", []),
             "damage_vulnerabilities": stats.get("damage_vulnerabilities", []),
@@ -146,8 +163,20 @@ def combat_summary_text(round_number: int, combatants: list[dict[str, Any]]) -> 
         hp = combatant.get("hp_current")
         hp_max = combatant.get("hp_max")
         downed = isinstance(hp, int) and hp <= 0
+        saves = combatant.get("death_saves") or {}
         conditions = [c for c in combatant.get("conditions", []) if c]
-        suffix = " — DOWN" if downed else ""
+        if saves.get("is_dead"):
+            suffix = " — DEAD"
+        elif downed and saves.get("is_stable"):
+            suffix = " — DOWN, stable"
+        elif downed:
+            suffix = " — DOWN"
+            successes = saves.get("successes", 0)
+            failures = saves.get("failures", 0)
+            if successes or failures:
+                suffix += f", death saves {successes} success / {failures} failure"
+        else:
+            suffix = ""
         if conditions:
             suffix += f" ({', '.join(str(c) for c in conditions)})"
         lines.append(f"- {name}: {hp}/{hp_max} HP{suffix}")

@@ -283,13 +283,39 @@ async def next_turn(
         sheet = CharacterSheet.from_dict(combatants[current_idx])
         sheet = _engine.tick_condition_durations(sheet)
         combatants[current_idx] = sheet.to_dict()
-        combat.combatants = combatants
 
     next_index = current_idx + 1
     if next_index >= order_len:
         combat.round_number += 1
         next_index = 0
     combat.current_turn_index = next_index
+
+    # A dying creature makes a death save at the start of its turn (2024 PHB).
+    # Rolled automatically here so "PC down" is playable without an extra
+    # endpoint; the result lands in combat_log for the table to see.
+    if next_index < len(combatants):
+        sheet = CharacterSheet.from_dict(combatants[next_index])
+        if sheet.is_dying:
+            save = _engine.roll_death_save(sheet)
+            combatants[next_index] = sheet.to_dict()
+            combat.combat_log = [
+                *(combat.combat_log or []),
+                {
+                    "round": combat.round_number,
+                    "turn": next_index,
+                    "actor_id": sheet.id,
+                    "event": "death_save",
+                    "roll": save.roll,
+                    "outcome": save.outcome.value,
+                    "successes": save.successes,
+                    "failures": save.failures,
+                    "is_stable": save.is_stable,
+                    "is_dead": save.is_dead,
+                    "regained_hp": save.regained_hp,
+                },
+            ]
+
+    combat.combatants = combatants
 
     await db.commit()
     await db.refresh(combat)

@@ -97,8 +97,25 @@ Everything is live for every connected browser:
      combat start will refuse them with a clear 422. Stats can't be changed
      mid-combat (combatants are snapshotted at initiative).
    - Ending combat posts a system message into the chat with the mechanical
-     outcome (rounds, final HP, who went down), so the AI DM narrates the
-     aftermath from what actually happened.
+     outcome (rounds, final HP, who went down or died, death-save tallies),
+     so the AI DM narrates the aftermath from what actually happened.
+   - **When a PC drops to 0 HP:** keep advancing turns — the engine rolls
+     their death save automatically at the start of each of their turns and
+     logs it (natural 20 brings them back up at 1 HP; three failures kills).
+     There's no in-combat heal/stabilize action yet, so the rescue play is:
+     resolve the fight, end combat, then PATCH the character's
+     `hp_current`/conditions to reflect the healing or stabilization you
+     narrated. Death-save progress survives into the character record.
+   - **Running a spellcaster:** the combat API resolves *attack-roll* spells
+     well if you model them as attacks — e.g. Fire Bolt is an Attack action
+     with `attack_details: {weapon_name: "Fire Bolt", damage_dice: "1d10",
+     damage_type: "fire", attack_ability: "intelligence", is_ranged: true}`
+     (to-hit comes out right; damage runs ~+INT high since attacks add the
+     ability mod). Save-DC spells, healing, AoE, and spell slots have no API
+     surface yet — adjudicate those in the chat (the AI gives solid rulings)
+     and apply results via PATCH after the fight.
+   - The engine doesn't enforce the action economy across requests — you're
+     the only one submitting actions, so one attack per turn is on you.
 4. **Battle map.** Toggle with "Show Map". Tokens mirror the combatants
    during combat (party = blue, enemies = red, downed = grey) and the party
    roster otherwise. Drag tokens — every connected screen follows. Positions

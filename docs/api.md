@@ -174,12 +174,26 @@ Appends the action to `combat_log`.
 
 **200** → `CombatStateRead` with updated `combat_log`
 
+### POST /api/sessions/{session_id}/combat/next-turn — advance the turn
+
+Ticks condition durations for the combatant whose turn is ending, advances
+`current_turn_index` (incrementing `round_number` on wrap), and — when the
+creature whose turn begins is dying (0 HP, not stable, not dead) — rolls its
+death saving throw automatically (2024 PHB: a dying creature saves at the
+start of its turn). The result is appended to `combat_log` as an
+`{"event": "death_save", roll, outcome, successes, failures, is_stable,
+is_dead, regained_hp}` entry; a natural 20 brings the creature back up at
+1 HP.
+
+**200** → `CombatStateRead` | **404** no active combat | **409** no combatants
+
 ### PUT /api/sessions/{session_id}/combat/end — end combat
 
-Sets `ended_at`, syncs final HP/conditions back to the character rows, and —
-when combatants were enrolled — appends a SYSTEM chat message summarizing the
-mechanical outcome (rounds, final HP, who went down). That summary enters the
-chat history, so the AI DM knows the result when narration resumes.
+Sets `ended_at`, syncs final HP/conditions/death-save state back to the
+character rows, and — when combatants were enrolled — appends a SYSTEM chat
+message summarizing the mechanical outcome (rounds, final HP, who went down
+or died, death-save tallies). That summary enters the chat history, so the
+AI DM knows the result when narration resumes.
 
 **200** → `CombatStateRead` | **404**
 

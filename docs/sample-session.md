@@ -143,15 +143,18 @@ the world's setting/lore plus the summaries of previous ended sessions.
 
 ## Playtest findings
 
-Three playtest agents ran this stack hard: a campaign playthrough (above), a
+Four playtest agents ran this stack hard: a campaign playthrough (above), a
 combat-mechanics gauntlet (4 rounds, downing a goblin, edge-case fuzzing),
-and a full stage-change workflow (arrive in town → ask for an inn → AI
+a full stage-change workflow (arrive in town → ask for an inn → AI
 generates inn + innkeeper + rough patrons → dialogue → bar brawl with the
 AI-created NPCs → map sync across two simulated player laptops → aftermath
-narration). Full loop verdicts: **zero HTTP 500s, no hangs, no malformed AI
-JSON**; combat math was rules-correct down to melee-crits-on-unconscious
-counting as two failed death saves; WebSocket fan-out was perfectly
-symmetric across both simulated players (80/80 events).
+narration), and a second multi-stage run ("The Ruined Watchtower": travel
+rulings → proposal accept/reject → spellcaster combat → a PC driven to
+0 HP → two combats in one session → cross-session recall of both fights).
+Full loop verdicts: **zero HTTP 500s, no hangs, no malformed AI JSON**;
+combat math was rules-correct down to melee-crits-on-unconscious counting
+as two failed death saves; WebSocket fan-out was perfectly symmetric across
+simulated players (80/80 and 96/96 events).
 
 **Fixed as a result of these playtests:**
 
@@ -177,20 +180,40 @@ symmetric across both simulated players (80/80 events).
   into the chat (rounds, final HP, who went down), and the AI narrates from
   it accurately.
 - `themes` on world creation required objects instead of plain strings.
+- **Death saves never rolled.** A PC at 0 HP just sat there — `next-turn`
+  now rolls the dying creature's death save automatically at the start of
+  its turn and logs it (natural 20 = back up at 1 HP).
+- **Death-save progress was destroyed at combat end.** The end-combat sync
+  now persists death-save state to the character record, and the SYSTEM
+  summary reports it ("DOWN, death saves 1 success / 2 failure" / "DEAD").
+- **Lowercase `char_class` silently became Fighter in combat** ("wizard" →
+  Fighter). The bridge now matches class names case-insensitively.
 
 **Known issues (open):**
 
+- **Spellcasting has no real API surface.** Attack-roll spells work modeled
+  as Attack actions (to-hit correct; damage runs +ability-mod high);
+  save-DC spells, healing, AoE, and slot tracking must be adjudicated in
+  chat. The engine's full spellcasting module exists but isn't wired to
+  the API yet.
+- **No in-combat healing or stabilize action** — rescue a downed PC by
+  ending combat and PATCHing hp/conditions afterward.
+- The action economy isn't enforced across requests (two attacks in one
+  turn both succeed; Dodge/Dash/Help have no mechanical carry-over). The
+  DM is the only action submitter, so table discipline covers it.
 - Combatants are snapshotted at combat start: a PATCH to a character
   mid-combat doesn't affect the live fight, and ending combat writes the
   snapshot's HP back over your patch. Set stats *before* starting combat.
+- No rest endpoints — between fights, PATCH `hp_current` (and `stats` to
+  clear conditions; note PATCH replaces the whole `stats` blob, so re-send
+  `ability_scores` with it).
 - Monsters at 0 HP get PC-style death saves instead of dying outright.
-- A `char_class` string the engine doesn't recognize silently coerces to
-  Fighter when entering combat.
 - `next-turn` doesn't skip dead/unconscious combatants — advance past them
-  manually.
+  manually (for dying PCs that's now a feature: their turn rolls the save).
 - Initiative ties have no DEX tie-break (insertion order wins).
 - Failed (`cannot_act`) actions still append to the combat log and broadcast.
-- Occasional narration slips (one in four turns called the wizard a fighter,
-  then self-corrected; the AI also names proposed NPCs in prose before
-  you've accepted them). The AI DM is a strong co-pilot, not an infallible
-  one — which is why the proposal review flow exists.
+- Occasional narration slips: the AI invents blow-by-blow details beyond
+  the mechanical summary, names proposed NPCs in prose before you've
+  accepted them, and once called the wizard a fighter before
+  self-correcting. The AI DM is a strong co-pilot, not an infallible one —
+  which is why the proposal review flow exists.
