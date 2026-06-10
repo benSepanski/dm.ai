@@ -22,10 +22,9 @@ from game_engine.types import (
 
 logger = logging.getLogger(__name__)
 
-# All basic combat actions available to any character this turn.
-# ActionType.CAST_SPELL is intentionally excluded: spell resolution requires
-# per-spell slot tracking and effect tables that are beyond the base engine's
-# scope. Spell casting is handled at the API/orchestrator layer.
+# All basic combat actions available to any character this turn (2024 PHB).
+# ActionType.MAGIC availability depends on the character knowing spells with
+# remaining slots; the spellcasting module owns that check.
 _ALL_BASIC_ACTIONS: list[ActionType] = [
     ActionType.ATTACK,
     ActionType.DASH,
@@ -33,9 +32,11 @@ _ALL_BASIC_ACTIONS: list[ActionType] = [
     ActionType.DODGE,
     ActionType.HELP,
     ActionType.HIDE,
+    ActionType.INFLUENCE,
     ActionType.READY,
     ActionType.SEARCH,
-    ActionType.USE_OBJECT,
+    ActionType.STUDY,
+    ActionType.UTILIZE,
 ]
 
 _DEFAULT_ATTACK = AttackDetails()

@@ -1,35 +1,12 @@
 """
-Typed string enums for the game engine.
+Core rules enums: abilities, skills, damage, conditions, creatures, magic.
 
-All enums use ``str, Enum`` inheritance so values are wire-compatible
-with their string equivalents and support ``Enum(value)`` construction.
+Internal module — import via :mod:`game_engine.types.enums`.
 """
 
 from __future__ import annotations
 
 from enum import Enum
-
-
-class CharacterClass(str, Enum):
-    """Valid D&D 5.5e character classes."""
-
-    ARTIFICER = "Artificer"
-    BARBARIAN = "Barbarian"
-    BARD = "Bard"
-    CLERIC = "Cleric"
-    DRUID = "Druid"
-    FIGHTER = "Fighter"
-    MONK = "Monk"
-    PALADIN = "Paladin"
-    RANGER = "Ranger"
-    ROGUE = "Rogue"
-    SORCERER = "Sorcerer"
-    WARLOCK = "Warlock"
-    WIZARD = "Wizard"
-
-    @classmethod
-    def all(cls) -> list["CharacterClass"]:
-        return list(cls)
 
 
 class Ability(str, Enum):
@@ -144,6 +121,11 @@ class Condition(str, Enum):
         """Return True if *condition* prevents the character from acting."""
         return condition in _ACTION_BLOCKING_CONDITIONS
 
+    @classmethod
+    def sets_speed_to_zero(cls, condition: "Condition") -> bool:
+        """Return True if *condition* reduces the creature's speed to 0."""
+        return condition in _SPEED_ZERO_CONDITIONS
+
 
 _ACTION_BLOCKING_CONDITIONS: frozenset[Condition] = frozenset(
     {
@@ -155,82 +137,23 @@ _ACTION_BLOCKING_CONDITIONS: frozenset[Condition] = frozenset(
     }
 )
 
-
-class ActionType(str, Enum):
-    """Combat action types available in D&D 5.5e."""
-
-    ATTACK = "Attack"
-    CAST_SPELL = "CastSpell"
-    DASH = "Dash"
-    DISENGAGE = "Disengage"
-    DODGE = "Dodge"
-    HELP = "Help"
-    HIDE = "Hide"
-    READY = "Ready"
-    SEARCH = "Search"
-    USE_OBJECT = "Use Object"
+_SPEED_ZERO_CONDITIONS: frozenset[Condition] = frozenset(
+    {
+        Condition.GRAPPLED,
+        Condition.PARALYZED,
+        Condition.PETRIFIED,
+        Condition.RESTRAINED,
+        Condition.STUNNED,
+        Condition.UNCONSCIOUS,
+    }
+)
 
 
-class CharacterType(str, Enum):
-    """Broad classification for a character's role in the game."""
+class AdvantageType(str, Enum):
+    """Whether a roll has advantage or disadvantage."""
 
-    PC = "PC"
-    NPC = "NPC"
-    MONSTER = "MONSTER"
-
-
-class LocationType(str, Enum):
-    """Classification for a location in the game world."""
-
-    REALM = "realm"
-    COUNTRY = "country"
-    REGION = "region"
-    TOWN = "town"
-    DISTRICT = "district"
-    BUILDING = "building"
-    ROOM = "room"
-    DUNGEON = "dungeon"
-    WILDERNESS = "wilderness"
-
-
-class ProposalType(str, Enum):
-    """Type of AI-generated proposal for the DM to review."""
-
-    LOCATION = "location"
-    CHARACTER = "character"
-    DUNGEON = "dungeon"
-    DIALOGUE = "dialogue"
-    COMBAT_ACTION = "combat_action"
-
-
-class ProposalStatus(str, Enum):
-    """Current status of an AI proposal."""
-
-    PENDING = "pending"
-    ACCEPTED = "accepted"
-    REJECTED = "rejected"
-    MODIFIED = "modified"
-
-
-class ChatRole(str, Enum):
-    """Role of the sender in a chat message."""
-
-    DM = "dm"
-    AI = "ai"
-    SYSTEM = "system"
-
-
-class SpellSchool(str, Enum):
-    """Schools of magic in D&D 5.5e."""
-
-    ABJURATION = "abjuration"
-    CONJURATION = "conjuration"
-    DIVINATION = "divination"
-    ENCHANTMENT = "enchantment"
-    EVOCATION = "evocation"
-    ILLUSION = "illusion"
-    NECROMANCY = "necromancy"
-    TRANSMUTATION = "transmutation"
+    ADVANTAGE = "advantage"
+    DISADVANTAGE = "disadvantage"
 
 
 class CreatureSize(str, Enum):
@@ -263,32 +186,33 @@ class CreatureType(str, Enum):
     UNDEAD = "undead"
 
 
-class AdvantageType(str, Enum):
-    """Whether a roll has advantage or disadvantage."""
+class SpellSchool(str, Enum):
+    """Schools of magic in D&D 5.5e."""
 
-    ADVANTAGE = "advantage"
-    DISADVANTAGE = "disadvantage"
-
-
-class ArmorCategory(str, Enum):
-    """Armor weight categories in D&D 5.5e."""
-
-    LIGHT = "light"
-    MEDIUM = "medium"
-    HEAVY = "heavy"
-    SHIELD = "shield"
+    ABJURATION = "abjuration"
+    CONJURATION = "conjuration"
+    DIVINATION = "divination"
+    ENCHANTMENT = "enchantment"
+    EVOCATION = "evocation"
+    ILLUSION = "illusion"
+    NECROMANCY = "necromancy"
+    TRANSMUTATION = "transmutation"
 
 
-class WeaponProperty(str, Enum):
-    """Weapon properties in D&D 5.5e."""
+class SpellComponent(str, Enum):
+    """Spell components: verbal, somatic, material."""
 
-    AMMUNITION = "ammunition"
-    FINESSE = "finesse"
-    HEAVY = "heavy"
-    LIGHT = "light"
-    LOADING = "loading"
-    REACH = "reach"
-    SPECIAL = "special"
-    THROWN = "thrown"
-    TWO_HANDED = "two-handed"
-    VERSATILE = "versatile"
+    VERBAL = "V"
+    SOMATIC = "S"
+    MATERIAL = "M"
+
+
+class AreaShape(str, Enum):
+    """Areas of effect for spells and abilities (2024 PHB)."""
+
+    CONE = "cone"
+    CUBE = "cube"
+    CYLINDER = "cylinder"
+    EMANATION = "emanation"
+    LINE = "line"
+    SPHERE = "sphere"
