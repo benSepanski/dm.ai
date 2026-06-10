@@ -260,6 +260,40 @@ async def test_session_chat_ai_message_uses_actual_token_count(client, world_id)
 
 
 @pytest.mark.asyncio
+async def test_session_chat_includes_world_context(client):
+    """The orchestrator receives world lore + prior session summaries."""
+    r = await client.post(
+        "/api/worlds/",
+        json={
+            "name": "Lore World",
+            "setting_description": "A frozen wasteland.",
+            "lore_summary": "The Ice Court rules from Glacier Keep.",
+        },
+    )
+    world = r.json()["id"]
+
+    # A finished earlier session whose summary should be carried forward.
+    r = await client.post("/api/sessions/", json={"world_id": world, "name": "Session One"})
+    first_session = r.json()["id"]
+    mock_orch = _mock_orchestrator("You brave the tundra.")
+    mock_orch.summarize = AsyncMock(return_value="The party crossed the tundra.")
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        await client.post(f"/api/sessions/{first_session}/chat", json={"message": "Onward."})
+        await client.put(f"/api/sessions/{first_session}/end")
+
+    r = await client.post("/api/sessions/", json={"world_id": world, "name": "Session Two"})
+    second_session = r.json()["id"]
+    mock_orch2 = _mock_orchestrator("Welcome back.")
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch2):
+        await client.post(f"/api/sessions/{second_session}/chat", json={"message": "Recap?"})
+
+    ctx = mock_orch2.handle_message.call_args.kwargs["world_context"]
+    assert ctx.setting_description == "A frozen wasteland."
+    assert ctx.lore_summary == "The Ice Court rules from Glacier Keep."
+    assert ctx.prior_session_summaries == ("Session One: The party crossed the tundra.",)
+
+
+@pytest.mark.asyncio
 async def test_session_chat_not_found(client):
     r = await client.post(
         f"/api/sessions/{uuid.uuid4()}/chat",

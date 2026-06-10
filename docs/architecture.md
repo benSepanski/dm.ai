@@ -22,7 +22,7 @@ dm.ai is composed of three deployable units and one installable Python library.
 │  │  /locations          │   │   └─ ClaudeCLIBackend             │   │
 │  │  /combat             │   │  System prompt builder            │   │
 │  │  /ai (proposals)     │   └───────────────────────────────────┘   │
-│  │  /ws/sessions/{id}   │                                           │
+│  │  /ws/sessions/{id}*  │  (*mounted under the /api prefix)         │
 │  └──────────────────────┘                                           │
 │                                                                     │
 │  ┌─────────────────────┐  ┌──────────┐  ┌──────────────────────┐   │
@@ -220,7 +220,7 @@ before returning to the client.
 
 ### WebSocket and Real-time Events
 
-`/ws/sessions/{session_id}` maintains an in-memory connection registry
+`/api/ws/sessions/{session_id}` maintains an in-memory connection registry
 (`dict[str, list[WebSocket]]`). It serves two roles:
 
 1. **Server-push broadcast** — HTTP endpoints call `broadcast_to_session()` after
@@ -236,16 +236,16 @@ server-push entry point. Dead connections are pruned silently on each call.
 
 | Type | Emitted by | Payload |
 |---|---|---|
-| `chat_message` | `POST /sessions/{id}/chat` | `session_id`, `role="ai"`, `content` |
+| `chat_message` | `POST /sessions/{id}/chat` (DM echo immediately after persist, AI reply after the orchestrator returns) | `session_id`, `message_id`, `role` (`dm`\|`ai`), `content` |
 | `proposal_ready` | `POST /sessions/{id}/chat`, `POST /ai/proposals/{id}/accept`, `POST /ai/proposals/{id}/reject` | `session_id`, `proposal_id`, `proposal_type`, `status` |
 | `combat_update` | `POST /sessions/{id}/combat`, `POST /sessions/{id}/combat/action`, `POST /sessions/{id}/combat/next-turn`, `PUT /sessions/{id}/combat/end` | `session_id`, `combat` (full `CombatStateRead`) |
 | `entity_update` | `POST /ai/proposals/{id}/accept` (when a LOCATION or CHARACTER entity is created) | `session_id`, `entity_type`, `entity_id` |
 
-**Planned (not yet implemented):**
+**Peer-relayed event types (client → other clients, no server handler):**
 
 | Type | Direction | Purpose |
 |---|---|---|
-| `map_update` | server → client | Token positions, fog-of-war reveal |
+| `map_token_move` | client → other clients | Battle-map token drag (`token_id`, `x`, `y`); each client also persists positions in localStorage |
 
 **Multi-process note:** The connection registry is process-local. A multi-worker
 deployment requires a shared pub/sub broker (e.g. Redis) to propagate events
@@ -260,9 +260,9 @@ The frontend is a React 19 + Vite + TypeScript application with strict mode enab
 ### Component Tree
 
 ```
-App
-└── DMDashboard             (owns chat input/output and layout)
-    ├── NewSessionForm       (shown when no sessionId in store)
+App                          (routes: "/" → NewSessionForm or redirect,
+│                             "/session/:sessionId" → DMDashboard)
+└── DMDashboard             (owns chat input/output, session hydration, layout)
     ├── aside (left)
     │   ├── LocationPanel
     │   └── CharacterCard
@@ -276,10 +276,14 @@ App
 ### State Management — Zustand
 
 `src/store/gameStore.ts` is the single source of truth. Key slices:
-- `sessionId` / `worldId` — active session and world
-- `messages` — chat history (`{id, role, content, timestamp}[]`)
+- `sessionId` / `worldId` — active session and world (persisted to
+  localStorage so a refresh resumes the session)
+- `messages` — chat history (`{id, role, content, timestamp}[]`), deduped by
+  server-assigned message id
+- `tokenPositions` — battle-map grid positions keyed by character id
+  (persisted to localStorage; synced across clients via `map_token_move`)
 - `isLoading` — tracks in-flight AI requests
-- `addMessage` / `setLoading` — actions
+- `addMessage` / `setMessages` / `moveToken` / `clearSession` — actions
 
 All data shared between more than one component goes through the store. Local
 `useState` is only used for purely local UI state (e.g., input field value, map
@@ -296,8 +300,9 @@ toggle).
 ### API Client and WebSocket Hook
 
 `src/api/client.ts` wraps `fetch` for REST calls. `src/api/ws.ts` exports a
-WebSocket hook that connects to `/ws/sessions/{id}` and dispatches incoming
-messages to the Zustand store.
+WebSocket hook that connects to `/api/ws/sessions/{id}`, dispatches incoming
+messages to the Zustand store, auto-reconnects after a drop, and triggers a
+full session re-hydration on reconnect to catch up on missed events.
 
 ---
 

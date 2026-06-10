@@ -14,15 +14,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dm_api.ai.backends.base import AIBackend
 from dm_api.ai.condenser import HistoryMessage, MessageAnchor
 from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
+from dm_api.ai.prompts.system_prompt import WorldContext
 from dm_api.api.ws import broadcast_to_session
 from dm_api.config import settings
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
 from dm_api.db.models.proposal import Proposal, ProposalRead
 from dm_api.db.models.session import GameSession, SessionCreate, SessionRead
+from dm_api.db.models.world import World
 from dm_api.db.session import get_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Most recent ended sessions whose summaries are injected into the system
+# prompt for cross-session continuity. Summaries are 2-3 sentences each, so
+# the token cost stays negligible.
+_PRIOR_SESSION_LIMIT = 10
 
 
 @functools.lru_cache(maxsize=1)
@@ -81,6 +88,35 @@ async def _fetch_history(db: AsyncSession, session_id: uuid.UUID) -> list[Histor
         )
         for m in result.scalars().all()
     ]
+
+
+async def _fetch_world_context(
+    db: AsyncSession,
+    world_id: uuid.UUID,
+    current_session_id: uuid.UUID,
+) -> WorldContext:
+    """Build the typed cross-session context for the orchestrator's system prompt.
+
+    Combines the world's setting/lore with summaries of the most recently
+    ended sessions in the same world (chronological order, oldest first).
+    """
+    world = (await db.execute(select(World).where(World.id == world_id))).scalar_one_or_none()
+    result = await db.execute(
+        select(GameSession)
+        .where(
+            GameSession.world_id == world_id,
+            GameSession.id != current_session_id,
+            GameSession.session_summary.is_not(None),
+        )
+        .order_by(GameSession.started_at.desc())
+        .limit(_PRIOR_SESSION_LIMIT)
+    )
+    prior_sessions = list(reversed(result.scalars().all()))
+    return WorldContext(
+        setting_description=world.setting_description if world else None,
+        lore_summary=world.lore_summary if world else None,
+        prior_session_summaries=tuple(f"{s.name}: {s.session_summary}" for s in prior_sessions),
+    )
 
 
 async def _persist_proposal(
@@ -162,17 +198,34 @@ async def session_chat(
 ) -> ChatResponse:
     game_session = await _fetch_session_or_404(db, session_id)
 
-    db.add(
-        ChatMessage(
-            session_id=session_id,
-            role=ChatRole.DM,
-            content=payload.message,
-            token_count=len(payload.message) // 4,
-        )
+    dm_message = ChatMessage(
+        session_id=session_id,
+        role=ChatRole.DM,
+        content=payload.message,
+        token_count=len(payload.message) // 4,
     )
+    db.add(dm_message)
     await db.flush()
 
+    # Echo the DM message to all connected clients right away so player
+    # screens update before the (slow) orchestrator call completes. Clients
+    # dedupe by message_id, so the sender rendering its own echo is safe.
+    try:
+        await broadcast_to_session(
+            session_id,
+            {
+                "type": "chat_message",
+                "session_id": str(session_id),
+                "message_id": str(dm_message.id),
+                "role": ChatRole.DM.value,
+                "content": payload.message,
+            },
+        )
+    except Exception:
+        logger.exception("ws broadcast failed session_id=%s", session_id)
+
     history = await _fetch_history(db, session_id)
+    world_context = await _fetch_world_context(db, game_session.world_id, session_id)
 
     # Condense → build messages → call backend → extract proposal.
     result = await _make_orchestrator().handle_message(
@@ -180,16 +233,18 @@ async def session_chat(
         session_id=str(session_id),
         world_id=str(game_session.world_id),
         history=history,
+        world_context=world_context,
     )
 
-    db.add(
-        ChatMessage(
-            session_id=session_id,
-            role=ChatRole.AI,
-            content=result.response,
-            token_count=result.tokens_out,
-        )
+    ai_message = ChatMessage(
+        session_id=session_id,
+        role=ChatRole.AI,
+        content=result.response,
+        token_count=result.tokens_out,
     )
+    db.add(ai_message)
+    await db.flush()
+    ai_message_id = str(ai_message.id)
     proposal_read = await _persist_proposal(db, session_id, game_session.world_id, result.proposal)
     await db.commit()
 
@@ -200,7 +255,8 @@ async def session_chat(
             {
                 "type": "chat_message",
                 "session_id": str(session_id),
-                "role": "ai",
+                "message_id": ai_message_id,
+                "role": ChatRole.AI.value,
                 "content": result.response,
             },
         )

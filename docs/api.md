@@ -201,33 +201,33 @@ DM can optionally override fields before accepting.
 
 ---
 
-## WebSocket  `/ws/sessions/{session_id}`
+## WebSocket  `/api/ws/sessions/{session_id}`
 
 Connect to receive real-time session events. Any JSON message sent by a client
-is broadcast to all other clients in the same session. The server injects
+is relayed to all other clients in the same session. The server injects
 `"session_id"` into each forwarded envelope.
 
-**URL:** `ws://localhost:8000/ws/sessions/{session_id}`
+**URL:** `ws://localhost:8000/api/ws/sessions/{session_id}`
 
 ### Message types
 
 | `type` | Direction | Key payload fields | Purpose |
 |---|---|---|---|
-| `map_update` | server → client | `tokens`, `revealed_cells` | Token positions or fog reveal |
-| `combat_update` | server → client | `initiative_order`, `combatants`, `round_number` | Combat state change |
-| `chat_message` | server → client | `role`, `content`, `timestamp` | New message in session |
-| `proposal_ready` | server → client | `proposal_id`, `proposal_type` | Proposal awaiting DM review |
-| `entity_update` | server → client | `entity_type`, `entity_id`, `fields` | Character/location field changed |
+| `chat_message` | server → client | `message_id`, `role` (`dm`\|`ai`), `content` | DM echo (sent immediately) and AI reply; clients dedupe on `message_id` |
+| `combat_update` | server → client | `combat` (full `CombatStateRead`) | Combat state change |
+| `proposal_ready` | server → client | `proposal_id`, `proposal_type`, `status` | Proposal awaiting DM review / resolved |
+| `entity_update` | server → client | `entity_type`, `entity_id` | Character/location created or changed |
+| `map_token_move` | client → other clients (peer relay) | `token_id`, `x`, `y` | Battle-map token drag, mirrored on every screen |
 
 ### JavaScript example
 
 ```javascript
-const ws = new WebSocket(`ws://localhost:8000/ws/sessions/${sessionId}`);
+const ws = new WebSocket(`ws://localhost:8000/api/ws/sessions/${sessionId}`);
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
   if (msg.type === "proposal_ready") { /* show proposal card */ }
 };
-ws.send(JSON.stringify({ type: "map_update", tokens: [...] }));
+ws.send(JSON.stringify({ type: "map_token_move", token_id: "...", x: 3, y: 4 }));
 ```
 
 ---

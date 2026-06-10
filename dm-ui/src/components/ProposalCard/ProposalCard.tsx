@@ -93,6 +93,7 @@ export default function ProposalCard({ proposal }: ProposalCardProps) {
 
   const statusBadge = !isPending
     ? {
+        pending: null,
         accepted: { label: "Accepted", color: "#27ae60" },
         rejected: { label: "Rejected", color: "#c0392b" },
         modified: { label: "Modified", color: "#e67e22" },

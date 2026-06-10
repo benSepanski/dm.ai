@@ -61,7 +61,7 @@ can be added by subclassing it without touching the API or UI layers.
           ▼
   dm-api  (FastAPI + Python 3.12 + SQLAlchemy async)
   ├── REST routes: /worlds  /sessions  /characters  /locations  /combat  /ai
-  ├── WebSocket:   /ws/sessions/{id}
+  ├── WebSocket:   /api/ws/sessions/{id}
   ├── AI layer
   │   ├── DMOrchestrator  (stateless, session-scoped)
   │   ├── AIBackend ABC
@@ -130,6 +130,28 @@ cd dm-ui
 npm install
 npm run dev
 ```
+
+## Playing over a LAN (DM laptop + player devices)
+
+The vite dev server binds on all interfaces (`host: true`), so other devices
+on the same network can join a running session:
+
+1. Start the stack (Docker, or local backend + `npm run dev`).
+2. Find your machine's LAN IP (e.g. `ipconfig getifaddr en0` on macOS,
+   `hostname -I` on Linux).
+3. Open the dashboard **via that IP** on the DM laptop:
+   `http://<your-lan-ip>:5173` — this matters because the invite link copies
+   the URL you are on.
+4. Create (or resume) a session, then use **Copy Invite Link** in the top bar
+   and share it. Players open `http://<your-lan-ip>:5173/session/<id>` and see
+   chat, combat tracker, and battle-map moves live.
+
+Session state lives in PostgreSQL, and each browser remembers its session in
+localStorage — refreshing, or coming back the next day, resumes where you
+left off. Use **New Session** in the top bar to detach a browser from its
+saved session (the session itself stays in the database; keep its URL to
+return to it). Run the API single-process (the default) — the WebSocket
+fan-out registry is in-memory.
 
 ## Configuration
 

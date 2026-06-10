@@ -1,63 +1,80 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { api, type CombatStateResponse } from "./client";
+import { mapCharacterResponse, mapCombatResponse } from "./mappers";
 import { useGameStore } from "../store/gameStore";
 
-const WS_BASE = "/ws";
+// The WS route lives under the API router (/api/ws/...), so it shares the
+// /api dev-server proxy with the REST endpoints.
+const WS_BASE = "/api/ws";
 
-// Shape of server-push events received over the WebSocket.
-type WsEvent =
-  | { type: "chat_message"; session_id: string; role: "dm" | "ai" | "system"; content: string }
-  | { type: "combat_update"; session_id: string; combat: CombatStateResponse }
-  | { type: "proposal_ready"; session_id: string; proposal_id: string; proposal_type: string; status?: string }
-  | { type: "entity_update"; session_id: string; entity_type: string; entity_id: string };
+const RECONNECT_DELAY_MS = 2000;
 
-function mapCombatFromWs(combat: CombatStateResponse) {
-  const order = combat.initiative_order ?? [];
-  const data = combat.combatants ?? [];
-  return {
-    id: combat.id,
-    round_number: combat.round_number,
-    current_turn_index: combat.current_turn_index,
-    combatants: order.map((entry, i) => ({
-      char_id: entry.character_id,
-      name: entry.name,
-      hp_current: data[i]?.hp_current ?? 0,
-      hp_max: data[i]?.hp_max ?? 0,
-      ac: data[i]?.ac ?? 10,
-      initiative: entry.initiative,
-      is_current_turn: i === combat.current_turn_index,
-    })),
-  };
+// Client→client event relayed verbatim by the backend peer relay
+// (see dm-api ws.py): one browser drags a token, all others apply the move.
+export interface MapTokenMoveEvent {
+  type: "map_token_move";
+  token_id: string;
+  x: number;
+  y: number;
 }
 
-export function useSessionWebSocket(sessionId: string | null): void {
-  const { addMessage, setCombat, addProposal, updateProposal, upsertCharacter, setLocation } =
-    useGameStore();
+// Shape of events received over the WebSocket (server-push + peer relay).
+type WsEvent =
+  | {
+      type: "chat_message";
+      session_id: string;
+      message_id?: string;
+      role: "dm" | "ai" | "system";
+      content: string;
+    }
+  | { type: "combat_update"; session_id: string; combat: CombatStateResponse }
+  | { type: "proposal_ready"; session_id: string; proposal_id: string; proposal_type: string; status?: string }
+  | { type: "entity_update"; session_id: string; entity_type: string; entity_id: string }
+  | (MapTokenMoveEvent & { session_id: string });
+
+export type SendWsEvent = (event: MapTokenMoveEvent) => void;
+
+export function useSessionWebSocket(
+  sessionId: string | null,
+  onReconnect?: () => void
+): SendWsEvent {
+  const {
+    addMessage,
+    setCombat,
+    addProposal,
+    updateProposal,
+    upsertCharacter,
+    setLocation,
+    moveToken,
+  } = useGameStore();
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
 
-    const ws = new WebSocket(`${WS_BASE}/sessions/${sessionId}`);
-    wsRef.current = ws;
+    let disposed = false;
+    let retryTimer: number | undefined;
+    let hadConnected = false;
 
-    ws.onmessage = (evt) => {
+    const handleEvent = (evt: MessageEvent) => {
       let event: WsEvent;
       try {
-        event = JSON.parse(evt.data) as WsEvent;
+        event = JSON.parse(evt.data as string) as WsEvent;
       } catch {
         return;
       }
 
-      if (event.type === "chat_message" && event.role === "ai") {
+      if (event.type === "chat_message" && (event.role === "dm" || event.role === "ai")) {
         addMessage({
-          id: crypto.randomUUID(),
-          role: "ai",
+          id: event.message_id ?? crypto.randomUUID(),
+          role: event.role,
           content: event.content,
           timestamp: new Date().toISOString(),
         });
       } else if (event.type === "combat_update") {
-        setCombat(mapCombatFromWs(event.combat));
+        setCombat(mapCombatResponse(event.combat));
+      } else if (event.type === "map_token_move") {
+        moveToken(event.token_id, event.x, event.y);
       } else if (event.type === "proposal_ready") {
         const status = event.status;
         if (!status || status === "pending") {
@@ -73,19 +90,7 @@ export function useSessionWebSocket(sessionId: string | null): void {
         if (event.entity_type === "character") {
           api
             .getCharacter(event.entity_id)
-            .then((char) =>
-              upsertCharacter({
-                id: char.id,
-                name: char.name,
-                char_class: char.char_class,
-                race: char.race,
-                level: char.level,
-                hp_current: char.hp_current,
-                hp_max: char.hp_max,
-                ac: char.ac,
-                stats: char.stats,
-              })
-            )
+            .then((char) => upsertCharacter(mapCharacterResponse(char)))
             .catch(console.error);
         } else if (event.entity_type === "location") {
           api
@@ -103,9 +108,45 @@ export function useSessionWebSocket(sessionId: string | null): void {
       }
     };
 
+    // Connect with auto-reconnect: laptop sleep or a server restart drops the
+    // socket; on re-open the caller's onReconnect re-hydrates missed state.
+    const connect = () => {
+      const ws = new WebSocket(`${WS_BASE}/sessions/${sessionId}`);
+      wsRef.current = ws;
+      ws.onmessage = handleEvent;
+      ws.onopen = () => {
+        if (hadConnected) onReconnect?.();
+        hadConnected = true;
+      };
+      ws.onclose = () => {
+        if (wsRef.current === ws) wsRef.current = null;
+        if (!disposed) retryTimer = window.setTimeout(connect, RECONNECT_DELAY_MS);
+      };
+    };
+    connect();
+
     return () => {
-      ws.close();
+      disposed = true;
+      if (retryTimer !== undefined) window.clearTimeout(retryTimer);
+      wsRef.current?.close();
       wsRef.current = null;
     };
-  }, [sessionId, addMessage, setCombat, addProposal, updateProposal, upsertCharacter, setLocation]);
+  }, [
+    sessionId,
+    onReconnect,
+    addMessage,
+    setCombat,
+    addProposal,
+    updateProposal,
+    upsertCharacter,
+    setLocation,
+    moveToken,
+  ]);
+
+  return useCallback((event: MapTokenMoveEvent) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(event));
+    }
+  }, []);
 }

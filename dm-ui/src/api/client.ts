@@ -30,6 +30,26 @@ export interface ProposalResponse {
   created_at: string;
 }
 
+export interface SessionResponse {
+  id: string;
+  world_id: string;
+  name: string;
+  rule_engine_version: string;
+  player_character_ids: string[] | null;
+  current_location_id: string | null;
+  session_summary: string | null;
+  started_at: string;
+  ended_at: string | null;
+}
+
+export interface ChatMessageResponse {
+  id: string;
+  session_id: string;
+  role: "dm" | "ai" | "system";
+  content: string;
+  timestamp: string;
+}
+
 export interface CharacterResponse {
   id: string;
   world_id: string;
@@ -128,6 +148,10 @@ export const api = {
   // Sessions
   createSession: (data: CreateSessionRequest) =>
     request<{ id: string }>("/sessions/", { method: "POST", body: JSON.stringify(data) }),
+  getSession: (sessionId: string) =>
+    request<SessionResponse>(`/sessions/${sessionId}`),
+  getSessionMessages: (sessionId: string) =>
+    request<ChatMessageResponse[]>(`/sessions/${sessionId}/messages`),
   chat: (sessionId: string, message: string) =>
     request<ChatResponse>(
       `/sessions/${sessionId}/chat`,
@@ -137,6 +161,8 @@ export const api = {
   // Combat
   startCombat: (sessionId: string) =>
     request<CombatStateResponse>(`/sessions/${sessionId}/combat`, { method: "POST" }),
+  getCombat: (sessionId: string) =>
+    request<CombatStateResponse>(`/sessions/${sessionId}/combat`),
   submitAction: (sessionId: string, action: CombatActionRequest) =>
     request<CombatStateResponse>(`/sessions/${sessionId}/combat/action`, {
       method: "POST",

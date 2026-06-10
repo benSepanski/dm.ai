@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { Stage, Layer, Rect, Circle, Text, Line } from "react-konva";
 import type Konva from "konva";
+import { useGameStore, type TokenPosition } from "../../store/gameStore";
 
 const CELL = 50;
 const COLS = 10;
@@ -8,12 +8,22 @@ const ROWS = 10;
 const W = CELL * COLS;
 const H = CELL * ROWS;
 
+const PARTY_COLOR = "#3498db";
+const ENEMY_COLOR = "#c0392b";
+const DOWNED_COLOR = "#555";
+
 interface Token {
   id: string;
   name: string;
   color: string;
   gridX: number;
   gridY: number;
+}
+
+interface BattleMapProps {
+  // Called when the local user drags a token; the dashboard persists the move
+  // and relays it to the other connected clients over the WebSocket.
+  onTokenMove: (tokenId: string, x: number, y: number) => void;
 }
 
 function GridLines() {
@@ -81,19 +91,54 @@ function TokenShape({
   );
 }
 
-const DEFAULT_TOKENS: Token[] = [
-  { id: "p1", name: "Hero", color: "#3498db", gridX: 1, gridY: 1 },
-  { id: "e1", name: "Goblin", color: "#c0392b", gridX: 7, gridY: 7 },
-];
-
-export default function BattleMap() {
-  const [tokens, setTokens] = useState<Token[]>(DEFAULT_TOKENS);
-
-  const moveToken = (id: string, gx: number, gy: number) => {
-    setTokens((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, gridX: gx, gridY: gy } : t))
-    );
+// Party tokens line up near the top edge, enemies near the bottom, until
+// someone drags them somewhere better.
+function defaultPosition(isParty: boolean, sideIndex: number): TokenPosition {
+  return {
+    x: (1 + sideIndex) % COLS,
+    y: isParty ? 1 : ROWS - 2,
   };
+}
+
+export default function BattleMap({ onTokenMove }: BattleMapProps) {
+  const combat = useGameStore((s) => s.combat);
+  const characters = useGameStore((s) => s.characters);
+  const tokenPositions = useGameStore((s) => s.tokenPositions);
+
+  // During combat, tokens mirror the combatants in initiative order; outside
+  // combat, show the party roster so the DM can stage a scene.
+  const partyIds = new Set(characters.map((c) => c.id));
+  const sources = combat
+    ? combat.combatants.map((c) => ({
+        id: c.char_id,
+        name: c.name,
+        isParty: partyIds.has(c.char_id),
+        isDowned: c.hp_current <= 0,
+      }))
+    : characters.map((c) => ({
+        id: c.id,
+        name: c.name,
+        isParty: true,
+        isDowned: (c.hp_current ?? 1) <= 0,
+      }));
+
+  let partyCount = 0;
+  let enemyCount = 0;
+  const tokens: Token[] = sources.map((source) => {
+    const sideIndex = source.isParty ? partyCount++ : enemyCount++;
+    const pos = tokenPositions[source.id] ?? defaultPosition(source.isParty, sideIndex);
+    return {
+      id: source.id,
+      name: source.name,
+      color: source.isDowned
+        ? DOWNED_COLOR
+        : source.isParty
+          ? PARTY_COLOR
+          : ENEMY_COLOR,
+      gridX: pos.x,
+      gridY: pos.y,
+    };
+  });
 
   return (
     <section>
@@ -107,6 +152,11 @@ export default function BattleMap() {
       >
         Battle Map
       </h3>
+      {tokens.length === 0 && (
+        <p style={{ color: "#555", fontSize: 12, margin: "0 0 8px" }}>
+          Tokens appear here once characters join the world or combat starts.
+        </p>
+      )}
       <div
         style={{
           background: "#111",
@@ -122,7 +172,7 @@ export default function BattleMap() {
           </Layer>
           <Layer>
             {tokens.map((t) => (
-              <TokenShape key={t.id} token={t} onMove={moveToken} />
+              <TokenShape key={t.id} token={t} onMove={onTokenMove} />
             ))}
           </Layer>
         </Stage>

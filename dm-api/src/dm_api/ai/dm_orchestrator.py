@@ -28,7 +28,7 @@ from game_engine.types import ProposalType
 
 from dm_api.ai.backends.base import AIBackend, AIMessage
 from dm_api.ai.condenser import CondensedContext, ContextCondenser, HistoryMessage
-from dm_api.ai.prompts.system_prompt import build_system_prompt
+from dm_api.ai.prompts.system_prompt import WorldContext, build_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,7 @@ class DMOrchestrator:
         session_id: str,
         world_id: str,
         history: list[HistoryMessage],
+        world_context: WorldContext | None = None,
     ) -> DMResponse:
         """Process a chat message and return the AI DM response.
 
@@ -105,6 +106,8 @@ class DMOrchestrator:
                 a typed ``HistoryMessage`` (with citation anchor + token
                 count). Callers are responsible for including the just-persisted
                 DM message as the final element.
+            world_context: Durable cross-session world knowledge (setting,
+                lore, prior session summaries) injected into the system prompt.
 
         Returns:
             A typed :class:`DMResponse`.
@@ -128,7 +131,9 @@ class DMOrchestrator:
         messages = self._build_messages(condensed, latest=message)
 
         # Stage 3: call the orchestrator model.
-        system = build_system_prompt(world_id=world_id, session_id=session_id)
+        system = build_system_prompt(
+            world_id=world_id, session_id=session_id, world_context=world_context
+        )
         response = await self._backend.complete(
             messages=messages,
             system=system,

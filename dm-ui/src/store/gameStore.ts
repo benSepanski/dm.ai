@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 // ---- Domain types ----
 
@@ -45,6 +46,12 @@ export interface CharacterData {
   stats: Record<string, unknown> | null;
 }
 
+// Grid cell coordinates of a battle-map token, keyed by character id.
+export interface TokenPosition {
+  x: number;
+  y: number;
+}
+
 export interface ProposalData {
   id: string;
   session_id: string | null;
@@ -67,9 +74,13 @@ interface GameState {
   currentLocation: LocationData | null;
   characters: CharacterData[];
   proposals: ProposalData[];
+  tokenPositions: Record<string, TokenPosition>;
 
   setSession: (sessionId: string, worldId: string) => void;
+  clearSession: () => void;
   addMessage: (msg: ChatMessage) => void;
+  setMessages: (messages: ChatMessage[]) => void;
+  moveToken: (tokenId: string, x: number, y: number) => void;
   setLoading: (loading: boolean) => void;
   setCombat: (combat: ActiveCombat | null) => void;
   setLocation: (location: LocationData | null) => void;
@@ -82,44 +93,69 @@ interface GameState {
 const initialState = {
   sessionId: null,
   worldId: null,
-  messages: [],
+  messages: [] as ChatMessage[],
   isLoading: false,
   combat: null,
   currentLocation: null,
-  characters: [],
-  proposals: [],
+  characters: [] as CharacterData[],
+  proposals: [] as ProposalData[],
+  tokenPositions: {} as Record<string, TokenPosition>,
 };
 
-export const useGameStore = create<GameState>((set) => ({
-  ...initialState,
-  setSession: (sessionId, worldId) => set({ sessionId, worldId }),
-  addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
-  setLoading: (loading) => set({ isLoading: loading }),
-  setCombat: (combat) => set({ combat }),
-  setLocation: (location) => set({ currentLocation: location }),
-  setCharacters: (characters) => set({ characters }),
-  upsertCharacter: (char) =>
-    set((s) => {
-      const idx = s.characters.findIndex((c) => c.id === char.id);
-      if (idx >= 0) {
-        const updated = [...s.characters];
-        updated[idx] = char;
-        return { characters: updated };
-      }
-      return { characters: [...s.characters, char] };
+// sessionId / worldId / tokenPositions are persisted to localStorage so a
+// page refresh (or closing the laptop between game days) resumes the same
+// session. Everything else is re-hydrated from the API on load.
+export const useGameStore = create<GameState>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      setSession: (sessionId, worldId) => set({ sessionId, worldId }),
+      clearSession: () => set({ ...initialState }),
+      // Dedupes by id: the same message can arrive via hydration (GET
+      // /messages) and the WebSocket broadcast — server-assigned ids match.
+      addMessage: (msg) =>
+        set((s) =>
+          s.messages.some((m) => m.id === msg.id) ? s : { messages: [...s.messages, msg] }
+        ),
+      setMessages: (messages) => set({ messages }),
+      moveToken: (tokenId, x, y) =>
+        set((s) => ({ tokenPositions: { ...s.tokenPositions, [tokenId]: { x, y } } })),
+      setLoading: (loading) => set({ isLoading: loading }),
+      setCombat: (combat) => set({ combat }),
+      setLocation: (location) => set({ currentLocation: location }),
+      setCharacters: (characters) => set({ characters }),
+      upsertCharacter: (char) =>
+        set((s) => {
+          const idx = s.characters.findIndex((c) => c.id === char.id);
+          if (idx >= 0) {
+            const updated = [...s.characters];
+            updated[idx] = char;
+            return { characters: updated };
+          }
+          return { characters: [...s.characters, char] };
+        }),
+      addProposal: (proposal) =>
+        set((s) => {
+          const idx = s.proposals.findIndex((p) => p.id === proposal.id);
+          if (idx >= 0) {
+            const updated = [...s.proposals];
+            updated[idx] = proposal;
+            return { proposals: updated };
+          }
+          return { proposals: [...s.proposals, proposal] };
+        }),
+      updateProposal: (proposalId, updates) =>
+        set((s) => ({
+          proposals: s.proposals.map((p) => (p.id === proposalId ? { ...p, ...updates } : p)),
+        })),
     }),
-  addProposal: (proposal) =>
-    set((s) => {
-      const idx = s.proposals.findIndex((p) => p.id === proposal.id);
-      if (idx >= 0) {
-        const updated = [...s.proposals];
-        updated[idx] = proposal;
-        return { proposals: updated };
-      }
-      return { proposals: [...s.proposals, proposal] };
-    }),
-  updateProposal: (proposalId, updates) =>
-    set((s) => ({
-      proposals: s.proposals.map((p) => (p.id === proposalId ? { ...p, ...updates } : p)),
-    })),
-}));
+    {
+      name: "dmai-game",
+      partialize: (s) => ({
+        sessionId: s.sessionId,
+        worldId: s.worldId,
+        tokenPositions: s.tokenPositions,
+      }),
+    }
+  )
+);
