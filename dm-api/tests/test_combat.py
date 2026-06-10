@@ -173,7 +173,9 @@ async def test_start_combat_initiative_order_sorted_descending(client, world_id)
 
 @pytest.mark.asyncio
 async def test_submit_combat_action_no_combatants(client, world_id):
-    """Action submitted when no combatants are enrolled; engine logs target_not_found."""
+    """An action from a non-combatant is a client error and must NOT pollute
+    the combat log (regression: this used to return 200 and append a permanent
+    actor_not_found row)."""
     session_id = await _create_session(client, world_id)
     await client.post(f"/api/sessions/{session_id}/combat")
 
@@ -185,15 +187,36 @@ async def test_submit_combat_action_no_combatants(client, world_id):
             "target_id": "enemy-001",
         },
     )
-    assert r.status_code == 200
-    data = r.json()
-    assert data["combat_log"] is not None
-    assert len(data["combat_log"]) == 1
-    log = data["combat_log"][0]
-    assert log["actor_id"] == "char-001"
-    assert log["action_type"] == ActionType.ATTACK.value
-    # Engine reports the actor missing first (no combatants enrolled)
-    assert log["error"] == "actor_not_found"
+    assert r.status_code == 404
+    assert "Actor" in r.json()["detail"]
+
+    # The combat log stays clean.
+    r = await client.get(f"/api/sessions/{session_id}/combat")
+    assert r.json()["combat_log"] in (None, [])
+
+
+@pytest.mark.asyncio
+async def test_submit_combat_action_unknown_target_is_404(client, world_id):
+    """A valid actor attacking a bogus target id is rejected up front."""
+    session_id = await _create_session(client, world_id)
+    attacker_id = await _create_character(client, world_id, name="Attacker")
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [attacker_id]},
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={
+            "actor_id": attacker_id,
+            "action_type": ActionType.ATTACK.value,
+            "target_id": "00000000-0000-0000-0000-000000000000",
+        },
+    )
+    assert r.status_code == 404
+    assert "Target" in r.json()["detail"]
 
 
 @pytest.mark.asyncio

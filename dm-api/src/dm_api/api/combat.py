@@ -284,6 +284,14 @@ async def submit_combat_action(
     # Stage 1: load — deserialise stored CharacterSheets.
     sheets: list[CharacterSheet] = [CharacterSheet.from_dict(c) for c in (combat.combatants or [])]
 
+    # Reject unknown actors/targets up front: a typo'd UUID must surface as a
+    # client error, not as a permanent "actor_not_found" row in the combat log.
+    combatant_ids = {s.id for s in sheets}
+    if payload.actor_id not in combatant_ids:
+        raise HTTPException(status_code=404, detail="Actor is not a combatant in this combat")
+    if payload.target_id is not None and payload.target_id not in combatant_ids:
+        raise HTTPException(status_code=404, detail="Target is not a combatant in this combat")
+
     # Stage 2: build-state.
     state = CombatStateData(
         combatants=sheets,
