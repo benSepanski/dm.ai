@@ -53,7 +53,9 @@ implement:
 | Method | Signature summary | Purpose |
 |---|---|---|
 | `roll_check` | `(char, skill/ability, dc, advantage, disadvantage) → CheckResult` | Skill / ability check |
+| `roll_saving_throw` | `(char, ability, dc, advantage, disadvantage) → SaveResult` | Saving throw (condition auto-fails) |
 | `apply_damage` | `(target, damage, damage_type) → CharacterSheet` | Damage with resistance calculation |
+| `apply_healing` | `(target, amount) → CharacterSheet` | Healing (wakes dying characters) |
 | `apply_condition` | `(target, condition, duration_rounds) → CharacterSheet` | Apply a status condition |
 | `remove_condition` | `(target, condition) → CharacterSheet` | Remove a status condition |
 | `tick_condition_durations` | `(target) → CharacterSheet` | Decrement timed conditions; remove expired ones |
@@ -63,50 +65,81 @@ implement:
 | `validate_character` | `(sheet) → ValidationResult` | Legality check for a character sheet |
 | `calculate_proficiency_bonus` | `(level) → int` | Proficiency bonus by level |
 
-Result dataclasses (`CheckResult`, `ActionResult`, `ValidationResult`) and the
-`Action` dataclass are defined in `interface.py` alongside the ABC.
+Result dataclasses (`CheckResult`, `SaveResult`, `DeathSaveResult`,
+`ActionResult`, `ValidationResult`) and the `Action` dataclass are defined in
+`interface.py` alongside the ABC.
 
 ### D&D 5.5e Engine
 
-`game_engine.rules.dnd_5_5e.DnD55eEngine` is the concrete implementation. It uses
-a **delegation pattern**: each abstract method delegates to a focused private helper
-module in `game_engine/rules/dnd_5_5e/` (`_checks.py`, `_actions.py`,
-`_conditions.py`, `_damage.py`, `_validation.py`). Those helpers in turn use shared
-utilities from `game_engine/core/` (dice, conditions, initiative). This keeps the
-engine file short and each helper independently testable.
+`game_engine.rules.dnd_5_5e.DnD55eEngine` is the concrete implementation of the
+2024 PHB rules (see `docs/phb-parity-spec.md` for the full feature matrix). It
+uses a **delegation pattern**: each method delegates to a focused private helper
+module in `game_engine/rules/dnd_5_5e/` (`_checks.py`, `_saves.py`,
+`_attacks.py`, `_actions.py`, `_conditions.py`, `_damage.py`, `_death.py`,
+`_validation.py`). Those helpers in turn use shared utilities from
+`game_engine/core/` (dice, conditions, initiative). Beyond the ABC, the engine
+exposes 5.5e-specific methods (`roll_death_save`, `stabilize`, `grant_temp_hp`,
+`begin_turn`, `passive_score`, `concentration_save_dc`).
 
-Data tables (spells, monsters, weapons, armor) live in
-`game_engine/rules/dnd_5_5e/data/` as Python modules using enum types for all
-typed fields.
+Sibling service modules cover the non-combat rule systems, each independently
+testable:
+
+- `spellcasting.py` + `_spell_resolution.py` — slot tables (full/half/third/
+  pact), multiclass slots, `cast_spell` with upcasting, cantrip scaling,
+  rituals, and concentration
+- `progression.py` — XP thresholds, `level_up`, multiclass prerequisites
+- `character_builder.py` — 2024 creation steps (`build_character`, point buy,
+  standard array)
+- `resting.py` — short/long rests, hit dice spending, pact slot recovery
+- `exploration.py` — encumbrance, jumping, falling, suffocation, travel pace,
+  light levels
+- `classes.py` — static class identity data (hit die, saves, proficiencies)
+
+Data registries (SRD 5.2 content) live in `game_engine/rules/dnd_5_5e/data/`
+as Python modules using enum types for all typed fields: `spells/` (per-level
+modules, 100+ spells), `class_features/` (per-class level 1-20 progression
+tables), `weapons.py` (full 2024 table with masteries), `armor.py`, `gear.py`,
+`species.py`, `backgrounds.py`, `feats.py`, `monsters.py`. Each registry
+exposes a typed lookup (`get_spell`, `get_weapon`, `get_progression`, …).
 
 ### types package
 
 `game_engine/types/` is the single source of truth for domain types:
 
-**Enums** (`enums.py`) — all `str, Enum` subclasses for wire-compatibility:
-- `CharacterClass` — 13 D&D 5.5e classes
-- `Ability` — STR / DEX / CON / INT / WIS / CHA (with `.modifier()` and `.short`)
-- `Skill` — all 18 skills (with `.governing_ability`)
-- `DamageType` — 13 standard damage types
-- `Condition` — 15 standard conditions (with `.prevents_action()` classmethod)
-- `ActionType` — 10 combat action types
-- `CharacterType` — PC / NPC / MONSTER
-- `LocationType` — REALM / COUNTRY / REGION / TOWN / DISTRICT / BUILDING / ROOM / DUNGEON / WILDERNESS
-- `ProposalType` — LOCATION / CHARACTER / DUNGEON / DIALOGUE / COMBAT_ACTION
-- `ProposalStatus` — PENDING / ACCEPTED / REJECTED / MODIFIED
-- `ChatRole` — DM / AI / SYSTEM
+**Enums** (`enums/` package) — all `str, Enum` subclasses for wire-compatibility,
+split into `_core` (abilities, skills, damage, conditions, magic), `_character`
+(classes, species, backgrounds, languages, resources), `_subclasses` (all 52),
+`_feats` (all 2024 feats), `_combat` (2024 action list, cover, rests, weapon
+categories/masteries), and `_app` (locations, proposals, chat). Highlights:
+- `CharacterClass` (13), `Species` (9), `Background` (16), `Subclass` (52),
+  `Feat` (75, with `.category`), `Language`, `Alignment`
+- `Ability`, `Skill` (with `.governing_ability`), `DamageType`, `Condition`
+  (with `.prevents_action()` / `.sets_speed_to_zero()`), `TaskDifficulty`
+  (with `.dc`), `LightLevel`
+- `ActionType` (the twelve 2024 actions), `CoverType` (with `.ac_bonus`),
+  `RestType`, `DeathSaveOutcome`, `UnarmedStrikeOption`, `WeaponCategory`,
+  `WeaponMastery`, `WeaponProperty`, `ArmorCategory`
+- `SpellSchool`, `SpellComponent`, `SpellRangeType`, `CastingTime`,
+  `AreaShape`, `SpellcasterType`, `ClassResource`
 
-**Dataclasses** (`sheets.py`):
-- `AbilityScoreSet` — six scores with `.get()`, `.modifier()`, `.to_dict()`, `.from_dict()`
-- `CharacterSheet` — full character representation including conditions, resistances,
-  immunities; `.is_alive`, `.can_act`, `.to_dict()`, `.from_dict()`
-- `CombatStateData` — combatant list + round/turn tracking
-- `AttackDetails` — weapon name, damage dice, damage type, attack ability, ranged flag
+**Dataclasses** (`sheets.py`, `character_state.py`):
+- `AbilityScoreSet` — six scores with `.get()`, `.set()`, `.modifier()`, serde
+- `CharacterSheet` — full 2024 character: origin (species/background/feats/
+  languages), multiclass `class_levels`, hit dice pools, death saves, temp HP,
+  exhaustion, spell slots, concentration, proficiencies/expertise, masteries,
+  inventory, currency; `.is_alive` / `.is_dying` / `.is_dead` / `.can_act` /
+  `.effective_speed` / `.d20_modifier`; serde via `_sheet_serde.py`
+- `CombatStateData` — combatants + round/turn tracking + per-combatant
+  `TurnState` (action economy and transient combat flags)
+- `AttackDetails` — weapon stats, properties, mastery, cover, off-hand and
+  unarmed options
+- `ClassLevelEntry`, `HitDicePool`, `DeathSaveState`, `SpellSlotState`,
+  `Currency`, `InventoryItem` — sheet sub-structures, all with serde
 
 ### Extending with a New Rule System
 
 1. Create `game_engine/rules/<system>/` with `__init__.py` and `engine.py`
-2. Subclass `RuleEngine` and implement all ten abstract methods
+2. Subclass `RuleEngine` and implement all abstract methods
 3. Register the engine in `game_engine/rules/__init__.py`
 4. Add system-specific classes to `CharacterClass` (or create a new enum subclass)
 5. Write tests in `game_engine/tests/test_<system>_engine.py`

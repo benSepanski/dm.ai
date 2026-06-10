@@ -19,15 +19,19 @@ from game_engine.interface import (
     Action,
     ActionResult,
     CheckResult,
+    DeathSaveResult,
     RuleEngine,
+    SaveResult,
     ValidationResult,
 )
 from game_engine.rules.dnd_5_5e._actions import (
+    _begin_turn_impl,
     _get_available_actions_impl,
     _resolve_action_impl,
 )
 from game_engine.rules.dnd_5_5e._checks import (
     _calc_prof_bonus,
+    _passive_score_impl,
     _roll_check_impl,
     _roll_initiative_impl,
 )
@@ -36,7 +40,14 @@ from game_engine.rules.dnd_5_5e._conditions import (
     _remove_condition_impl,
     _tick_condition_durations_impl,
 )
-from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl
+from game_engine.rules.dnd_5_5e._damage import (
+    _apply_damage_impl,
+    _apply_healing_impl,
+    _grant_temp_hp_impl,
+    concentration_save_dc,
+)
+from game_engine.rules.dnd_5_5e._death import _roll_death_save_impl, _stabilize_impl
+from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
 from game_engine.rules.dnd_5_5e._validation import _validate_character_impl
 from game_engine.types import (
     Ability,
@@ -45,6 +56,7 @@ from game_engine.types import (
     Condition,
     DamageType,
     Skill,
+    TurnState,
 )
 
 
@@ -120,8 +132,98 @@ class DnD55eEngine(RuleEngine):
         return _roll_check_impl(char, skill, dc, advantage, disadvantage)
 
     # ------------------------------------------------------------------
-    # Damage
+    # Saving throws & death saves
     # ------------------------------------------------------------------
+
+    def roll_saving_throw(
+        self,
+        char: CharacterSheet,
+        ability: Ability,
+        dc: int,
+        advantage: bool = False,
+        disadvantage: bool = False,
+    ) -> SaveResult:
+        """Roll a saving throw against *dc* (2024 rules).
+
+        Applies save proficiency, condition auto-failures (e.g. paralyzed
+        creatures auto-fail STR/DEX saves), restrained's disadvantage on
+        DEX saves, and exhaustion's flat d20 penalty.
+
+        Args:
+            char: Character sheet.
+            ability: The ability being saved with.
+            dc: Difficulty class.
+            advantage: Roll twice, take higher.
+            disadvantage: Roll twice, take lower.
+
+        Returns:
+            :class:`~game_engine.interface.SaveResult`.
+        """
+        return _roll_saving_throw_impl(char, ability, dc, advantage, disadvantage)
+
+    def roll_death_save(self, char: CharacterSheet) -> DeathSaveResult:
+        """Roll a death saving throw for a dying character.
+
+        Args:
+            char: Character sheet (must be at 0 HP, not stable, not dead).
+
+        Returns:
+            :class:`~game_engine.interface.DeathSaveResult`.
+
+        Raises:
+            ValueError: If the character is not dying.
+        """
+        return _roll_death_save_impl(char)
+
+    def stabilize(self, char: CharacterSheet) -> CharacterSheet:
+        """Stabilize a dying character (e.g. DC 10 Medicine check succeeded).
+
+        Args:
+            char: Character sheet. Modified in-place and returned.
+
+        Returns:
+            Updated character sheet.
+        """
+        return _stabilize_impl(char)
+
+    # ------------------------------------------------------------------
+    # Damage & healing
+    # ------------------------------------------------------------------
+
+    def apply_healing(self, target: CharacterSheet, amount: int) -> CharacterSheet:
+        """Restore hit points (capped at max; wakes a dying character).
+
+        Args:
+            target: Character sheet. Modified in-place and returned.
+            amount: Hit points to restore.
+
+        Returns:
+            Updated character sheet.
+        """
+        return _apply_healing_impl(target, amount)
+
+    def grant_temp_hp(self, target: CharacterSheet, amount: int) -> CharacterSheet:
+        """Grant temporary hit points (doesn't stack — larger pool wins).
+
+        Args:
+            target: Character sheet. Modified in-place and returned.
+            amount: Temporary hit points to grant.
+
+        Returns:
+            Updated character sheet.
+        """
+        return _grant_temp_hp_impl(target, amount)
+
+    def concentration_save_dc(self, damage: int) -> int:
+        """Return the CON save DC to keep concentration after taking damage.
+
+        Args:
+            damage: Damage dealt by the triggering event.
+
+        Returns:
+            ``max(10, damage // 2)``.
+        """
+        return concentration_save_dc(damage)
 
     def apply_damage(
         self,
@@ -232,6 +334,34 @@ class DnD55eEngine(RuleEngine):
             :class:`~game_engine.interface.ActionResult`.
         """
         return _resolve_action_impl(action, combat_state)
+
+    # ------------------------------------------------------------------
+    # Turn management & passive scores
+    # ------------------------------------------------------------------
+
+    def begin_turn(self, char: CharacterSheet, combat_state: CombatStateData) -> TurnState:
+        """Reset *char*'s action economy at the start of their turn.
+
+        Args:
+            char: Character sheet.
+            combat_state: Current combat state.
+
+        Returns:
+            The fresh :class:`~game_engine.types.TurnState`.
+        """
+        return _begin_turn_impl(char, combat_state)
+
+    def passive_score(self, char: CharacterSheet, skill: Skill) -> int:
+        """Return the passive score for *skill* (10 + check modifiers).
+
+        Args:
+            char: Character sheet.
+            skill: The skill (e.g. ``Skill.PERCEPTION``).
+
+        Returns:
+            Integer passive score.
+        """
+        return _passive_score_impl(char, skill)
 
     # ------------------------------------------------------------------
     # Character validation

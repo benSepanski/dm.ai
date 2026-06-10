@@ -1,15 +1,17 @@
+# NOTE: exceeds 400 LoC — single cohesive data module
 """
-D&D 5.5e class definitions.
+D&D 5.5e class definitions (2024 PHB chapter 3, plus Tasha's Artificer).
 
-Provides static data for all 13 classes available in the 2024 Player's
-Handbook (plus Artificer from Tasha's Cauldron of Everything).
+Static identity data for all 13 classes: hit die, saves, proficiencies,
+and skill choices. Per-level features live in
+:mod:`game_engine.rules.dnd_5_5e.data.class_features`.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from game_engine.types import Ability, CharacterClass, Skill
+from game_engine.types import Ability, ArmorCategory, CharacterClass, Skill, WeaponCategory
 
 
 @dataclass(frozen=True)
@@ -20,11 +22,15 @@ class ClassData:
     hit_die: int
     primary_abilities: list[Ability]
     saving_throw_proficiencies: list[Ability]
-    armor_proficiencies: list[str]
-    weapon_proficiencies: list[str]
+    armor_training: list[ArmorCategory]
+    weapon_category_training: list[WeaponCategory]
     skill_choices: list[Skill]
     num_skill_choices: int
     spellcasting: bool
+    # Qualified weapon training that a category can't express
+    # (e.g. "Martial weapons that have the Light property").
+    weapon_training_notes: list[str] = field(default_factory=list)
+    subclass_level: int = 3
 
 
 CLASSES: dict[CharacterClass, ClassData] = {
@@ -33,8 +39,8 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=8,
         primary_abilities=[Ability.INTELLIGENCE],
         saving_throw_proficiencies=[Ability.CONSTITUTION, Ability.INTELLIGENCE],
-        armor_proficiencies=["Light", "Medium", "Shields"],
-        weapon_proficiencies=["Simple weapons"],
+        armor_training=[ArmorCategory.LIGHT, ArmorCategory.MEDIUM, ArmorCategory.SHIELD],
+        weapon_category_training=[WeaponCategory.SIMPLE],
         skill_choices=[
             Skill.ARCANA,
             Skill.HISTORY,
@@ -52,8 +58,8 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=12,
         primary_abilities=[Ability.STRENGTH],
         saving_throw_proficiencies=[Ability.STRENGTH, Ability.CONSTITUTION],
-        armor_proficiencies=["Light", "Medium", "Shields"],
-        weapon_proficiencies=["Simple weapons", "Martial weapons"],
+        armor_training=[ArmorCategory.LIGHT, ArmorCategory.MEDIUM, ArmorCategory.SHIELD],
+        weapon_category_training=[WeaponCategory.SIMPLE, WeaponCategory.MARTIAL],
         skill_choices=[
             Skill.ANIMAL_HANDLING,
             Skill.ATHLETICS,
@@ -70,34 +76,9 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=8,
         primary_abilities=[Ability.CHARISMA],
         saving_throw_proficiencies=[Ability.DEXTERITY, Ability.CHARISMA],
-        armor_proficiencies=["Light"],
-        weapon_proficiencies=[
-            "Simple weapons",
-            "Hand crossbows",
-            "Longswords",
-            "Rapiers",
-            "Shortswords",
-        ],
-        skill_choices=[
-            Skill.ACROBATICS,
-            Skill.ANIMAL_HANDLING,
-            Skill.ARCANA,
-            Skill.ATHLETICS,
-            Skill.DECEPTION,
-            Skill.HISTORY,
-            Skill.INSIGHT,
-            Skill.INTIMIDATION,
-            Skill.INVESTIGATION,
-            Skill.MEDICINE,
-            Skill.NATURE,
-            Skill.PERCEPTION,
-            Skill.PERFORMANCE,
-            Skill.PERSUASION,
-            Skill.RELIGION,
-            Skill.SLEIGHT_OF_HAND,
-            Skill.STEALTH,
-            Skill.SURVIVAL,
-        ],
+        armor_training=[ArmorCategory.LIGHT],
+        weapon_category_training=[WeaponCategory.SIMPLE],
+        skill_choices=list(Skill),
         num_skill_choices=3,
         spellcasting=True,
     ),
@@ -106,8 +87,8 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=8,
         primary_abilities=[Ability.WISDOM],
         saving_throw_proficiencies=[Ability.WISDOM, Ability.CHARISMA],
-        armor_proficiencies=["Light", "Medium", "Shields"],
-        weapon_proficiencies=["Simple weapons"],
+        armor_training=[ArmorCategory.LIGHT, ArmorCategory.MEDIUM, ArmorCategory.SHIELD],
+        weapon_category_training=[WeaponCategory.SIMPLE],
         skill_choices=[
             Skill.HISTORY,
             Skill.INSIGHT,
@@ -123,19 +104,8 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=8,
         primary_abilities=[Ability.WISDOM],
         saving_throw_proficiencies=[Ability.INTELLIGENCE, Ability.WISDOM],
-        armor_proficiencies=["Light", "Medium", "Shields"],
-        weapon_proficiencies=[
-            "Clubs",
-            "Daggers",
-            "Darts",
-            "Javelins",
-            "Maces",
-            "Quarterstaffs",
-            "Scimitars",
-            "Sickles",
-            "Slings",
-            "Spears",
-        ],
+        armor_training=[ArmorCategory.LIGHT, ArmorCategory.SHIELD],
+        weapon_category_training=[WeaponCategory.SIMPLE],
         skill_choices=[
             Skill.ARCANA,
             Skill.ANIMAL_HANDLING,
@@ -154,8 +124,13 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=10,
         primary_abilities=[Ability.STRENGTH, Ability.DEXTERITY],
         saving_throw_proficiencies=[Ability.STRENGTH, Ability.CONSTITUTION],
-        armor_proficiencies=["Light", "Medium", "Heavy", "Shields"],
-        weapon_proficiencies=["Simple weapons", "Martial weapons"],
+        armor_training=[
+            ArmorCategory.LIGHT,
+            ArmorCategory.MEDIUM,
+            ArmorCategory.HEAVY,
+            ArmorCategory.SHIELD,
+        ],
+        weapon_category_training=[WeaponCategory.SIMPLE, WeaponCategory.MARTIAL],
         skill_choices=[
             Skill.ACROBATICS,
             Skill.ANIMAL_HANDLING,
@@ -164,6 +139,7 @@ CLASSES: dict[CharacterClass, ClassData] = {
             Skill.INSIGHT,
             Skill.INTIMIDATION,
             Skill.PERCEPTION,
+            Skill.PERSUASION,
             Skill.SURVIVAL,
         ],
         num_skill_choices=2,
@@ -174,8 +150,9 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=8,
         primary_abilities=[Ability.DEXTERITY, Ability.WISDOM],
         saving_throw_proficiencies=[Ability.STRENGTH, Ability.DEXTERITY],
-        armor_proficiencies=[],
-        weapon_proficiencies=["Simple weapons", "Shortswords"],
+        armor_training=[],
+        weapon_category_training=[WeaponCategory.SIMPLE],
+        weapon_training_notes=["Martial weapons that have the Light property"],
         skill_choices=[
             Skill.ACROBATICS,
             Skill.ATHLETICS,
@@ -192,8 +169,13 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=10,
         primary_abilities=[Ability.STRENGTH, Ability.CHARISMA],
         saving_throw_proficiencies=[Ability.WISDOM, Ability.CHARISMA],
-        armor_proficiencies=["Light", "Medium", "Heavy", "Shields"],
-        weapon_proficiencies=["Simple weapons", "Martial weapons"],
+        armor_training=[
+            ArmorCategory.LIGHT,
+            ArmorCategory.MEDIUM,
+            ArmorCategory.HEAVY,
+            ArmorCategory.SHIELD,
+        ],
+        weapon_category_training=[WeaponCategory.SIMPLE, WeaponCategory.MARTIAL],
         skill_choices=[
             Skill.ATHLETICS,
             Skill.INSIGHT,
@@ -210,8 +192,8 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=10,
         primary_abilities=[Ability.DEXTERITY, Ability.WISDOM],
         saving_throw_proficiencies=[Ability.STRENGTH, Ability.DEXTERITY],
-        armor_proficiencies=["Light", "Medium", "Shields"],
-        weapon_proficiencies=["Simple weapons", "Martial weapons"],
+        armor_training=[ArmorCategory.LIGHT, ArmorCategory.MEDIUM, ArmorCategory.SHIELD],
+        weapon_category_training=[WeaponCategory.SIMPLE, WeaponCategory.MARTIAL],
         skill_choices=[
             Skill.ANIMAL_HANDLING,
             Skill.ATHLETICS,
@@ -230,14 +212,9 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=8,
         primary_abilities=[Ability.DEXTERITY],
         saving_throw_proficiencies=[Ability.DEXTERITY, Ability.INTELLIGENCE],
-        armor_proficiencies=["Light"],
-        weapon_proficiencies=[
-            "Simple weapons",
-            "Hand crossbows",
-            "Longswords",
-            "Rapiers",
-            "Shortswords",
-        ],
+        armor_training=[ArmorCategory.LIGHT],
+        weapon_category_training=[WeaponCategory.SIMPLE],
+        weapon_training_notes=["Martial weapons that have the Finesse or Light property"],
         skill_choices=[
             Skill.ACROBATICS,
             Skill.ATHLETICS,
@@ -246,7 +223,6 @@ CLASSES: dict[CharacterClass, ClassData] = {
             Skill.INTIMIDATION,
             Skill.INVESTIGATION,
             Skill.PERCEPTION,
-            Skill.PERFORMANCE,
             Skill.PERSUASION,
             Skill.SLEIGHT_OF_HAND,
             Skill.STEALTH,
@@ -259,14 +235,8 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=6,
         primary_abilities=[Ability.CHARISMA],
         saving_throw_proficiencies=[Ability.CONSTITUTION, Ability.CHARISMA],
-        armor_proficiencies=[],
-        weapon_proficiencies=[
-            "Daggers",
-            "Darts",
-            "Slings",
-            "Quarterstaffs",
-            "Light crossbows",
-        ],
+        armor_training=[],
+        weapon_category_training=[WeaponCategory.SIMPLE],
         skill_choices=[
             Skill.ARCANA,
             Skill.DECEPTION,
@@ -283,8 +253,8 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=8,
         primary_abilities=[Ability.CHARISMA],
         saving_throw_proficiencies=[Ability.WISDOM, Ability.CHARISMA],
-        armor_proficiencies=["Light"],
-        weapon_proficiencies=["Simple weapons"],
+        armor_training=[ArmorCategory.LIGHT],
+        weapon_category_training=[WeaponCategory.SIMPLE],
         skill_choices=[
             Skill.ARCANA,
             Skill.DECEPTION,
@@ -302,20 +272,15 @@ CLASSES: dict[CharacterClass, ClassData] = {
         hit_die=6,
         primary_abilities=[Ability.INTELLIGENCE],
         saving_throw_proficiencies=[Ability.INTELLIGENCE, Ability.WISDOM],
-        armor_proficiencies=[],
-        weapon_proficiencies=[
-            "Daggers",
-            "Darts",
-            "Slings",
-            "Quarterstaffs",
-            "Light crossbows",
-        ],
+        armor_training=[],
+        weapon_category_training=[WeaponCategory.SIMPLE],
         skill_choices=[
             Skill.ARCANA,
             Skill.HISTORY,
             Skill.INSIGHT,
             Skill.INVESTIGATION,
             Skill.MEDICINE,
+            Skill.NATURE,
             Skill.RELIGION,
         ],
         num_skill_choices=2,

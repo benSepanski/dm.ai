@@ -8,7 +8,14 @@ from __future__ import annotations
 
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import CheckResult
-from game_engine.types import Ability, CharacterSheet, Skill
+from game_engine.types import Ability, CharacterSheet, Condition, Skill
+
+# Conditions that impose disadvantage on ability checks (2024 PHB).
+# Frightened technically requires line of sight to the fear source; the
+# engine has no positional model, so it is applied unconditionally.
+_CHECK_DISADVANTAGE_CONDITIONS: frozenset[Condition] = frozenset(
+    {Condition.POISONED, Condition.FRIGHTENED}
+)
 
 # ---------------------------------------------------------------------------
 # Skill → ability map (includes raw ability checks)
@@ -37,6 +44,25 @@ def _calc_prof_bonus(level: int) -> int:
     if not 1 <= level <= 20:
         raise ValueError(f"Level must be between 1 and 20, got {level}.")
     return 2 + (level - 1) // 4
+
+
+def _passive_score_impl(char: CharacterSheet, skill: Skill) -> int:
+    """Return the passive score for *skill*: 10 + all check modifiers.
+
+    Args:
+        char: Character sheet.
+        skill: The skill (e.g. ``Skill.PERCEPTION`` for Passive Perception).
+
+    Returns:
+        Integer passive score.
+    """
+    total = 10 + char.ability_scores.modifier(skill.governing_ability)
+    prof_bonus = _calc_prof_bonus(char.level)
+    if char.is_proficient(skill):
+        total += prof_bonus
+    if char.has_expertise(skill):
+        total += prof_bonus
+    return total + char.d20_modifier
 
 
 def _roll_initiative_impl(char: CharacterSheet) -> int:
@@ -105,6 +131,15 @@ def _roll_check_impl(
         proficiency_key = ability
     is_proficient = char.is_proficient(proficiency_key)
     total_mod = ability_mod + (prof_bonus if is_proficient else 0)
+    # Expertise doubles the proficiency bonus.
+    if isinstance(proficiency_key, Skill) and char.has_expertise(proficiency_key):
+        total_mod += prof_bonus
+    # Exhaustion: flat -2 per level on every d20 test (2024 rules).
+    total_mod += char.d20_modifier
+
+    # Poisoned/frightened impose disadvantage on ability checks.
+    if any(c in _CHECK_DISADVANTAGE_CONDITIONS for c in char.conditions):
+        disadvantage = True
 
     # Roll d20
     if advantage and not disadvantage:
