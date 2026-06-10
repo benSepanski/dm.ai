@@ -216,3 +216,27 @@ class AreaShape(str, Enum):
     EMANATION = "emanation"
     LINE = "line"
     SPHERE = "sphere"
+
+
+class CastingTime(str, Enum):
+    """Standard spell casting times."""
+
+    ACTION = "1 action"
+    BONUS_ACTION = "1 bonus action"
+    REACTION = "1 reaction"
+    ONE_MINUTE = "1 minute"
+    TEN_MINUTES = "10 minutes"
+    ONE_HOUR = "1 hour"
+    EIGHT_HOURS = "8 hours"
+    TWELVE_HOURS = "12 hours"
+    TWENTY_FOUR_HOURS = "24 hours"
+
+
+class SpellRangeType(str, Enum):
+    """How a spell's range is expressed."""
+
+    SELF = "self"
+    TOUCH = "touch"
+    RANGED = "ranged"  # numeric range in feet
+    SIGHT = "sight"
+    UNLIMITED = "unlimited"
