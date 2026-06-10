@@ -106,21 +106,42 @@ cd dm-ui && npx tsc --noEmit && npm run lint
 
 ## Key Types (game-engine)
 
-### Enums (`game_engine.types.enums`)
-- `Ability`, `Skill`, `CharacterClass`, `CharacterType`
-- `DamageType`, `Condition`, `ActionType`
-- `SpellSchool`, `CreatureSize`, `CreatureType`
-- `ArmorCategory`, `WeaponProperty`
-- `LocationType`, `ProposalType`, `ProposalStatus`, `ChatRole`
+See `docs/phb-parity-spec.md` for the PHB 2024 feature matrix this engine
+implements.
+
+### Enums (`game_engine.types.enums` — package)
+- Character: `Ability`, `Skill`, `CharacterClass`, `Subclass`, `Species`,
+  `Background`, `Feat`, `FeatCategory`, `Language`, `Alignment`,
+  `CharacterType`, `ClassResource`, `SpellcasterType`
+- Combat: `ActionType` (2024 action list), `DamageType`, `Condition`,
+  `CoverType`, `RestType`, `DeathSaveOutcome`, `UnarmedStrikeOption`,
+  `WeaponCategory`, `WeaponMastery`, `WeaponProperty`, `ArmorCategory`
+- Magic: `SpellSchool`, `SpellComponent`, `SpellRangeType`, `CastingTime`,
+  `AreaShape`
+- World/app: `CreatureSize`, `CreatureType`, `TaskDifficulty`, `LightLevel`,
+  `LocationType`, `ProposalType`, `ProposalStatus`, `ChatRole`
 
 ### Value Types (`game_engine.types.values`)
 - `DiceNotation` — validated dice string (e.g. `DiceNotation("2d8+4")`)
 
-### Data Classes (`game_engine.types.sheets`)
-- `CharacterSheet`, `AbilityScoreSet`, `CombatStateData`, `AttackDetails`
+### Data Classes (`game_engine.types`)
+- `CharacterSheet`, `AbilityScoreSet`, `CombatStateData`, `TurnState`,
+  `AttackDetails`
+- Sheet sub-structures: `ClassLevelEntry`, `HitDicePool`, `DeathSaveState`,
+  `SpellSlotState`, `Currency`, `InventoryItem`
 
-### Data Definitions (`game_engine.rules.dnd_5_5e`)
-- `ClassData`, `SpellData`, `MonsterData`, `WeaponData`, `ArmorData`
+### Rule Services (`game_engine.rules.dnd_5_5e`)
+- `DnD55eEngine` (checks, saves, attacks, actions, damage, death, conditions)
+- `cast_spell` / `spellcasting` (slots, upcasting, concentration)
+- `build_character`, `level_up`, `can_multiclass`, `short_rest` / `long_rest`
+- `exploration` (encumbrance, falling, travel, light)
+
+### Data Registries (`game_engine.rules.dnd_5_5e.data` — SRD 5.2 content)
+- `ClassData`, `ClassProgression`/`ClassFeatureData`, `SpellData`,
+  `MonsterData`, `WeaponData`, `ArmorData`, `GearData`/`ToolData`/`PackData`,
+  `SpeciesData`, `BackgroundData`, `FeatData`
+- Lookups: `get_spell`, `get_weapon`, `get_armor`, `get_progression`,
+  `get_species`, `get_background`, `get_feat`
 
 ## AI Layer (dm-api)
 
