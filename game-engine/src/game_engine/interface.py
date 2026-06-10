@@ -19,6 +19,7 @@ from game_engine.types import (
     CombatStateData,
     Condition,
     DamageType,
+    DeathSaveOutcome,
     Skill,
 )
 
@@ -40,6 +41,51 @@ class CheckResult:
     total: int
     dc: int
     margin: int
+
+
+@dataclass
+class SaveResult:
+    """Result of a saving throw.
+
+    Attributes:
+        success: Whether the save met or exceeded the DC.
+        roll: The raw d20 roll (0 when the save auto-failed).
+        total: The final total (roll + modifiers).
+        dc: The difficulty class.
+        margin: total - dc.
+        auto_failed: True when a condition forced automatic failure
+            (e.g. paralyzed creatures auto-fail STR/DEX saves).
+    """
+
+    success: bool
+    roll: int
+    total: int
+    dc: int
+    margin: int
+    auto_failed: bool = False
+
+
+@dataclass
+class DeathSaveResult:
+    """Result of a single death saving throw.
+
+    Attributes:
+        outcome: The categorical outcome of the roll.
+        roll: The raw d20 roll.
+        successes: Accumulated successes after this roll.
+        failures: Accumulated failures after this roll.
+        is_stable: Whether the character is now stable.
+        is_dead: Whether the character has died.
+        regained_hp: True on a natural 20 (regain 1 HP and wake up).
+    """
+
+    outcome: DeathSaveOutcome
+    roll: int
+    successes: int
+    failures: int
+    is_stable: bool
+    is_dead: bool
+    regained_hp: bool
 
 
 @dataclass
@@ -121,6 +167,44 @@ class RuleEngine(ABC):
 
         Returns:
             CheckResult with roll details and success flag.
+        """
+
+    @abstractmethod
+    def roll_saving_throw(
+        self,
+        char: CharacterSheet,
+        ability: Ability,
+        dc: int,
+        advantage: bool = False,
+        disadvantage: bool = False,
+    ) -> SaveResult:
+        """Roll a saving throw against a DC.
+
+        Args:
+            char: Character sheet.
+            ability: The ability being saved with.
+            dc: Difficulty class to meet or exceed.
+            advantage: Roll two dice and take the higher.
+            disadvantage: Roll two dice and take the lower.
+
+        Returns:
+            SaveResult with roll details, success flag, and auto-fail flag.
+        """
+
+    @abstractmethod
+    def apply_healing(
+        self,
+        target: CharacterSheet,
+        amount: int,
+    ) -> CharacterSheet:
+        """Restore hit points (capped at max; wakes a dying character).
+
+        Args:
+            target: Character sheet (modified in place and returned).
+            amount: Hit points to restore.
+
+        Returns:
+            Updated character sheet.
         """
 
     @abstractmethod

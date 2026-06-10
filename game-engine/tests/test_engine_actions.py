@@ -16,6 +16,7 @@ from game_engine.types import (
     CharacterSheet,
     CombatStateData,
     DamageType,
+    DiceNotation,
 )
 
 
@@ -44,7 +45,7 @@ def _attack_action(actor_id: str, target_id: str) -> Action:
         action_type=ActionType.ATTACK,
         actor_id=actor_id,
         target_id=target_id,
-        details=AttackDetails(damage_dice="1d6", damage_type=DamageType.SLASHING),
+        details=AttackDetails(damage_dice=DiceNotation("1d6"), damage_type=DamageType.SLASHING),
     )
 
 
@@ -64,7 +65,7 @@ class TestNatural20CriticalHit:
     def test_natural_20_always_hits(self, engine: DnD55eEngine, combat_state: CombatStateData):
         action = _attack_action("attacker", "defender")
         # Force roll_dice to return 20 (natural 20 — always hits regardless of AC).
-        with patch("game_engine.rules.dnd_5_5e._actions.roll_dice", return_value=(20, [20])):
+        with patch("game_engine.rules.dnd_5_5e._attacks.roll_dice", return_value=(20, [20])):
             result = engine.resolve_action(action, combat_state)
         assert result.success is True
         assert result.damage > 0
@@ -74,10 +75,10 @@ class TestNatural20CriticalHit:
         self, engine: DnD55eEngine, combat_state: CombatStateData
     ):
         action = _attack_action("attacker", "defender")
-        with patch("game_engine.rules.dnd_5_5e._actions.roll_dice", return_value=(20, [20])):
+        with patch("game_engine.rules.dnd_5_5e._attacks.roll_dice", return_value=(20, [20])):
             # dice() is called twice on critical — mock it to return fixed values
             with patch(
-                "game_engine.rules.dnd_5_5e._actions.dice_roll",
+                "game_engine.rules.dnd_5_5e._attacks.dice_roll",
                 side_effect=[(3, [3]), (4, [4])],
             ):
                 result = engine.resolve_action(action, combat_state)
@@ -94,7 +95,7 @@ class TestNatural1AutomaticMiss:
         state = CombatStateData(combatants=[attacker, defender])
         action = _attack_action("attacker", "defender")
 
-        with patch("game_engine.rules.dnd_5_5e._actions.roll_dice", return_value=(1, [1])):
+        with patch("game_engine.rules.dnd_5_5e._attacks.roll_dice", return_value=(1, [1])):
             result = engine.resolve_action(action, state)
 
         assert result.success is False
@@ -105,14 +106,14 @@ class TestNormalHitAndMiss:
     def test_hits_when_total_beats_ac(self, engine: DnD55eEngine, combat_state: CombatStateData):
         # defender AC=15; roll 14 + prof(2) + str_mod(0) = 16 → hit
         action = _attack_action("attacker", "defender")
-        with patch("game_engine.rules.dnd_5_5e._actions.roll_dice", return_value=(14, [14])):
+        with patch("game_engine.rules.dnd_5_5e._attacks.roll_dice", return_value=(14, [14])):
             result = engine.resolve_action(action, combat_state)
         assert result.success is True
 
     def test_misses_when_total_below_ac(self, engine: DnD55eEngine, combat_state: CombatStateData):
         # defender AC=15; roll 5 + prof(2) + str_mod(0) = 7 → miss
         action = _attack_action("attacker", "defender")
-        with patch("game_engine.rules.dnd_5_5e._actions.roll_dice", return_value=(5, [5])):
+        with patch("game_engine.rules.dnd_5_5e._attacks.roll_dice", return_value=(5, [5])):
             result = engine.resolve_action(action, combat_state)
         assert result.success is False
 
@@ -124,7 +125,7 @@ class TestNormalHitAndMiss:
         assert defender is not None
         initial_hp = defender.hp_current
 
-        with patch("game_engine.rules.dnd_5_5e._actions.roll_dice", return_value=(14, [14])):
+        with patch("game_engine.rules.dnd_5_5e._attacks.roll_dice", return_value=(14, [14])):
             result = engine.resolve_action(action, combat_state)
 
         assert result.success is True
@@ -136,7 +137,7 @@ class TestNormalHitAndMiss:
         assert defender is not None
         initial_hp = defender.hp_current
 
-        with patch("game_engine.rules.dnd_5_5e._actions.roll_dice", return_value=(5, [5])):
+        with patch("game_engine.rules.dnd_5_5e._attacks.roll_dice", return_value=(5, [5])):
             result = engine.resolve_action(action, combat_state)
 
         assert result.success is False

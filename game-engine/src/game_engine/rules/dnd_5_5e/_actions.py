@@ -1,31 +1,28 @@
 """
-D&D 5.5e action availability and resolution logic.
+D&D 5.5e action availability, action economy, and non-attack resolution.
+
+Attack resolution lives in :mod:`._attacks`.
 
 Internal module — import via :class:`DnD55eEngine`.
 """
 
 from __future__ import annotations
 
-import logging
+from typing import Any
 
-from game_engine.core.dice import roll as dice_roll
-from game_engine.core.dice import roll_dice
 from game_engine.interface import Action, ActionResult
-from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
-from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl
+from game_engine.rules.dnd_5_5e._attacks import _resolve_attack
+from game_engine.rules.dnd_5_5e._checks import _roll_check_impl
 from game_engine.types import (
     ActionType,
-    AttackDetails,
     CharacterSheet,
     CombatStateData,
+    Skill,
+    TurnState,
 )
 
-logger = logging.getLogger(__name__)
-
-# All basic combat actions available to any character this turn (2024 PHB).
-# ActionType.MAGIC availability depends on the character knowing spells with
-# remaining slots; the spellcasting module owns that check.
-_ALL_BASIC_ACTIONS: list[ActionType] = [
+# Actions every conscious creature can always take (2024 PHB).
+_ALWAYS_AVAILABLE: list[ActionType] = [
     ActionType.ATTACK,
     ActionType.DASH,
     ActionType.DISENGAGE,
@@ -39,7 +36,8 @@ _ALL_BASIC_ACTIONS: list[ActionType] = [
     ActionType.UTILIZE,
 ]
 
-_DEFAULT_ATTACK = AttackDetails()
+# DC for the Hide action's Dexterity (Stealth) check (2024 PHB).
+_HIDE_DC = 15
 
 
 def _get_available_actions_impl(
@@ -48,14 +46,13 @@ def _get_available_actions_impl(
 ) -> list[Action]:
     """Return the list of actions the character may legally take.
 
-    Actions are filtered by the character's current conditions. Returned
-    ``Action`` objects have ``target_id=None``; the caller must supply a
-    concrete target when submitting the action for resolution.
+    The Magic action is included only for characters with spells known or
+    prepared. Returned ``Action`` objects have ``target_id=None``; the
+    caller supplies a concrete target on submission.
 
     Args:
         char: Character sheet.
-        combat_state: Current combat state (passed for interface symmetry;
-            target enumeration is handled at the API layer).
+        combat_state: Current combat state.
 
     Returns:
         List of :class:`~game_engine.interface.Action` objects.
@@ -63,20 +60,52 @@ def _get_available_actions_impl(
     if not char.can_act:
         return []
 
+    available = list(_ALWAYS_AVAILABLE)
+    if char.prepared_spells or char.known_spells:
+        available.append(ActionType.MAGIC)
+
     return [
         Action(action_type=action_type, actor_id=char.id, target_id=None)
-        for action_type in _ALL_BASIC_ACTIONS
+        for action_type in available
     ]
+
+
+def _begin_turn_impl(char: CharacterSheet, combat_state: CombatStateData) -> TurnState:
+    """Reset *char*'s action economy at the start of their turn."""
+    return combat_state.reset_turn(char.id)
+
+
+def _simple_result(
+    action: Action, success: bool, flavor: str, extra: dict[str, Any] | None = None
+) -> ActionResult:
+    log: dict[str, Any] = {
+        "actor_id": action.actor_id,
+        "action_type": action.action_type.value,
+        "target_id": action.target_id,
+        "success": success,
+    }
+    if extra:
+        log.update(extra)
+    return ActionResult(
+        success=success,
+        damage=0,
+        damage_type=None,
+        conditions_applied=[],
+        flavor_text=flavor,
+        log_entry=log,
+    )
 
 
 def _resolve_action_impl(
     action: Action,
     combat_state: CombatStateData,
 ) -> ActionResult:
-    """Resolve *action* and return the outcome.
+    """Resolve *action*, enforcing the action/bonus-action economy.
 
-    Currently handles the **Attack** action with a full to-hit and damage
-    roll.  Other action types are logged as successful with 0 damage.
+    An off-hand attack (``details.is_offhand``) consumes the bonus action;
+    every other action type consumes the action. The Magic action is
+    validated and resolved by the spellcasting module — here it only
+    consumes the action slot.
 
     Args:
         action: The action to resolve.
@@ -85,138 +114,88 @@ def _resolve_action_impl(
     Returns:
         :class:`~game_engine.interface.ActionResult`.
     """
-    if action.action_type == ActionType.ATTACK:
-        return _resolve_attack(action, combat_state)
-
-    # Generic non-attack action — simply succeeds with no damage.
-    return ActionResult(
-        success=True,
-        damage=0,
-        damage_type=None,
-        conditions_applied=[],
-        flavor_text=f"{action.actor_id} uses {action.action_type.value}.",
-        log_entry={
-            "actor_id": action.actor_id,
-            "action_type": action.action_type.value,
-            "target_id": action.target_id,
-        },
-    )
-
-
-def _resolve_attack(
-    action: Action,
-    combat_state: CombatStateData,
-) -> ActionResult:
-    """Resolve an Attack action."""
     actor = combat_state.get_combatant(action.actor_id)
-    target = combat_state.get_combatant(action.target_id) if action.target_id else None
+    if actor is not None and not actor.can_act:
+        return _simple_result(action, False, f"{actor.name} can't act.", {"error": "cannot_act"})
 
-    if actor is None:
-        logger.warning(
-            "actor %s not found in combat state; using level 1 defaults", action.actor_id
-        )
-        actor_name = action.actor_id
-        actor_level = 1
-        actor_ability_mod = 0
-    else:
-        actor_name = actor.name
-        actor_level = actor.level
-        actor_ability_mod = actor.ability_scores.modifier(
-            (action.details or _DEFAULT_ATTACK).attack_ability
-        )
-
-    if target is None:
-        return ActionResult(
-            success=False,
-            damage=0,
-            damage_type=None,
-            conditions_applied=[],
-            flavor_text="No target found.",
-            log_entry={
-                "actor_id": action.actor_id,
-                "action_type": action.action_type.value,
-                "target_id": action.target_id,
-                "error": "target_not_found",
-            },
-        )
-
-    target_ac = target.ac
-
-    details = action.details or _DEFAULT_ATTACK
-    damage_dice = details.damage_dice
-    damage_type = details.damage_type
-
-    prof_bonus = _calc_prof_bonus(actor_level)
-
-    # Roll to hit
-    attack_roll_raw, _ = roll_dice(1, 20)
-    attack_total = attack_roll_raw + actor_ability_mod + prof_bonus
-
-    # Natural 1 always misses; natural 20 always hits (D&D 5e core rules).
-    hit = attack_roll_raw == 20 or (attack_roll_raw != 1 and attack_total >= target_ac)
-    critical = attack_roll_raw == 20
-    target_name = target.name
-
-    if not hit:
-        return ActionResult(
-            success=False,
-            damage=0,
-            damage_type=damage_type,
-            conditions_applied=[],
-            flavor_text=(
-                f"{actor_name} misses {target_name}! "
-                f"(rolled {attack_roll_raw} + {actor_ability_mod + prof_bonus} "
-                f"= {attack_total} vs AC {target_ac})"
-            ),
-            log_entry={
-                "actor_id": action.actor_id,
-                "action_type": action.action_type.value,
-                "target_id": action.target_id,
-                "attack_roll": attack_roll_raw,
-                "attack_total": attack_total,
-                "target_ac": target_ac,
-                "hit": False,
-            },
-        )
-
-    # Roll damage
-    damage_mod = actor_ability_mod
-    if critical:
-        dmg1, _ = dice_roll(damage_dice)
-        dmg2, _ = dice_roll(damage_dice)
-        total_damage = max(0, dmg1 + dmg2 + damage_mod)
-    else:
-        raw_dmg, _ = dice_roll(damage_dice)
-        total_damage = max(0, raw_dmg + damage_mod)
-
-    # Apply damage to target in-place
-    _apply_damage_impl(target, total_damage, damage_type)
-
-    flavor = (
-        f"{'CRITICAL HIT! ' if critical else ''}"
-        f"{actor_name} hits {target_name} for {total_damage} "
-        f"{damage_type.value} damage! "
-        f"(roll {attack_roll_raw} + {actor_ability_mod + prof_bonus} "
-        f"= {attack_total} vs AC {target_ac})"
+    ts = combat_state.turn_state_for(action.actor_id)
+    uses_bonus_action = (
+        action.action_type is ActionType.ATTACK
+        and action.details is not None
+        and action.details.is_offhand
     )
+    if uses_bonus_action:
+        if ts.bonus_action_used:
+            return _simple_result(
+                action, False, "Bonus action already used.", {"error": "bonus_action_used"}
+            )
+        ts.bonus_action_used = True
+    else:
+        if ts.action_used:
+            return _simple_result(
+                action, False, "Action already used this turn.", {"error": "action_used"}
+            )
+        ts.action_used = True
 
-    return ActionResult(
-        success=True,
-        damage=total_damage,
-        damage_type=damage_type,
-        conditions_applied=[],
-        flavor_text=flavor,
-        log_entry={
-            "actor_id": action.actor_id,
-            "action_type": action.action_type.value,
-            "target_id": action.target_id,
-            "attack_roll": attack_roll_raw,
-            "attack_total": attack_total,
-            "target_ac": target_ac,
-            "hit": True,
-            "critical": critical,
-            "damage": total_damage,
-            "damage_type": damage_type.value,
-            "target_hp_remaining": target.hp_current,
-        },
-    )
+    if action.action_type is ActionType.ATTACK:
+        return _resolve_attack(action, combat_state)
+    return _resolve_non_attack(action, actor, combat_state, ts)
+
+
+def _resolve_non_attack(
+    action: Action,
+    actor: CharacterSheet | None,
+    combat_state: CombatStateData,
+    ts: TurnState,
+) -> ActionResult:
+    """Resolve the non-attack 2024 actions."""
+    name = actor.name if actor else action.actor_id
+
+    if action.action_type is ActionType.DASH:
+        ts.dashing = True
+        speed = actor.effective_speed if actor else 30
+        return _simple_result(
+            action, True, f"{name} dashes (+{speed} ft of movement).", {"extra_movement": speed}
+        )
+    if action.action_type is ActionType.DISENGAGE:
+        ts.disengaging = True
+        return _simple_result(
+            action, True, f"{name} disengages; their movement provokes no opportunity attacks."
+        )
+    if action.action_type is ActionType.DODGE:
+        ts.dodging = True
+        return _simple_result(
+            action,
+            True,
+            f"{name} dodges; attacks against them have disadvantage until their next turn.",
+        )
+    if action.action_type is ActionType.HELP:
+        if action.target_id:
+            combat_state.turn_state_for(action.target_id).helped = True
+        return _simple_result(
+            action, True, f"{name} helps an ally, granting advantage on their next roll."
+        )
+    if action.action_type is ActionType.HIDE and actor is not None:
+        check = _roll_check_impl(actor, Skill.STEALTH, _HIDE_DC)
+        ts.hidden = check.success
+        outcome = "hides successfully" if check.success else "fails to hide"
+        return _simple_result(
+            action,
+            check.success,
+            f"{name} {outcome} (Stealth {check.total} vs DC {_HIDE_DC}).",
+            {"stealth_total": check.total, "dc": _HIDE_DC},
+        )
+
+    # Influence / Magic / Ready / Search / Study / Utilize / Hide-without-actor:
+    # generic success; detailed resolution happens at the orchestration layer
+    # (Influence uses a CHA check against the monster's Influence DC; Magic is
+    # resolved by the spellcasting module).
+    return _simple_result(action, True, f"{name} uses {action.action_type.value}.")
+
+
+def provokes_opportunity_attack(mover_id: str, combat_state: CombatStateData) -> bool:
+    """True when a creature leaving reach would provoke an opportunity attack.
+
+    Disengaging suppresses opportunity attacks for the rest of the turn.
+    """
+    return not combat_state.turn_state_for(mover_id).disengaging

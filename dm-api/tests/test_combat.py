@@ -192,8 +192,8 @@ async def test_submit_combat_action_no_combatants(client, world_id):
     log = data["combat_log"][0]
     assert log["actor_id"] == "char-001"
     assert log["action_type"] == ActionType.ATTACK.value
-    # Engine reports target not found (no combatants enrolled)
-    assert log["error"] == "target_not_found"
+    # Engine reports the actor missing first (no combatants enrolled)
+    assert log["error"] == "actor_not_found"
 
 
 @pytest.mark.asyncio

@@ -232,6 +232,30 @@ class CastingTime(str, Enum):
     TWENTY_FOUR_HOURS = "24 hours"
 
 
+class TaskDifficulty(str, Enum):
+    """Typical difficulty classes for d20 tests (2024 PHB chapter 1)."""
+
+    VERY_EASY = "very easy"
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+    VERY_HARD = "very hard"
+    NEARLY_IMPOSSIBLE = "nearly impossible"
+
+    @property
+    def dc(self) -> int:
+        """Return the typical DC for this difficulty."""
+        return _TASK_DIFFICULTY_DCS[self]
+
+
+class LightLevel(str, Enum):
+    """Illumination levels (2024 PHB chapter 1)."""
+
+    BRIGHT = "bright"
+    DIM = "dim"  # lightly obscured: disadvantage on sight-based Perception
+    DARKNESS = "darkness"  # heavily obscured: effectively blinded
+
+
 class SpellRangeType(str, Enum):
     """How a spell's range is expressed."""
 
@@ -240,3 +264,13 @@ class SpellRangeType(str, Enum):
     RANGED = "ranged"  # numeric range in feet
     SIGHT = "sight"
     UNLIMITED = "unlimited"
+
+
+_TASK_DIFFICULTY_DCS: dict[TaskDifficulty, int] = {
+    TaskDifficulty.VERY_EASY: 5,
+    TaskDifficulty.EASY: 10,
+    TaskDifficulty.MEDIUM: 15,
+    TaskDifficulty.HARD: 20,
+    TaskDifficulty.VERY_HARD: 25,
+    TaskDifficulty.NEARLY_IMPOSSIBLE: 30,
+}

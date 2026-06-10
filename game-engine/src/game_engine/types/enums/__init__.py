@@ -44,10 +44,12 @@ from game_engine.types.enums._core import (
     CreatureSize,
     CreatureType,
     DamageType,
+    LightLevel,
     Skill,
     SpellComponent,
     SpellRangeType,
     SpellSchool,
+    TaskDifficulty,
 )
 from game_engine.types.enums._feats import Feat, FeatCategory
 from game_engine.types.enums._subclasses import Subclass, subclasses_for
@@ -62,10 +64,12 @@ __all__ = [
     "CreatureSize",
     "CreatureType",
     "DamageType",
+    "LightLevel",
     "Skill",
     "SpellComponent",
     "SpellRangeType",
     "SpellSchool",
+    "TaskDifficulty",
     # _character
     "Alignment",
     "Background",
