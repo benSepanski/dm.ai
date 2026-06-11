@@ -207,9 +207,9 @@ The active backend is selected at runtime by `backends/factory.py` based on
 3. **Build system prompt** — calls `build_system_prompt(world_id, session_id)`.
 4. **Call backend** — calls `backend.complete()` with the orchestrator model (Sonnet
    by default).
-5. **Extract proposal** — scans the response for a `[PROPOSAL]...[/PROPOSAL]`
-   JSON block via `_extract_proposal()`.
-6. **Return** a typed `DMResponse(response, proposal, was_condensed, tokens_in,
+5. **Extract proposals** — scans the response for all `[PROPOSAL]...[/PROPOSAL]`
+   JSON blocks via `_extract_proposals()` (one block per new entity).
+6. **Return** a typed `DMResponse(response, proposals, was_condensed, tokens_in,
    tokens_out)` where `tokens_in/out` reflect the actual orchestrator API call.
 
 The session route (`POST /api/sessions/{id}/chat`) persists both the DM message
@@ -516,7 +516,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 mock_orch = MagicMock()
 mock_orch.handle_message = AsyncMock(return_value=DMResponse(
-    response="You find a chest.", proposal=None, was_condensed=False,
+    response="You find a chest.", proposals=[], was_condensed=False,
     tokens_in=100, tokens_out=50,
 ))
 with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):

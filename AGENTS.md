@@ -44,6 +44,22 @@ should reinforce the harness, not work around it.
 3. If the mistake affects existing code elsewhere, open a separate
    garbage-collection PR: narrow scope, mechanical fix, one-minute review.
 
+### Anthropic API alternating-turn rule (learned from SYSTEM-message bug)
+
+`CondensedContext.as_ai_messages()` must never produce two consecutive `"user"`
+messages — the Anthropic API rejects them with HTTP 400. The relevant mapping:
+
+| `ChatRole` | Anthropic API role |
+|---|---|
+| `ChatRole.DM` | `"user"` |
+| `ChatRole.SYSTEM` | `"user"` |
+| `ChatRole.AI` | `"assistant"` |
+
+Both `DM` and `SYSTEM` messages map to `"user"`. When merging a condensation
+synopsis into the first preserved message, check `role != ChatRole.AI` (not
+`role == ChatRole.DM`) so SYSTEM messages (e.g. combat-end summaries) are
+merged correctly instead of creating a forbidden consecutive-user-message pair.
+
 ### Serialization completeness rule (learned from `condition_durations` bug)
 
 When adding a new field to a dataclass that has `to_dict()` and `from_dict()`:
@@ -85,7 +101,13 @@ dm.ai/
 │   ├── pyproject.toml
 │   └── src/game_engine/
 │       ├── types/               — ALL enums + typed dataclasses (start here)
-│       │   ├── enums.py         —   Ability, Skill, DamageType, Condition, ActionType, …
+│       │   ├── enums/           —   Ability, Skill, DamageType, Condition, ActionType, …
+│       │   │   ├── _core.py     —     abilities, skills, damage types, conditions, magic
+│       │   │   ├── _character.py—     classes, species, backgrounds, languages, resources
+│       │   │   ├── _combat.py   —     action types, cover, rests, weapon categories
+│       │   │   ├── _subclasses.py—    all 52 subclasses
+│       │   │   ├── _feats.py    —     all 2024 feats
+│       │   │   └── _app.py      —     locations, proposals, chat roles
 │       │   ├── sheets.py        —   CharacterSheet, AbilityScoreSet, CombatStateData, …
 │       │   └── values.py        —   DiceNotation (validated value type)
 │       ├── interface.py         — RuleEngine ABC
@@ -145,7 +167,7 @@ if sheet.char_class == CharacterClass.FIGHTER:
 
 All game concepts with a fixed set of values MUST be `str, Enum` subclasses. This
 enables type-checking, IDE autocomplete, and prevents silent typo bugs. Enum types
-already defined in `game_engine/types/enums.py`:
+already defined in `game_engine/types/enums/`:
 `CharacterClass`, `Ability`, `Skill`, `DamageType`, `Condition`, `ActionType`,
 `CharacterType`, `LocationType`, `ProposalType`, `ProposalStatus`, `ChatRole`.
 
@@ -246,7 +268,7 @@ ai/
 1. Create `game_engine/rules/<system_name>/` with `__init__.py` and `engine.py`
 2. Subclass `game_engine.interface.RuleEngine` and implement every abstract method
 3. Register the engine in `game_engine/rules/__init__.py`
-4. Add system-specific enum values to `CharacterClass` in `game_engine/types/enums.py`
+4. Add system-specific enum values to `CharacterClass` in `game_engine/types/enums/`
    (or create a separate enum that extends it)
 5. Write tests in `game_engine/tests/test_<system_name>_engine.py`
 

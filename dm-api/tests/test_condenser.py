@@ -240,6 +240,53 @@ def _mk_msg(content: str, role: ChatRole) -> HistoryMessage:
     return HistoryMessage(anchor=_mk_anchor(role), content=content, token_count=10)
 
 
+def test_as_ai_messages_merges_synopsis_with_first_system_message() -> None:
+    """Synopsis + SYSTEM-role first-preserved must not produce two consecutive user turns.
+
+    SYSTEM messages (e.g. combat-end summaries written by end_combat) map to
+    the "user" role in the Anthropic API, exactly like DM messages. Without the
+    merge, emitting the synopsis as a standalone user turn followed immediately
+    by the SYSTEM message (also user) violates the alternating-turn contract and
+    causes an HTTP 400 from the backend.
+
+    Regression test for the bug where the merge condition checked
+    ``role == ChatRole.DM`` rather than ``role != ChatRole.AI``.
+    """
+    first_anchor = _mk_anchor(ChatRole.DM)
+    last_anchor = _mk_anchor(ChatRole.AI)
+
+    preserved = [
+        _mk_msg("[Combat ended: 2 rounds, all enemies defeated]", ChatRole.SYSTEM),
+        _mk_msg("What do I do next?", ChatRole.DM),
+        _mk_msg("The dust settles around you.", ChatRole.AI),
+    ]
+
+    ctx = CondensedContext(
+        synopsis="Party fought goblins.",
+        key_facts=["Lyra is wounded"],
+        open_threads=[],
+        condensed_span=(first_anchor, last_anchor),
+        preserved=preserved,
+        tokens_in=400,
+        tokens_out=80,
+    )
+
+    messages = ctx.as_ai_messages()
+
+    # Alternating invariant must hold — no two consecutive user messages.
+    roles = [m.role for m in messages]
+    for i in range(len(roles) - 1):
+        assert not (
+            roles[i] == "user" and roles[i + 1] == "user"
+        ), f"Consecutive user messages at indices {i} and {i + 1}: {roles}"
+
+    # The synopsis is merged into the SYSTEM message (both are "user"), so the
+    # first rendered message must contain both.
+    assert messages[0].role == "user"
+    assert "[CONDENSED SYNOPSIS]" in messages[0].content
+    assert "[Combat ended:" in messages[0].content
+
+
 def test_as_ai_messages_merges_synopsis_with_first_dm_message() -> None:
     """When synopsis is non-empty and first preserved message is a DM turn,
     the synopsis is merged into that message to avoid two consecutive user turns,
