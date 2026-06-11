@@ -103,10 +103,18 @@ class CondensedContext:
     def as_ai_messages(self) -> list[AIMessage]:
         """Render the condensed context into backend-ready AI messages.
 
-        The condensation artifact is injected as a single ``user`` message with
-        labelled sections; preserved tail messages follow in original order.
+        The condensation artifact is injected as a leading ``user`` message;
+        preserved tail messages follow in original order. Consecutive messages
+        that map to the same Anthropic role (``"user"`` or ``"assistant"``) are
+        merged by concatenation so the output always strictly alternates — a
+        hard requirement of the Anthropic API.
+
+        Both ``ChatRole.DM`` and ``ChatRole.SYSTEM`` map to ``"user"``; only
+        ``ChatRole.AI`` maps to ``"assistant"``. SYSTEM messages (e.g. combat
+        summaries appended by ``end_combat``) can therefore appear consecutive
+        with DM messages in the preserved tail, which is why merging must cover
+        the entire output, not just the synopsis-vs-first-message boundary.
         """
-        rendered: list[AIMessage] = []
         sections: list[str] = []
 
         if self.synopsis:
@@ -121,29 +129,32 @@ class CondensedContext:
 
         synopsis_content = "\n\n".join(sections) if sections else ""
 
-        # Build the preserved tail, merging synopsis into the first user message
-        # to avoid two consecutive "user" turns (violates the Anthropic API contract).
-        start_idx = 0
-        if synopsis_content and self.preserved and self.preserved[0].role == ChatRole.DM:
-            first_preserved = self.preserved[0]
-            rendered.append(
-                AIMessage(role="user", content=synopsis_content + "\n\n" + first_preserved.content)
-            )
-            start_idx = 1
-        elif synopsis_content:
-            rendered.append(AIMessage(role="user", content=synopsis_content))
-
-        for message in self.preserved[start_idx:]:
-            # SYSTEM messages are injected as user-role context (not possible via
-            # normal session_chat, but guarded explicitly for correctness).
+        # Build raw (role, content) pairs: synopsis first (if any), then preserved.
+        raw: list[tuple[Literal["user", "assistant"], str]] = []
+        if synopsis_content:
+            raw.append(("user", synopsis_content))
+        for message in self.preserved:
+            # SYSTEM messages are injected as user-role context; only AI turns
+            # become "assistant".
             msg_role: Literal["user", "assistant"] = (
                 "assistant" if message.role == ChatRole.AI else "user"
             )
-            rendered.append(AIMessage(role=msg_role, content=message.content))
+            raw.append((msg_role, message.content))
 
-        # The Anthropic API requires the first message to be a user turn.
-        # Guard against edge cases (e.g. a session whose first persisted message
-        # is an AI turn) so a bad history never causes a 400 from the backend.
+        # Merge consecutive same-role entries to satisfy the Anthropic API's
+        # strict alternating-turn contract.
+        rendered: list[AIMessage] = []
+        for role, content in raw:
+            if rendered and rendered[-1].role == role:
+                rendered[-1] = AIMessage(
+                    role=role, content=rendered[-1].content + "\n\n" + content
+                )
+            else:
+                rendered.append(AIMessage(role=role, content=content))
+
+        # Guard: the Anthropic API requires the first message to be a user turn.
+        # Covers the edge case where a session's first persisted message is an AI
+        # turn and there is no synopsis to prepend.
         if rendered and rendered[0].role == "assistant":
             rendered.insert(0, AIMessage(role="user", content="[Session start]"))
 
