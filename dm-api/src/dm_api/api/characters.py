@@ -8,6 +8,7 @@ from game_engine.types import RestType
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.api.auth import ClientRole, client_role, require_dm
 from dm_api.api.character_combat import (
     active_combats_with_character,
     write_through_character_update,
@@ -17,6 +18,7 @@ from dm_api.api.combat_utils import (
     broadcast_combat,
     character_to_sheet,
 )
+from dm_api.api.visibility import character_read_for
 from dm_api.db.models.character import (
     Character,
     CharacterCreate,
@@ -48,12 +50,13 @@ async def create_character(
 async def get_character(
     char_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    role: ClientRole = Depends(client_role),
 ) -> CharacterRead:
     result = await db.execute(select(Character).where(Character.id == char_id))
     character = result.scalar_one_or_none()
     if character is None:
         raise HTTPException(status_code=404, detail="Character not found")
-    return CharacterRead.model_validate(character)
+    return character_read_for(character, role)
 
 
 @router.patch("/{char_id}", response_model=CharacterRead)
@@ -61,6 +64,7 @@ async def update_character(
     char_id: uuid.UUID,
     payload: CharacterUpdate,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> CharacterRead:
     """Partially update a character.
 
@@ -100,6 +104,7 @@ async def rest_character(
     char_id: uuid.UUID,
     payload: RestRequest,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> RestRead:
     """Take a short or long rest, resolved by the rule engine (2024 PHB).
 
@@ -150,10 +155,11 @@ async def rest_character(
 async def list_world_characters(
     world_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    role: ClientRole = Depends(client_role),
 ) -> list[CharacterRead]:
     world_result = await db.execute(select(World).where(World.id == world_id))
     if world_result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="World not found")
     result = await db.execute(select(Character).where(Character.world_id == world_id))
     characters = result.scalars().all()
-    return [CharacterRead.model_validate(c) for c in characters]
+    return [character_read_for(c, role) for c in characters]

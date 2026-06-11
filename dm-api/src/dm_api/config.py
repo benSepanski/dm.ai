@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-key"
     frontend_url: str = "http://localhost:5173"
 
+    # Shared token that unlocks the DM role (X-DM-Token header / dm_token WS
+    # query param). Leave empty to auto-generate one per run — it is printed
+    # in the API startup logs.
+    dm_token: str = ""
+
     # AI provider: "anthropic" (uses ANTHROPIC_API_KEY) or "claude_cli" (uses installed claude CLI)
     ai_provider: Literal["anthropic", "claude_cli"] = "anthropic"
 

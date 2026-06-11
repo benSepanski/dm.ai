@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from dm_api.api import (
     ai,
+    auth,
     character_creation,
     characters,
     combat,
@@ -15,6 +16,7 @@ from dm_api.api import (
 )
 
 router = APIRouter()
+router.include_router(auth.router, prefix="/auth", tags=["auth"])
 router.include_router(worlds.router, prefix="/worlds", tags=["worlds"])
 router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
 router.include_router(

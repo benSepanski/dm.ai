@@ -221,7 +221,9 @@ before returning to the client.
 ### WebSocket and Real-time Events
 
 `/api/ws/sessions/{session_id}` maintains an in-memory connection registry
-(`dict[str, list[WebSocket]]`). It serves two roles:
+(`dict[str, list[SessionClient]]`, where `SessionClient` pairs the socket
+with the `ClientRole` resolved from the `dm_token` query parameter at
+connect time). It serves two roles:
 
 1. **Server-push broadcast** — HTTP endpoints call `broadcast_to_session()` after
    committing state changes so all connected clients receive live updates without
@@ -229,15 +231,17 @@ before returning to the client.
 2. **Peer relay** — messages sent by one client are forwarded to all other clients
    in the same session (e.g. cursor moves, battle-map drags).
 
-`broadcast_to_session(session_id, event)` in `dm_api.api.ws` is the sole
-server-push entry point. Dead connections are pruned silently on each call.
+`broadcast_to_session(session_id, event, dm_only=False)` in `dm_api.api.ws`
+is the sole server-push entry point. Dead connections are pruned silently on
+each call. Events sent with `dm_only=True` (all `proposal_ready` events) are
+delivered only to DM-role connections.
 
 **Server-push event types (implemented):**
 
 | Type | Emitted by | Payload |
 |---|---|---|
 | `chat_message` | `POST /sessions/{id}/chat` (DM echo immediately after persist, AI reply after the orchestrator returns) | `session_id`, `message_id`, `role` (`dm`\|`ai`), `content` |
-| `proposal_ready` | `POST /sessions/{id}/chat`, `POST /ai/proposals/{id}/accept`, `POST /ai/proposals/{id}/reject` | `session_id`, `proposal_id`, `proposal_type`, `status` |
+| `proposal_ready` (DM connections only) | `POST /sessions/{id}/chat`, `POST /ai/proposals/{id}/accept`, `POST /ai/proposals/{id}/reject` | `session_id`, `proposal_id`, `proposal_type`, `status` |
 | `combat_update` | `POST /sessions/{id}/combat`, `POST /sessions/{id}/combat/action`, `POST /sessions/{id}/combat/cast-spell`, `POST /sessions/{id}/combat/heal`, `POST /sessions/{id}/combat/stabilize`, `POST /sessions/{id}/combat/next-turn`, `PUT /sessions/{id}/combat/end`, `PATCH /characters/{id}` (write-through while enrolled in an active combat) | `session_id`, `combat` (full `CombatStateRead`) |
 | `entity_update` | `POST /ai/proposals/{id}/accept` (when a LOCATION or CHARACTER entity is created) | `session_id`, `entity_type`, `entity_id` |
 
