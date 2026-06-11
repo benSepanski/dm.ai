@@ -410,6 +410,25 @@ DMOrchestrator.handle_message(history=[HistoryMessage, ...])
 | `context_preserve_last_n` | `5` | Tail messages kept verbatim after condensing |
 | `log_level` | `"INFO"` | Python log level; set `LOG_LEVEL=DEBUG` for token-count detail |
 
+### Per-game configuration (`dm_api.db.models.game_config`)
+
+`Settings` provides deployment defaults; each game (world) can override them
+in its `GameConfig` row, edited by the DM via
+`GET/PUT /api/worlds/{world_id}/config` (UI: the "Game Settings" modal).
+Overridable per game: `ai_provider`, `orchestrator_model`,
+`generation_model`, `context_token_limit`, `context_preserve_last_n`, and
+the game's storage locations (`database_url`, `redis_url`).
+
+`resolve_game_config(row | None)` merges overrides with the defaults into a
+frozen `EffectiveGameConfig` (typed boundary — no optional fields), and the
+sessions API builds the `DMOrchestrator` from it on every chat/summary call,
+so changes apply immediately. AI backends are cached per provider, not
+per process, so two games may run different providers side by side. The
+storage URLs are resolved through the same seam; the API server itself still
+binds its engine to `Settings.database_url` at startup, so per-game storage
+URLs are honored by tooling/deployments that read the game's effective
+config rather than re-routing live requests.
+
 ### Injected context sections
 
 When the condenser fires, the orchestrator receives a lead `user` message

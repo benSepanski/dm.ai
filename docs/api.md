@@ -30,6 +30,34 @@ Base URL (local): `http://localhost:8000`
 
 **200** → `LocationRead[]`
 
+### GET /api/worlds/{world_id}/config — per-game configuration
+
+**200** → `GameConfigRead`: `world_id`, `overrides`, `effective` | **404**
+
+`overrides` holds the DM's stored choices (null = inherit the deployment
+default from `dm_api.config.Settings`); `effective` is the fully resolved
+configuration the engine will actually use. Fields:
+
+| Field | Purpose |
+|-------|---------|
+| `ai_provider` | `"anthropic"` or `"claude_cli"` backend for this game |
+| `orchestrator_model` | Model for full narrative turns |
+| `generation_model` | Fast model for summaries / condensation sub-agents |
+| `context_token_limit` | Token budget that triggers history condensation |
+| `context_preserve_last_n` | Tail messages kept verbatim when condensing |
+| `database_url` | Where this game's relational database lives |
+| `redis_url` | Where this game's Redis instance lives |
+
+### PUT /api/worlds/{world_id}/config — replace per-game overrides
+
+**Body:** any subset of the fields above; omitted/null fields clear the
+override (full-replace semantics, no merge).
+
+**200** → `GameConfigRead` | **404** | **422** (unknown provider, non-positive limits)
+
+Model and context overrides take effect on the next AI call for the game —
+no restart needed.
+
 ### DELETE /api/worlds/{world_id} — delete world + cascades
 
 **204** | **404**

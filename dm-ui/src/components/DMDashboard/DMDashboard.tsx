@@ -8,6 +8,7 @@ import CharacterCard from "../CharacterCard/CharacterCard";
 import CombatTracker from "../CombatTracker/CombatTracker";
 import LocationPanel from "../LocationPanel/LocationPanel";
 import BattleMap from "../BattleMap/BattleMap";
+import GameSettingsModal from "../GameSettings/GameSettingsModal";
 import ProposalCard from "../ProposalCard/ProposalCard";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -26,6 +27,7 @@ export default function DMDashboard() {
   const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
   const {
     sessionId,
+    worldId,
     messages,
     isLoading,
     addMessage,
@@ -42,6 +44,7 @@ export default function DMDashboard() {
   } = useGameStore();
   const [input, setInput] = useState("");
   const [showMap, setShowMap] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -247,6 +250,23 @@ export default function DMDashboard() {
             {showMap ? "Hide Map" : "Show Map"}
           </button>
           <div style={{ flex: 1 }} />
+          {worldId && (
+            <button
+              onClick={() => setShowSettings(true)}
+              title="Per-game settings: AI models, context budget, and storage locations"
+              style={{
+                padding: "4px 10px",
+                background: "#333",
+                color: "#fff",
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              Game Settings
+            </button>
+          )}
           <button
             onClick={copyInviteLink}
             title="Share this link with players on your network so they can watch the session"
@@ -427,6 +447,10 @@ export default function DMDashboard() {
           </section>
         )}
       </aside>
+
+      {showSettings && worldId && (
+        <GameSettingsModal worldId={worldId} onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 }
