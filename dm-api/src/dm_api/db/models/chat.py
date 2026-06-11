@@ -24,7 +24,12 @@ class ChatMessage(Base):
         nullable=False,
     )
     role: Mapped[ChatRole] = mapped_column(
-        sa.Enum(ChatRole, name="chat_role", create_type=False),
+        sa.Enum(
+            ChatRole,
+            name="chat_role",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
