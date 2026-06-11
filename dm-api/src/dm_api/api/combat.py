@@ -30,6 +30,7 @@ from game_engine.types import Ability, CharacterSheet, ChatRole, CombatStateData
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.api.auth import ClientRole, require_dm
 from dm_api.api.combat_utils import (
     advance_turn_index,
     broadcast_combat,
@@ -70,6 +71,7 @@ async def start_combat(
     session_id: uuid.UUID,
     payload: StartCombatRequest | None = Body(default=None),
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> CombatStateRead:
     """Start a new combat encounter for the session.
 
@@ -185,6 +187,7 @@ async def submit_combat_action(
     session_id: uuid.UUID,
     payload: CombatActionRequest,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> CombatStateRead:
     """Resolve a combat action through the DnD55eEngine.
 
@@ -267,6 +270,7 @@ async def submit_combat_action(
 async def next_turn(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> CombatStateRead:
     """Advance to the next combatant's turn, incrementing the round when the
     turn index wraps past the last combatant in the initiative order."""
@@ -348,6 +352,7 @@ async def next_turn(
 async def end_combat(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> CombatStateRead:
     result = await db.execute(
         select(CombatState).where(

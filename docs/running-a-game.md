@@ -12,6 +12,9 @@ campaign that persists between sessions. For endpoint details see
 ```bash
 cp .env.example .env
 # Set ANTHROPIC_API_KEY, or set AI_PROVIDER=claude_cli if you use Claude Code
+# Set DM_TOKEN to a secret of your choosing — it's the password that
+# unlocks DM controls in the UI. (Leave it unset and the API generates one
+# per run, printed in its startup logs.)
 docker-compose up
 ```
 
@@ -31,7 +34,10 @@ fan-out is in-memory.
 ### Create the party
 
 There is no character-builder UI yet; create PCs once via the Swagger UI
-(`POST /api/characters/`) or curl. You need a world first — easiest order:
+(`POST /api/characters/`) or curl. Creation is open (players can make their
+own PCs), but any *edit* (`PATCH`) is DM-only — add an
+`X-DM-Token: <your DM_TOKEN>` header to those requests. You need a world
+first — easiest order:
 
 1. Open the dashboard, create your world + first session (this also gives you
    the world id, visible in the invite URL or via `GET /api/worlds/...`).
@@ -73,10 +79,13 @@ Everything is live for every connected browser:
 - combat tracker updates (initiative, HP, turns),
 - battle-map token drags.
 
-> **Trust note:** there is no authentication and no player/DM role split —
-> every connected browser sees the full DM dashboard, including proposal
-> accept/reject buttons and combat controls. Fine for friends on your wifi;
-> agree on who presses what.
+> **Roles:** the browser that holds the DM token (entered on the new-session
+> form, or via **Unlock DM** in the top bar) is the DM; every other browser
+> is a player. Players get a read-only view — no chat input, no combat
+> controls, no proposal cards — and the server redacts DM-only data from
+> their API responses: NPC/monster stat blocks and roleplay secrets,
+> location lore/history, world lore, and all AI proposals. Don't share the
+> DM token with the table.
 
 ## 3. The play loop
 
@@ -91,12 +100,15 @@ Everything is live for every connected browser:
    rolls initiative through the real rules engine (ties break on DEX).
    Submit actions, advance turns, end combat; HP, conditions, and spell
    slots sync back to the character records. Combat resolution is
-   engine-driven (deterministic dice, 2024 rules), not AI-driven. Things to
+   engine-driven (deterministic dice, 2024 rules), not AI-driven. All combat
+   and rest endpoints below are DM-only — when calling them directly via
+   curl or the Swagger UI, include your `X-DM-Token` header. Things to
    know:
    - Characters created from accepted AI proposals have **no combat stats** —
-     give them hp/ac/stats (PATCH via the Swagger UI) *before* the fight, or
-     combat start will refuse them with a clear 422. A mid-combat PATCH
-     also works: it writes through to the live fight and survives combat end.
+     give them hp/ac/stats (PATCH via the Swagger UI, with your
+     `X-DM-Token` header) *before* the fight, or combat start will refuse
+     them with a clear 422. A mid-combat PATCH also works: it writes through
+     to the live fight and survives combat end.
    - Ending combat posts a system message into the chat with the mechanical
      outcome (rounds, final HP, who went down or died, death-save tallies),
      so the AI DM narrates the aftermath from what actually happened.
@@ -148,9 +160,9 @@ Everything is live for every connected browser:
   fine — the WebSocket reconnects and catches up automatically.
 - **Bookmark the session URL.** `/session/<id>` is the canonical handle;
   anyone with it can rejoin.
-- **End the session when you wrap** (`PUT /api/sessions/{id}/end`, or curl —
-  there's no UI button yet). This generates a 2-3 sentence AI summary and
-  stores it on the session.
+- **End the session when you wrap** with the **End Session** button in the
+  top bar (DM only). This generates a 2-3 sentence AI summary and stores it
+  on the session.
 - **Next week:** create a new session in the same world. The AI's system
   prompt automatically includes the world's setting, its lore, and the
   summaries of up to 10 previous ended sessions — so "remind the party what

@@ -55,7 +55,16 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from dm_api.config import settings
+
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+
+# DM-role authentication: the suite-wide DM token. The default ``client``
+# fixture sends it on every request (tests exercise the DM workflow unless
+# they opt into ``player_client``).
+TEST_DM_TOKEN = "test-dm-token"
+settings.dm_token = TEST_DM_TOKEN
+DM_HEADERS = {"X-DM-Token": TEST_DM_TOKEN}
 
 
 @pytest.fixture
@@ -88,6 +97,26 @@ async def db_session(test_engine):
 
 @pytest_asyncio.fixture(scope="function")
 async def client(test_engine):
+    from dm_api.db.session import get_db
+    from dm_api.main import app
+
+    session_factory = async_sessionmaker(test_engine, expire_on_commit=False)
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test", headers=DM_HEADERS
+    ) as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def player_client(test_engine):
+    """HTTP client WITHOUT the DM token — sees the API as a player does."""
     from dm_api.db.session import get_db
     from dm_api.main import app
 

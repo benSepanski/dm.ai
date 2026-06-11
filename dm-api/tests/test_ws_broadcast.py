@@ -2,7 +2,7 @@
 
 Server-push events are tested at two levels:
 1. Unit tests for ``broadcast_to_session`` — mock WebSockets verify the
-   delivery, dead-connection cleanup, and no-op behaviour.
+   delivery, dead-connection cleanup, role filtering, and no-op behaviour.
 2. Integration tests via Starlette's sync TestClient — connect a WS client,
    trigger an HTTP action that mutates state, verify the broadcast arrives.
 """
@@ -19,9 +19,22 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from starlette.testclient import TestClient
 
+from dm_api.api.auth import ClientRole
+from dm_api.config import settings
+
+DM_HEADERS = {"X-DM-Token": settings.dm_token}
+
 # ---------------------------------------------------------------------------
 # Unit tests — mock WebSocket objects
 # ---------------------------------------------------------------------------
+
+
+def _mock_client(role: ClientRole = ClientRole.DM, send_error: Exception | None = None):
+    from dm_api.api.ws import SessionClient
+
+    mock_ws = MagicMock()
+    mock_ws.send_text = AsyncMock(side_effect=send_error)
+    return SessionClient(socket=mock_ws, role=role)
 
 
 @pytest.mark.asyncio
@@ -42,14 +55,13 @@ async def test_broadcast_delivers_to_connected_client():
     from dm_api.api.ws import _connections, broadcast_to_session
 
     session_id = str(uuid.uuid4())
-    mock_ws = MagicMock()
-    mock_ws.send_text = AsyncMock()
+    client = _mock_client()
 
-    _connections[session_id].append(mock_ws)
+    _connections[session_id].append(client)
     try:
         await broadcast_to_session(session_id, {"type": "chat_message", "content": "hello"})
-        mock_ws.send_text.assert_called_once()
-        payload = json.loads(mock_ws.send_text.call_args[0][0])
+        client.socket.send_text.assert_called_once()
+        payload = json.loads(client.socket.send_text.call_args[0][0])
         assert payload["type"] == "chat_message"
         assert payload["content"] == "hello"
     finally:
@@ -62,14 +74,36 @@ async def test_broadcast_delivers_to_multiple_clients():
     from dm_api.api.ws import _connections, broadcast_to_session
 
     session_id = str(uuid.uuid4())
-    clients = [MagicMock() for _ in range(3)]
-    for c in clients:
-        c.send_text = AsyncMock()
-        _connections[session_id].append(c)
+    clients = [_mock_client() for _ in range(3)]
+    _connections[session_id].extend(clients)
     try:
         await broadcast_to_session(session_id, {"type": "combat_update"})
         for c in clients:
-            c.send_text.assert_called_once()
+            c.socket.send_text.assert_called_once()
+    finally:
+        _connections.pop(session_id, None)
+
+
+@pytest.mark.asyncio
+async def test_broadcast_dm_only_skips_player_clients():
+    """dm_only events are delivered to DM connections and withheld from players."""
+    from dm_api.api.ws import _connections, broadcast_to_session
+
+    session_id = str(uuid.uuid4())
+    dm = _mock_client(role=ClientRole.DM)
+    player = _mock_client(role=ClientRole.PLAYER)
+    _connections[session_id].extend([dm, player])
+    try:
+        await broadcast_to_session(
+            session_id, {"type": "proposal_ready", "proposal_id": "p1"}, dm_only=True
+        )
+        dm.socket.send_text.assert_called_once()
+        player.socket.send_text.assert_not_called()
+
+        # Non-dm_only events still reach everyone.
+        await broadcast_to_session(session_id, {"type": "chat_message", "content": "hi"})
+        assert dm.socket.send_text.call_count == 2
+        player.socket.send_text.assert_called_once()
     finally:
         _connections.pop(session_id, None)
 
@@ -80,20 +114,18 @@ async def test_broadcast_removes_dead_connections():
     from dm_api.api.ws import _connections, broadcast_to_session
 
     session_id = str(uuid.uuid4())
-    dead_ws = MagicMock()
-    dead_ws.send_text = AsyncMock(side_effect=RuntimeError("connection closed"))
-    alive_ws = MagicMock()
-    alive_ws.send_text = AsyncMock()
+    dead = _mock_client(send_error=RuntimeError("connection closed"))
+    alive = _mock_client()
 
-    _connections[session_id].extend([dead_ws, alive_ws])
+    _connections[session_id].extend([dead, alive])
     try:
         await broadcast_to_session(session_id, {"type": "test"})
         # The dead connection should have been pruned.
-        assert dead_ws not in _connections.get(session_id, [])
+        assert dead not in _connections.get(session_id, [])
         # The alive connection should still be there.
-        assert alive_ws in _connections[session_id]
+        assert alive in _connections[session_id]
         # The alive client received the event.
-        alive_ws.send_text.assert_called_once()
+        alive.socket.send_text.assert_called_once()
     finally:
         _connections.pop(session_id, None)
 
@@ -104,10 +136,9 @@ async def test_broadcast_cleans_up_empty_session_key():
     from dm_api.api.ws import _connections, broadcast_to_session
 
     session_id = str(uuid.uuid4())
-    only_ws = MagicMock()
-    only_ws.send_text = AsyncMock(side_effect=RuntimeError("gone"))
+    only = _mock_client(send_error=RuntimeError("gone"))
 
-    _connections[session_id].append(only_ws)
+    _connections[session_id].append(only)
     await broadcast_to_session(session_id, {"type": "test"})
     assert session_id not in _connections
 
@@ -119,17 +150,15 @@ async def test_broadcast_session_isolation():
 
     session_a = str(uuid.uuid4())
     session_b = str(uuid.uuid4())
-    client_a = MagicMock()
-    client_a.send_text = AsyncMock()
-    client_b = MagicMock()
-    client_b.send_text = AsyncMock()
+    client_a = _mock_client()
+    client_b = _mock_client()
 
     _connections[session_a].append(client_a)
     _connections[session_b].append(client_b)
     try:
         await broadcast_to_session(session_a, {"type": "test", "data": "only A"})
-        client_a.send_text.assert_called_once()
-        client_b.send_text.assert_not_called()
+        client_a.socket.send_text.assert_called_once()
+        client_b.socket.send_text.assert_not_called()
     finally:
         _connections.pop(session_a, None)
         _connections.pop(session_b, None)
@@ -212,13 +241,16 @@ def test_combat_start_broadcasts_update():
     try:
         with TestClient(app) as http:
             # Create world + session via HTTP.
-            world_r = http.post("/api/worlds/", json={"name": "Broadcast Test World"})
+            world_r = http.post(
+                "/api/worlds/", json={"name": "Broadcast Test World"}, headers=DM_HEADERS
+            )
             assert world_r.status_code == 201
             world_id = world_r.json()["id"]
 
             session_r = http.post(
                 "/api/sessions/",
                 json={"world_id": world_id, "name": "Broadcast Session"},
+                headers=DM_HEADERS,
             )
             assert session_r.status_code == 201
             session_id = session_r.json()["id"]
@@ -240,7 +272,7 @@ def test_combat_start_broadcasts_update():
             assert received.get(timeout=5) == "ready"
 
             # Start combat — this should trigger a broadcast.
-            combat_r = http.post(f"/api/sessions/{session_id}/combat")
+            combat_r = http.post(f"/api/sessions/{session_id}/combat", headers=DM_HEADERS)
             assert combat_r.status_code == 201
 
             # The WS listener should have received the combat_update event.
@@ -256,11 +288,8 @@ def test_combat_start_broadcasts_update():
 
 def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
     """A chat response that includes a proposal emits a proposal_ready event
-    with a 'status' field set to 'pending'.
-
-    Regression test: the initial proposal_ready broadcast was missing 'status',
-    while accept/reject broadcasts included it, causing inconsistency on the
-    client side.
+    (to DM connections only) with a 'status' field set to 'pending', while a
+    player connection receives only the chat messages.
     """
     from game_engine.types import ProposalType
 
@@ -269,29 +298,45 @@ def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
     app, engine = _make_sync_app()
     try:
         with TestClient(app) as http:
-            world_r = http.post("/api/worlds/", json={"name": "Proposal Status World"})
+            world_r = http.post(
+                "/api/worlds/", json={"name": "Proposal Status World"}, headers=DM_HEADERS
+            )
             assert world_r.status_code == 201
             world_id = world_r.json()["id"]
 
             session_r = http.post(
                 "/api/sessions/",
                 json={"world_id": world_id, "name": "Proposal Status Session"},
+                headers=DM_HEADERS,
             )
             assert session_r.status_code == 201
             session_id = session_r.json()["id"]
 
-            # Collect both WS events: chat_message + proposal_ready.
-            received: queue.Queue = queue.Queue()
+            # DM socket gets chat_message x2 + proposal_ready; the player
+            # socket must only get the two chat messages.
+            dm_received: queue.Queue = queue.Queue()
+            player_received: queue.Queue = queue.Queue()
 
-            def ws_listener():
-                with http.websocket_connect(f"/api/ws/sessions/{session_id}") as ws:
-                    received.put("ready")
+            def dm_listener():
+                with http.websocket_connect(
+                    f"/api/ws/sessions/{session_id}?dm_token={settings.dm_token}"
+                ) as ws:
+                    dm_received.put("ready")
                     for _ in range(3):  # dm chat_message + ai chat_message + proposal_ready
-                        received.put(json.loads(ws.receive_text()))
+                        dm_received.put(json.loads(ws.receive_text()))
 
-            t = threading.Thread(target=ws_listener, daemon=True)
-            t.start()
-            assert received.get(timeout=5) == "ready"
+            def player_listener():
+                with http.websocket_connect(f"/api/ws/sessions/{session_id}") as ws:
+                    player_received.put("ready")
+                    for _ in range(2):  # dm chat_message + ai chat_message only
+                        player_received.put(json.loads(ws.receive_text()))
+
+            dm_t = threading.Thread(target=dm_listener, daemon=True)
+            player_t = threading.Thread(target=player_listener, daemon=True)
+            dm_t.start()
+            player_t.start()
+            assert dm_received.get(timeout=5) == "ready"
+            assert player_received.get(timeout=5) == "ready"
 
             mock_orch = MagicMock()
             mock_orch.handle_message = AsyncMock(
@@ -313,22 +358,30 @@ def test_chat_with_proposal_broadcasts_proposal_ready_with_status():
                 chat_r = http.post(
                     f"/api/sessions/{session_id}/chat",
                     json={"message": "Explore the forest."},
+                    headers=DM_HEADERS,
                 )
             assert chat_r.status_code == 200
 
-            events = [received.get(timeout=5) for _ in range(3)]
-            events_by_type = {ev["type"]: ev for ev in events}
+            dm_events = [dm_received.get(timeout=5) for _ in range(3)]
+            dm_events_by_type = {ev["type"]: ev for ev in dm_events}
 
             assert (
-                "proposal_ready" in events_by_type
-            ), f"Expected a 'proposal_ready' event; got: {list(events_by_type)}"
-            proposal_event = events_by_type["proposal_ready"]
+                "proposal_ready" in dm_events_by_type
+            ), f"Expected a 'proposal_ready' event; got: {list(dm_events_by_type)}"
+            proposal_event = dm_events_by_type["proposal_ready"]
             assert "status" in proposal_event, "proposal_ready event must include 'status' field"
             assert (
                 proposal_event["status"] == "pending"
             ), f"Expected status='pending', got status={proposal_event['status']!r}"
 
-            t.join(timeout=1)
+            player_events = [player_received.get(timeout=5) for _ in range(2)]
+            player_types = {ev["type"] for ev in player_events}
+            assert player_types == {
+                "chat_message"
+            }, f"Player socket must only receive chat messages; got: {player_types}"
+
+            dm_t.join(timeout=1)
+            player_t.join(timeout=1)
     finally:
         _cleanup_sync_app(app, engine)
 
@@ -342,13 +395,16 @@ def test_chat_broadcasts_chat_message():
     app, engine = _make_sync_app()
     try:
         with TestClient(app) as http:
-            world_r = http.post("/api/worlds/", json={"name": "Chat Broadcast World"})
+            world_r = http.post(
+                "/api/worlds/", json={"name": "Chat Broadcast World"}, headers=DM_HEADERS
+            )
             assert world_r.status_code == 201
             world_id = world_r.json()["id"]
 
             session_r = http.post(
                 "/api/sessions/",
                 json={"world_id": world_id, "name": "Chat Broadcast Session"},
+                headers=DM_HEADERS,
             )
             assert session_r.status_code == 201
             session_id = session_r.json()["id"]
@@ -381,6 +437,7 @@ def test_chat_broadcasts_chat_message():
                 chat_r = http.post(
                     f"/api/sessions/{session_id}/chat",
                     json={"message": "Look around."},
+                    headers=DM_HEADERS,
                 )
             assert chat_r.status_code == 200
 

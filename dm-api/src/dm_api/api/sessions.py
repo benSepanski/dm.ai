@@ -15,6 +15,7 @@ from dm_api.ai.backends.base import AIBackend
 from dm_api.ai.condenser import HistoryMessage, MessageAnchor
 from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
 from dm_api.ai.prompts.system_prompt import WorldContext
+from dm_api.api.auth import ClientRole, require_dm
 from dm_api.api.ws import broadcast_to_session
 from dm_api.config import settings
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
@@ -171,6 +172,7 @@ async def _broadcast_ai_response(
             },
         )
         for proposal in proposals:
+            # Proposals are unreviewed AI content — only DM clients may see them.
             await broadcast_to_session(
                 session_id,
                 {
@@ -180,6 +182,7 @@ async def _broadcast_ai_response(
                     "proposal_type": proposal.type.value,
                     "status": ProposalStatus.PENDING.value,
                 },
+                dm_only=True,
             )
     except Exception:
         logger.exception("ws broadcast failed session_id=%s", session_id)
@@ -220,6 +223,7 @@ class ChatResponse(BaseModel):
 async def create_session(
     payload: SessionCreate,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> SessionRead:
     session = GameSession(
         world_id=payload.world_id,
@@ -262,6 +266,7 @@ async def session_chat(
     session_id: uuid.UUID,
     payload: ChatRequest,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> ChatResponse:
     game_session = await _fetch_session_or_404(db, session_id)
     if game_session.ended_at is not None:
@@ -311,6 +316,7 @@ async def session_chat(
 async def end_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> SessionRead:
     session = await _fetch_session_or_404(db, session_id)
     session.ended_at = datetime.now(tz=timezone.utc)

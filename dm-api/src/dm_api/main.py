@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from dm_api.api.auth import log_dm_token_source
 from dm_api.api.router import router
 from dm_api.config import settings
 from dm_api.logging_config import configure_logging
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.ai_provider,
         settings.orchestrator_model,
     )
+    log_dm_token_source()
     yield
     logger.info("dm-api shutting down")
 

@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.api.auth import ClientRole, client_role, require_dm
+from dm_api.api.visibility import location_read_for
 from dm_api.db.models.location import (
     Location,
     LocationCreate,
@@ -21,6 +23,7 @@ router = APIRouter()
 async def create_location(
     payload: LocationCreate,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> LocationRead:
     location = Location(**payload.model_dump())
     db.add(location)
@@ -33,12 +36,13 @@ async def create_location(
 async def get_location(
     loc_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    role: ClientRole = Depends(client_role),
 ) -> LocationRead:
     result = await db.execute(select(Location).where(Location.id == loc_id))
     location = result.scalar_one_or_none()
     if location is None:
         raise HTTPException(status_code=404, detail="Location not found")
-    return LocationRead.model_validate(location)
+    return location_read_for(location, role)
 
 
 @router.patch("/{loc_id}", response_model=LocationRead)
@@ -46,6 +50,7 @@ async def update_location(
     loc_id: uuid.UUID,
     payload: LocationUpdate,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> LocationRead:
     result = await db.execute(select(Location).where(Location.id == loc_id))
     location = result.scalar_one_or_none()
@@ -65,6 +70,7 @@ async def update_location(
 async def delete_location(
     loc_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> None:
     result = await db.execute(select(Location).where(Location.id == loc_id))
     location = result.scalar_one_or_none()

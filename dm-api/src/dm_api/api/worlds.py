@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.api.auth import ClientRole, client_role, require_dm
+from dm_api.api.visibility import location_read_for, world_read_for
 from dm_api.db.models.game_config import (
     GameConfig,
     GameConfigRead,
@@ -31,6 +33,7 @@ async def _fetch_world_or_404(db: AsyncSession, world_id: uuid.UUID) -> World:
 async def create_world(
     payload: WorldCreate,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> WorldRead:
     world = World(
         name=payload.name,
@@ -48,32 +51,36 @@ async def create_world(
 async def get_world(
     world_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    role: ClientRole = Depends(client_role),
 ) -> WorldRead:
     world = await _fetch_world_or_404(db, world_id)
-    return WorldRead.model_validate(world)
+    return world_read_for(world, role)
 
 
 @router.get("/{world_id}/locations", response_model=list[LocationRead])
 async def get_world_locations(
     world_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    role: ClientRole = Depends(client_role),
 ) -> list[LocationRead]:
     await _fetch_world_or_404(db, world_id)
 
     result = await db.execute(select(Location).where(Location.world_id == world_id))
     locations = result.scalars().all()
-    return [LocationRead.model_validate(loc) for loc in locations]
+    return [location_read_for(loc, role) for loc in locations]
 
 
 @router.get("/{world_id}/config", response_model=GameConfigRead)
 async def get_game_config(
     world_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> GameConfigRead:
     """Return the game's config: stored overrides plus the effective values.
 
     A game with no stored config returns all-null overrides with the
-    deployment defaults as the effective settings.
+    deployment defaults as the effective settings. DM-only: the config
+    includes infrastructure connection strings.
     """
     await _fetch_world_or_404(db, world_id)
     result = await db.execute(select(GameConfig).where(GameConfig.world_id == world_id))
@@ -85,6 +92,7 @@ async def put_game_config(
     world_id: uuid.UUID,
     payload: GameConfigUpdate,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> GameConfigRead:
     """Replace the game's config overrides.
 
@@ -116,6 +124,7 @@ async def put_game_config(
 async def delete_world(
     world_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> None:
     world = await _fetch_world_or_404(db, world_id)
     await db.delete(world)
