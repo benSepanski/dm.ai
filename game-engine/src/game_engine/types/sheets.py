@@ -219,6 +219,42 @@ class TurnState:
     sapped: bool = False
     vexed_target_id: str | None = None
 
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serialisable dict so turn state survives between requests."""
+        return {
+            "action_used": self.action_used,
+            "bonus_action_used": self.bonus_action_used,
+            "reaction_used": self.reaction_used,
+            "movement_used_ft": self.movement_used_ft,
+            "attacks_made": self.attacks_made,
+            "dodging": self.dodging,
+            "disengaging": self.disengaging,
+            "dashing": self.dashing,
+            "hidden": self.hidden,
+            "helped": self.helped,
+            "sapped": self.sapped,
+            "vexed_target_id": self.vexed_target_id,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "TurnState":
+        """Create a :class:`TurnState` from a dict; tolerant of missing keys."""
+        vexed = d.get("vexed_target_id")
+        return cls(
+            action_used=bool(d.get("action_used", False)),
+            bonus_action_used=bool(d.get("bonus_action_used", False)),
+            reaction_used=bool(d.get("reaction_used", False)),
+            movement_used_ft=int(d.get("movement_used_ft", 0)),
+            attacks_made=int(d.get("attacks_made", 0)),
+            dodging=bool(d.get("dodging", False)),
+            disengaging=bool(d.get("disengaging", False)),
+            dashing=bool(d.get("dashing", False)),
+            hidden=bool(d.get("hidden", False)),
+            helped=bool(d.get("helped", False)),
+            sapped=bool(d.get("sapped", False)),
+            vexed_target_id=str(vexed) if vexed is not None else None,
+        )
+
 
 @dataclass
 class CombatStateData:

@@ -26,15 +26,18 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
-from game_engine.types import CharacterSheet, ChatRole, CombatStateData
+from game_engine.types import Ability, CharacterSheet, ChatRole, CombatStateData, TurnState
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dm_api.api.combat_utils import (
+    advance_turn_index,
     broadcast_combat,
     build_attack_details,
     character_to_sheet,
     combat_summary_text,
+    dump_turn_states,
+    load_turn_states,
     missing_combat_stats,
     sync_combatants_to_db,
 )
@@ -123,7 +126,7 @@ async def start_combat(
                 ),
             )
 
-        rolled: list[tuple[dict[str, Any], dict[str, Any]]] = []
+        rolled: list[tuple[dict[str, Any], dict[str, Any], int]] = []
         for char in characters:
             sheet = character_to_sheet(char)
             initiative = _engine.roll_initiative(sheet)
@@ -131,10 +134,12 @@ async def start_combat(
                 (
                     {"character_id": str(char.id), "name": char.name, "initiative": initiative},
                     sheet.to_dict(),
+                    sheet.ability_scores.get(Ability.DEXTERITY),
                 )
             )
 
-        rolled.sort(key=lambda x: x[0]["initiative"], reverse=True)
+        # Ties are broken by Dexterity score (2024 PHB initiative tie-break).
+        rolled.sort(key=lambda x: (x[0]["initiative"], x[2]), reverse=True)
         initiative_order = [r[0] for r in rolled]
         combatants = [r[1] for r in rolled]
 
@@ -211,11 +216,13 @@ async def submit_combat_action(
     if payload.target_id is not None and payload.target_id not in combatant_ids:
         raise HTTPException(status_code=404, detail="Target is not a combatant in this combat")
 
-    # Stage 2: build-state.
+    # Stage 2: build-state — including the persisted per-combatant turn
+    # states, so the action/bonus-action economy is enforced across requests.
     state = CombatStateData(
         combatants=sheets,
         round_number=combat.round_number,
         current_turn_index=combat.current_turn_index,
+        turn_states=load_turn_states(combat),
     )
 
     # Stage 3: resolve — engine mutates sheets in-place.
@@ -227,9 +234,15 @@ async def submit_combat_action(
     )
     outcome = _engine.resolve_action(action, state)
 
-    # Stage 4: persist — updated sheets + enriched log entry.
+    # Rule rejections (incapacitated actor, action economy exhausted) are
+    # client errors: surface them as 409 and keep the combat log clean.
+    if outcome.log_entry.get("error") in ("cannot_act", "action_used", "bonus_action_used"):
+        raise HTTPException(status_code=409, detail=outcome.flavor_text)
+
+    # Stage 4: persist — updated sheets, turn states, + enriched log entry.
     if state.combatants:
         combat.combatants = [s.to_dict() for s in state.combatants]
+    combat.turn_states = dump_turn_states(state.turn_states)
 
     log_entry: dict[str, Any] = {
         "round": combat.round_number,
@@ -284,17 +297,20 @@ async def next_turn(
         sheet = _engine.tick_condition_durations(sheet)
         combatants[current_idx] = sheet.to_dict()
 
-    next_index = current_idx + 1
-    if next_index >= order_len:
-        combat.round_number += 1
-        next_index = 0
+    # Dead and stable-unconscious combatants are skipped; dying ones keep
+    # their turn (that's when their death save rolls).
+    next_index, rounds_advanced = advance_turn_index(current_idx, order_len, combatants)
+    combat.round_number += rounds_advanced
     combat.current_turn_index = next_index
 
-    # A dying creature makes a death save at the start of its turn (2024 PHB).
-    # Rolled automatically here so "PC down" is playable without an extra
-    # endpoint; the result lands in combat_log for the table to see.
+    turn_states = dict(combat.turn_states or {})
     if next_index < len(combatants):
         sheet = CharacterSheet.from_dict(combatants[next_index])
+        # A new turn resets the combatant's action economy.
+        turn_states[sheet.id] = TurnState().to_dict()
+        # A dying creature makes a death save at the start of its turn (2024
+        # PHB). Rolled automatically here so "PC down" is playable without an
+        # extra endpoint; the result lands in combat_log for the table to see.
         if sheet.is_dying:
             save = _engine.roll_death_save(sheet)
             combatants[next_index] = sheet.to_dict()
@@ -315,6 +331,7 @@ async def next_turn(
                 },
             ]
 
+    combat.turn_states = turn_states
     combat.combatants = combatants
 
     await db.commit()

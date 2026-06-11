@@ -167,7 +167,7 @@ and Alembic for migrations.
 | `sessions` | `id`, `world_id`, `name`, `rule_engine_version`, `player_character_ids` (JSON), `current_location_id`, `session_summary`, `started_at`, `ended_at` | One active session per DM run |
 | `characters` | `id`, `world_id`, `type` (PC/NPC/MONSTER), `name`, full stat block, `embedding` (vector 1536) | Shared across sessions |
 | `locations` | `id`, `world_id`, `parent_id` (self-referential), `type` (LocationType), `name`, `description`, `lore`, `map_data` (JSON), `embedding` (vector 1536) | Tree hierarchy via `parent_id` |
-| `combat_states` | `id`, `session_id` (unique), `round_number`, `current_turn_index`, `initiative_order` (JSON), `combatants` (JSON), `combat_log` (JSON) | One active combat per session |
+| `combat_states` | `id`, `session_id` (unique), `round_number`, `current_turn_index`, `initiative_order` (JSON), `combatants` (JSON), `combat_log` (JSON), `turn_states` (JSON, per-combatant action economy) | One active combat per session |
 | `proposals` | `id`, `session_id`, `world_id`, `type` (ProposalType), `content` (JSON), `status` (ProposalStatus), `dm_notes` | AI-generated content awaiting DM review |
 | `chat_messages` | `id`, `session_id`, `role` (dm/ai/system), `content`, `token_count`, `timestamp` | Full conversation history |
 
@@ -238,7 +238,7 @@ server-push entry point. Dead connections are pruned silently on each call.
 |---|---|---|
 | `chat_message` | `POST /sessions/{id}/chat` (DM echo immediately after persist, AI reply after the orchestrator returns) | `session_id`, `message_id`, `role` (`dm`\|`ai`), `content` |
 | `proposal_ready` | `POST /sessions/{id}/chat`, `POST /ai/proposals/{id}/accept`, `POST /ai/proposals/{id}/reject` | `session_id`, `proposal_id`, `proposal_type`, `status` |
-| `combat_update` | `POST /sessions/{id}/combat`, `POST /sessions/{id}/combat/action`, `POST /sessions/{id}/combat/next-turn`, `PUT /sessions/{id}/combat/end` | `session_id`, `combat` (full `CombatStateRead`) |
+| `combat_update` | `POST /sessions/{id}/combat`, `POST /sessions/{id}/combat/action`, `POST /sessions/{id}/combat/cast-spell`, `POST /sessions/{id}/combat/heal`, `POST /sessions/{id}/combat/stabilize`, `POST /sessions/{id}/combat/next-turn`, `PUT /sessions/{id}/combat/end`, `PATCH /characters/{id}` (write-through while enrolled in an active combat) | `session_id`, `combat` (full `CombatStateRead`) |
 | `entity_update` | `POST /ai/proposals/{id}/accept` (when a LOCATION or CHARACTER entity is created) | `session_id`, `entity_type`, `entity_id` |
 
 **Peer-relayed event types (client → other clients, no server handler):**

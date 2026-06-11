@@ -11,6 +11,7 @@ from game_engine.types import (
     AbilityScoreSet,
     CharacterClass,
     CharacterSheet,
+    CharacterType,
     Condition,
     DamageType,
 )
@@ -393,3 +394,55 @@ class TestTickConditionDurations:
         fighter.condition_durations[Condition.STUNNED] = 0
         engine.tick_condition_durations(fighter)
         assert Condition.STUNNED not in fighter.conditions
+
+
+# ---------------------------------------------------------------------------
+# Monsters at 0 HP die outright (2024 PHB — death saves are for PCs/NPCs)
+# ---------------------------------------------------------------------------
+
+
+def make_monster(hp_current: int = 10, hp_max: int = 10) -> CharacterSheet:
+    return CharacterSheet(
+        id="monster-1",
+        name="Goblin",
+        level=1,
+        char_class=CharacterClass.FIGHTER,
+        hp_current=hp_current,
+        hp_max=hp_max,
+        ac=13,
+        char_type=CharacterType.MONSTER,
+    )
+
+
+class TestMonsterDeath:
+    def test_monster_dies_at_zero_hp(self, engine: DnD55eEngine):
+        monster = make_monster(hp_current=5)
+        engine.apply_damage(monster, 5, DamageType.SLASHING)
+        assert monster.hp_current == 0
+        assert monster.is_dead
+        assert Condition.UNCONSCIOUS not in monster.conditions
+        assert monster.death_saves.failures == 0
+
+    def test_monster_at_zero_hp_dies_from_further_damage(self, engine: DnD55eEngine):
+        monster = make_monster(hp_current=0)
+        engine.apply_damage(monster, 1, DamageType.PIERCING)
+        assert monster.is_dead
+
+    def test_monster_death_ends_concentration(self, engine: DnD55eEngine):
+        monster = make_monster(hp_current=3)
+        monster.concentrating_on = "Hold Person"
+        engine.apply_damage(monster, 3, DamageType.FIRE)
+        assert monster.concentrating_on is None
+
+    def test_pc_at_zero_hp_still_falls_unconscious(self, engine: DnD55eEngine):
+        pc = make_fighter(hp_current=5, hp_max=44)
+        engine.apply_damage(pc, 5, DamageType.SLASHING)
+        assert pc.hp_current == 0
+        assert not pc.is_dead
+        assert pc.is_dying
+        assert Condition.UNCONSCIOUS in pc.conditions
+
+    def test_dead_monster_is_not_dying(self, engine: DnD55eEngine):
+        monster = make_monster(hp_current=1)
+        engine.apply_damage(monster, 1, DamageType.BLUDGEONING)
+        assert not monster.is_dying

@@ -7,7 +7,7 @@ Internal module — import via :class:`DnD55eEngine`.
 from __future__ import annotations
 
 from game_engine.core.conditions import CONDITION_EFFECTS
-from game_engine.types import CharacterSheet, Condition, DamageType
+from game_engine.types import CharacterSheet, CharacterType, Condition, DamageType
 
 
 def _apply_damage_impl(
@@ -63,7 +63,11 @@ def _apply_damage_impl(
         return target
 
     # Damage while already at 0 HP → death save failures (no HP change).
+    # Monsters don't make death saves: any damage at 0 HP finishes them.
     if target.hp_current <= 0:
+        if target.char_type is CharacterType.MONSTER:
+            target.death_saves.is_dead = True
+            return target
         target.death_saves.is_stable = False
         target.death_saves.failures += 2 if critical else 1
         if target.death_saves.failures >= 3:
@@ -82,9 +86,12 @@ def _apply_damage_impl(
     target.hp_current = max(0, target.hp_current - effective_damage)
 
     if target.hp_current == 0:
-        if remaining >= target.hp_max:
-            # Massive damage: instant death.
+        if remaining >= target.hp_max or target.char_type is CharacterType.MONSTER:
+            # Massive damage — or a monster dropping to 0 HP — is instant
+            # death (2024 PHB: monsters die at 0 HP; only PCs/NPCs get
+            # death saving throws).
             target.death_saves.is_dead = True
+            target.concentrating_on = None
         else:
             _fall_unconscious(target)
     return target

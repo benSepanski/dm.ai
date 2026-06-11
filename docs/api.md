@@ -106,9 +106,38 @@ Marks `ended_at` and generates a session summary via the fast model.
 
 ### PATCH /api/characters/{char_id} — partial update
 
-All fields optional; only provided fields are changed.
+All fields optional; only provided fields are changed. Two semantics worth
+knowing:
+
+- **`stats` merges key-by-key** into the existing blob (send
+  `{"stats": {"conditions": []}}` without re-sending `ability_scores`); a
+  key set to `null` is removed.
+- **Updates write through to active combat**: if the character is enrolled
+  in a live fight, the patched fields are mirrored into the combat snapshot
+  (and broadcast as a `combat_update`), so mid-combat patches take effect
+  immediately and are not overwritten when combat ends.
 
 **200** → `CharacterRead` (updated) | **404**
+
+### POST /api/characters/{char_id}/rest — take a short or long rest
+
+Resolved by the rule engine (2024 rules). **Short** rest spends Hit Point
+Dice (`hit_dice_to_spend`, healing roll + CON each) and restores warlock
+pact slots. **Long** rest restores full HP, all Hit Point Dice and spell
+slots, drops temp HP, and reduces exhaustion by 1. Spell slots and hit dice
+are derived from class/level on first use, then persist in `stats`.
+
+**Body:** `{ "rest_type": "short" | "long", "hit_dice_to_spend": 0 }`
+
+**200** →
+```json
+{
+  "rest_type": "long", "hp_restored": 9, "hit_dice_spent": 0,
+  "hit_dice_restored": 3, "slots_restored": true, "exhaustion_reduced": false,
+  "character": { ...CharacterRead... }
+}
+```
+**404** unknown character | **409** during active combat, or character is dead
 
 ### GET /api/characters/world/{world_id} — list world characters
 
@@ -149,7 +178,8 @@ Commonly used to write `map_data` after the DM edits the battle map.
 ### POST /api/sessions/{session_id}/combat — start combat
 
 **Body (optional):** `{ "character_ids": [...], "location_id": "..." }` —
-initiative is rolled for the listed characters.
+initiative is rolled for the listed characters; ties are broken by
+Dexterity score.
 
 Returns **409** if active combat already exists for the session, **404** if a
 character id doesn't exist, and **422** if an enrolled character has no
@@ -158,7 +188,7 @@ proposals; PATCH the character first).
 
 **201** → `CombatStateRead`: `id`, `session_id`, `location_id`, `round_number` (1),
 `current_turn_index` (0), `initiative_order`, `combatants`, `combat_log`,
-`started_at`, `ended_at`
+`turn_states`, `started_at`, `ended_at`
 
 ### GET /api/sessions/{session_id}/combat — get active combat state
 
@@ -166,21 +196,76 @@ proposals; PATCH the character first).
 
 ### POST /api/sessions/{session_id}/combat/action — submit an action
 
-Appends the action to `combat_log`.
+Resolves the action through the rule engine and appends it to `combat_log`.
+The action economy is enforced across requests via `turn_states`: each
+combatant gets one action and one bonus action per turn (an off-hand attack
+consumes the bonus action), reset when their turn comes around. Dodge /
+Dash / Disengage / Help flags carry over mechanically until then.
 
-**Body:** `actor_id` (req), `action_type` (req — e.g. `"attack"`, `"spell"`,
-`"dash"`, `"dodge"`, `"hide"`, `"help"`), `target_id`, `spell_name`, `item_name`,
-`extra` (free object for rule-specific data)
+**Body:** `actor_id` (req), `action_type` (req — a 2024 action:
+`"Attack"`, `"Dash"`, `"Dodge"`, `"Disengage"`, `"Help"`, `"Hide"`, …),
+`target_id`, `attack_details` (`weapon_name`, `damage_dice`, `damage_type`,
+`attack_ability`, `is_ranged`)
 
-**200** → `CombatStateRead` with updated `combat_log`
+**200** → `CombatStateRead` with updated `combat_log` | **404** unknown
+actor/target | **409** rule rejection (actor can't act, or its action /
+bonus action is already spent) — rejections never enter `combat_log`
+
+### POST /api/sessions/{session_id}/combat/cast-spell — cast a spell
+
+Casts a spell from the SRD registry through the engine's spellcasting
+module: slot consumption (with upcasting via `slot_level`), spell attack
+rolls, saving throws against the caster's spell save DC, damage and healing
+(cantrip level-scaling included), rider conditions, and concentration.
+Casting consumes the caster's action / bonus action / reaction per the
+spell's casting time. Spell slots derive from class/level the first time a
+caster enters combat; spent slots persist on the character after the fight.
+
+**Body:** `actor_id` (req), `spell_name` (req, case-insensitive),
+`target_ids` (array), `slot_level` (optional upcast),
+`spellcasting_ability` (optional override; required for classes with no
+spellcasting ability)
+
+**200** → `CombatStateRead` — the log entry carries
+`{"event": "cast_spell", spell, slot_level_used, outcomes: [{target_id,
+hit, attack_total, save_total, save_success, damage, healing,
+conditions_applied}]}`
+
+**404** unknown spell / actor / target | **409** no slot remaining, economy
+spent, caster can't act, or casting time too long for combat | **422**
+spellcasting ability unresolvable
+
+### POST /api/sessions/{session_id}/combat/heal — heal a combatant
+
+DM adjudication tool (potion, Lay on Hands, narrative fiat) — consumes no
+action economy. Healing a dying creature brings it back up and clears its
+death saves. For spell healing prefer `cast-spell`.
+
+**Body:** `{ "target_id": "...", "amount": 5 }` (amount ≥ 1)
+
+**200** → `CombatStateRead` (log gains an `{"event": "heal"}` entry) |
+**404** | **409** target is dead
+
+### POST /api/sessions/{session_id}/combat/stabilize — stabilize a dying combatant
+
+Marks a dying creature stable (e.g. after a DC 10 Medicine check): it stays
+unconscious at 0 HP but stops rolling death saves and is skipped by
+`next-turn`.
+
+**Body:** `{ "target_id": "..." }`
+
+**200** → `CombatStateRead` (log gains an `{"event": "stabilize"}` entry) |
+**404** | **409** target is dead, not at 0 HP, or already stable
 
 ### POST /api/sessions/{session_id}/combat/next-turn — advance the turn
 
 Ticks condition durations for the combatant whose turn is ending, advances
-`current_turn_index` (incrementing `round_number` on wrap), and — when the
-creature whose turn begins is dying (0 HP, not stable, not dead) — rolls its
-death saving throw automatically (2024 PHB: a dying creature saves at the
-start of its turn). The result is appended to `combat_log` as an
+`current_turn_index` (incrementing `round_number` on wrap), **skipping**
+combatants who can never act again (the dead, and stable unconscious
+creatures), and resets the new combatant's action economy. When the
+creature whose turn begins is dying (0 HP, not stable, not dead), its death
+saving throw is rolled automatically (2024 PHB: a dying creature saves at
+the start of its turn). The result is appended to `combat_log` as an
 `{"event": "death_save", roll, outcome, successes, failures, is_stable,
 is_dead, regained_hp}` entry; a natural 20 brings the creature back up at
 1 HP.
@@ -189,11 +274,12 @@ is_dead, regained_hp}` entry; a natural 20 brings the creature back up at
 
 ### PUT /api/sessions/{session_id}/combat/end — end combat
 
-Sets `ended_at`, syncs final HP/conditions/death-save state back to the
-character rows, and — when combatants were enrolled — appends a SYSTEM chat
-message summarizing the mechanical outcome (rounds, final HP, who went down
-or died, death-save tallies). That summary enters the chat history, so the
-AI DM knows the result when narration resumes.
+Sets `ended_at`, syncs final HP, conditions, death-save state, spell slots,
+temp HP, and concentration back to the character rows, and — when combatants
+were enrolled — appends a SYSTEM chat message summarizing the mechanical
+outcome (rounds, final HP, who went down or died, death-save tallies). That
+summary enters the chat history, so the AI DM knows the result when
+narration resumes.
 
 **200** → `CombatStateRead` | **404**
 

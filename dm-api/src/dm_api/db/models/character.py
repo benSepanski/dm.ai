@@ -5,9 +5,9 @@ from datetime import datetime
 from typing import Any
 
 import sqlalchemy as sa
-from game_engine.types import CharacterType
+from game_engine.types import CharacterType, RestType
 from pgvector.sqlalchemy import Vector
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -120,6 +120,35 @@ class CharacterRead(BaseModel):
     interaction_log_summary: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class RestRequest(BaseModel):
+    """Request body for taking a short or long rest.
+
+    hit_dice_to_spend only applies to short rests (Hit Point Dice healing).
+    """
+
+    rest_type: RestType
+    hit_dice_to_spend: int = 0
+
+    @field_validator("hit_dice_to_spend")
+    @classmethod
+    def validate_hit_dice(cls, v: int) -> int:
+        if v < 0:
+            raise ValueError("hit_dice_to_spend must be non-negative")
+        return v
+
+
+class RestRead(BaseModel):
+    """Typed outcome of a rest, mirroring the engine's RestResult."""
+
+    rest_type: RestType
+    hp_restored: int
+    hit_dice_spent: int
+    hit_dice_restored: int
+    slots_restored: bool
+    exhaustion_reduced: bool
+    character: CharacterRead
 
 
 class CharacterUpdate(BaseModel):
