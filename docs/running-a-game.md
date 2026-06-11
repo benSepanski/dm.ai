@@ -88,34 +88,47 @@ Everything is live for every connected browser:
    characters/locations appear in the UI for everyone) or reject it with a
    note. Nothing enters your world without your say-so.
 3. **Combat.** Use the combat tracker (right panel) to start combat — it
-   rolls initiative through the real rules engine. Submit actions, advance
-   turns, end combat; HP and conditions sync back to the character records.
-   Combat resolution is engine-driven (deterministic dice, 2024 rules), not
-   AI-driven. Two things to know:
+   rolls initiative through the real rules engine (ties break on DEX).
+   Submit actions, advance turns, end combat; HP, conditions, and spell
+   slots sync back to the character records. Combat resolution is
+   engine-driven (deterministic dice, 2024 rules), not AI-driven. Things to
+   know:
    - Characters created from accepted AI proposals have **no combat stats** —
      give them hp/ac/stats (PATCH via the Swagger UI) *before* the fight, or
-     combat start will refuse them with a clear 422. Stats can't be changed
-     mid-combat (combatants are snapshotted at initiative).
+     combat start will refuse them with a clear 422. A mid-combat PATCH
+     also works: it writes through to the live fight and survives combat end.
    - Ending combat posts a system message into the chat with the mechanical
      outcome (rounds, final HP, who went down or died, death-save tallies),
      so the AI DM narrates the aftermath from what actually happened.
    - **When a PC drops to 0 HP:** keep advancing turns — the engine rolls
      their death save automatically at the start of each of their turns and
      logs it (natural 20 brings them back up at 1 HP; three failures kills).
-     There's no in-combat heal/stabilize action yet, so the rescue play is:
-     resolve the fight, end combat, then PATCH the character's
-     `hp_current`/conditions to reflect the healing or stabilization you
-     narrated. Death-save progress survives into the character record.
-   - **Running a spellcaster:** the combat API resolves *attack-roll* spells
-     well if you model them as attacks — e.g. Fire Bolt is an Attack action
-     with `attack_details: {weapon_name: "Fire Bolt", damage_dice: "1d10",
-     damage_type: "fire", attack_ability: "intelligence", is_ranged: true}`
-     (to-hit comes out right; damage runs ~+INT high since attacks add the
-     ability mod). Save-DC spells, healing, AoE, and spell slots have no API
-     surface yet — adjudicate those in the chat (the AI gives solid rulings)
-     and apply results via PATCH after the fight.
-   - The engine doesn't enforce the action economy across requests — you're
-     the only one submitting actions, so one attack per turn is on you.
+     The rescue plays, all live mid-combat: cast a healing spell
+     (`POST .../combat/cast-spell` with Cure Wounds or Healing Word), pour a
+     potion (`POST .../combat/heal` with the amount), or stabilize after a
+     DC 10 Medicine check (`POST .../combat/stabilize` — they stay down but
+     stop rolling saves, and `next-turn` skips them). Monsters skip all of
+     this: at 0 HP they die outright, and the dead are skipped on
+     `next-turn`.
+   - **Running a spellcaster:** `POST .../combat/cast-spell` resolves SRD
+     spells end-to-end — spell attack rolls, save DCs, damage with cantrip
+     scaling, healing, rider conditions, concentration, and slot tracking
+     with upcasting (`slot_level`). Slots derive from class/level
+     automatically and spent slots persist on the character after the
+     fight; a long rest (`POST /api/characters/{id}/rest`) restores them.
+     Multi-target spells like Fireball take a `target_ids` list (templates/
+     areas are theater-of-the-mind: you pick who's in the blast).
+   - **Between fights, rest instead of hand-patching:**
+     `POST /api/characters/{id}/rest` with `{"rest_type": "short",
+     "hit_dice_to_spend": 2}` or `{"rest_type": "long"}` applies the 2024
+     rest rules (hit dice healing, slot recovery, exhaustion). PATCH still
+     works for adjudicated changes — and `stats` now merges key-by-key, so
+     clearing conditions doesn't require re-sending ability scores.
+   - The action economy is enforced across requests: one action + one bonus
+     action per combatant per turn (off-hand attacks use the bonus action;
+     a spell consumes whichever its casting time says). A second attack in
+     the same turn is rejected with a 409 — and Dodge/Dash/Help genuinely
+     carry over until the combatant's next turn.
 4. **Battle map.** Toggle with "Show Map". Tokens mirror the combatants
    during combat (party = blue, enemies = red, downed = grey) and the party
    roster otherwise. Drag tokens — every connected screen follows. Positions

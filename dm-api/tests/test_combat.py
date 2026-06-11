@@ -3,9 +3,16 @@
 import uuid
 
 import pytest
+from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
 from game_engine.types import ActionType
 
-from tests.combat_helpers import _create_character, _create_session, _create_statless_npc
+from tests.combat_helpers import (
+    _create_character,
+    _create_dead_monster,
+    _create_downed_character,
+    _create_session,
+    _create_statless_npc,
+)
 
 # ---------------------------------------------------------------------------
 # Basic lifecycle
@@ -384,3 +391,188 @@ async def test_next_turn_no_active_combat(client, world_id):
     session_id = await _create_session(client, world_id)
     r = await client.post(f"/api/sessions/{session_id}/combat/next-turn")
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Action economy — enforced across requests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_second_action_same_turn_is_409(client, world_id):
+    """The action economy persists between requests: one action per turn."""
+    attacker_id = await _create_character(client, world_id, name="Attacker")
+    defender_id = await _create_character(client, world_id, name="Defender")
+    session_id = await _create_session(client, world_id)
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [attacker_id, defender_id]},
+    )
+
+    attack = {
+        "actor_id": attacker_id,
+        "action_type": ActionType.ATTACK.value,
+        "target_id": defender_id,
+    }
+    r = await client.post(f"/api/sessions/{session_id}/combat/action", json=attack)
+    assert r.status_code == 200
+    log_len = len(r.json()["combat_log"])
+
+    r = await client.post(f"/api/sessions/{session_id}/combat/action", json=attack)
+    assert r.status_code == 409
+    assert "Action already used" in r.json()["detail"]
+
+    # The rejected action never reaches the combat log.
+    r = await client.get(f"/api/sessions/{session_id}/combat")
+    assert len(r.json()["combat_log"]) == log_len
+
+
+@pytest.mark.asyncio
+async def test_action_economy_resets_when_turn_comes_around(client, world_id):
+    attacker_id = await _create_character(client, world_id, name="Attacker")
+    defender_id = await _create_character(client, world_id, name="Defender")
+    session_id = await _create_session(client, world_id)
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [attacker_id, defender_id]},
+    )
+
+    attack = {
+        "actor_id": attacker_id,
+        "action_type": ActionType.ATTACK.value,
+        "target_id": defender_id,
+    }
+    r = await client.post(f"/api/sessions/{session_id}/combat/action", json=attack)
+    assert r.status_code == 200
+    r = await client.post(f"/api/sessions/{session_id}/combat/action", json=attack)
+    assert r.status_code == 409
+
+    # Advance a full round so the attacker's turn begins again.
+    await client.post(f"/api/sessions/{session_id}/combat/next-turn")
+    await client.post(f"/api/sessions/{session_id}/combat/next-turn")
+
+    r = await client.post(f"/api/sessions/{session_id}/combat/action", json=attack)
+    assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_incapacitated_actor_is_409_and_keeps_log_clean(client, world_id):
+    """An unconscious actor can't act; the rejection never pollutes the log."""
+    downed_id = await _create_downed_character(client, world_id)
+    target_id = await _create_character(client, world_id, name="Target")
+    session_id = await _create_session(client, world_id)
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [downed_id, target_id]},
+    )
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={
+            "actor_id": downed_id,
+            "action_type": ActionType.ATTACK.value,
+            "target_id": target_id,
+        },
+    )
+    assert r.status_code == 409
+
+    r = await client.get(f"/api/sessions/{session_id}/combat")
+    assert r.json()["combat_log"] in (None, [])
+
+
+# ---------------------------------------------------------------------------
+# next-turn skips the dead; initiative ties break on Dexterity
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_next_turn_skips_dead_combatant(client, world_id, monkeypatch):
+    """A dead monster between two living combatants never gets a turn."""
+    initiative = {"Alive A": 20, "Slain Goblin": 15, "Alive B": 10}
+    monkeypatch.setattr(
+        DnD55eEngine, "roll_initiative", lambda self, sheet: initiative[sheet.name]
+    )
+    a_id = await _create_character(client, world_id, name="Alive A")
+    dead_id = await _create_dead_monster(client, world_id, name="Slain Goblin")
+    b_id = await _create_character(client, world_id, name="Alive B")
+    session_id = await _create_session(client, world_id)
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [a_id, dead_id, b_id]},
+    )
+    assert r.status_code == 201
+    assert [e["name"] for e in r.json()["initiative_order"]] == [
+        "Alive A",
+        "Slain Goblin",
+        "Alive B",
+    ]
+
+    r = await client.post(f"/api/sessions/{session_id}/combat/next-turn")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["current_turn_index"] == 2  # skipped the dead goblin at index 1
+    assert data["round_number"] == 1
+
+    # Wrapping also skips: B → (skip goblin going through wrap) → A, round 2.
+    r = await client.post(f"/api/sessions/{session_id}/combat/next-turn")
+    data = r.json()
+    assert data["current_turn_index"] == 0
+    assert data["round_number"] == 2
+
+
+@pytest.mark.asyncio
+async def test_next_turn_does_not_skip_dying_combatant(client, world_id, monkeypatch):
+    """Dying (not stable, not dead) combatants keep their turn — that's when
+    their death save rolls."""
+    initiative = {"Alive A": 20, "Sylvara": 10}
+    monkeypatch.setattr(
+        DnD55eEngine, "roll_initiative", lambda self, sheet: initiative[sheet.name]
+    )
+    a_id = await _create_character(client, world_id, name="Alive A")
+    dying_id = await _create_downed_character(client, world_id, name="Sylvara")
+    session_id = await _create_session(client, world_id)
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [a_id, dying_id]},
+    )
+
+    r = await client.post(f"/api/sessions/{session_id}/combat/next-turn")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["current_turn_index"] == 1
+    assert data["combat_log"][-1]["event"] == "death_save"
+
+
+@pytest.mark.asyncio
+async def test_initiative_tie_broken_by_dexterity(client, world_id, monkeypatch):
+    monkeypatch.setattr(DnD55eEngine, "roll_initiative", lambda self, sheet: 12)
+
+    async def create(name, dex):
+        r = await client.post(
+            "/api/characters/",
+            json={
+                "world_id": world_id,
+                "type": "PC",
+                "name": name,
+                "level": 1,
+                "char_class": "Fighter",
+                "hp_current": 10,
+                "hp_max": 10,
+                "ac": 14,
+                "stats": {"ability_scores": {"dexterity": dex}},
+            },
+        )
+        assert r.status_code == 201
+        return r.json()["id"]
+
+    slow_id = await create("Slowfoot", 8)
+    swift_id = await create("Swift", 18)
+    session_id = await _create_session(client, world_id)
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [slow_id, swift_id]},
+    )
+    assert r.status_code == 201
+    order = r.json()["initiative_order"]
+    assert [e["name"] for e in order] == ["Swift", "Slowfoot"]
+    assert order[0]["initiative"] == order[1]["initiative"] == 12

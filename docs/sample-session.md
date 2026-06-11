@@ -188,32 +188,49 @@ simulated players (80/80 and 96/96 events).
   summary reports it ("DOWN, death saves 1 success / 2 failure" / "DEAD").
 - **Lowercase `char_class` silently became Fighter in combat** ("wizard" →
   Fighter). The bridge now matches class names case-insensitively.
+- **Spellcasting had no real API surface** — save-DC spells, healing, AoE,
+  and slot tracking had to be adjudicated in chat. The engine's
+  spellcasting module is now wired to `POST .../combat/cast-spell`: spell
+  attacks, save DCs, cantrip scaling, healing, rider conditions,
+  concentration, and slot tracking with upcasting, with spent slots
+  persisting on the character after the fight.
+- **No in-combat healing or stabilize action** — the rescue play used to be
+  "end combat, then PATCH". Downed PCs are now saved mid-fight via
+  `cast-spell` (Cure Wounds / Healing Word), `heal` (potions, fiat), or
+  `stabilize` (Medicine check).
+- **The action economy wasn't enforced across requests** (two attacks in
+  one turn both succeeded; Dodge/Dash/Help had no carry-over). Per-combatant
+  turn state is now persisted: one action + one bonus action per turn,
+  reset when the turn comes around; violations are 409s.
+- **Mid-combat PATCHes were lost** — combatants were snapshotted at combat
+  start, and ending combat wrote the snapshot back over your patch.
+  Character PATCHes now write through to active combat snapshots.
+- **No rest endpoints** — `POST /api/characters/{id}/rest` now applies the
+  2024 short/long rest rules (hit dice healing, slot recovery, exhaustion).
+  And `stats` PATCHes merge key-by-key instead of replacing the whole blob.
+- **Monsters at 0 HP got PC-style death saves** — monsters now die outright
+  at 0 HP (2024 PHB; death saves remain for PCs and NPCs).
+- **`next-turn` didn't skip dead/unconscious combatants** — it now skips
+  the dead and the stable unconscious. Dying PCs still get their turn:
+  that's when their death save rolls.
+- **Initiative ties had no DEX tie-break** — ties now break on Dexterity.
+- **Failed (`cannot_act`) actions polluted the combat log** — rule
+  rejections (incapacitated actor, economy spent) are now 409s that never
+  enter the log or broadcast.
 
 **Known issues (open):**
 
-- **Spellcasting has no real API surface.** Attack-roll spells work modeled
-  as Attack actions (to-hit correct; damage runs +ability-mod high);
-  save-DC spells, healing, AoE, and slot tracking must be adjudicated in
-  chat. The engine's full spellcasting module exists but isn't wired to
-  the API yet.
-- **No in-combat healing or stabilize action** — rescue a downed PC by
-  ending combat and PATCHing hp/conditions afterward.
-- The action economy isn't enforced across requests (two attacks in one
-  turn both succeed; Dodge/Dash/Help have no mechanical carry-over). The
-  DM is the only action submitter, so table discipline covers it.
-- Combatants are snapshotted at combat start: a PATCH to a character
-  mid-combat doesn't affect the live fight, and ending combat writes the
-  snapshot's HP back over your patch. Set stats *before* starting combat.
-- No rest endpoints — between fights, PATCH `hp_current` (and `stats` to
-  clear conditions; note PATCH replaces the whole `stats` blob, so re-send
-  `ability_scores` with it).
-- Monsters at 0 HP get PC-style death saves instead of dying outright.
-- `next-turn` doesn't skip dead/unconscious combatants — advance past them
-  manually (for dying PCs that's now a feature: their turn rolls the save).
-- Initiative ties have no DEX tie-break (insertion order wins).
-- Failed (`cannot_act`) actions still append to the combat log and broadcast.
-- Occasional narration slips: the AI invents blow-by-blow details beyond
-  the mechanical summary, names proposed NPCs in prose before you've
-  accepted them, and once called the wizard a fighter before
-  self-correcting. The AI DM is a strong co-pilot, not an infallible one —
-  which is why the proposal review flow exists.
+- Areas of effect are theater-of-the-mind: a multi-target spell takes an
+  explicit `target_ids` list — the engine doesn't compute who's inside a
+  20-ft radius from map positions (token positions are cosmetic).
+- The cast-spell endpoint doesn't verify the spell is on the caster's
+  known/prepared list or class spell list — the DM submits casts, so table
+  discipline covers it.
+- Reactions (opportunity attacks, Shield, Counterspell) have no dedicated
+  flow — adjudicate in chat; reaction-speed spells do consume the
+  caster's reaction slot when cast via the API.
+- Occasional narration slips: the AI can invent details beyond the
+  mechanical summary or name proposed NPCs before acceptance. The system
+  prompt now forbids both explicitly, which reduces but doesn't eliminate
+  it — the AI DM is a strong co-pilot, not an infallible one, which is why
+  the proposal review flow exists.

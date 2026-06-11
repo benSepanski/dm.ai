@@ -17,6 +17,7 @@ from game_engine.types import (
     Condition,
     DamageType,
     Skill,
+    TurnState,
 )
 
 # ---------------------------------------------------------------------------
@@ -443,3 +444,37 @@ class TestAttackDetails:
         )
         assert details.weapon_name == "Longsword"
         assert details.damage_type == DamageType.SLASHING
+
+
+# ---------------------------------------------------------------------------
+# TurnState serialisation (persisted by the API between requests)
+# ---------------------------------------------------------------------------
+
+
+class TestTurnStateSerde:
+    def test_round_trip_defaults(self):
+        ts = TurnState()
+        assert TurnState.from_dict(ts.to_dict()) == ts
+
+    def test_round_trip_all_fields_set(self):
+        ts = TurnState(
+            action_used=True,
+            bonus_action_used=True,
+            reaction_used=True,
+            movement_used_ft=25,
+            attacks_made=2,
+            dodging=True,
+            disengaging=True,
+            dashing=True,
+            hidden=True,
+            helped=True,
+            sapped=True,
+            vexed_target_id="target-7",
+        )
+        assert TurnState.from_dict(ts.to_dict()) == ts
+
+    def test_from_dict_tolerates_missing_keys(self):
+        ts = TurnState.from_dict({"action_used": True})
+        assert ts.action_used is True
+        assert ts.bonus_action_used is False
+        assert ts.vexed_target_id is None

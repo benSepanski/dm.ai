@@ -33,6 +33,9 @@ class CombatState(Base):
     initiative_order: Mapped[list[Any] | None] = mapped_column(JSON, nullable=True)
     combatants: Mapped[list[Any] | None] = mapped_column(JSON, nullable=True)
     combat_log: Mapped[list[Any] | None] = mapped_column(JSON, nullable=True)
+    # Per-combatant TurnState dicts keyed by combatant id — persisted so the
+    # action/bonus-action economy survives between HTTP requests.
+    turn_states: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -55,6 +58,7 @@ class CombatStateRead(BaseModel):
     initiative_order: list[Any] | None
     combatants: list[Any] | None
     combat_log: list[Any] | None
+    turn_states: dict[str, Any] | None
     started_at: datetime
     ended_at: datetime | None
 
@@ -103,3 +107,41 @@ class CombatActionRequest(BaseModel):
     action_type: ActionType
     target_id: str | None = None
     attack_details: AttackDetailsRequest | None = None
+
+
+class CastSpellRequest(BaseModel):
+    """Typed request body for casting a spell in combat.
+
+    spell_name is resolved against the SRD spell registry (case-insensitive);
+    unknown spells are a 404. spellcasting_ability defaults to the caster's
+    class spellcasting ability when omitted.
+    """
+
+    actor_id: str
+    spell_name: str
+    target_ids: list[str] = []
+    slot_level: int | None = None
+    spellcasting_ability: Ability | None = None
+
+
+class HealRequest(BaseModel):
+    """Apply healing to a combatant mid-fight (potion, lay on hands, DM fiat).
+
+    Healing a creature at 0 HP brings it back up and clears its death saves.
+    """
+
+    target_id: str
+    amount: int
+
+    @field_validator("amount")
+    @classmethod
+    def validate_amount(cls, v: int) -> int:
+        if v < 1:
+            raise ValueError("amount must be at least 1")
+        return v
+
+
+class StabilizeRequest(BaseModel):
+    """Stabilize a dying combatant (e.g. a successful DC 10 Medicine check)."""
+
+    target_id: str

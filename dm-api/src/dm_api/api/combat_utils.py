@@ -11,14 +11,37 @@ import logging
 import uuid
 from typing import Any
 
-from game_engine.types import AttackDetails, CharacterClass, CharacterSheet
+from game_engine.rules.dnd_5_5e.classes import CLASSES
+from game_engine.rules.dnd_5_5e.spellcasting import compute_spell_slots
+from game_engine.types import (
+    AttackDetails,
+    CharacterClass,
+    CharacterSheet,
+    ClassLevelEntry,
+    HitDicePool,
+    TurnState,
+)
 from game_engine.types.values import DiceNotation
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dm_api.api.ws import broadcast_to_session
 from dm_api.db.models.character import Character
-from dm_api.db.models.combat import AttackDetailsRequest, CombatStateRead
+from dm_api.db.models.combat import AttackDetailsRequest, CombatState, CombatStateRead
+
+# CharacterSheet fields written back to the Character.stats blob when combat
+# ends (or when a sheet is persisted after a rest). Everything the engine can
+# mutate during a fight must be listed here or it is silently lost.
+SHEET_STATE_FIELDS = (
+    "conditions",
+    "condition_durations",
+    "death_saves",
+    "spell_slots",
+    "concentrating_on",
+    "temp_hp",
+    "exhaustion_level",
+    "hit_dice",
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +99,7 @@ async def sync_combatants_to_db(
             character.hp_current = int(hp_current)
 
         stats: dict[str, Any] = dict(character.stats or {})
-        for field in ("conditions", "condition_durations", "death_saves"):
+        for field in SHEET_STATE_FIELDS:
             if field in combatant:
                 stats[field] = combatant[field]
         character.stats = stats
@@ -110,31 +133,89 @@ def _normalize_char_class(raw: str | None) -> str:
 
 
 def character_to_sheet(character: Character) -> CharacterSheet:
-    """Bridge DB Character row → typed CharacterSheet for the rule engine."""
+    """Bridge DB Character row → typed CharacterSheet for the rule engine.
+
+    The whole ``stats`` blob is passed through the sheet serde (which is
+    tolerant of unknown/missing keys), so spell slots, hit dice, known
+    spells, exhaustion, etc. all round-trip; explicit DB columns override.
+    Spell slots and hit dice are derived from class/level on first use when
+    the stats blob doesn't carry them yet.
+    """
     stats = character.stats or {}
     hp_max = character.hp_max if character.hp_max is not None else _DEFAULT_HP
-    return CharacterSheet.from_dict(
-        {
-            "id": str(character.id),
-            "name": character.name,
-            "level": character.level,
-            "class": _normalize_char_class(character.char_class),
-            "ability_scores": stats.get("ability_scores", {}),
-            "hp_current": character.hp_current if character.hp_current is not None else hp_max,
-            "hp_max": hp_max,
-            "ac": character.ac if character.ac is not None else _DEFAULT_AC,
-            "speed": character.speed if character.speed is not None else _DEFAULT_SPEED,
-            "type": character.type.value,
-            "proficiencies": stats.get("proficiencies", []),
-            "conditions": stats.get("conditions", []),
-            "condition_durations": stats.get("condition_durations", {}),
-            "death_saves": stats.get("death_saves", {}),
-            "damage_resistances": stats.get("damage_resistances", []),
-            "damage_immunities": stats.get("damage_immunities", []),
-            "damage_vulnerabilities": stats.get("damage_vulnerabilities", []),
-            "condition_immunities": stats.get("condition_immunities", []),
-        }
-    )
+    sheet_dict: dict[str, Any] = {
+        **stats,
+        "id": str(character.id),
+        "name": character.name,
+        "level": character.level,
+        "class": _normalize_char_class(character.char_class),
+        "hp_current": character.hp_current if character.hp_current is not None else hp_max,
+        "hp_max": hp_max,
+        "ac": character.ac if character.ac is not None else _DEFAULT_AC,
+        "speed": character.speed if character.speed is not None else _DEFAULT_SPEED,
+        "type": character.type.value,
+    }
+    if not sheet_dict.get("known_spells") and character.spells:
+        sheet_dict["known_spells"] = [str(s) for s in character.spells]
+    sheet = CharacterSheet.from_dict(sheet_dict)
+
+    class_levels = sheet.class_levels or [
+        ClassLevelEntry(character_class=sheet.char_class, level=sheet.level)
+    ]
+    if "spell_slots" not in stats:
+        sheet.spell_slots = compute_spell_slots(class_levels)
+    if not sheet.hit_dice:
+        sheet.hit_dice = [
+            HitDicePool(
+                die_size=CLASSES[entry.character_class].hit_die,
+                maximum=entry.level,
+                remaining=entry.level,
+            )
+            for entry in class_levels
+        ]
+    return sheet
+
+
+def advance_turn_index(
+    current_idx: int,
+    order_len: int,
+    combatants: list[dict[str, Any]],
+) -> tuple[int, int]:
+    """Return ``(next_index, rounds_advanced)`` for a turn advance.
+
+    Skips combatants who can never act again: the dead, and the stable
+    unconscious (who don't roll death saves). Dying creatures are NOT
+    skipped — their turn is when their death save rolls. Bounded loop so
+    an all-dead roster can't spin forever.
+    """
+    next_index = current_idx + 1
+    rounds_advanced = 0
+    if next_index >= order_len:
+        next_index = 0
+        rounds_advanced = 1
+
+    for _ in range(order_len - 1):
+        if next_index >= len(combatants):
+            break
+        sheet = CharacterSheet.from_dict(combatants[next_index])
+        if not (sheet.is_dead or (sheet.hp_current <= 0 and sheet.death_saves.is_stable)):
+            break
+        next_index += 1
+        if next_index >= order_len:
+            next_index = 0
+            rounds_advanced += 1
+
+    return next_index, rounds_advanced
+
+
+def load_turn_states(combat: CombatState) -> dict[str, TurnState]:
+    """Deserialise the persisted per-combatant TurnStates for the engine."""
+    return {char_id: TurnState.from_dict(ts) for char_id, ts in (combat.turn_states or {}).items()}
+
+
+def dump_turn_states(turn_states: dict[str, TurnState]) -> dict[str, Any]:
+    """Serialise engine TurnStates back into the CombatState JSON column."""
+    return {char_id: ts.to_dict() for char_id, ts in turn_states.items()}
 
 
 def build_attack_details(req: AttackDetailsRequest | None) -> AttackDetails | None:
