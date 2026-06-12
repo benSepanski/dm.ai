@@ -14,6 +14,7 @@ from typing import Any
 from game_engine.rules.dnd_5_5e.classes import CLASSES
 from game_engine.rules.dnd_5_5e.spellcasting import compute_spell_slots
 from game_engine.types import (
+    Ability,
     AttackDetails,
     CharacterClass,
     CharacterSheet,
@@ -132,6 +133,27 @@ def _normalize_char_class(raw: str | None) -> str:
     return raw
 
 
+def _ability_scores_from_flat_stats(stats: dict[str, Any]) -> dict[str, int]:
+    """Collect flat ability-score keys from a stats blob into a nested dict.
+
+    The documented character payload (docs/running-a-game.md §1) puts the six
+    scores flat in ``stats`` (``"strength": 16``), but the sheet serde only
+    reads a nested ``"ability_scores"`` dict — without this bridge every
+    combatant fought with all 10s. Accepts full names and short forms
+    (``"str"``), matching what ``AbilityScoreSet.from_dict`` accepts.
+    """
+    scores: dict[str, int] = {}
+    for ability in Ability:
+        raw = stats.get(ability.value, stats.get(ability.short))
+        if raw is None:
+            continue
+        try:
+            scores[ability.value] = int(raw)
+        except (TypeError, ValueError):
+            continue
+    return scores
+
+
 def character_to_sheet(character: Character) -> CharacterSheet:
     """Bridge DB Character row → typed CharacterSheet for the rule engine.
 
@@ -157,6 +179,10 @@ def character_to_sheet(character: Character) -> CharacterSheet:
     }
     if not sheet_dict.get("known_spells") and character.spells:
         sheet_dict["known_spells"] = [str(s) for s in character.spells]
+    if "ability_scores" not in sheet_dict:
+        flat_scores = _ability_scores_from_flat_stats(stats)
+        if flat_scores:
+            sheet_dict["ability_scores"] = flat_scores
     sheet = CharacterSheet.from_dict(sheet_dict)
 
     class_levels = sheet.class_levels or [
