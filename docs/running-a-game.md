@@ -42,7 +42,7 @@ curl -X POST http://localhost:8000/api/characters/ \
   -H 'Content-Type: application/json' \
   -d '{
     "world_id": "<world-uuid>",
-    "type": "pc",
+    "type": "PC",
     "name": "Kira Swiftblade",
     "race": "Human",
     "char_class": "Fighter",
@@ -53,8 +53,8 @@ curl -X POST http://localhost:8000/api/characters/ \
   }'
 ```
 
-Monsters and NPCs are created the same way with `"type": "monster"` or
-`"type": "npc"`. The party appears in the left sidebar and on the battle map.
+Monsters and NPCs are created the same way with `"type": "MONSTER"` or
+`"type": "NPC"`. The party appears in the left sidebar and on the battle map.
 
 ## 2. LAN play — players join your session
 

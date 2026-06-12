@@ -64,6 +64,35 @@ class TestShortRest:
         assert result.hit_dice_spent == 3
         assert char.hp_current == 10 + 3 * 7
 
+    def test_short_rest_counts_the_last_hit_die(self):
+        """Regression: spending the last die used to be consumed but reported
+        as hit_dice_spent: 0 (the loop broke before counting it)."""
+        char = _char(hit_dice=[HitDicePool(die_size=10, maximum=5, remaining=1)])
+        with patch("game_engine.rules.dnd_5_5e.resting.roll_dice", return_value=(5, [5])):
+            result = short_rest(char, hit_dice_to_spend=3)
+        assert result.hit_dice_spent == 1
+        assert result.hp_restored == 7
+        assert char.hit_dice[0].remaining == 0
+
+    def test_short_rest_counts_last_die_even_at_full_hp(self):
+        """A die spent at full HP heals 0 but is still consumed — and must
+        still be reported as spent."""
+        char = _char(
+            hp_current=40,
+            hit_dice=[HitDicePool(die_size=10, maximum=5, remaining=1)],
+        )
+        with patch("game_engine.rules.dnd_5_5e.resting.roll_dice", return_value=(5, [5])):
+            result = short_rest(char, hit_dice_to_spend=1)
+        assert result.hit_dice_spent == 1
+        assert result.hp_restored == 0
+        assert char.hit_dice[0].remaining == 0
+
+    def test_short_rest_with_no_dice_left_spends_nothing(self):
+        char = _char(hit_dice=[HitDicePool(die_size=10, maximum=5, remaining=0)])
+        result = short_rest(char, hit_dice_to_spend=2)
+        assert result.hit_dice_spent == 0
+        assert result.hp_restored == 0
+
     def test_warlock_pact_slots_return_on_short_rest(self):
         char = _char(
             char_class=CharacterClass.WARLOCK,

@@ -65,10 +65,12 @@ def short_rest(char: CharacterSheet, hit_dice_to_spend: int = 0) -> RestResult:
     """
     result = RestResult()
     for _ in range(max(0, hit_dice_to_spend)):
-        healed = spend_hit_die(char)
-        if healed == 0 and not any(p.remaining > 0 for p in char.hit_dice):
+        # Check availability BEFORE spending: spend_hit_die decrements the
+        # pool, so checking afterwards used to consume the last die while
+        # reporting hit_dice_spent: 0.
+        if not any(p.remaining > 0 for p in char.hit_dice):
             break
-        result.hp_restored += healed
+        result.hp_restored += spend_hit_die(char)
         result.hit_dice_spent += 1
 
     warlock_levels = char.class_level(CharacterClass.WARLOCK)
