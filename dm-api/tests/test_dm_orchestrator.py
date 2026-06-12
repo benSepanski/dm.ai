@@ -193,6 +193,13 @@ def test_system_prompt_contains_all_enum_values() -> None:
         assert ct.value in prompt, f"CharacterType.{ct.name} ({ct.value!r}) missing from prompt"
 
 
+def test_system_prompt_location_schema_includes_map_data() -> None:
+    """The location proposal schema advertises map_data so the prompt and
+    the accept path (which persists it to locations.map_data) agree."""
+    prompt = build_system_prompt(world_id="w", session_id="s")
+    assert "map_data" in prompt
+
+
 def test_system_prompt_includes_world_context() -> None:
     """Setting, lore, and prior session summaries all appear in the prompt."""
     ctx = WorldContext(

@@ -214,6 +214,62 @@ async def test_accept_location_proposal_applies_dm_modifications(client, world_i
 
 
 @pytest.mark.asyncio
+async def test_accept_location_proposal_persists_map_data(client, world_id, db_session):
+    """The AI-generated map survives acceptance into locations.map_data.
+
+    Regression: map_data used to be silently dropped when copying the
+    proposal content into the Location row.
+    """
+    from sqlalchemy import select
+
+    map_data = {
+        "grid": [[0, 1], [1, 0]],
+        "legend": {"0": "floor", "1": "wall"},
+    }
+    session_id = await _make_session(client, world_id, "LocMap")
+    proposal_id = await _insert_proposal(
+        db_session,
+        world_id=world_id,
+        session_id=session_id,
+        ptype=ProposalType.LOCATION,
+        content={"name": "Mapped Crypt", "map_data": map_data},
+    )
+
+    r = await client.post(f"/api/ai/proposals/{proposal_id}/accept", json={})
+    assert r.status_code == 200
+    entity_id = r.json()["content"]["created_entity_id"]
+
+    result = await db_session.execute(select(Location).where(Location.id == uuid.UUID(entity_id)))
+    loc = result.scalar_one()
+    assert loc.map_data == map_data
+
+
+@pytest.mark.asyncio
+async def test_accept_location_proposal_non_object_map_data_degrades(client, world_id, db_session):
+    """A malformed (non-object) map_data is dropped, but the location is
+    still created — graceful degradation at the AI boundary."""
+    from sqlalchemy import select
+
+    session_id = await _make_session(client, world_id, "LocBadMap")
+    proposal_id = await _insert_proposal(
+        db_session,
+        world_id=world_id,
+        session_id=session_id,
+        ptype=ProposalType.LOCATION,
+        content={"name": "Sketchy Cave", "map_data": "ASCII art of a cave"},
+    )
+
+    r = await client.post(f"/api/ai/proposals/{proposal_id}/accept", json={})
+    assert r.status_code == 200
+    entity_id = r.json()["content"]["created_entity_id"]
+
+    result = await db_session.execute(select(Location).where(Location.id == uuid.UUID(entity_id)))
+    loc = result.scalar_one()
+    assert loc.name == "Sketchy Cave"
+    assert loc.map_data is None
+
+
+@pytest.mark.asyncio
 async def test_accept_location_proposal_no_name_skips_entity(client, world_id, db_session):
     """A LOCATION proposal without a name is accepted but no entity is created."""
     session_id = await _make_session(client, world_id, "NoName")

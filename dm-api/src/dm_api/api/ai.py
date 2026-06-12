@@ -42,6 +42,23 @@ def _location_type_from_content(content: dict[str, Any]) -> LocationType:
         return LocationType.BUILDING
 
 
+def _map_data_from_content(content: dict[str, Any]) -> dict[str, Any] | None:
+    """Validate map_data at the AI boundary; non-object shapes are dropped.
+
+    The AI response is untrusted — only a JSON object may enter the typed
+    ``locations.map_data`` column. Anything else degrades gracefully to None
+    (the location is still created) with a warning for traceability.
+    """
+    raw = content.get("map_data")
+    if raw is None or isinstance(raw, dict):
+        return raw
+    logger.warning(
+        "accept_proposal: map_data is %s, not a JSON object — dropping it",
+        type(raw).__name__,
+    )
+    return None
+
+
 def _character_type_from_content(content: dict[str, Any]) -> CharacterType:
     """Parse CharacterType from proposal content; fall back to NPC."""
     raw = content.get("type", "")
@@ -75,6 +92,7 @@ async def _create_location_from_proposal(
         description=content.get("description"),
         lore=content.get("lore"),
         history=content.get("history"),
+        map_data=_map_data_from_content(content),
     )
     db.add(location)
     await db.flush()
