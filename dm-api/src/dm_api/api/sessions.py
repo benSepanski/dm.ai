@@ -127,6 +127,64 @@ async def _fetch_world_context(
     )
 
 
+async def _broadcast_dm_message(
+    session_id: uuid.UUID,
+    message_id: uuid.UUID,
+    content: str,
+) -> None:
+    """Emit the DM message to WebSocket clients immediately (fire-and-forget).
+
+    Called before the slow orchestrator so player screens update right away.
+    Clients dedupe on message_id, so the sender seeing its own echo is safe.
+    """
+    try:
+        await broadcast_to_session(
+            session_id,
+            {
+                "type": "chat_message",
+                "session_id": str(session_id),
+                "message_id": str(message_id),
+                "role": ChatRole.DM.value,
+                "content": content,
+            },
+        )
+    except Exception:
+        logger.exception("ws broadcast failed session_id=%s", session_id)
+
+
+async def _broadcast_ai_response(
+    session_id: uuid.UUID,
+    message_id: str,
+    content: str,
+    proposals: list[ProposalRead],
+) -> None:
+    """Emit the AI reply and any proposals to WebSocket clients after commit."""
+    try:
+        await broadcast_to_session(
+            session_id,
+            {
+                "type": "chat_message",
+                "session_id": str(session_id),
+                "message_id": message_id,
+                "role": ChatRole.AI.value,
+                "content": content,
+            },
+        )
+        for proposal in proposals:
+            await broadcast_to_session(
+                session_id,
+                {
+                    "type": "proposal_ready",
+                    "session_id": str(session_id),
+                    "proposal_id": str(proposal.id),
+                    "proposal_type": proposal.type.value,
+                    "status": ProposalStatus.PENDING.value,
+                },
+            )
+    except Exception:
+        logger.exception("ws broadcast failed session_id=%s", session_id)
+
+
 async def _persist_proposals(
     db: AsyncSession,
     session_id: uuid.UUID,
@@ -215,23 +273,7 @@ async def session_chat(
     )
     db.add(dm_message)
     await db.flush()
-
-    # Echo the DM message to all connected clients right away so player
-    # screens update before the (slow) orchestrator call completes. Clients
-    # dedupe by message_id, so the sender rendering its own echo is safe.
-    try:
-        await broadcast_to_session(
-            session_id,
-            {
-                "type": "chat_message",
-                "session_id": str(session_id),
-                "message_id": str(dm_message.id),
-                "role": ChatRole.DM.value,
-                "content": payload.message,
-            },
-        )
-    except Exception:
-        logger.exception("ws broadcast failed session_id=%s", session_id)
+    await _broadcast_dm_message(session_id, dm_message.id, payload.message)
 
     history = await _fetch_history(db, session_id)
     world_context = await _fetch_world_context(db, game_session.world_id, session_id)
@@ -254,38 +296,12 @@ async def session_chat(
     )
     db.add(ai_message)
     await db.flush()
-    ai_message_id = str(ai_message.id)
     proposals_read = await _persist_proposals(
         db, session_id, game_session.world_id, result.proposals
     )
     await db.commit()
 
-    # Notify all connected WebSocket clients about the new AI message and any proposals.
-    try:
-        await broadcast_to_session(
-            session_id,
-            {
-                "type": "chat_message",
-                "session_id": str(session_id),
-                "message_id": ai_message_id,
-                "role": ChatRole.AI.value,
-                "content": result.response,
-            },
-        )
-        for proposal_read in proposals_read:
-            await broadcast_to_session(
-                session_id,
-                {
-                    "type": "proposal_ready",
-                    "session_id": str(session_id),
-                    "proposal_id": str(proposal_read.id),
-                    "proposal_type": proposal_read.type.value,
-                    "status": ProposalStatus.PENDING.value,
-                },
-            )
-    except Exception:
-        logger.exception("ws broadcast failed session_id=%s", session_id)
-
+    await _broadcast_ai_response(session_id, str(ai_message.id), result.response, proposals_read)
     return ChatResponse(response=result.response, proposals=proposals_read)
 
 

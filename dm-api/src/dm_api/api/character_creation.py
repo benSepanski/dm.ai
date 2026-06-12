@@ -8,6 +8,7 @@ sheet — the engine is the single source of truth for creation rules.
 
 from __future__ import annotations
 
+import functools
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -43,8 +44,13 @@ from dm_api.db.session import get_db
 router = APIRouter()
 
 
+@functools.lru_cache(maxsize=1)
 def _creation_options() -> CreationOptionsRead:
-    """Assemble the full options payload from the engine registries."""
+    """Assemble the full options payload from the engine registries.
+
+    Cached: all input data comes from module-level constants that never
+    change at runtime, so repeated GET /options requests are O(1).
+    """
     return CreationOptionsRead(
         classes=[
             ClassOptionRead(
