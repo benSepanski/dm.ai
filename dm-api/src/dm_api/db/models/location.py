@@ -28,7 +28,12 @@ class Location(Base):
         nullable=True,
     )
     type: Mapped[LocationType] = mapped_column(
-        sa.Enum(LocationType, name="location_type", create_type=False),
+        sa.Enum(
+            LocationType,
+            name="location_type",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)

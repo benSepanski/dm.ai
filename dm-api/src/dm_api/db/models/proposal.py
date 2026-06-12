@@ -27,12 +27,22 @@ class Proposal(Base):
         UUID(as_uuid=True), ForeignKey("worlds.id", ondelete="CASCADE"), nullable=False
     )
     type: Mapped[ProposalType] = mapped_column(
-        sa.Enum(ProposalType, name="proposal_type", create_type=False),
+        sa.Enum(
+            ProposalType,
+            name="proposal_type",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
     )
     content: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     status: Mapped[ProposalStatus] = mapped_column(
-        sa.Enum(ProposalStatus, name="proposal_status", create_type=False),
+        sa.Enum(
+            ProposalStatus,
+            name="proposal_status",
+            create_type=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
         nullable=False,
         default=ProposalStatus.PENDING,
     )
