@@ -104,6 +104,16 @@ cd dm-api && DATABASE_URL="sqlite+aiosqlite:///:memory:" AI_PROVIDER="anthropic"
 cd dm-ui && npx tsc --noEmit && npm run lint
 ```
 
+### Playtesting the UI (no Docker/Postgres/Redis/API key needed)
+
+```bash
+scripts/playtest.sh start   # boots API :8000 (SQLite) + UI :5173, claude CLI as AI backend
+scripts/playtest.sh smoke   # headless-browser end-to-end playtest (Playwright)
+```
+
+See `.claude/skills/playtest/SKILL.md` (agent guide) and the
+"Playtesting the UI (agents)" section of AGENTS.md.
+
 ## Key Types (game-engine)
 
 See `docs/phb-parity-spec.md` for the PHB 2024 feature matrix this engine

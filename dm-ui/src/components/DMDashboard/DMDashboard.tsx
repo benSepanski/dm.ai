@@ -339,6 +339,8 @@ export default function DMDashboard() {
           {messages.map((m) => (
             <div
               key={m.id}
+              data-testid="chat-message"
+              data-role={m.role}
               style={{
                 marginBottom: 12,
                 padding: 10,
@@ -376,6 +378,7 @@ export default function DMDashboard() {
           }}
         >
           <input
+            data-testid="chat-input"
             style={{
               flex: 1,
               padding: "8px 12px",

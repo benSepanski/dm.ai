@@ -37,3 +37,6 @@ Thumbs.db
 
 # Alembic
 alembic/versions/*.pyc
+
+# Local playtest stack (scripts/playtest.sh) - SQLite DB, logs, screenshots
+.playtest/

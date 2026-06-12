@@ -133,6 +133,33 @@ dm.ai/
 
 ---
 
+## Playtesting the UI (agents)
+
+The full stack runs locally with **no Docker, no Postgres, no Redis, and no
+API key** — SQLite for storage, in-memory WebSocket fan-out, and the
+`claude` CLI as the AI backend:
+
+```bash
+scripts/playtest.sh start    # API :8000 (SQLite) + UI :5173; installs deps on first run
+scripts/playtest.sh smoke    # headless-browser playtest: new session → DM chat → AI reply
+scripts/playtest.sh stop     # shut both down (reset also wipes .playtest/dm.db)
+```
+
+For ad-hoc browser driving, see `.claude/skills/playtest/SKILL.md` and the
+worked example in `scripts/playtest_smoke.cjs`. Stable selectors:
+`[data-testid="chat-input"]` and `[data-testid="chat-message"]` (with
+`data-role="dm" | "ai" | "system"`) — extend the `data-testid` convention
+rather than matching on inline styles or copy text. Logs and screenshots
+land in `.playtest/` (gitignored).
+
+Schema note: the playtest stack creates tables via
+`python -m dm_api.db.bootstrap` (`Base.metadata.create_all`) because the
+Alembic migrations contain PostgreSQL-specific DDL. Alembic remains the
+canonical migration path for real deployments — keep both in sync by
+defining schema only in the models.
+
+---
+
 ## Before Every Commit
 
 - Run `pytest tests/ -v` inside `game-engine/` — all tests must pass
