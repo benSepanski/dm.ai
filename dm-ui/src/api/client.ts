@@ -220,6 +220,36 @@ export interface CombatActionRequest {
   target_id?: string;
 }
 
+export type AIProvider = "anthropic" | "claude_cli";
+
+// Per-game overrides; null means "inherit the deployment default".
+export interface GameConfigOverrides {
+  ai_provider: AIProvider | null;
+  orchestrator_model: string | null;
+  generation_model: string | null;
+  context_token_limit: number | null;
+  context_preserve_last_n: number | null;
+  database_url: string | null;
+  redis_url: string | null;
+}
+
+// Fully resolved settings the engine actually uses (overrides + defaults).
+export interface EffectiveGameConfig {
+  ai_provider: string;
+  orchestrator_model: string;
+  generation_model: string;
+  context_token_limit: number;
+  context_preserve_last_n: number;
+  database_url: string;
+  redis_url: string;
+}
+
+export interface GameConfigResponse {
+  world_id: string;
+  overrides: GameConfigOverrides;
+  effective: EffectiveGameConfig;
+}
+
 // ---- HTTP helper ----
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -241,6 +271,13 @@ export const api = {
   // Worlds
   createWorld: (data: CreateWorldRequest) =>
     request<{ id: string }>("/worlds/", { method: "POST", body: JSON.stringify(data) }),
+  getGameConfig: (worldId: string) =>
+    request<GameConfigResponse>(`/worlds/${worldId}/config`),
+  updateGameConfig: (worldId: string, overrides: GameConfigOverrides) =>
+    request<GameConfigResponse>(`/worlds/${worldId}/config`, {
+      method: "PUT",
+      body: JSON.stringify(overrides),
+    }),
 
   // Sessions
   createSession: (data: CreateSessionRequest) =>

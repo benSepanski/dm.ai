@@ -18,6 +18,7 @@ from dm_api.ai.prompts.system_prompt import WorldContext
 from dm_api.api.ws import broadcast_to_session
 from dm_api.config import settings
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
+from dm_api.db.models.game_config import EffectiveGameConfig, GameConfig, resolve_game_config
 from dm_api.db.models.proposal import Proposal, ProposalRead
 from dm_api.db.models.session import GameSession, SessionCreate, SessionRead
 from dm_api.db.models.world import World
@@ -32,33 +33,40 @@ router = APIRouter()
 _PRIOR_SESSION_LIMIT = 10
 
 
-@functools.lru_cache(maxsize=1)
-def _get_backend() -> AIBackend:
-    """Return the process-wide singleton AI backend.
+@functools.lru_cache(maxsize=None)
+def _get_backend(provider: str) -> AIBackend:
+    """Return the process-wide singleton AI backend for ``provider``.
 
-    Cached so the AnthropicBackend (and its underlying HTTP connection pool)
-    is created once per process rather than once per request.
+    Cached per provider so the AnthropicBackend (and its underlying HTTP
+    connection pool) is created once per process rather than once per request,
+    while games configured with different providers each get their own backend.
     """
     from dm_api.ai.backends.factory import create_backend
 
     return create_backend(
-        provider=settings.ai_provider,
+        provider=provider,
         api_key=settings.anthropic_api_key,
     )
 
 
-def _make_orchestrator() -> DMOrchestrator:
-    """Return a fresh DMOrchestrator using the cached backend singleton.
+async def _fetch_effective_config(db: AsyncSession, world_id: uuid.UUID) -> EffectiveGameConfig:
+    """Resolve the game's config (stored overrides merged with deployment defaults)."""
+    result = await db.execute(select(GameConfig).where(GameConfig.world_id == world_id))
+    return resolve_game_config(result.scalar_one_or_none())
+
+
+def _make_orchestrator(config: EffectiveGameConfig) -> DMOrchestrator:
+    """Return a fresh DMOrchestrator honoring the game's effective config.
 
     DMOrchestrator is stateless and cheap to construct; only the backend
     (which holds the HTTP connection pool) is cached.
     """
     return DMOrchestrator(
-        backend=_get_backend(),
-        orchestrator_model=settings.orchestrator_model,
-        generation_model=settings.generation_model,
-        context_token_limit=settings.context_token_limit,
-        context_preserve_last_n=settings.context_preserve_last_n,
+        backend=_get_backend(config.ai_provider),
+        orchestrator_model=config.orchestrator_model,
+        generation_model=config.generation_model,
+        context_token_limit=config.context_token_limit,
+        context_preserve_last_n=config.context_preserve_last_n,
     )
 
 
@@ -227,9 +235,10 @@ async def session_chat(
 
     history = await _fetch_history(db, session_id)
     world_context = await _fetch_world_context(db, game_session.world_id, session_id)
+    game_config = await _fetch_effective_config(db, game_session.world_id)
 
     # Condense → build messages → call backend → extract proposal.
-    result = await _make_orchestrator().handle_message(
+    result = await _make_orchestrator(game_config).handle_message(
         message=payload.message,
         session_id=str(session_id),
         world_id=str(game_session.world_id),
@@ -300,7 +309,8 @@ async def end_session(
             summary_text = "\n".join(
                 f"{m.role.value.upper()}: {m.content}" for m in messages[-20:]
             )
-            session.session_summary = await _make_orchestrator().summarize(summary_text)
+            game_config = await _fetch_effective_config(db, session.world_id)
+            session.session_summary = await _make_orchestrator(game_config).summarize(summary_text)
         except Exception:
             logger.exception("session summary failed session_id=%s", session_id)
             session.session_summary = "Session ended."

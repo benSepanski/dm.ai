@@ -172,3 +172,8 @@ for harness-engineering patterns in this repo:
   `orchestrator_model` (Sonnet) for full narrative turns.
 - Preserve citation anchors (`msg:<uuid>@<timestamp>`) in any condensed or
   summarised artifact.
+- Per-game overrides (AI provider, model roles, context budget, storage URLs)
+  live in `dm_api.db.models.game_config` — one `GameConfig` row per world,
+  edited via `GET/PUT /api/worlds/{world_id}/config`. Construct orchestrators
+  from the frozen `EffectiveGameConfig` returned by `resolve_game_config`,
+  never from `Settings` directly.
