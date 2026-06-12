@@ -6,12 +6,19 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-from game_engine.types import CharacterType, ChatRole, LocationType, ProposalType
+from game_engine.types import CharacterType, ChatRole, Condition, LocationType, ProposalType
 
 from dm_api.ai.backends.base import AIBackend, AIMessage, AIResponse
 from dm_api.ai.condenser import HistoryMessage, MessageAnchor
 from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
-from dm_api.ai.prompts.system_prompt import WorldContext, build_system_prompt
+from dm_api.ai.prompts.system_prompt import (
+    CharacterBrief,
+    CombatantBrief,
+    CombatSnapshot,
+    LocationBrief,
+    WorldContext,
+    build_system_prompt,
+)
 
 
 class _ScriptedBackend(AIBackend):
@@ -212,6 +219,71 @@ def test_system_prompt_includes_world_context() -> None:
     assert "A storm-wracked archipelago." in prompt
     assert "The Sea Queen rules the tides." in prompt
     assert "Session 1: The party met the Sea Queen." in prompt
+
+
+def test_system_prompt_includes_canon_entities() -> None:
+    """Accepted locations/characters render as canon briefs with a grounding
+    line telling the model never to contradict or re-propose them."""
+    ctx = WorldContext(
+        known_locations=(
+            LocationBrief(
+                name="The Gilded Goose",
+                type=LocationType.BUILDING,
+                description="A riverside inn.",
+            ),
+        ),
+        known_characters=(
+            CharacterBrief(
+                name="Old Tom",
+                type=CharacterType.NPC,
+                race="Human",
+                char_class="Fighter",
+                level=2,
+                personality_traits="Gruff but kind.",
+                known_facts=("Owes the party a favor",),
+            ),
+        ),
+    )
+    prompt = build_system_prompt(world_id="w", session_id="s", world_context=ctx)
+    assert "Known locations (canon):" in prompt
+    assert "- The Gilded Goose (building): A riverside inn." in prompt
+    assert "Known characters (canon):" in prompt
+    assert "- Old Tom (npc, Human Fighter 2)" in prompt
+    assert "traits: Gruff but kind." in prompt
+    assert "known facts: Owes the party a favor" in prompt
+    assert "never re-propose" in prompt
+
+
+def test_system_prompt_includes_active_combat() -> None:
+    """Mid-combat chat carries a live tracker: round, whose turn, per-combatant
+    HP, death state, and conditions."""
+    ctx = WorldContext(
+        active_combat=CombatSnapshot(
+            round_number=3,
+            active_combatant="Goblin",
+            combatants=(
+                CombatantBrief(
+                    name="Aria",
+                    hp_current=22,
+                    hp_max=30,
+                    conditions=(Condition.POISONED,),
+                ),
+                CombatantBrief(name="Goblin", hp_current=0, hp_max=7, is_dead=True),
+            ),
+        )
+    )
+    prompt = build_system_prompt(world_id="w", session_id="s", world_context=ctx)
+    assert "ACTIVE COMBAT (round 3 — Goblin's turn)" in prompt
+    assert "- Aria: 22/30 HP (poisoned)" in prompt
+    assert "- Goblin: 0/7 HP — DEAD" in prompt
+    assert "Narrate strictly from this tracker" in prompt
+
+
+def test_system_prompt_no_combat_section_outside_combat() -> None:
+    ctx = WorldContext(setting_description="A quiet realm.")
+    assert "ACTIVE COMBAT" not in build_system_prompt(
+        world_id="w", session_id="s", world_context=ctx
+    )
 
 
 def test_system_prompt_world_context_silent_when_empty() -> None:

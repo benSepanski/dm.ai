@@ -14,23 +14,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dm_api.ai.backends.base import AIBackend
 from dm_api.ai.condenser import HistoryMessage, MessageAnchor
 from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
-from dm_api.ai.prompts.system_prompt import WorldContext
+from dm_api.api.session_context import fetch_world_context
 from dm_api.api.ws import broadcast_to_session
 from dm_api.config import settings
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
 from dm_api.db.models.game_config import EffectiveGameConfig, GameConfig, resolve_game_config
 from dm_api.db.models.proposal import Proposal, ProposalRead
 from dm_api.db.models.session import GameSession, SessionCreate, SessionRead
-from dm_api.db.models.world import World
 from dm_api.db.session import get_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-# Most recent ended sessions whose summaries are injected into the system
-# prompt for cross-session continuity. Summaries are 2-3 sentences each, so
-# the token cost stays negligible.
-_PRIOR_SESSION_LIMIT = 10
 
 
 @functools.lru_cache(maxsize=None)
@@ -96,35 +90,6 @@ async def _fetch_history(db: AsyncSession, session_id: uuid.UUID) -> list[Histor
         )
         for m in result.scalars().all()
     ]
-
-
-async def _fetch_world_context(
-    db: AsyncSession,
-    world_id: uuid.UUID,
-    current_session_id: uuid.UUID,
-) -> WorldContext:
-    """Build the typed cross-session context for the orchestrator's system prompt.
-
-    Combines the world's setting/lore with summaries of the most recently
-    ended sessions in the same world (chronological order, oldest first).
-    """
-    world = (await db.execute(select(World).where(World.id == world_id))).scalar_one_or_none()
-    result = await db.execute(
-        select(GameSession)
-        .where(
-            GameSession.world_id == world_id,
-            GameSession.id != current_session_id,
-            GameSession.session_summary.is_not(None),
-        )
-        .order_by(GameSession.started_at.desc())
-        .limit(_PRIOR_SESSION_LIMIT)
-    )
-    prior_sessions = list(reversed(result.scalars().all()))
-    return WorldContext(
-        setting_description=world.setting_description if world else None,
-        lore_summary=world.lore_summary if world else None,
-        prior_session_summaries=tuple(f"{s.name}: {s.session_summary}" for s in prior_sessions),
-    )
 
 
 async def _persist_proposals(
@@ -234,7 +199,7 @@ async def session_chat(
         logger.exception("ws broadcast failed session_id=%s", session_id)
 
     history = await _fetch_history(db, session_id)
-    world_context = await _fetch_world_context(db, game_session.world_id, session_id)
+    world_context = await fetch_world_context(db, game_session.world_id, session_id)
     game_config = await _fetch_effective_config(db, game_session.world_id)
 
     # Condense → build messages → call backend → extract proposal.

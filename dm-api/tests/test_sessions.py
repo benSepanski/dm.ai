@@ -301,6 +301,127 @@ async def test_session_chat_includes_world_context(client):
 
 
 @pytest.mark.asyncio
+async def test_session_chat_includes_accepted_canon_entities(client, world_id):
+    """Accepted locations and characters reach the orchestrator as typed
+    briefs (regression: canon entities never reached the AI, which then
+    contradicted or re-proposed them)."""
+    r = await client.post(
+        "/api/locations/",
+        json={
+            "world_id": world_id,
+            "type": "building",
+            "name": "The Prancing Pony",
+            "description": "A bustling inn at the crossroads.",
+        },
+    )
+    assert r.status_code == 201
+    r = await client.post(
+        "/api/characters/",
+        json={
+            "world_id": world_id,
+            "type": "NPC",
+            "name": "Barliman",
+            "race": "Human",
+            "char_class": "Commoner",
+            "level": 1,
+            "personality_traits": "Forgetful but warm-hearted.",
+            "known_facts": ["Knows every rumor in town"],
+        },
+    )
+    assert r.status_code == 201
+
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "Canon"})
+    session_id = r.json()["id"]
+    mock_orch = _mock_orchestrator("Barliman waves you over.")
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        await client.post(f"/api/sessions/{session_id}/chat", json={"message": "Hello."})
+
+    ctx = mock_orch.handle_message.call_args.kwargs["world_context"]
+    assert [loc.name for loc in ctx.known_locations] == ["The Prancing Pony"]
+    assert ctx.known_locations[0].description == "A bustling inn at the crossroads."
+    barliman = next(c for c in ctx.known_characters if c.name == "Barliman")
+    assert barliman.personality_traits == "Forgetful but warm-hearted."
+    assert barliman.known_facts == ("Knows every rumor in town",)
+    assert ctx.active_combat is None
+
+
+@pytest.mark.asyncio
+async def test_session_chat_includes_live_combat_snapshot(client, world_id, db_session):
+    """Mid-combat chat carries a typed snapshot of the active CombatState
+    (regression: the AI had no live combat tracker until combat ended)."""
+    from dm_api.db.models.combat import CombatState
+
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "Fight"})
+    session_id = r.json()["id"]
+
+    aria_id = str(uuid.uuid4())
+    goblin_id = str(uuid.uuid4())
+    db_session.add(
+        CombatState(
+            session_id=uuid.UUID(session_id),
+            round_number=2,
+            current_turn_index=1,
+            initiative_order=[
+                {"character_id": aria_id, "name": "Aria", "initiative": 18},
+                {"character_id": goblin_id, "name": "Goblin", "initiative": 11},
+            ],
+            combatants=[
+                {"id": aria_id, "name": "Aria", "hp_current": 22, "hp_max": 30},
+                {
+                    "id": goblin_id,
+                    "name": "Goblin",
+                    "hp_current": 0,
+                    "hp_max": 7,
+                    "death_saves": {"is_dead": True},
+                },
+            ],
+        )
+    )
+    await db_session.commit()
+
+    mock_orch = _mock_orchestrator("The goblin falls!")
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        await client.post(f"/api/sessions/{session_id}/chat", json={"message": "Status?"})
+
+    snapshot = mock_orch.handle_message.call_args.kwargs["world_context"].active_combat
+    assert snapshot is not None
+    assert snapshot.round_number == 2
+    assert snapshot.active_combatant == "Goblin"
+    aria = next(c for c in snapshot.combatants if c.name == "Aria")
+    assert (aria.hp_current, aria.hp_max, aria.is_dead) == (22, 30, False)
+    goblin = next(c for c in snapshot.combatants if c.name == "Goblin")
+    assert goblin.is_dead is True
+
+
+@pytest.mark.asyncio
+async def test_session_chat_ignores_ended_combat(client, world_id, db_session):
+    """A finished fight (ended_at set) is not injected as live combat."""
+    from datetime import datetime, timezone
+
+    from dm_api.db.models.combat import CombatState
+
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "Aftermath"})
+    session_id = r.json()["id"]
+    db_session.add(
+        CombatState(
+            session_id=uuid.UUID(session_id),
+            round_number=4,
+            current_turn_index=0,
+            initiative_order=[],
+            combatants=[],
+            ended_at=datetime.now(tz=timezone.utc),
+        )
+    )
+    await db_session.commit()
+
+    mock_orch = _mock_orchestrator("Peace returns.")
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        await client.post(f"/api/sessions/{session_id}/chat", json={"message": "And now?"})
+
+    assert mock_orch.handle_message.call_args.kwargs["world_context"].active_combat is None
+
+
+@pytest.mark.asyncio
 async def test_session_chat_not_found(client):
     r = await client.post(
         f"/api/sessions/{uuid.uuid4()}/chat",

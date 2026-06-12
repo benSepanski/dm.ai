@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from game_engine.types import CharacterType, LocationType, ProposalType
+from game_engine.types import CharacterType, Condition, LocationType, ProposalType
 
 # Build enum value lists once at module load time so the prompt is always in
 # sync with the canonical enum definitions in game_engine.types.enums.
@@ -32,31 +32,130 @@ _CHARACTER_TYPES = "|".join(ct.value for ct in CharacterType)
 
 
 @dataclass(frozen=True)
+class LocationBrief:
+    """Condensed canon location injected into the system prompt."""
+
+    name: str
+    type: LocationType
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class CharacterBrief:
+    """Condensed canon character (PC, NPC, or monster) injected into the prompt."""
+
+    name: str
+    type: CharacterType
+    race: str | None = None
+    char_class: str | None = None
+    level: int = 1
+    personality_traits: str | None = None
+    ideals: str | None = None
+    bonds: str | None = None
+    flaws: str | None = None
+    known_facts: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class CombatantBrief:
+    """One combatant's line in the live combat snapshot."""
+
+    name: str
+    hp_current: int
+    hp_max: int
+    is_dead: bool = False
+    conditions: tuple[Condition, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class CombatSnapshot:
+    """Live combat-tracker state injected while a fight is in progress."""
+
+    round_number: int
+    active_combatant: str | None = None
+    combatants: tuple[CombatantBrief, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
 class WorldContext:
     """Typed world-grounding input for the system prompt.
 
-    Carries durable campaign knowledge (world setting/lore and summaries of
-    previously ended sessions) so the orchestrator keeps continuity across
-    sessions. Built by the Runtime layer from the worlds/sessions tables.
+    Carries durable campaign knowledge (world setting/lore, summaries of
+    previously ended sessions, and the accepted canon entities) plus the
+    live combat snapshot, so the orchestrator keeps continuity across
+    sessions and never contradicts its own accepted proposals. Built by the
+    Runtime layer from the worlds/sessions/locations/characters tables.
     """
 
     setting_description: str | None = None
     lore_summary: str | None = None
     prior_session_summaries: tuple[str, ...] = field(default_factory=tuple)
+    known_locations: tuple[LocationBrief, ...] = field(default_factory=tuple)
+    known_characters: tuple[CharacterBrief, ...] = field(default_factory=tuple)
+    active_combat: CombatSnapshot | None = None
 
     def is_empty(self) -> bool:
         return (
             not self.setting_description
             and not self.lore_summary
             and not self.prior_session_summaries
+            and not self.known_locations
+            and not self.known_characters
+            and self.active_combat is None
         )
 
 
+def _location_line(loc: LocationBrief) -> str:
+    line = f"- {loc.name} ({loc.type.value})"
+    if loc.description:
+        line += f": {loc.description}"
+    return line
+
+
+def _character_line(char: CharacterBrief) -> str:
+    identity = " ".join(part for part in (char.race, char.char_class) if part)
+    descriptor = char.type.value.lower()
+    descriptor += f", {identity} {char.level}" if identity else f", level {char.level}"
+    details: list[str] = []
+    for label, value in (
+        ("traits", char.personality_traits),
+        ("ideals", char.ideals),
+        ("bonds", char.bonds),
+        ("flaws", char.flaws),
+    ):
+        if value:
+            details.append(f"{label}: {value}")
+    if char.known_facts:
+        details.append("known facts: " + "; ".join(char.known_facts))
+    line = f"- {char.name} ({descriptor})"
+    if details:
+        line += " — " + " | ".join(details)
+    return line
+
+
+def _combat_lines(snapshot: CombatSnapshot | None) -> list[str]:
+    """Render the ACTIVE COMBAT prompt section. Empty when no fight is live."""
+    if snapshot is None:
+        return []
+    header = f"ACTIVE COMBAT (round {snapshot.round_number}"
+    if snapshot.active_combatant:
+        header += f" — {snapshot.active_combatant}'s turn"
+    lines = [header + ")"]
+    for combatant in snapshot.combatants:
+        suffix = " — DEAD" if combatant.is_dead else ""
+        if combatant.conditions:
+            suffix += " (" + ", ".join(c.value for c in combatant.conditions) + ")"
+        lines.append(f"- {combatant.name}: {combatant.hp_current}/{combatant.hp_max} HP{suffix}")
+    lines.append("Narrate strictly from this tracker; the rules engine resolves all mechanics.")
+    return lines
+
+
 def _world_context_block(world_context: WorldContext | None) -> str:
-    """Render the WORLD CONTEXT prompt section.
+    """Render the WORLD CONTEXT and ACTIVE COMBAT prompt sections.
 
     Silent no-op (empty string) when there is no durable world knowledge yet,
-    e.g. a brand-new world with no lore and no ended sessions.
+    e.g. a brand-new world with no lore, no ended sessions, and no accepted
+    canon entities.
     """
     if world_context is None or world_context.is_empty():
         return ""
@@ -68,7 +167,22 @@ def _world_context_block(world_context: WorldContext | None) -> str:
     if world_context.prior_session_summaries:
         lines.append("Previous sessions (oldest first):")
         lines.extend(f"- {summary}" for summary in world_context.prior_session_summaries)
-    return "\n".join(lines) + "\n\n"
+    if world_context.known_locations:
+        lines.append("Known locations (canon):")
+        lines.extend(_location_line(loc) for loc in world_context.known_locations)
+    if world_context.known_characters:
+        lines.append("Known characters (canon):")
+        lines.extend(_character_line(char) for char in world_context.known_characters)
+    if world_context.known_locations or world_context.known_characters:
+        lines.append(
+            "The entities above are canon: use their names and details exactly, "
+            "and never re-propose an entity that already appears above."
+        )
+    sections = ["\n".join(lines)] if len(lines) > 1 else []
+    combat = _combat_lines(world_context.active_combat)
+    if combat:
+        sections.append("\n".join(combat))
+    return "\n\n".join(sections) + "\n\n" if sections else ""
 
 
 def build_system_prompt(
