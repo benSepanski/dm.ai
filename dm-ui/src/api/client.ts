@@ -66,6 +66,103 @@ export interface CharacterResponse {
   speed: number | null;
 }
 
+// ---- Character creation (engine-backed) ----
+
+export type AbilityName =
+  | "strength"
+  | "dexterity"
+  | "constitution"
+  | "intelligence"
+  | "wisdom"
+  | "charisma";
+
+export type AbilityScores = Record<AbilityName, number>;
+
+export interface ClassOption {
+  character_class: string;
+  hit_die: number;
+  primary_abilities: AbilityName[];
+  saving_throw_proficiencies: AbilityName[];
+  armor_training: string[];
+  weapon_category_training: string[];
+  skill_choices: string[];
+  num_skill_choices: number;
+  spellcasting: boolean;
+}
+
+export interface SpeciesTrait {
+  name: string;
+  description: string;
+}
+
+export interface SpeciesOption {
+  species: string;
+  creature_type: string;
+  size_options: string[];
+  speed: number;
+  darkvision_ft: number;
+  traits: SpeciesTrait[];
+  damage_resistances: string[];
+  description: string;
+}
+
+export interface BackgroundOption {
+  background: string;
+  ability_scores: AbilityName[];
+  skill_proficiencies: string[];
+  tool_proficiency: string;
+  origin_feat: string;
+  equipment: string[];
+  description: string;
+}
+
+export interface ArmorOption {
+  name: string;
+  armor_type: string;
+  base_ac: number;
+  dex_bonus: boolean;
+  dex_cap: number | null;
+  stealth_disadvantage: boolean;
+}
+
+export interface SkillOption {
+  skill: string;
+  governing_ability: AbilityName;
+}
+
+export interface CreationOptions {
+  classes: ClassOption[];
+  species: SpeciesOption[];
+  backgrounds: BackgroundOption[];
+  armor: ArmorOption[];
+  skills: SkillOption[];
+  languages: string[];
+  alignments: string[];
+  standard_array: number[];
+  point_buy_budget: number;
+  point_buy_costs: Record<string, number>;
+}
+
+export interface CharacterBuildRequest {
+  world_id: string;
+  name: string;
+  character_class: string;
+  species: string;
+  background: string;
+  ability_scores: AbilityScores;
+  skill_choices: string[];
+  background_ability_allocation: Partial<Record<AbilityName, number>> | null;
+  languages: string[] | null;
+  armor_name: string | null;
+  shield: boolean;
+  alignment: string | null;
+}
+
+export interface CharacterBuildResponse {
+  character: CharacterResponse;
+  warnings: string[];
+}
+
 export interface LocationResponse {
   id: string;
   world_id: string;
@@ -194,6 +291,15 @@ export const api = {
     request<CharacterResponse[]>(`/characters/world/${worldId}`),
   getCharacter: (charId: string) =>
     request<CharacterResponse>(`/characters/${charId}`),
+
+  // Character creation (engine-backed)
+  getCreationOptions: () =>
+    request<CreationOptions>("/characters/creation/options"),
+  buildCharacter: (data: CharacterBuildRequest) =>
+    request<CharacterBuildResponse>("/characters/creation/build", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // Locations
   getLocation: (locId: string) =>

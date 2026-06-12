@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import CharacterCreationWizard from "./components/CharacterCreation/CharacterCreationWizard";
 import DMDashboard from "./components/DMDashboard/DMDashboard";
 import NewSessionForm from "./components/DMDashboard/NewSessionForm";
 import { useGameStore } from "./store/gameStore";
@@ -30,6 +31,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/session/:sessionId" element={<DMDashboard />} />
+      <Route path="/world/:worldId/create-character" element={<CharacterCreationWizard />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

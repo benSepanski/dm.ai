@@ -26,6 +26,7 @@ export default function DMDashboard() {
   const { sessionId: routeSessionId } = useParams<{ sessionId: string }>();
   const {
     sessionId,
+    worldId,
     messages,
     isLoading,
     addMessage,
@@ -247,6 +248,22 @@ export default function DMDashboard() {
             {showMap ? "Hide Map" : "Show Map"}
           </button>
           <div style={{ flex: 1 }} />
+          <button
+            onClick={() => worldId && navigate(`/world/${worldId}/create-character`)}
+            disabled={!worldId}
+            title="Build a level-1 player character with the 2024 PHB rules"
+            style={{
+              padding: "4px 10px",
+              background: "#333",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+              cursor: worldId ? "pointer" : "not-allowed",
+              fontSize: 12,
+            }}
+          >
+            Create Character
+          </button>
           <button
             onClick={copyInviteLink}
             title="Share this link with players on your network so they can watch the session"

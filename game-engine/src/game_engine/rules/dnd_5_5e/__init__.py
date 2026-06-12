@@ -2,6 +2,8 @@
 
 from game_engine.rules.dnd_5_5e._spell_resolution import cast_spell
 from game_engine.rules.dnd_5_5e.character_builder import (
+    POINT_BUY_BUDGET,
+    POINT_BUY_COSTS,
     STANDARD_ARRAY,
     BuildResult,
     build_character,
@@ -33,6 +35,8 @@ __all__ = [
     "CLASSES",
     "ClassData",
     # creation & advancement
+    "POINT_BUY_BUDGET",
+    "POINT_BUY_COSTS",
     "STANDARD_ARRAY",
     "BuildResult",
     "build_character",

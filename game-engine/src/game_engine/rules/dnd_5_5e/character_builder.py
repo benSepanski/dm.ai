@@ -35,7 +35,7 @@ from game_engine.types import (
 STANDARD_ARRAY: list[int] = [15, 14, 13, 12, 10, 8]
 
 #: Point-buy cost per score (27 points total, scores 8-15).
-_POINT_BUY_COSTS: dict[int, int] = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9}
+POINT_BUY_COSTS: dict[int, int] = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9}
 
 POINT_BUY_BUDGET = 27
 
@@ -49,9 +49,9 @@ def point_buy_cost(scores: AbilityScoreSet) -> int:
     total = 0
     for ability in Ability:
         score = scores.get(ability)
-        if score not in _POINT_BUY_COSTS:
+        if score not in POINT_BUY_COSTS:
             raise ValueError(f"{ability.value} = {score} is outside the point-buy range (8-15).")
-        total += _POINT_BUY_COSTS[score]
+        total += POINT_BUY_COSTS[score]
     return total
 
 
