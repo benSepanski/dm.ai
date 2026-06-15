@@ -27,7 +27,7 @@ dm.ai is composed of three deployable units and one installable Python library.
 │                                                                     │
 │  ┌─────────────────────┐  ┌──────────┐  ┌──────────────────────┐   │
 │  │ PostgreSQL 16       │  │  Redis   │  │   game-engine        │   │
-│  │ + pgvector          │  │ pub/sub  │  │   (Python package)   │   │
+│  │ + pgvector          │  │ (future) │  │   (Python package)   │   │
 │  └─────────────────────┘  └──────────┘  └──────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
                                                   │
@@ -247,9 +247,12 @@ server-push entry point. Dead connections are pruned silently on each call.
 |---|---|---|
 | `map_token_move` | client → other clients | Battle-map token drag (`token_id`, `x`, `y`); each client also persists positions in localStorage |
 
-**Multi-process note:** The connection registry is process-local. A multi-worker
-deployment requires a shared pub/sub broker (e.g. Redis) to propagate events
-across workers. See `config.py` → `redis_url` for the intended connection string.
+**Deployment note:** The connection registry is process-local. `docker-compose.yml`
+runs a single uvicorn worker intentionally ("Single worker on purpose" comment).
+Redis is deployed and `redis_url` is wired through `EffectiveGameConfig` /
+`Settings`, but is **not yet used** — the WebSocket fan-out is in-process.
+A future multi-worker deployment would use Redis pub/sub to propagate events
+across workers; `redis_url` is the hook point for that upgrade.
 
 ---
 

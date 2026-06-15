@@ -79,20 +79,27 @@ async def sync_combatants_to_db(
     """Write updated HP and conditions from combat state back to Character DB rows.
 
     Called by ``end_combat`` to make combat damage and condition changes
-    persistent.  Combatants whose ``id`` does not resolve to a ``Character``
+    persistent. Combatants whose ``id`` does not resolve to a ``Character``
     row (e.g. ad-hoc monsters not stored in DB) are skipped silently.
+
+    Uses a single batch SELECT instead of N per-combatant queries to avoid
+    an N+1 problem on large encounters.
     """
+    uuid_to_combatant: dict[uuid.UUID, dict[str, Any]] = {}
     for combatant in combatants:
         char_id_str = combatant.get("id", "")
         try:
             char_uuid = uuid.UUID(char_id_str)
         except (ValueError, AttributeError):
             continue
+        uuid_to_combatant[char_uuid] = combatant
 
-        result = await db.execute(select(Character).where(Character.id == char_uuid))
-        character = result.scalar_one_or_none()
-        if character is None:
-            continue
+    if not uuid_to_combatant:
+        return
+
+    result = await db.execute(select(Character).where(Character.id.in_(uuid_to_combatant.keys())))
+    for character in result.scalars().all():
+        combatant = uuid_to_combatant[character.id]
 
         hp_current = combatant.get("hp_current")
         if hp_current is not None:

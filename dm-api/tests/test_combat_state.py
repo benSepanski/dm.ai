@@ -133,9 +133,6 @@ async def test_char_class_is_case_insensitive_in_combat(client, world_id):
     assert r.json()["combatants"][0]["class"] == "Wizard"
 
 
-@pytest.mark.asyncio
-
-
 # ---------------------------------------------------------------------------
 # Regression: condition_durations must survive the DB→engine round-trip
 # ---------------------------------------------------------------------------
