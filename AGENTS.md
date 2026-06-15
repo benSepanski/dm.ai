@@ -279,9 +279,11 @@ ai/
 Data files live in `game_engine/rules/dnd_5_5e/data/`. Use existing entries as
 templates. Always use enum types for `damage_type`, `school`, and similar fields.
 
-- `spells.py` — add to the `SPELLS` list
-- `monsters.py` — add to the `MONSTERS` list
-- `items.py` — add to `WEAPONS` or `ARMOR`
+- `data/spells/` — spell data split by level; add to the appropriate level module
+  (`cantrips.py`, `level1.py` … `level9.py`). Re-export from `data/spells/__init__.py`.
+- `data/monsters.py` — add to the `MONSTERS` list
+- `data/weapons.py` — add to the `WEAPONS` list
+- `data/armor.py` — add to the `ARMOR` list
 
 ---
 

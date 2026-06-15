@@ -307,3 +307,29 @@ async def test_session_chat_not_found(client):
         json={"message": "Hello?"},
     )
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_session_chat_rejected_after_end(client, world_id):
+    """Chatting with an ended session must return 409, not silently succeed.
+
+    Regression: session_chat had no guard on ended_at; messages would be
+    persisted into a concluded session leaving it in an inconsistent state.
+    """
+    r = await client.post(
+        "/api/sessions/",
+        json={"world_id": world_id, "name": "Ended Session"},
+    )
+    assert r.status_code == 201
+    session_id = r.json()["id"]
+
+    r = await client.put(f"/api/sessions/{session_id}/end")
+    assert r.status_code == 200
+    assert r.json()["ended_at"] is not None
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/chat",
+        json={"message": "One more thing..."},
+    )
+    assert r.status_code == 409
+    assert r.json()["detail"] == "Session has ended"

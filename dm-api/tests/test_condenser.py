@@ -223,6 +223,27 @@ def test_as_ai_messages_guards_against_assistant_first_message() -> None:
         ), f"Consecutive user messages at indices {i} and {i+1}"
 
 
+@pytest.mark.asyncio
+async def test_condense_with_preserve_last_n_zero() -> None:
+    """preserve_last_n=0 must not raise IndexError.
+
+    In Python, messages[:-0] == messages[:0] == [], which would cause
+    to_condense[0] to raise IndexError. The condenser guards against this by
+    branching on preserve_last_n > 0.
+    """
+    payload = '{"synopsis": "All compressed.", "key_facts": [], "open_threads": []}'
+    backend = _StubBackend(reply=payload)
+    condenser = ContextCondenser(backend=backend, model="fast-model")
+
+    history = _mk_history(4, tokens_each=100)
+    result = await condenser.condense(messages=history, token_limit=50, preserve_last_n=0)
+
+    assert result.was_condensed is True
+    assert result.synopsis == "All compressed."
+    assert result.preserved == []
+    assert len(backend.calls) == 1
+
+
 def test_message_anchor_citation_format() -> None:
     """The citation format matches filepath:lineno style: msg:<id>@<ts>."""
     mid = uuid.UUID("12345678-1234-5678-1234-567812345678")

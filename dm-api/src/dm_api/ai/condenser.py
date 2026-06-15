@@ -213,8 +213,13 @@ class ContextCondenser:
             )
 
         # Stage 2: extract — split into condense range + preserved tail.
-        to_condense = messages[:-preserve_last_n]
-        preserved = messages[-preserve_last_n:]
+        # NOTE: messages[:-0] == messages[:0] == [] in Python, so guard explicitly.
+        if preserve_last_n > 0:
+            to_condense = messages[:-preserve_last_n]
+            preserved = messages[-preserve_last_n:]
+        else:
+            to_condense = list(messages)
+            preserved = []
         first_anchor = to_condense[0].anchor
         last_anchor = to_condense[-1].anchor
         logger.info(

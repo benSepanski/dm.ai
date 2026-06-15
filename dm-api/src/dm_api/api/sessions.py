@@ -206,6 +206,8 @@ async def session_chat(
     db: AsyncSession = Depends(get_db),
 ) -> ChatResponse:
     game_session = await _fetch_session_or_404(db, session_id)
+    if game_session.ended_at is not None:
+        raise HTTPException(status_code=409, detail="Session has ended")
 
     dm_message = ChatMessage(
         session_id=session_id,
