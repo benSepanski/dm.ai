@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from game_engine.core.dice import roll_dice
 from game_engine.rules.dnd_5_5e._damage import _apply_healing_impl
-from game_engine.types import Ability, CharacterClass, CharacterSheet
+from game_engine.types import Ability, CharacterClass, CharacterSheet, Condition
 
 
 @dataclass
@@ -105,6 +105,10 @@ def long_rest(char: CharacterSheet) -> RestResult:
     before = char.hp_current
     char.hp_current = char.hp_max
     result.hp_restored = char.hp_current - before
+    if before <= 0 and char.hp_current > 0:
+        char.death_saves.reset()
+        char.conditions = [c for c in char.conditions if c is not Condition.UNCONSCIOUS]
+        char.condition_durations.pop(Condition.UNCONSCIOUS, None)
     char.temp_hp = 0
 
     for pool in char.hit_dice:

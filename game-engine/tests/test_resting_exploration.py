@@ -99,6 +99,28 @@ class TestLongRest:
         result = long_rest(char)
         assert result.hp_restored == 0
 
+    def test_long_rest_clears_death_saves_and_unconscious_for_stable_character(self):
+        """A stable-unconscious character wakes with full HP, cleared death saves,
+        and UNCONSCIOUS removed. Regression: long_rest() used to skip both steps
+        that _apply_healing_impl performs for 0-HP→positive transitions."""
+        char = _char(hp_current=0, conditions=[Condition.UNCONSCIOUS, Condition.POISONED])
+        char.death_saves.successes = 3
+        char.death_saves.is_stable = True
+        char.condition_durations = {Condition.UNCONSCIOUS: 0}
+
+        result = long_rest(char)
+
+        assert char.hp_current == char.hp_max
+        assert result.hp_restored == char.hp_max
+        # Death save state must be cleared.
+        assert char.death_saves.successes == 0
+        assert char.death_saves.failures == 0
+        assert not char.death_saves.is_stable
+        # UNCONSCIOUS must be lifted; other conditions (poisoned) stay.
+        assert Condition.UNCONSCIOUS not in char.conditions
+        assert Condition.POISONED in char.conditions
+        assert Condition.UNCONSCIOUS not in char.condition_durations
+
 
 class TestEncumbrance:
     def test_carrying_capacity(self):

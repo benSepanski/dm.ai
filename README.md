@@ -69,7 +69,7 @@ can be added by subclassing it without touching the API or UI layers.
   │   │   └── ClaudeCLIBackend  (subprocess, claude CLI)
   │   └── Prompts / system prompt builder
   ├── PostgreSQL 16 + pgvector  (7 tables, vector(1536) embeddings)
-  └── Redis  (pub/sub for WS broadcast)
+  └── Redis  (deployed; reserved for future multi-worker WS fan-out)
           │
           ▼
   game-engine  (installable Python package, no FastAPI dep)
@@ -168,7 +168,6 @@ fill in the values relevant to your setup.
 | `AI_PROVIDER` | `anthropic` | `anthropic` (API key) or `claude_cli` (local CLI) |
 | `ANTHROPIC_API_KEY` | — | Required when `AI_PROVIDER=anthropic` |
 | `ORCHESTRATOR_MODEL` | `claude-sonnet-4-6` | Main chat / proposal model |
-| `PLANNING_MODEL` | `claude-sonnet-4-6` | World-building and complex reasoning |
 | `GENERATION_MODEL` | `claude-haiku-4-5-20251001` | Fast tasks: summaries, dialogue |
 | `DATABASE_URL` | `postgresql+asyncpg://dmuser:dmpass@localhost:5432/dmdb` | PostgreSQL (asyncpg) |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection |
