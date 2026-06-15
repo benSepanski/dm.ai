@@ -116,6 +116,107 @@ Marks `ended_at` and generates a session summary via the fast model.
 
 ---
 
+## Character Creation  `/api/characters/creation`
+
+Engine-backed creation endpoints that apply 2024 PHB rules — ability scores,
+proficiencies, HP, AC, spell slots — so the UI never hard-codes game data.
+
+### GET /api/characters/creation/options — fetch creation reference data
+
+Returns all choices needed to build a level-1 character from the engine's
+SRD registries. Safe to cache client-side; the data changes only on engine
+updates.
+
+**200** →
+```json
+{
+  "classes": [
+    {
+      "character_class": "Fighter",
+      "hit_die": 10,
+      "primary_abilities": ["strength", "dexterity"],
+      "saving_throw_proficiencies": ["strength", "constitution"],
+      "armor_training": ["light", "medium", "heavy", "shield"],
+      "weapon_category_training": ["simple", "martial"],
+      "skill_choices": ["acrobatics", "athletics", ...],
+      "num_skill_choices": 2,
+      "spellcasting": false
+    }, ...
+  ],
+  "species": [
+    {
+      "species": "Human",
+      "creature_type": "humanoid",
+      "size_options": ["medium", "small"],
+      "speed": 30,
+      "darkvision_ft": 0,
+      "traits": [{ "name": "Resourceful", "description": "..." }],
+      "damage_resistances": [],
+      "description": "..."
+    }, ...
+  ],
+  "backgrounds": [
+    {
+      "background": "Soldier",
+      "ability_scores": ["strength", "constitution"],
+      "skill_proficiencies": ["athletics", "intimidation"],
+      "tool_proficiency": "playing card set",
+      "origin_feat": "Savage Attacker",
+      "equipment": ["spear", "shortbow", ...],
+      "description": "..."
+    }, ...
+  ],
+  "armor": [{ "name": "Chain Mail", "armor_type": "heavy", "base_ac": 16, "dex_bonus": false, "dex_cap": null, "stealth_disadvantage": true }, ...],
+  "skills": [{ "skill": "athletics", "governing_ability": "strength" }, ...],
+  "languages": ["common", "elvish", ...],
+  "alignments": ["Lawful Good", ...],
+  "standard_array": [15, 14, 13, 12, 10, 8],
+  "point_buy_budget": 27,
+  "point_buy_costs": { "8": 0, "9": 1, ..., "15": 9 }
+}
+```
+
+### POST /api/characters/creation/build — build a level-1 PC
+
+Runs `build_character` from the 2024 PHB engine and persists the result.
+Rule-bending choices (off-list skill, untrained armor) surface as
+non-fatal `warnings`; invalid inputs (unknown class/species, out-of-range
+scores) return **422**.
+
+**Body:**
+```json
+{
+  "world_id": "uuid",
+  "name": "Roderick",
+  "character_class": "Fighter",
+  "species": "Human",
+  "background": "Soldier",
+  "ability_scores": { "strength": 15, "dexterity": 14, "constitution": 13, "intelligence": 12, "wisdom": 10, "charisma": 8 },
+  "skill_choices": ["athletics", "perception"],
+  "background_ability_allocation": null,
+  "languages": [],
+  "armor_name": "Chain Mail",
+  "shield": true,
+  "alignment": "Lawful Good"
+}
+```
+
+`background_ability_allocation` (optional) lets the player direct the background's
++2/+1 ability bonus. If omitted, the engine picks the default allocation for
+the background. `armor_name` must match an entry in the `/options` armor list
+(or be omitted for no armor). `shield` adds +2 AC.
+
+**201** →
+```json
+{
+  "character": { ...CharacterRead... },
+  "warnings": ["Fighter should pick weapon masteries before play."]
+}
+```
+**404** world not found | **422** invalid class/species/background/scores
+
+---
+
 ## Characters  `/api/characters`
 
 ### POST /api/characters — create character

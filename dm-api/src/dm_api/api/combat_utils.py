@@ -106,9 +106,9 @@ async def sync_combatants_to_db(
             character.hp_current = int(hp_current)
 
         stats: dict[str, Any] = dict(character.stats or {})
-        for field in SHEET_STATE_FIELDS:
-            if field in combatant:
-                stats[field] = combatant[field]
+        for stat_field in SHEET_STATE_FIELDS:
+            if stat_field in combatant:
+                stats[stat_field] = combatant[stat_field]
         character.stats = stats
 
 
