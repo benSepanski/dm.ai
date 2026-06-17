@@ -270,13 +270,16 @@ def _parse_proposal(json_str: str) -> ProposalPayload | None:
     bad proposal never breaks chat."""
     try:
         raw = json.loads(_strip_json_fences(json_str))
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        logger.debug("proposal json decode failed: %s — snippet: %.80r", exc, json_str)
         return None
     if not isinstance(raw, dict):
+        logger.debug("proposal is not a dict: %.80r", raw)
         return None
     try:
         proposal_type = ProposalType(raw.get("type", ""))
     except ValueError:
+        logger.debug("unknown proposal type: %.40r", raw.get("type"))
         return None
     content = raw.get("content")
     return ProposalPayload(

@@ -80,7 +80,7 @@ def short_rest(char: CharacterSheet, hit_dice_to_spend: int = 0) -> RestResult:
                 (s for s in char.spell_slots if s.slot_level == pact_slot.slot_level), None
             )
             if slot is not None and slot.remaining < slot.maximum:
-                slot.remaining = min(slot.maximum, slot.remaining + pact_slot.maximum)
+                slot.remaining = slot.maximum
                 result.slots_restored = True
     return result
 

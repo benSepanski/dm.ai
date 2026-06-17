@@ -307,7 +307,8 @@ def _parse_condensation(text: str) -> _ParsedCondensation:
     stripped = _strip_fences(text.strip())
     try:
         data = json.loads(stripped)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        logger.warning("condenser json decode failed: %s — using raw text as synopsis", exc)
         return _ParsedCondensation(
             synopsis=_clip(stripped, max_chars=2000),
             key_facts=[],

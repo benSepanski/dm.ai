@@ -42,6 +42,12 @@ class AnthropicBackend(AIBackend):
         )
         duration_ms = int((time.monotonic() - start) * 1000)
         text_blocks = [b for b in response.content if isinstance(b, TextBlock)]
+        if not text_blocks:
+            logger.warning(
+                "anthropic returned no text block  model=%s stop_reason=%s",
+                response.model,
+                response.stop_reason,
+            )
         content = text_blocks[0].text if text_blocks else ""
         logger.debug(
             "anthropic complete  model=%s tokens_in=%d tokens_out=%d duration_ms=%d",
