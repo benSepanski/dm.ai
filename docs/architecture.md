@@ -463,7 +463,7 @@ to cite anchors when referring to prior events.
 2026-05-09 12:34:56,001 INFO     dm_api.ai.dm_orchestrator  orchestrator start  session_id=abc world_id=xyz history_len=12
 2026-05-09 12:34:56,002 DEBUG    dm_api.ai.condenser  condenser skipped  messages=12 tokens=45000 limit=180000
 2026-05-09 12:34:57,400 DEBUG    dm_api.ai.backends.anthropic_backend  anthropic complete  model=claude-sonnet-4-6 tokens_in=1480 tokens_out=312 duration_ms=1398
-2026-05-09 12:34:57,401 INFO     dm_api.ai.dm_orchestrator  orchestrator done  session_id=abc model=claude-sonnet-4-6 tokens_in=1480 tokens_out=312 was_condensed=False proposal=none duration_ms=1430
+2026-05-09 12:34:57,401 INFO     dm_api.ai.dm_orchestrator  orchestrator done  session_id=abc model=claude-sonnet-4-6 tokens_in=1480 tokens_out=312 was_condensed=False proposals=none duration_ms=1430
 2026-05-09 12:34:58,000 INFO     dm_api.api.ws  ws disconnect  session_id=abc remaining=0
 ```
 
@@ -475,8 +475,10 @@ to cite anchors when referring to prior events.
 | `dm_api.api.ws` | connect (session, total connections), disconnect (session, remaining) | dead-connection pruned |
 | `dm_api.ai.dm_orchestrator` | start + done (session, model, tokens, ms) | — |
 | `dm_api.ai.condenser` | triggered (token counts, messages condensed, facts/threads) | skipped (no-op path) |
-| `dm_api.ai.backends.anthropic_backend` | — | model, tokens in/out, ms |
+| `dm_api.ai.backends.anthropic_backend` | WARNING: no text block returned (empty stop_reason) | model, tokens in/out, ms |
 | `dm_api.ai.backends.claude_cli_backend` | — | model, estimated tokens, ms |
+| `dm_api.ai.dm_orchestrator` (debug) | — | proposal json decode failures, unknown proposal types (DEBUG) |
+| `dm_api.ai.condenser` (debug) | WARNING: condenser json decode failed (uses raw text as synopsis) | — |
 
 ### Configuring the Log Level
 
