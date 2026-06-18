@@ -39,6 +39,10 @@ POINT_BUY_COSTS: dict[int, int] = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7
 
 POINT_BUY_BUDGET = 27
 
+# Trait name checked during character creation to apply the HP bonus.
+# Matches SpeciesTraitData.name for Dwarf's "Dwarven Toughness" entry.
+_TRAIT_DWARVEN_TOUGHNESS = "Dwarven Toughness"
+
 
 def point_buy_cost(scores: AbilityScoreSet) -> int:
     """Return the total point-buy cost of *scores*.
@@ -172,7 +176,7 @@ def build_character(
     con_mod = scores.modifier(Ability.CONSTITUTION)
     hp_max = class_data.hit_die + con_mod
     # Species/feat HP riders.
-    if any(t.name == "Dwarven Toughness" for t in species_data.traits):
+    if any(t.name == _TRAIT_DWARVEN_TOUGHNESS for t in species_data.traits):
         hp_max += 1
     feats = [background_data.origin_feat]
     if background_data.origin_feat is Feat.TOUGH:
