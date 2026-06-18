@@ -78,6 +78,20 @@ class TestShortRest:
         slot = char.spell_slots[0]
         assert (slot.slot_level, slot.remaining) == (3, 2)
 
+    def test_warlock_pact_slots_fully_restored_when_partially_spent(self):
+        """A short rest always restores ALL pact slots, not just the ones spent."""
+        char = _char(
+            char_class=CharacterClass.WARLOCK,
+            level=5,
+            class_levels=[ClassLevelEntry(CharacterClass.WARLOCK, 5)],
+        )
+        char.spell_slots = compute_spell_slots(char.class_levels)
+        # Spend only 1 of the 2 pact slots.
+        char.spell_slots[0].remaining = 1
+        result = short_rest(char)
+        assert result.slots_restored
+        assert char.spell_slots[0].remaining == char.spell_slots[0].maximum
+
 
 class TestLongRest:
     def test_restores_everything(self):

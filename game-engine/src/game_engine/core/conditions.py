@@ -25,9 +25,16 @@ class ConditionEffect:
         can_act: Whether the creature can take actions/reactions.
         attack_modifier: ``"advantage"``, ``"disadvantage"``, or ``None``.
         attack_against_modifier: Modifier on rolls *against* this creature.
+            NOTE: ``Condition.PRONE`` is NOT handled via this field — it has
+            range-dependent handling (advantage melee, disadvantage ranged)
+            implemented directly in ``_attacks.py`` and is skipped by the
+            generic condition-effect loop there.
         auto_fail_saves: Abilities that auto-fail saves while in this condition.
         speed_zero: Whether the condition sets movement speed to 0.
         immunity_types: Damage types the creature is immune to (condition-based).
+        damage_resistances_all: True when the condition grants resistance to all
+            damage types (e.g. PETRIFIED).  ``_damage.py`` consults this field
+            to extend the effective resistance list before computing damage.
     """
 
     description: str = ""
@@ -37,6 +44,7 @@ class ConditionEffect:
     auto_fail_saves: list[Ability] = field(default_factory=list)
     speed_zero: bool = False
     immunity_types: list[DamageType] = field(default_factory=list)
+    damage_resistances_all: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +145,7 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
         speed_zero=True,
         immunity_types=[DamageType.POISON, DamageType.PSYCHIC],
+        damage_resistances_all=True,
     ),
     Condition.POISONED: ConditionEffect(
         description=("A poisoned creature has disadvantage on attack rolls and ability checks."),
@@ -152,7 +161,10 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
         ),
         can_act=True,
         attack_modifier=AdvantageType.DISADVANTAGE,
-        attack_against_modifier=AdvantageType.ADVANTAGE,  # within 5 ft; disadvantage beyond
+        # attack_against_modifier is intentionally None: _attacks.py short-circuits
+        # on PRONE before reaching the generic condition-effect loop, applying
+        # advantage for melee and disadvantage for ranged independently.
+        attack_against_modifier=None,
     ),
     Condition.RESTRAINED: ConditionEffect(
         description=(

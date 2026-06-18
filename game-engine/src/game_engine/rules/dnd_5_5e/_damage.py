@@ -19,10 +19,12 @@ def _apply_damage_impl(
     """Apply damage to *target*, respecting resistances and immunities.
 
     Damage calculations:
-    - **Immunity** → damage = 0 (character immunities AND condition-based immunities)
-    - **Resistance** → damage = damage // 2
+    - **Immunity** → damage = 0 (character immunities AND condition-based immunities
+      from ``ConditionEffect.immunity_types``).
+    - **Resistance** → damage = damage // 2 (character resistances AND condition-based
+      all-damage resistance from ``ConditionEffect.damage_resistances_all``).
     - **Vulnerability** → damage = damage * 2
-    - Petrified creatures have resistance to all damage and immunity to poison/psychic.
+    - Resistance and vulnerability cancel each other out; immunity always wins.
 
     Temporary hit points absorb damage first. Dropping to 0 HP knocks the
     character unconscious and prone (2024 PHB "Dropping to 0 Hit Points");
@@ -40,17 +42,18 @@ def _apply_damage_impl(
     Returns:
         Updated character sheet.
     """
-    # Condition-based immunities (e.g. PETRIFIED → immune to POISON and PSYCHIC).
+    # Condition-based immunities and all-damage resistance.
+    # ConditionEffect.immunity_types:      e.g. PETRIFIED → immune to POISON/PSYCHIC
+    # ConditionEffect.damage_resistances_all: e.g. PETRIFIED → resistant to all damage
+    resistances = list(target.damage_resistances)
     for cond in target.conditions:
         effect = CONDITION_EFFECTS.get(cond)
-        if effect and damage_type in effect.immunity_types:
+        if effect is None:
+            continue
+        if damage_type in effect.immunity_types:
             return target
-
-    # Petrified → resistance to all damage
-    is_petrified = Condition.PETRIFIED in target.conditions
-    resistances = list(target.damage_resistances)
-    if is_petrified and damage_type not in resistances:
-        resistances.append(damage_type)
+        if effect.damage_resistances_all and damage_type not in resistances:
+            resistances.append(damage_type)
 
     effective_damage = _compute_damage(
         damage,

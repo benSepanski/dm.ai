@@ -224,6 +224,20 @@ class TestApplyDamagePetrified:
         engine.apply_damage(char, 20, DamageType.POISON)
         assert char.hp_current == 44
 
+    def test_petrified_resistance_via_condition_effect_not_hardcode(self, engine: DnD55eEngine):
+        """PETRIFIED all-damage resistance comes from ConditionEffect.damage_resistances_all,
+        not a hardcoded isinstance check — so any future condition with the same flag works."""
+        from game_engine.core.conditions import CONDITION_EFFECTS
+
+        # Verify the data model: PETRIFIED carries damage_resistances_all=True.
+        petrified_effect = CONDITION_EFFECTS[Condition.PETRIFIED]
+        assert petrified_effect.damage_resistances_all is True
+
+        # The engine halves non-immune damage through the generic mechanism.
+        char = make_fighter(conditions=[Condition.PETRIFIED])
+        engine.apply_damage(char, 20, DamageType.FIRE)
+        assert char.hp_current == 44 - 10  # 20 // 2 = 10
+
 
 # ---------------------------------------------------------------------------
 # apply_condition

@@ -122,6 +122,25 @@ class TestConditionEffectsDict:
         assert DamageType.POISON in effect.immunity_types
         assert DamageType.PSYCHIC in effect.immunity_types
 
+    def test_petrified_damage_resistances_all(self) -> None:
+        """PETRIFIED grants resistance to all damage types via damage_resistances_all."""
+        effect = CONDITION_EFFECTS[Condition.PETRIFIED]
+        assert effect.damage_resistances_all is True
+
+    def test_no_other_condition_has_damage_resistances_all(self) -> None:
+        """Only PETRIFIED should have damage_resistances_all=True in the base set."""
+        conditions_with_all_resistance = [
+            c for c, e in CONDITION_EFFECTS.items() if e.damage_resistances_all
+        ]
+        assert conditions_with_all_resistance == [Condition.PETRIFIED]
+
+    def test_prone_attack_against_modifier_is_none(self) -> None:
+        """PRONE's attack_against_modifier is None because _attacks.py handles the
+        range-dependent rule (advantage melee, disadvantage ranged) via its own
+        short-circuit before reaching the generic condition-effect loop."""
+        effect = CONDITION_EFFECTS[Condition.PRONE]
+        assert effect.attack_against_modifier is None
+
 
 # ---------------------------------------------------------------------------
 # Condition.prevents_action classmethod
