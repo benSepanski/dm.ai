@@ -1,8 +1,11 @@
 """
-D&D 5.5e spellcasting engine: slot progression, save DCs, and casting.
+D&D 5.5e spellcasting engine: slot progression, save DCs, and result types.
 
 Action economy for the Magic action is enforced by :mod:`._actions`;
-this module owns slot bookkeeping and spell effect resolution.
+this module owns slot bookkeeping, save DC / attack-bonus helpers, and the
+typed :class:`SpellCastResult` / :class:`SpellTargetOutcome` dataclasses.
+Spell effect resolution (damage, conditions, healing) lives in
+:mod:`._spell_resolution`.
 """
 
 from __future__ import annotations

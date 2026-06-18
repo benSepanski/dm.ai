@@ -2,7 +2,7 @@
 D&D 5.5e spell cast resolution.
 
 Internal module — import :func:`cast_spell` via
-:mod:`game_engine.rules.dnd_5_5e.spellcasting` users.
+:mod:`game_engine.rules.dnd_5_5e` (the package ``__init__.py`` re-exports it).
 """
 
 from __future__ import annotations
@@ -163,7 +163,7 @@ def cast_spell(
         if spell.healing_dice is not None:
             healing += caster.ability_scores.modifier(spellcasting_ability)
         healing += spell.healing_flat + spell.upcast_healing_flat_per_slot * upcast_levels
-        if healing > 0 and spell.healing_dice is not None or spell.healing_flat > 0:
+        if healing > 0 and (spell.healing_dice is not None or spell.healing_flat > 0):
             _apply_healing_impl(target, max(0, healing))
             outcome.healing = max(0, healing)
 

@@ -256,12 +256,13 @@ async def reject_proposal(
     await db.refresh(proposal)
     result_read = ProposalRead.model_validate(proposal)
 
+    session_id_str = str(proposal.session_id)
     try:
         await broadcast_to_session(
-            str(proposal.session_id),
+            session_id_str,
             {
                 "type": "proposal_ready",
-                "session_id": str(proposal.session_id),
+                "session_id": session_id_str,
                 "proposal_id": str(proposal.id),
                 "proposal_type": proposal.type.value,
                 "status": ProposalStatus.REJECTED.value,
