@@ -45,6 +45,7 @@ packages = ["src/dm_api"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["src", "../game-engine/src"]
 
 [tool.black]
 line-length = 99
