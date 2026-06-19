@@ -68,9 +68,9 @@ def _passive_score_impl(char: CharacterSheet, skill: Skill) -> int:
 def _roll_initiative_impl(char: CharacterSheet) -> int:
     """Roll the raw d20 for initiative.
 
-    The caller (``DnD55eEngine.roll_initiative``) adds the DEX modifier to
-    produce the final total; this function returns only the raw roll so the
-    engine can expose both values if needed (e.g., for tie-breaking storage).
+    The caller (``DnD55eEngine.roll_initiative``) adds the DEX modifier and
+    returns the final total. Tie-breaking in combat uses the raw DEX score
+    directly, not a separate raw-roll value.
 
     Args:
         char: Character sheet (unused here; retained for interface symmetry).
