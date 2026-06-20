@@ -16,12 +16,13 @@ dm.ai is composed of three deployable units and one installable Python library.
 │                                                                     │
 │  ┌──────────────────────┐   ┌───────────────────────────────────┐   │
 │  │ REST Route Handlers  │   │ AI Layer                          │   │
-│  │  /worlds             │   │  DMOrchestrator                   │   │
-│  │  /sessions           │   │  AIBackend ABC                    │   │
-│  │  /characters         │   │   ├─ AnthropicBackend             │   │
-│  │  /locations          │   │   └─ ClaudeCLIBackend             │   │
-│  │  /combat             │   │  System prompt builder            │   │
-│  │  /ai (proposals)     │   └───────────────────────────────────┘   │
+│  │  /auth               │   │  DMOrchestrator                   │   │
+│  │  /worlds             │   │  AIBackend ABC                    │   │
+│  │  /sessions           │   │   ├─ AnthropicBackend             │   │
+│  │  /characters         │   │   └─ ClaudeCLIBackend             │   │
+│  │  /locations          │   │  System prompt builder            │   │
+│  │  /combat             │   └───────────────────────────────────┘   │
+│  │  /ai (proposals)     │                                           │
 │  │  /ws/sessions/{id}*  │  (*mounted under the /api prefix)         │
 │  └──────────────────────┘                                           │
 │                                                                     │
@@ -159,6 +160,26 @@ and Alembic for migrations.
 - A health endpoint at `GET /health` (outside the prefix)
 - Lifespan context manager (migrations run separately via Alembic)
 
+### Authentication — DM vs. player roles
+
+`api/auth.py` implements a single-token role split. A shared `DM_TOKEN`
+(from `Settings`, or auto-generated and logged at startup) distinguishes two
+roles via the `X-DM-Token` request header:
+
+- `client_role` resolves the caller's `ClientRole` (DM or player) and is used
+  by read endpoints to redact selectively.
+- `require_dm` is a dependency that 403s any non-DM caller; it guards every
+  mutation except character creation (`POST /api/characters` and
+  `/api/characters/creation/*` stay open for player onboarding) and the
+  entire `/api/ai` proposals surface.
+- `api/visibility.py` nulls DM-only fields (NPC/monster stat blocks and
+  roleplay secrets, location lore/history, world lore, DM bookkeeping) from
+  player reads.
+- `GET /api/auth/role` echoes the caller's resolved role so the UI can
+  validate a token before trusting it.
+
+See `docs/api.md` for the per-entity redaction table.
+
 ### Database — 7 Tables
 
 | Table | Key columns | Notes |
@@ -240,7 +261,7 @@ delivered only to DM-role connections.
 
 | Type | Emitted by | Payload |
 |---|---|---|
-| `chat_message` | `POST /sessions/{id}/chat` (DM echo immediately after persist, AI reply after the orchestrator returns) | `session_id`, `message_id`, `role` (`dm`\|`ai`), `content` |
+| `chat_message` | `POST /sessions/{id}/chat` (DM echo immediately after persist, AI reply after the orchestrator returns); `PUT /sessions/{id}/combat/end` (end-of-combat system summary) | `session_id`, `message_id`, `role` (`dm`\|`ai`\|`system`), `content` |
 | `proposal_ready` (DM connections only) | `POST /sessions/{id}/chat`, `POST /ai/proposals/{id}/accept`, `POST /ai/proposals/{id}/reject` | `session_id`, `proposal_id`, `proposal_type`, `status` |
 | `combat_update` | `POST /sessions/{id}/combat`, `POST /sessions/{id}/combat/action`, `POST /sessions/{id}/combat/cast-spell`, `POST /sessions/{id}/combat/heal`, `POST /sessions/{id}/combat/stabilize`, `POST /sessions/{id}/combat/next-turn`, `PUT /sessions/{id}/combat/end`, `PATCH /characters/{id}` (write-through while enrolled in an active combat) | `session_id`, `combat` (full `CombatStateRead`) |
 | `entity_update` | `POST /ai/proposals/{id}/accept` (when a LOCATION or CHARACTER entity is created) | `session_id`, `entity_type`, `entity_id` |
@@ -267,18 +288,28 @@ The frontend is a React 19 + Vite + TypeScript application with strict mode enab
 ### Component Tree
 
 ```
-App                          (routes: "/" → NewSessionForm or redirect,
-│                             "/session/:sessionId" → DMDashboard)
-└── DMDashboard             (owns chat input/output, session hydration, layout)
-    ├── aside (left)
-    │   ├── LocationPanel
-    │   └── CharacterCard
-    ├── main
-    │   ├── BattleMap        (react-konva, collapsible via "Show Map" toggle)
-    │   └── (inline) Chat    (message list + input bar — lives in DMDashboard.tsx)
-    └── aside (right)
-        └── CombatTracker
+App                          (routes: "/" → Home (NewSessionForm or redirect),
+│                             "/session/:sessionId" → DMDashboard,
+│                             "/world/:worldId/create-character"
+│                                                  → CharacterCreationWizard)
+├── DMDashboard             (owns chat input/output, session hydration, layout)
+│   ├── top bar             (role badge, DMUnlock [player], GameSettings [DM],
+│   │                        Create Character, Copy Invite Link, End Session [DM])
+│   ├── aside (left)
+│   │   ├── LocationPanel
+│   │   └── CharacterCard
+│   ├── main
+│   │   ├── BattleMap        (react-konva, collapsible via "Show Map" toggle)
+│   │   └── (inline) Chat    (message list + input bar — lives in DMDashboard.tsx)
+│   └── aside (right)
+│       └── CombatTracker    (DM-only controls; players see read-only state)
+└── CharacterCreationWizard (OriginStep → AbilitiesStep → SkillsStep →
+                             ReviewStep; engine-backed via /characters/creation)
 ```
+
+The DM-only surfaces (chat input, combat controls, proposal cards, Game
+Settings, End Session) are gated on the role returned by `GET /api/auth/role`;
+a stale or wrong token degrades silently to the read-only player view.
 
 ### State Management — Zustand
 

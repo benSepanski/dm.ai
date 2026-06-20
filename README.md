@@ -49,6 +49,11 @@ can be added by subclassing it without touching the API or UI layers.
   sync during live sessions
 - **Dual AI Backend** — use the Anthropic API with an API key, or the `claude` CLI
   for local/offline use
+- **Character Creation Wizard** — an engine-backed, in-UI builder for level-1 PCs
+  (origin, point-buy/standard-array abilities, skills) that applies the 2024 PHB
+  rules for proficiencies, HP, AC, and spell slots
+- **DM / Player Roles** — a shared DM token splits clients into a full-access DM
+  and read-only players; player API responses redact DM-only secrets server-side
 
 ## Architecture
 
@@ -60,7 +65,7 @@ can be added by subclassing it without touching the API or UI layers.
           │  REST + WebSocket  (prefix: /api)
           ▼
   dm-api  (FastAPI + Python 3.12 + SQLAlchemy async)
-  ├── REST routes: /worlds  /sessions  /characters  /locations  /combat  /ai
+  ├── REST routes: /auth  /worlds  /sessions  /characters  /locations  /combat  /ai
   ├── WebSocket:   /api/ws/sessions/{id}
   ├── AI layer
   │   ├── DMOrchestrator  (stateless, session-scoped)
@@ -151,6 +156,11 @@ on the same network can join a running session:
    and share it. Players open `http://<your-lan-ip>:5173/session/<id>` and see
    chat, combat tracker, and battle-map moves live.
 
+The browser holding the `DM_TOKEN` (entered on the new-session form or via
+**Unlock DM** in the top bar) is the DM and gets full control; every other
+browser is a read-only player with DM-only data redacted server-side. Keep
+the token off the table.
+
 Session state lives in PostgreSQL, and each browser remembers its session in
 localStorage — refreshing, or coming back the next day, resumes where you
 left off. Use **New Session** in the top bar to detach a browser from its
@@ -172,6 +182,7 @@ fill in the values relevant to your setup.
 | `DATABASE_URL` | `postgresql+asyncpg://dmuser:dmpass@localhost:5432/dmdb` | PostgreSQL (asyncpg) |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection |
 | `SECRET_KEY` | `dev-secret-key` | FastAPI signing key (change in production) |
+| `DM_TOKEN` | — (auto-generated) | Shared token that unlocks the DM role (`X-DM-Token` header / `dm_token` WS param). Leave unset to generate one per run, printed in the API logs |
 | `FRONTEND_URL` | `http://localhost:5173` | CORS allowed origin |
 | `CONTEXT_TOKEN_LIMIT` | `180000` | Token count that triggers context summarization |
 | `CONTEXT_PRESERVE_LAST_N` | `5` | Messages kept verbatim before the summary |
@@ -222,7 +233,8 @@ dm.ai/
         ├── api/             — REST client + WebSocket hook
         ├── store/gameStore.ts
         └── components/      — DMDashboard, BattleMap, CombatTracker,
-                               CharacterCard, LocationPanel, ProposalCard
+                               CharacterCard, CharacterCreation, LocationPanel,
+                               ProposalCard, DMUnlock, GameSettings
 ```
 
 ## Development
