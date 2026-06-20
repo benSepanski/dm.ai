@@ -120,7 +120,7 @@ async def test_cast_unknown_spell_404(client, world_id):
 @pytest.mark.asyncio
 async def test_cast_without_slot_is_409_and_keeps_log_clean(client, world_id):
     """A level-3 wizard has no 3rd-level slots — Fireball is rejected loudly."""
-    wizard_id = await _create_caster(client, world_id)
+    wizard_id = await _create_caster(client, world_id, spells=["Fire Bolt", "Fireball"])
     target_id = await _create_character(client, world_id, name="Bandit")
     session_id, _ = await _start_combat(client, world_id, wizard_id, target_id)
 
@@ -162,7 +162,13 @@ async def test_cast_spell_consumes_the_action(client, world_id):
 @pytest.mark.asyncio
 async def test_bonus_action_spell_uses_bonus_action(client, world_id):
     """Healing Word is a bonus action: it stacks with an action, not with itself."""
-    cleric_id = await _create_caster(client, world_id, name="Maren", char_class="Cleric")
+    cleric_id = await _create_caster(
+        client,
+        world_id,
+        name="Maren",
+        char_class="Cleric",
+        spells=["Healing Word", "Sacred Flame"],
+    )
     ally_id = await _create_character(client, world_id, name="Dorn", hp=20)
     session_id, _ = await _start_combat(client, world_id, cleric_id, ally_id)
 
@@ -189,7 +195,11 @@ async def test_bonus_action_spell_uses_bonus_action(client, world_id):
 
 @pytest.mark.asyncio
 async def test_cast_by_non_caster_class_requires_explicit_ability(client, world_id):
-    fighter_id = await _create_character(client, world_id, name="Dorn")
+    # A martial granted a spell (e.g. via a feat) has it prepared, but their
+    # class has no spellcasting ability — so the cast needs an explicit one.
+    fighter_id = await _create_caster(
+        client, world_id, name="Dorn", char_class="Fighter", spells=["Fire Bolt"]
+    )
     target_id = await _create_character(client, world_id, name="Bandit")
     session_id, _ = await _start_combat(client, world_id, fighter_id, target_id)
 
@@ -249,6 +259,60 @@ async def test_spell_slots_sync_to_character_on_end_combat(client, world_id):
     slots = r.json()["stats"]["spell_slots"]
     level_1 = next(s for s in slots if s["slot_level"] == 1)
     assert level_1["remaining"] == 3
+
+
+@pytest.mark.asyncio
+async def test_cast_unprepared_spell_is_409_and_keeps_log_clean(client, world_id):
+    """A real spell the caster hasn't prepared is gated out before any cost."""
+    wizard_id = await _create_caster(client, world_id, spells=["Fire Bolt"])
+    target_id = await _create_character(client, world_id, name="Bandit")
+    session_id, _ = await _start_combat(client, world_id, wizard_id, target_id)
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/cast-spell",
+        json={"actor_id": wizard_id, "spell_name": "Cure Wounds", "target_ids": [target_id]},
+    )
+    assert r.status_code == 409
+    assert "Cure Wounds" in r.json()["detail"]
+
+    r = await client.get(f"/api/sessions/{session_id}/combat")
+    assert r.json()["combat_log"] in (None, [])
+
+
+@pytest.mark.asyncio
+async def test_monster_casts_from_its_own_spell_list(client, world_id):
+    """A monster with a spell list casts through the same gated path as PCs."""
+    r = await client.post(
+        "/api/characters/",
+        json={
+            "world_id": world_id,
+            "type": "MONSTER",
+            "name": "Lich",
+            "level": 18,
+            "char_class": "Wizard",
+            "hp_current": 135,
+            "hp_max": 135,
+            "ac": 17,
+            "spells": ["Fire Bolt", "Magic Missile"],
+            "stats": {"ability_scores": {"intelligence": 20}},
+        },
+    )
+    assert r.status_code == 201
+    lich_id = r.json()["id"]
+    target_id = await _create_character(client, world_id, name="Hero", hp=40)
+    session_id, _ = await _start_combat(client, world_id, lich_id, target_id)
+
+    # A prepared leveled spell resolves; an unprepared one is gated.
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/cast-spell",
+        json={"actor_id": lich_id, "spell_name": "Magic Missile", "target_ids": [target_id]},
+    )
+    assert r.status_code == 200
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/cast-spell",
+        json={"actor_id": lich_id, "spell_name": "Fireball", "target_ids": [target_id]},
+    )
+    assert r.status_code == 409
 
 
 # ---------------------------------------------------------------------------

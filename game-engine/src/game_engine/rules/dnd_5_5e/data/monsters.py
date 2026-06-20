@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from game_engine.types import (
     Ability,
@@ -48,6 +48,11 @@ class MonsterData:
     actions: list[MonsterAction]
     special_traits: list[str]
     legendary_actions: list[str]
+    # Spellcasting: the SRD spell list this monster casts (resolved by the
+    # engine's cast path, gated like any caster). Empty for non-casters.
+    spellcasting_ability: Ability | None = None
+    cantrips: list[str] = field(default_factory=list)
+    prepared_spells: list[str] = field(default_factory=list)
 
 
 MONSTERS: list[MonsterData] = [
@@ -948,6 +953,19 @@ MONSTERS: list[MonsterData] = [
             "Paralyzing Touch (costs 2 actions): Use Paralyzing Touch.",
             "Frightening Gaze (costs 2 actions): Target within 10 ft makes DC 18 Wisdom save or is frightened for 1 minute.",
             "Disrupt Life (costs 3 actions): Each creature within 20 ft makes DC 18 Constitution save, taking 21 (6d6) necrotic on failure.",
+        ],
+        spellcasting_ability=Ability.INTELLIGENCE,
+        cantrips=["Fire Bolt", "Ray of Frost", "Chill Touch"],
+        prepared_spells=[
+            "Magic Missile",
+            "Shield",
+            "Misty Step",
+            "Fireball",
+            "Lightning Bolt",
+            "Counterspell",
+            "Cone of Cold",
+            "Disintegrate",
+            "Finger of Death",
         ],
     ),
 ]

@@ -75,7 +75,8 @@ def cast_spell(
     concentration (ending any previous concentration).
 
     Whether the spell is known/prepared, and the Magic action's economy,
-    are the caller's responsibility (see :mod:`._actions`).
+    are the caller's responsibility — see :func:`.spell_lists.can_cast` for
+    the known/prepared gate and :mod:`._actions` for the economy.
 
     Args:
         caster: The casting character.

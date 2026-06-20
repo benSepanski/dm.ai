@@ -121,6 +121,7 @@ class CharacterSheet:
     # Spellcasting state
     spell_slots: list[SpellSlotState] = field(default_factory=list)
     concentrating_on: str | None = None
+    cantrips: list[str] = field(default_factory=list)
     known_spells: list[str] = field(default_factory=list)
     prepared_spells: list[str] = field(default_factory=list)
     # Proficiencies & equipment

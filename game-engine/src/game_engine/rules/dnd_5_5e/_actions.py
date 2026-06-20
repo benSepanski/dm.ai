@@ -46,8 +46,8 @@ def _get_available_actions_impl(
 ) -> list[Action]:
     """Return the list of actions the character may legally take.
 
-    The Magic action is included only for characters with spells known or
-    prepared. Returned ``Action`` objects have ``target_id=None``; the
+    The Magic action is included only for characters with cantrips known or
+    spells prepared. Returned ``Action`` objects have ``target_id=None``; the
     caller supplies a concrete target on submission.
 
     Args:
@@ -61,7 +61,7 @@ def _get_available_actions_impl(
         return []
 
     available = list(_ALWAYS_AVAILABLE)
-    if char.prepared_spells or char.known_spells:
+    if char.cantrips or char.prepared_spells or char.known_spells:
         available.append(ActionType.MAGIC)
 
     return [

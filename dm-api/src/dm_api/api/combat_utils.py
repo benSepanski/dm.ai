@@ -12,6 +12,7 @@ import uuid
 from typing import Any
 
 from game_engine.rules.dnd_5_5e.classes import CLASSES
+from game_engine.rules.dnd_5_5e.data.spells import get_spell
 from game_engine.rules.dnd_5_5e.spellcasting import compute_spell_slots
 from game_engine.types import (
     AttackDetails,
@@ -41,6 +42,9 @@ SHEET_STATE_FIELDS = (
     "temp_hp",
     "exhaustion_level",
     "hit_dice",
+    "cantrips",
+    "known_spells",
+    "prepared_spells",
 )
 
 logger = logging.getLogger(__name__)
@@ -162,8 +166,21 @@ def character_to_sheet(character: Character) -> CharacterSheet:
         "speed": character.speed if character.speed is not None else _DEFAULT_SPEED,
         "type": character.type.value,
     }
-    if not sheet_dict.get("known_spells") and character.spells:
-        sheet_dict["known_spells"] = [str(s) for s in character.spells]
+    if character.spells:
+        # The ``spells`` column is the manual-input spell list (monsters,
+        # NPCs, imported PCs). Resolve it into the sheet's castable buckets —
+        # cantrips vs prepared by spell level — unless ``stats`` already
+        # carries an engine-built selection (the canonical source).
+        names = [str(s) for s in character.spells]
+        resolved = [(n, get_spell(n)) for n in names]
+        if not sheet_dict.get("cantrips"):
+            sheet_dict["cantrips"] = [n for n, s in resolved if s is not None and s.is_cantrip]
+        if not sheet_dict.get("prepared_spells"):
+            sheet_dict["prepared_spells"] = [
+                n for n, s in resolved if s is not None and not s.is_cantrip
+            ]
+        if not sheet_dict.get("known_spells"):
+            sheet_dict["known_spells"] = names
     sheet = CharacterSheet.from_dict(sheet_dict)
 
     class_levels = sheet.class_levels or [

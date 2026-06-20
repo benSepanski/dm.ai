@@ -23,6 +23,7 @@ from game_engine.rules.dnd_5_5e import cast_spell
 from game_engine.rules.dnd_5_5e.data.class_features import CLASS_PROGRESSIONS
 from game_engine.rules.dnd_5_5e.data.spells import SpellData, get_spell
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
+from game_engine.rules.dnd_5_5e.spell_lists import can_cast
 from game_engine.rules.dnd_5_5e.spellcasting import SpellCastResult
 from game_engine.types import (
     Ability,
@@ -166,6 +167,13 @@ async def cast_combat_spell(
     spell = get_spell(payload.spell_name)
     if spell is None:
         raise HTTPException(status_code=404, detail=f"Unknown spell: {payload.spell_name}")
+
+    if not can_cast(caster, spell):
+        kind = "know" if spell.is_cantrip else "have"
+        raise HTTPException(
+            status_code=409,
+            detail=f"{caster.name} doesn't {kind} {spell.name} prepared.",
+        )
 
     if not caster.can_act:
         raise HTTPException(status_code=409, detail=f"{caster.name} can't act.")

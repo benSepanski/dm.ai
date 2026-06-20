@@ -106,6 +106,12 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Spell attack rolls & save DCs | `spellcasting` | ✅ |
 | Components (V/S/M), casting time, range, areas of effect | `data.spells` | ✅ |
 | Spell data registry | `data.spells` | 🟡 ~100 SRD spells, levels 0–9 (registry extensible to full SRD list) |
+| Known cantrips / prepared spells tracked on the sheet | `types.CharacterSheet` (`cantrips`, `prepared_spells`) | ✅ |
+| Castable list derived from class spell list + level counts | `rules.dnd_5_5e.spell_lists` (`default_spell_selection`, `cantrips_known_count`, `prepared_spells_count`) | ✅ |
+| Builder populates a caster's starting cantrips/prepared | `rules.dnd_5_5e.character_builder` | ✅ |
+| Cast gating: only known cantrips / prepared spells are castable | `spell_lists.can_cast` (enforced at the API cast boundary) | ✅ |
+| (Re)preparation validated against class list + counts | `spell_lists.prepare_spells` | ✅ |
+| Monster spell lists (e.g. Lich) | `data.monsters` (`spellcasting_ability`, `cantrips`, `prepared_spells`) | 🟡 casters populated as added |
 
 ### Chapters 1 & 8 — Combat & Adventuring (action economy, movement, environment)
 

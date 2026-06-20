@@ -113,6 +113,8 @@ def build_character(
     shield: bool = False,
     alignment: Alignment | None = None,
     char_type: CharacterType = CharacterType.PC,
+    cantrips: list[str] | None = None,
+    prepared_spells: list[str] | None = None,
 ) -> BuildResult:
     """Build a level-1 character (2024 PHB creation steps).
 
@@ -238,4 +240,19 @@ def build_character(
         darkvision_ft=species_data.darkvision_ft,
         damage_resistances=list(species_data.damage_resistances),
     )
+
+    # Spells derive from class + level: auto-pick a deterministic default
+    # selection, or validate the caller's chosen lists against the class list.
+    if class_data.spellcasting:
+        from game_engine.rules.dnd_5_5e.spell_lists import (
+            default_spell_selection,
+            prepare_spells,
+        )
+
+        default_cantrips, default_prepared = default_spell_selection(sheet)
+        sheet.cantrips = default_cantrips
+        sheet.prepared_spells = default_prepared
+        if cantrips is not None or prepared_spells is not None:
+            warnings.extend(prepare_spells(sheet, cantrips, prepared_spells))
+
     return BuildResult(sheet=sheet, warnings=warnings)
