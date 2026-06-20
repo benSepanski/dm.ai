@@ -33,34 +33,42 @@ fan-out is in-memory.
 
 ### Create the party
 
-There is no character-builder UI yet; create PCs once via the Swagger UI
-(`POST /api/characters/`) or curl. Creation is open (players can make their
-own PCs), but any *edit* (`PATCH`) is DM-only — add an
-`X-DM-Token: <your DM_TOKEN>` header to those requests. You need a world
-first — easiest order:
+PCs are built in the UI with the **Create Character** wizard (the button is
+in the top bar; it's open to everyone, so players can roll up their own PCs).
+The wizard is engine-backed — it walks through origin (class / species /
+background), ability scores (standard array or point buy), and skills, then
+applies the 2024 PHB rules for proficiencies, HP, AC, and spell slots so you
+never hand-enter a stat block. Rule-bending choices come back as non-fatal
+warnings on the review step. You need a world first — easiest order:
 
 1. Open the dashboard, create your world + first session (this also gives you
    the world id, visible in the invite URL or via `GET /api/worlds/...`).
-2. For each PC:
+2. Click **Create Character**, pick your world, and run each PC through the
+   wizard.
+
+Editing a character afterward (`PATCH`) is DM-only — add an
+`X-DM-Token: <your DM_TOKEN>` header when you call it via curl or Swagger.
+
+The wizard is PC-only. Create monsters and NPCs via the Swagger UI
+(`POST /api/characters/`) or curl with `"type": "MONSTER"` / `"type": "NPC"`
+(like PC creation, this endpoint is open — no `X-DM-Token` needed):
 
 ```bash
 curl -X POST http://localhost:8000/api/characters/ \
   -H 'Content-Type: application/json' \
   -d '{
     "world_id": "<world-uuid>",
-    "type": "pc",
-    "name": "Kira Swiftblade",
-    "race": "Human",
-    "char_class": "Fighter",
-    "level": 3,
-    "hp_current": 28, "hp_max": 28, "ac": 17, "speed": 30,
-    "stats": {"strength": 16, "dexterity": 14, "constitution": 14,
-              "intelligence": 10, "wisdom": 12, "charisma": 8}
+    "type": "MONSTER",
+    "name": "Dire Wolf",
+    "char_class": null,
+    "level": 1,
+    "hp_current": 22, "hp_max": 22, "ac": 14, "speed": 50,
+    "stats": {"strength": 17, "dexterity": 15, "constitution": 15,
+              "intelligence": 3, "wisdom": 12, "charisma": 7}
   }'
 ```
 
-Monsters and NPCs are created the same way with `"type": "monster"` or
-`"type": "npc"`. The party appears in the left sidebar and on the battle map.
+The party appears in the left sidebar and on the battle map.
 
 ## 2. LAN play — players join your session
 
