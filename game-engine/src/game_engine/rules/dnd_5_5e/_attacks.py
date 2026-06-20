@@ -180,6 +180,7 @@ def _resolve_unarmed_special(
     actor: CharacterSheet,
     target: CharacterSheet,
     option: UnarmedStrikeOption,
+    target_ts: TurnState | None = None,
 ) -> ActionResult:
     """Resolve an unarmed strike used to Grapple or Shove (2024 rules)."""
     dc = 8 + actor.ability_scores.modifier(Ability.STRENGTH) + _calc_prof_bonus(actor.level)
@@ -187,7 +188,14 @@ def _resolve_unarmed_special(
     str_mod = target.ability_scores.modifier(Ability.STRENGTH)
     dex_mod = target.ability_scores.modifier(Ability.DEXTERITY)
     save_ability = Ability.STRENGTH if str_mod >= dex_mod else Ability.DEXTERITY
-    save = _roll_saving_throw_impl(target, save_ability, dc)
+    # 2024 PHB: Dodge grants advantage on DEX saves while active.
+    dodging_advantage = (
+        save_ability is Ability.DEXTERITY
+        and target_ts is not None
+        and target_ts.dodging
+        and target.can_act
+    )
+    save = _roll_saving_throw_impl(target, save_ability, dc, advantage=dodging_advantage)
 
     condition = Condition.GRAPPLED if option is UnarmedStrikeOption.GRAPPLE else Condition.PRONE
     applied: list[Condition] = []
@@ -236,12 +244,11 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
             action, "total_cover", f"{target.name} has total cover and can't be targeted."
         )
 
-    if details.unarmed_option in (UnarmedStrikeOption.GRAPPLE, UnarmedStrikeOption.SHOVE):
-        assert details.unarmed_option is not None
-        return _resolve_unarmed_special(action, actor, target, details.unarmed_option)
-
     actor_ts = combat_state.turn_state_for(actor.id)
     target_ts = combat_state.turn_state_for(target.id)
+
+    if details.unarmed_option in (UnarmedStrikeOption.GRAPPLE, UnarmedStrikeOption.SHOVE):
+        return _resolve_unarmed_special(action, actor, target, details.unarmed_option, target_ts)
 
     ability_mod = actor.ability_scores.modifier(details.attack_ability)
     prof_bonus = _calc_prof_bonus(actor.level) if details.proficient else 0

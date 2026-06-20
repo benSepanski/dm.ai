@@ -107,8 +107,10 @@ def long_rest(char: CharacterSheet) -> RestResult:
     result.hp_restored = char.hp_current - before
     if before <= 0 and char.hp_current > 0:
         char.death_saves.reset()
-        char.conditions = [c for c in char.conditions if c is not Condition.UNCONSCIOUS]
+        _rest_cleared = {Condition.UNCONSCIOUS, Condition.PRONE}
+        char.conditions = [c for c in char.conditions if c not in _rest_cleared]
         char.condition_durations.pop(Condition.UNCONSCIOUS, None)
+        char.condition_durations.pop(Condition.PRONE, None)
     char.temp_hp = 0
 
     for pool in char.hit_dice:

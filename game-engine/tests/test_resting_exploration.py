@@ -144,6 +144,34 @@ class TestLongRest:
         assert Condition.POISONED in char.conditions
         assert Condition.UNCONSCIOUS not in char.condition_durations
 
+    def test_long_rest_clears_prone_from_unconscious_fall(self):
+        """Dropping to 0 HP automatically adds PRONE; long rest should clear it.
+        After 8 hours of recovery a character stands up naturally — PRONE must not
+        persist into the next session unlike mid-combat healing."""
+        char = _char(
+            hp_current=0,
+            conditions=[Condition.UNCONSCIOUS, Condition.PRONE, Condition.POISONED],
+        )
+        char.death_saves.is_stable = True
+
+        long_rest(char)
+
+        assert char.hp_current == char.hp_max
+        assert Condition.PRONE not in char.conditions
+        assert Condition.UNCONSCIOUS not in char.conditions
+        # Non-combat conditions like poison are NOT cleared by rest.
+        assert Condition.POISONED in char.conditions
+
+    def test_long_rest_does_not_clear_prone_for_healthy_character(self):
+        """If a healthy character somehow has PRONE, long rest leaves it alone
+        (only combat-recovery awakening removes it)."""
+        char = _char(hp_current=40, conditions=[Condition.PRONE])
+
+        long_rest(char)
+
+        # PRONE was not caused by an unconscious fall, so it persists.
+        assert Condition.PRONE in char.conditions
+
 
 class TestEncumbrance:
     def test_carrying_capacity(self):

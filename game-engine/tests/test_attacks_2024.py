@@ -244,6 +244,32 @@ class TestUnarmedOptions:
         # DC 8 + 0 + 2 = 10; DEX save 10 + 4 = 14 ≥ 10 → escape
         assert result.success is False
 
+    def test_dodging_target_gets_dex_save_advantage_vs_shove(self, engine, state):
+        """2024 PHB: Dodge grants advantage on DEX saves. A dodging target choosing
+        DEX for a shove must use roll_with_advantage, not a flat roll."""
+        target = state.get_combatant("b")
+        # Give target higher DEX so it picks DEX over STR.
+        target.ability_scores = AbilityScoreSet(strength=8, dexterity=18)
+        # Target uses Dodge.
+        engine.resolve_action(Action(ActionType.DODGE, "b", None), state)
+        # Attacker's turn — shove the dodging target.
+        state.reset_turn("a")
+        with patch(
+            "game_engine.rules.dnd_5_5e._saves.roll_with_advantage", return_value=(15, [15, 3])
+        ) as mock_adv:
+            engine.resolve_action(_attack(unarmed_option=UnarmedStrikeOption.SHOVE), state)
+        mock_adv.assert_called_once()
+
+    def test_non_dodging_target_uses_flat_roll_vs_shove(self, engine, state):
+        """Without Dodge the target rolls a plain d20, not with advantage."""
+        target = state.get_combatant("b")
+        target.ability_scores = AbilityScoreSet(strength=8, dexterity=18)
+        with patch(
+            "game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(10, [10])
+        ) as mock_flat:
+            engine.resolve_action(_attack(unarmed_option=UnarmedStrikeOption.SHOVE), state)
+        mock_flat.assert_called_once()
+
 
 class TestActionEconomyAndConcentration:
     def test_action_used_once_per_turn(self, engine, state):
