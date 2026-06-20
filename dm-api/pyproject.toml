@@ -17,7 +17,7 @@ dependencies = [
     "redis>=5.0",
     "anthropic>=0.40",
     "pydantic>=2.0",
-    "pydantic-settings>=2.0",
+    "pydantic-settings>=2.14.2",
     "httpx>=0.27",
     "python-dotenv>=1.0",
     "game-engine @ {root:uri}/../game-engine",
