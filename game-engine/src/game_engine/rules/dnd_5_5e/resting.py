@@ -45,7 +45,7 @@ def spend_hit_die(char: CharacterSheet, die_size: int | None = None) -> int:
     pool = max(pools, key=lambda p: p.die_size)
     pool.remaining -= 1
     rolled, _ = roll_dice(1, pool.die_size)
-    healed = max(0, rolled + char.ability_scores.modifier(Ability.CONSTITUTION))
+    healed = max(1, rolled + char.ability_scores.modifier(Ability.CONSTITUTION))
     before = char.hp_current
     _apply_healing_impl(char, healed)
     return char.hp_current - before

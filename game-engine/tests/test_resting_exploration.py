@@ -57,6 +57,15 @@ class TestShortRest:
         assert healed == 8  # 6 + CON 2
         assert char.hit_dice[0].remaining == 4
 
+    def test_spend_hit_die_minimum_1_with_negative_con(self):
+        # STR/CON 6 → CON modifier −2; even a roll of 1 must restore at least 1 HP.
+        char = _char(ability_scores=AbilityScoreSet(constitution=6), hp_current=5)
+        with patch("game_engine.rules.dnd_5_5e.resting.roll_dice", return_value=(1, [1])):
+            healed = spend_hit_die(char)
+        # 2024 PHB: "minimum 1 Hit Point" when spending a Hit Die.
+        assert healed == 1
+        assert char.hp_current == 6
+
     def test_short_rest_spends_requested_dice(self):
         char = _char()
         with patch("game_engine.rules.dnd_5_5e.resting.roll_dice", return_value=(5, [5])):

@@ -147,6 +147,19 @@ class TestWeaponMasteries:
         assert result.damage == 3
         assert state.get_combatant("b").hp_current == 27
 
+    def test_graze_minimum_damage_is_1_with_negative_ability_mod(self, engine, state):
+        actor = state.get_combatant("a")
+        actor.ability_scores = AbilityScoreSet(strength=6)  # STR −2
+        actor.weapon_masteries = ["Greatsword"]
+        with patch(f"{ATTACKS}.roll_dice", return_value=(2, [2])):
+            result = engine.resolve_action(
+                _attack(weapon_name="Greatsword", mastery=WeaponMastery.GRAZE), state
+            )
+        # 2024 PHB GRAZE: minimum 1 damage even when ability mod is negative.
+        assert result.success is False
+        assert result.damage == 1
+        assert state.get_combatant("b").hp_current == 29
+
     def test_topple_forces_save_or_prone(self, engine, state):
         actor = state.get_combatant("a")
         actor.weapon_masteries = ["Maul"]
