@@ -280,7 +280,7 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
     if not hit:
         graze_damage = 0
         if details.mastery is WeaponMastery.GRAZE and _has_mastery(actor, details):
-            graze_damage = max(0, ability_mod)
+            graze_damage = max(1, ability_mod)
             if graze_damage:
                 _apply_damage_impl(target, graze_damage, details.damage_type)
                 _concentration_check(target, graze_damage, log)
