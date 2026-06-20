@@ -17,6 +17,7 @@ from game_engine.types import CharacterType, LocationType, ProposalStatus, Propo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.api.auth import ClientRole, require_dm
 from dm_api.api.ws import broadcast_to_session
 from dm_api.db.models.character import Character
 from dm_api.db.models.location import Location
@@ -143,6 +144,7 @@ async def _create_character_from_proposal(
 async def get_proposal(
     proposal_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> ProposalRead:
     result = await db.execute(select(Proposal).where(Proposal.id == proposal_id))
     proposal = result.scalar_one_or_none()
@@ -155,6 +157,7 @@ async def get_proposal(
 async def list_session_proposals(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> list[ProposalRead]:
     result = await db.execute(
         select(Proposal)
@@ -170,6 +173,7 @@ async def accept_proposal(
     proposal_id: uuid.UUID,
     payload: ProposalAccept,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> ProposalRead:
     """Accept a pending proposal.
 
@@ -218,6 +222,7 @@ async def accept_proposal(
                 "proposal_type": proposal.type.value,
                 "status": ProposalStatus.ACCEPTED.value,
             },
+            dm_only=True,
         )
         if created_id is not None:
             await broadcast_to_session(
@@ -240,6 +245,7 @@ async def reject_proposal(
     proposal_id: uuid.UUID,
     payload: ProposalReject,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> ProposalRead:
     result = await db.execute(select(Proposal).where(Proposal.id == proposal_id))
     proposal = result.scalar_one_or_none()
@@ -267,6 +273,7 @@ async def reject_proposal(
                 "proposal_type": proposal.type.value,
                 "status": ProposalStatus.REJECTED.value,
             },
+            dm_only=True,
         )
     except Exception:
         logger.exception("ws broadcast failed proposal_id=%s", proposal_id)

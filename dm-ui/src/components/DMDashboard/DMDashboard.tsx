@@ -10,6 +10,7 @@ import LocationPanel from "../LocationPanel/LocationPanel";
 import BattleMap from "../BattleMap/BattleMap";
 import GameSettingsModal from "../GameSettings/GameSettingsModal";
 import ProposalCard from "../ProposalCard/ProposalCard";
+import DMUnlock from "./DMUnlock";
 
 const ROLE_COLORS: Record<string, string> = {
   dm: "#16213e",
@@ -41,6 +42,9 @@ export default function DMDashboard() {
     setCombat,
     setLocation,
     moveToken,
+    dmToken,
+    isDM,
+    setIsDM,
   } = useGameStore();
   const [input, setInput] = useState("");
   const [showMap, setShowMap] = useState(false);
@@ -104,17 +108,39 @@ export default function DMDashboard() {
     void hydrateSession();
   }, [hydrateSession]);
 
+  // Verify the stored DM token against the server. The server is the only
+  // authority on roles — a stale or wrong token quietly degrades to player.
+  useEffect(() => {
+    let cancelled = false;
+    if (!dmToken) {
+      setIsDM(false);
+      return;
+    }
+    api
+      .getRole()
+      .then((r) => {
+        if (!cancelled) setIsDM(r.role === "dm");
+      })
+      .catch(() => {
+        if (!cancelled) setIsDM(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dmToken, setIsDM]);
+
   // Real-time updates from the server via WebSocket; re-hydrate on reconnect.
   const sendWsEvent = useSessionWebSocket(sessionId, hydrateSession);
 
-  // Load any existing proposals for this session.
+  // Load any existing proposals for this session (DM only — the endpoint
+  // rejects players, who never see proposals).
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !isDM) return;
     api
       .listSessionProposals(sessionId)
       .then((list) => list.forEach(addProposal))
       .catch(console.error);
-  }, [sessionId, addProposal]);
+  }, [sessionId, isDM, addProposal]);
 
   // Auto-scroll when messages change
   useEffect(() => {
@@ -174,6 +200,32 @@ export default function DMDashboard() {
     clearSession();
     navigate("/", { replace: true });
   }, [clearSession, navigate]);
+
+  // Wrap up the session: the server generates and stores an AI summary
+  // (used for "previously on…" context in future sessions), then this
+  // browser detaches. The session itself stays in the database.
+  const [ending, setEnding] = useState(false);
+  const endSession = useCallback(async () => {
+    if (!sessionId || ending) return;
+    if (!window.confirm("End this session? An AI summary will be saved for next time.")) {
+      return;
+    }
+    setEnding(true);
+    try {
+      await api.endSession(sessionId);
+      clearSession();
+      navigate("/", { replace: true });
+    } catch (err) {
+      addMessage({
+        id: crypto.randomUUID(),
+        role: "system",
+        content: `Error ending session: ${err instanceof Error ? err.message : "Unknown error"}`,
+        timestamp: new Date().toISOString(),
+      });
+    } finally {
+      setEnding(false);
+    }
+  }, [sessionId, ending, clearSession, navigate, addMessage]);
 
   if (!sessionId) {
     return (
@@ -249,8 +301,22 @@ export default function DMDashboard() {
           >
             {showMap ? "Hide Map" : "Show Map"}
           </button>
+          <span
+            style={{
+              fontSize: 11,
+              padding: "2px 8px",
+              borderRadius: 10,
+              background: isDM ? "#7c6af733" : "#2e2e2e",
+              color: isDM ? "#7c6af7" : "#888",
+            }}
+          >
+            {isDM ? "DM" : "Player"}
+          </span>
           <div style={{ flex: 1 }} />
-          {worldId && (
+          {!isDM && <DMUnlock />}
+          {/* Game settings edit AI models and storage — DM only (the API
+              rejects non-DM config reads/writes too). */}
+          {isDM && worldId && (
             <button
               onClick={() => setShowSettings(true)}
               title="Per-game settings: AI models, context budget, and storage locations"
@@ -267,6 +333,7 @@ export default function DMDashboard() {
               Game Settings
             </button>
           )}
+          {/* Players build their own PCs — creation stays open to everyone. */}
           <button
             onClick={() => worldId && navigate(`/world/${worldId}/create-character`)}
             disabled={!worldId}
@@ -298,21 +365,41 @@ export default function DMDashboard() {
           >
             {linkCopied ? "Copied!" : "Copy Invite Link"}
           </button>
-          <button
-            onClick={startNewSession}
-            title="Leave this session and start a new one (this session stays saved on the server)"
-            style={{
-              padding: "4px 10px",
-              background: "#333",
-              color: "#fff",
-              border: "none",
-              borderRadius: 4,
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            New Session
-          </button>
+          {isDM && (
+            <>
+              <button
+                onClick={endSession}
+                disabled={ending}
+                title="End the session for everyone — saves an AI summary the next session will recall"
+                style={{
+                  padding: "4px 10px",
+                  background: ending ? "#444" : "#8e2f2f",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: ending ? "not-allowed" : "pointer",
+                  fontSize: 12,
+                }}
+              >
+                {ending ? "Ending…" : "End Session"}
+              </button>
+              <button
+                onClick={startNewSession}
+                title="Leave this session and start a new one (this session stays saved on the server)"
+                style={{
+                  padding: "4px 10px",
+                  background: "#333",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                New Session
+              </button>
+            </>
+          )}
         </div>
 
         {/* Battle map (collapsible) */}
@@ -366,7 +453,21 @@ export default function DMDashboard() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input bar */}
+        {/* Input bar — only the DM narrates; players watch the story unfold */}
+        {!isDM && (
+          <div
+            style={{
+              padding: "10px 12px",
+              borderTop: "1px solid #333",
+              color: "#666",
+              fontSize: 12,
+              textAlign: "center",
+            }}
+          >
+            You're watching as a player — the DM drives the story.
+          </div>
+        )}
+        {isDM && (
         <div
           style={{
             display: "flex",
@@ -407,6 +508,7 @@ export default function DMDashboard() {
             {isLoading ? "…" : "Send"}
           </button>
         </div>
+        )}
       </main>
 
       {/* Right panel */}
@@ -423,8 +525,8 @@ export default function DMDashboard() {
       >
         <CombatTracker />
 
-        {/* Proposals panel */}
-        {proposals.length > 0 && (
+        {/* Proposals panel — DM eyes only: unreviewed AI content */}
+        {isDM && proposals.length > 0 && (
           <section>
             <h3
               style={{

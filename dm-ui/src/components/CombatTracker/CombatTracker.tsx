@@ -163,7 +163,9 @@ function CombatActions({
 }
 
 export default function CombatTracker() {
-  const { sessionId, combat, setCombat } = useGameStore();
+  // Players see the initiative tracker live but only the DM gets the
+  // controls — the server enforces this too (combat mutations are DM-only).
+  const { sessionId, combat, setCombat, isDM } = useGameStore();
 
   const handleStart = useCallback(async () => {
     if (!sessionId) return;
@@ -199,7 +201,7 @@ export default function CombatTracker() {
           Combat
         </h3>
         <p style={{ color: "#555", fontSize: 13 }}>No active combat.</p>
-        {sessionId && (
+        {sessionId && isDM && (
           <button
             onClick={handleStart}
             style={{
@@ -233,6 +235,7 @@ export default function CombatTracker() {
         <h3 style={{ margin: 0, fontSize: 14, color: "#ccc", textTransform: "uppercase" }}>
           Combat · Round {combat.round_number}
         </h3>
+        {isDM && (
         <button
           onClick={handleEnd}
           style={{
@@ -247,6 +250,7 @@ export default function CombatTracker() {
         >
           End
         </button>
+        )}
       </div>
       {combat.combatants.length === 0 ? (
         <p style={{ color: "#555", fontSize: 13 }}>No combatants in initiative order.</p>
@@ -255,7 +259,7 @@ export default function CombatTracker() {
           <CombatantRow key={c.char_id} combatant={c} />
         ))
       )}
-      {sessionId && (
+      {sessionId && isDM && (
         <CombatActions
           sessionId={sessionId}
           currentActorId={currentActorId}

@@ -47,6 +47,10 @@ export function useSessionWebSocket(
     setLocation,
     moveToken,
   } = useGameStore();
+  // DM connections authenticate via the dm_token query param so the server
+  // can route DM-only events (proposal_ready) to them. Subscribing to the
+  // token means unlocking DM mode reconnects with the upgraded role.
+  const dmToken = useGameStore((s) => s.dmToken);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -112,7 +116,8 @@ export function useSessionWebSocket(
     // Connect with auto-reconnect: laptop sleep or a server restart drops the
     // socket; on re-open the caller's onReconnect re-hydrates missed state.
     const connect = () => {
-      const ws = new WebSocket(`${WS_BASE}/sessions/${sessionId}`);
+      const query = dmToken ? `?dm_token=${encodeURIComponent(dmToken)}` : "";
+      const ws = new WebSocket(`${WS_BASE}/sessions/${sessionId}${query}`);
       wsRef.current = ws;
       ws.onmessage = handleEvent;
       ws.onopen = () => {
@@ -134,6 +139,7 @@ export function useSessionWebSocket(
     };
   }, [
     sessionId,
+    dmToken,
     onReconnect,
     addMessage,
     setCombat,

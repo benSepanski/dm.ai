@@ -35,6 +35,7 @@ from game_engine.types import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dm_api.api.auth import ClientRole, require_dm
 from dm_api.api.combat_utils import broadcast_combat, dump_turn_states, load_turn_states
 from dm_api.db.models.combat import (
     CastSpellRequest,
@@ -145,6 +146,7 @@ async def cast_combat_spell(
     session_id: uuid.UUID,
     payload: CastSpellRequest,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> CombatStateRead:
     """Cast a spell through the rule engine's spellcasting module.
 
@@ -208,6 +210,7 @@ async def heal_combatant(
     session_id: uuid.UUID,
     payload: HealRequest,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> CombatStateRead:
     """Apply healing to a combatant mid-fight (potion, Lay on Hands, DM fiat).
 
@@ -248,6 +251,7 @@ async def stabilize_combatant(
     session_id: uuid.UUID,
     payload: StabilizeRequest,
     db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
 ) -> CombatStateRead:
     """Stabilize a dying combatant (successful DC 10 Medicine check, Healer's Kit).
 

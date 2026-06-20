@@ -70,6 +70,10 @@ export interface ProposalData {
 interface GameState {
   sessionId: string | null;
   worldId: string | null;
+  // DM token entered by this browser (null = player). isDM flips to true
+  // only after the server confirms the token via GET /api/auth/role.
+  dmToken: string | null;
+  isDM: boolean;
   messages: ChatMessage[];
   isLoading: boolean;
   combat: ActiveCombat | null;
@@ -80,6 +84,8 @@ interface GameState {
 
   setSession: (sessionId: string, worldId: string) => void;
   clearSession: () => void;
+  setDmToken: (token: string | null) => void;
+  setIsDM: (isDM: boolean) => void;
   addMessage: (msg: ChatMessage) => void;
   setMessages: (messages: ChatMessage[]) => void;
   moveToken: (tokenId: string, x: number, y: number) => void;
@@ -95,6 +101,8 @@ interface GameState {
 const initialState = {
   sessionId: null,
   worldId: null,
+  dmToken: null as string | null,
+  isDM: false,
   messages: [] as ChatMessage[],
   isLoading: false,
   combat: null,
@@ -112,7 +120,12 @@ export const useGameStore = create<GameState>()(
     (set) => ({
       ...initialState,
       setSession: (sessionId, worldId) => set({ sessionId, worldId }),
-      clearSession: () => set({ ...initialState }),
+      // Leaving a session keeps the DM credentials — the DM shouldn't have
+      // to re-enter the token to start next week's session.
+      clearSession: () =>
+        set((s) => ({ ...initialState, dmToken: s.dmToken, isDM: s.isDM })),
+      setDmToken: (dmToken) => set({ dmToken }),
+      setIsDM: (isDM) => set({ isDM }),
       // Dedupes by id: the same message can arrive via hydration (GET
       // /messages) and the WebSocket broadcast — server-assigned ids match.
       addMessage: (msg) =>
@@ -156,6 +169,7 @@ export const useGameStore = create<GameState>()(
       partialize: (s) => ({
         sessionId: s.sessionId,
         worldId: s.worldId,
+        dmToken: s.dmToken,
         tokenPositions: s.tokenPositions,
       }),
     }

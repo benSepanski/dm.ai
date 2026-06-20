@@ -1,6 +1,14 @@
+import { useGameStore } from "../store/gameStore";
+
 const BASE_URL = "/api";
 
 // ---- Request/Response types ----
+
+export type ClientRole = "dm" | "player";
+
+export interface RoleResponse {
+  role: ClientRole;
+}
 
 export interface CreateWorldRequest {
   name: string;
@@ -252,11 +260,23 @@ export interface GameConfigResponse {
 
 // ---- HTTP helper ----
 
+// DM authentication: the token (if this browser has one) rides on every
+// request. The server decides the role per request — no token means the
+// caller is treated as a player and gets the redacted views.
+function authHeaders(): Record<string, string> {
+  const token = useGameStore.getState().dmToken;
+  return token ? { "X-DM-Token": token } : {};
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const { headers: extraHeaders, ...rest } = options ?? {};
   const res = await fetch(`${BASE_URL}${path}`, {
     ...rest,
-    headers: { "Content-Type": "application/json", ...(extraHeaders as Record<string, string>) },
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+      ...(extraHeaders as Record<string, string>),
+    },
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -268,6 +288,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 // ---- API client ----
 
 export const api = {
+  // Auth
+  getRole: () => request<RoleResponse>("/auth/role"),
+
   // Worlds
   createWorld: (data: CreateWorldRequest) =>
     request<{ id: string }>("/worlds/", { method: "POST", body: JSON.stringify(data) }),
@@ -291,6 +314,8 @@ export const api = {
       `/sessions/${sessionId}/chat`,
       { method: "POST", body: JSON.stringify({ message }) },
     ),
+  endSession: (sessionId: string) =>
+    request<SessionResponse>(`/sessions/${sessionId}/end`, { method: "PUT" }),
 
   // Combat
   startCombat: (sessionId: string) =>

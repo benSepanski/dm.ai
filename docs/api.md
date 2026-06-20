@@ -6,6 +6,32 @@ Base URL (local): `http://localhost:8000`
 
 ---
 
+## Authentication — DM vs. player
+
+A single shared token (`DM_TOKEN` in `.env`; auto-generated and logged at
+startup if unset) splits clients into two roles:
+
+- **DM** — sends `X-DM-Token: <token>` on REST requests (and
+  `?dm_token=<token>` on the WebSocket URL). Full access.
+- **Player** — no/invalid token. Read-only: every write endpoint except
+  `POST /api/characters` responds **403** `{ "detail": "DM token required" }`,
+  and read endpoints redact DM-only fields to `null`:
+
+| Entity | Hidden from players |
+|---|---|
+| Character (NPC/monster) | `char_class`, `alignment`, `stats`, `hp_current`, `hp_max`, `ac`, `speed`, `abilities`, `spells`, `equipment`, `personality_traits`, `ideals`, `bonds`, `flaws`, `known_facts`, `interaction_log_summary` |
+| Character (PC) | `known_facts`, `interaction_log_summary` |
+| Location | `lore`, `history`, `character_associations`, `interaction_log_summary` |
+| World | `lore_summary` |
+| Proposals | entire `/api/ai/*` surface is DM-only (403) |
+
+### GET /api/auth/role — check the caller's role
+
+**200** → `{ "role": "dm" }` with a valid `X-DM-Token` header, else
+`{ "role": "player" }`. Used by the UI to validate the token.
+
+---
+
 ## Health
 
 ### GET /health
@@ -451,13 +477,17 @@ is relayed to all other clients in the same session. The server injects
 
 **URL:** `ws://localhost:8000/api/ws/sessions/{session_id}`
 
+DM clients append `?dm_token=<DM_TOKEN>`: `proposal_ready` events are
+delivered only to connections that authenticated as DM. All other events go
+to every connection in the session.
+
 ### Message types
 
 | `type` | Direction | Key payload fields | Purpose |
 |---|---|---|---|
 | `chat_message` | server → client | `message_id`, `role` (`dm`\|`ai`\|`system`), `content` | DM echo (sent immediately), AI reply, or system notice (end-of-combat summary); clients dedupe on `message_id` |
 | `combat_update` | server → client | `combat` (full `CombatStateRead`) | Combat state change |
-| `proposal_ready` | server → client | `proposal_id`, `proposal_type`, `status` | Proposal awaiting DM review / resolved |
+| `proposal_ready` | server → DM clients only | `proposal_id`, `proposal_type`, `status` | Proposal awaiting DM review / resolved |
 | `entity_update` | server → client | `entity_type`, `entity_id` | Character/location created or changed |
 | `map_token_move` | client → other clients (peer relay) | `token_id`, `x`, `y` | Battle-map token drag, mirrored on every screen |
 
@@ -478,6 +508,7 @@ ws.send(JSON.stringify({ type: "map_token_move", token_id: "...", x: 3, y: 4 }))
 
 | Status | Body | When |
 |---|---|---|
+| 403 | `{ "detail": "DM token required" }` | DM-only endpoint called without a valid `X-DM-Token` header |
 | 404 | `{ "detail": "X not found" }` | Resource with given ID does not exist |
 | 409 | `{ "detail": "..." }` | Conflict (e.g. proposal already acted on, combat already active) |
 | 422 | FastAPI validation error | Request body fails Pydantic validation |
