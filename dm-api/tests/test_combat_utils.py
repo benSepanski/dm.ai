@@ -10,6 +10,8 @@ Tests cover every public function:
   dump_turn_states
 - character_to_sheet     — DB Character → CharacterSheet bridge
 - sync_combatants_to_db  — combat write-back to DB
+
+roll_and_sort_initiatives is tested in test_roll_and_sort_initiatives.py.
 """
 
 from __future__ import annotations
