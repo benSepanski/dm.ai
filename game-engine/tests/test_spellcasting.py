@@ -263,6 +263,85 @@ class TestCasting:
         assert result.error == "not_a_ritual"
 
 
+class TestDodgeInteraction:
+    """2024 PHB: Dodge grants disadvantage on attacks and DEX-save advantage."""
+
+    def _state_with_dodging_target(self, caster: CharacterSheet) -> CombatStateData:
+        target = CharacterSheet(
+            id="t",
+            name="Target",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            hp_current=30,
+            hp_max=30,
+            ac=10,
+        )
+        state = CombatStateData(combatants=[caster, target])
+        state.turn_state_for("t").dodging = True
+        return state
+
+    def test_spell_attack_has_disadvantage_vs_dodging_target(self):
+        caster = _caster()
+        state = self._state_with_dodging_target(caster)
+        spell = _spell(
+            level=0,
+            attack_roll=True,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("1d10"),
+        )
+        with patch(f"{RES}.roll_with_disadvantage", return_value=(3, [3, 15])) as dis:
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        dis.assert_called_once()
+
+    def test_dex_save_has_advantage_vs_dodging_target(self):
+        caster = _caster()
+        state = self._state_with_dodging_target(caster)
+        spell = _spell(
+            save=Ability.DEXTERITY,
+            half_damage_on_save=True,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("4d6"),
+        )
+        with patch(
+            "game_engine.rules.dnd_5_5e._saves.roll_with_advantage", return_value=(18, [18, 5])
+        ) as adv:
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        adv.assert_called_once()
+
+    def test_non_dex_save_gets_no_advantage_when_dodging(self):
+        caster = _caster()
+        state = self._state_with_dodging_target(caster)
+        spell = _spell(
+            save=Ability.CONSTITUTION,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("3d6"),
+        )
+        with (
+            patch("game_engine.rules.dnd_5_5e._saves.roll_with_advantage") as adv,
+            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(10, [10])),
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        adv.assert_not_called()
+
+    def test_incapacitated_dodger_grants_no_benefit(self):
+        """Dodge grants no benefit if the target can't act (2024 PHB)."""
+        caster = _caster()
+        state = self._state_with_dodging_target(caster)
+        target = state.get_combatant("t")
+        assert target is not None
+        target.conditions.append(Condition.INCAPACITATED)
+        spell = _spell(
+            level=0,
+            attack_roll=True,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("1d10"),
+        )
+        with patch(f"{RES}.roll_with_disadvantage") as dis:
+            with patch(f"{RES}.roll_dice", return_value=(15, [15])):
+                cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        dis.assert_not_called()
+
+
 class TestRegistryIntegration:
     def test_fireball_full_pipeline(self):
         fireball = get_spell("Fireball")

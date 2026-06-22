@@ -117,7 +117,7 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Opportunity attacks | `_attacks` | ✅ |
 | Two-weapon fighting (Light property, Nick) | `_attacks` | ✅ |
 | Unarmed strike (damage / grapple / shove) | `_attacks` | ✅ |
-| Dodge / Disengage / Dash effects | `_actions` + `_attacks` | 🟡 attack-disadvantage ✅; DEX save advantage ✅ for grapple/shove; ⬜ for in-combat spell saves (spellcasting path lacks CombatStateData context) |
+| Dodge / Disengage / Dash effects | `_actions` + `_attacks` + `_spell_resolution` | ✅ attack-disadvantage on weapon and spell attacks; DEX save advantage on all saving throws (grapple/shove and spells) |
 | Mounted/underwater combat | — | ⬜ (needs positional model; out of theater-of-mind scope) |
 | Jumping, falling, suffocation | `rules.dnd_5_5e.exploration` | ✅ |
 | Travel pace, light & vision | `exploration` | ✅ |
