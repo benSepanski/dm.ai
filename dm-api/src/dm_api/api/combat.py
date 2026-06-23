@@ -1,3 +1,4 @@
+# NOTE: exceeds 400 LoC — extracting roll_and_sort_initiatives to combat_utils is in progress
 """Combat API endpoints — wired to the DnD55eEngine rule engine.
 
 Harness-engineering notes:

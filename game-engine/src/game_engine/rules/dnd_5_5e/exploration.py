@@ -19,7 +19,6 @@ from game_engine.types import (
 )
 
 _SIZE_CAPACITY_MULTIPLIER: dict[CreatureSize, int] = {
-    CreatureSize.TINY: 1,  # tiny creatures halve capacity; see carrying_capacity
     CreatureSize.SMALL: 1,
     CreatureSize.MEDIUM: 1,
     CreatureSize.LARGE: 2,
@@ -29,7 +28,10 @@ _SIZE_CAPACITY_MULTIPLIER: dict[CreatureSize, int] = {
 
 
 def carrying_capacity(strength_score: int, size: CreatureSize = CreatureSize.MEDIUM) -> int:
-    """Maximum carried weight in pounds: STR × 15, scaled by size."""
+    """Maximum carried weight in pounds: STR × 15, scaled by size.
+
+    Tiny creatures halve carrying capacity (2024 PHB).
+    """
     base = strength_score * 15
     if size is CreatureSize.TINY:
         return base // 2
