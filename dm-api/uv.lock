@@ -307,7 +307,7 @@ requires-dist = [
     { name = "autoflake", marker = "extra == 'dev'", specifier = ">=2.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=24.0" },
     { name = "fastapi", specifier = ">=0.115" },
-    { name = "game-engine", directory = "/home/dependabot/dependabot-updater/repo/game-engine" },
+    { name = "game-engine", directory = "../game-engine" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.0" },
@@ -352,7 +352,7 @@ wheels = [
 [[package]]
 name = "game-engine"
 version = "0.1.0"
-source = { directory = "/home/dependabot/dependabot-updater/repo/game-engine" }
+source = { directory = "../game-engine" }
 dependencies = [
     { name = "pydantic" },
 ]
