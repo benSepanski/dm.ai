@@ -16,13 +16,15 @@ def _roll_death_save_impl(char: CharacterSheet) -> DeathSaveResult:
     """Roll a death saving throw for a dying character.
 
     Rules (2024 PHB):
-    - 10 or higher: one success; three successes → stable.
-    - 9 or lower: one failure; three failures → dead.
-    - Natural 1: two failures.
-    - Natural 20: regain 1 hit point (conscious again).
+    - Natural 20 (raw): regain 1 hit point (conscious again) — triggers on raw roll.
+    - Natural 1 (raw): two failures — triggers on raw roll.
+    - Adjusted total ≥ 10: one success; three successes → stable.
+    - Adjusted total < 10: one failure; three failures → dead.
 
-    Death saves are pure d20 rolls — no modifiers apply (exhaustion's
-    d20 penalty does not apply because a death save is not a test).
+    Exhaustion applies: the 2024 PHB defines death saving throws as "special
+    D20 Tests," and the exhaustion penalty (−2 per level) applies to all D20
+    Tests. Natural 1/20 effects trigger on the unmodified raw d20; only the
+    10+ success threshold uses the exhaustion-adjusted total.
 
     Args:
         char: Character sheet. Must be dying (0 HP, not stable, not dead).
@@ -37,6 +39,7 @@ def _roll_death_save_impl(char: CharacterSheet) -> DeathSaveResult:
         raise ValueError(f"{char.name or char.id} is not dying; no death save is needed.")
 
     raw_roll, _ = roll_dice(1, 20)
+    total = raw_roll + char.d20_modifier
     saves = char.death_saves
     regained_hp = False
 
@@ -47,7 +50,7 @@ def _roll_death_save_impl(char: CharacterSheet) -> DeathSaveResult:
     elif raw_roll == 1:
         outcome = DeathSaveOutcome.CRITICAL_FAILURE
         saves.failures += 2
-    elif raw_roll >= 10:
+    elif total >= 10:
         outcome = DeathSaveOutcome.SUCCESS
         saves.successes += 1
     else:
@@ -62,6 +65,7 @@ def _roll_death_save_impl(char: CharacterSheet) -> DeathSaveResult:
     return DeathSaveResult(
         outcome=outcome,
         roll=raw_roll,
+        total=total,
         successes=saves.successes,
         failures=saves.failures,
         is_stable=saves.is_stable,

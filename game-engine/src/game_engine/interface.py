@@ -71,7 +71,9 @@ class DeathSaveResult:
 
     Attributes:
         outcome: The categorical outcome of the roll.
-        roll: The raw d20 roll.
+        roll: The raw d20 roll (before exhaustion modifier).
+        total: roll + exhaustion modifier; used for the 10+ threshold.
+            Natural 1/20 effects trigger on the raw roll, not total.
         successes: Accumulated successes after this roll.
         failures: Accumulated failures after this roll.
         is_stable: Whether the character is now stable.
@@ -81,6 +83,7 @@ class DeathSaveResult:
 
     outcome: DeathSaveOutcome
     roll: int
+    total: int
     successes: int
     failures: int
     is_stable: bool
