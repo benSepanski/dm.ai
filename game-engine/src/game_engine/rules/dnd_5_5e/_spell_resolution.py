@@ -7,7 +7,7 @@ Internal module — import :func:`cast_spell` via
 
 from __future__ import annotations
 
-from game_engine.core.dice import roll_dice
+from game_engine.core.dice import roll_dice, roll_with_disadvantage
 from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl, _apply_healing_impl
 from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
 from game_engine.rules.dnd_5_5e.data.spells import SpellData
@@ -121,8 +121,16 @@ def cast_spell(
             continue
         outcome = SpellTargetOutcome(target_id=target_id)
 
+        # 2024 PHB Dodge: attacks against a dodging creature have disadvantage;
+        # DEX saves made by a dodging creature have advantage.
+        target_ts = combat_state.turn_state_for(target_id)
+        target_dodging = target_ts.dodging and target.can_act
+
         if spell.attack_roll:
-            raw, _ = roll_dice(1, 20)
+            if target_dodging:
+                raw, _ = roll_with_disadvantage(20)
+            else:
+                raw, _ = roll_dice(1, 20)
             total = raw + attack_bonus
             outcome.attack_total = total
             outcome.hit = raw == 20 or (raw != 1 and total >= target.ac)
@@ -130,7 +138,8 @@ def cast_spell(
                 outcomes.append(outcome)
                 continue
         elif spell.save is not None:
-            save = _roll_saving_throw_impl(target, spell.save, dc)
+            dex_save_advantage = target_dodging and spell.save is Ability.DEXTERITY
+            save = _roll_saving_throw_impl(target, spell.save, dc, advantage=dex_save_advantage)
             outcome.save_total = save.total
             outcome.save_success = save.success
 

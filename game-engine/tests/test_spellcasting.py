@@ -263,6 +263,99 @@ class TestCasting:
         assert result.error == "not_a_ritual"
 
 
+class TestDodgeInteraction:
+    """2024 PHB: Dodge grants disadvantage on incoming spell attack rolls and
+    advantage on DEX saves for the dodging creature."""
+
+    def _state(self, caster, target_hp: int = 30) -> CombatStateData:
+        target = CharacterSheet(
+            id="t",
+            name="Target",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            hp_current=target_hp,
+            hp_max=target_hp,
+            ac=10,
+        )
+        return CombatStateData(combatants=[caster, target])
+
+    def test_dodging_target_gives_spell_attack_disadvantage(self):
+        """Spell attack rolls against a dodging target use roll_with_disadvantage."""
+        caster = _caster()
+        state = self._state(caster)
+        state.turn_state_for("t").dodging = True
+        spell = _spell(
+            level=0,
+            attack_roll=True,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("1d6"),
+        )
+        with (
+            patch(f"{RES}.roll_with_disadvantage", return_value=(3, [3, 15])) as mock_dis,
+            patch(f"{RES}.roll_dice", return_value=(4, [4])),
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_dis.assert_called_once()
+
+    def test_non_dodging_target_uses_flat_roll_for_spell_attack(self):
+        """Without Dodge, spell attacks use roll_dice (flat), not roll_with_disadvantage."""
+        caster = _caster()
+        state = self._state(caster)
+        spell = _spell(
+            level=0,
+            attack_roll=True,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("1d6"),
+        )
+        with (
+            patch(f"{RES}.roll_with_disadvantage") as mock_dis,
+            patch(f"{RES}.roll_dice", return_value=(15, [15])),
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_dis.assert_not_called()
+
+    def test_dodging_target_gets_dex_save_advantage(self):
+        """Dodging target rolling a DEX save vs a spell uses roll_with_advantage."""
+        caster = _caster()
+        state = self._state(caster)
+        state.turn_state_for("t").dodging = True
+        spell = _spell(
+            save=Ability.DEXTERITY,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("3d6"),
+            half_damage_on_save=True,
+        )
+        with (
+            patch(f"{RES}.roll_dice", return_value=(18, [])),
+            patch(
+                "game_engine.rules.dnd_5_5e._saves.roll_with_advantage",
+                return_value=(18, [18, 5]),
+            ) as mock_adv,
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_adv.assert_called_once()
+
+    def test_dodging_target_gets_no_advantage_on_non_dex_save(self):
+        """Dodge only grants advantage on DEX saves; other saves remain unaffected."""
+        caster = _caster()
+        state = self._state(caster)
+        state.turn_state_for("t").dodging = True
+        spell = _spell(
+            save=Ability.WISDOM,
+            damage_type=DamageType.PSYCHIC,
+            damage_dice=DiceNotation("2d6"),
+        )
+        with (
+            patch(f"{RES}.roll_dice", return_value=(8, [])),
+            patch(
+                "game_engine.rules.dnd_5_5e._saves.roll_with_advantage",
+            ) as mock_adv,
+            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(10, [10])),
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_adv.assert_not_called()
+
+
 class TestRegistryIntegration:
     def test_fireball_full_pipeline(self):
         fireball = get_spell("Fireball")
