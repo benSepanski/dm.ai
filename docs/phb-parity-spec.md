@@ -35,9 +35,9 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Damage, resistance/vulnerability/immunity | `rules.dnd_5_5e._damage` | ✅ |
 | Temporary hit points | `rules.dnd_5_5e._damage` | ✅ |
 | Healing | `rules.dnd_5_5e._damage` | ✅ |
-| Dropping to 0 HP, instant death, death saves | `rules.dnd_5_5e._death` | ✅ |
+| Dropping to 0 HP, instant death, death saves (incl. exhaustion on 10+ threshold; nat 1/20 unmodified) | `rules.dnd_5_5e._death` | ✅ |
 | Conditions (all 15) + mechanical effects | `core.conditions` | ✅ |
-| Exhaustion (2024: −2×level on d20 tests, −5 ft speed) | `core.conditions`, `_saves`, `_attacks` | ✅ |
+| Exhaustion (2024: −2×level on d20 tests, −5 ft speed) | `core.conditions`, `_saves`, `_attacks`, `_death` | ✅ |
 | Short/long rests, hit dice spending | `rules.dnd_5_5e.resting` | ✅ |
 
 ### Chapter 2 — Creating a Character

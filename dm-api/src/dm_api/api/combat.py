@@ -1,3 +1,5 @@
+# NOTE: This file intentionally approaches the 400-line guideline; combat_utils.py
+# was already split out. Further decomposition would cross HTTP concerns across files.
 """Combat API endpoints — wired to the DnD55eEngine rule engine.
 
 Harness-engineering notes:
@@ -326,6 +328,7 @@ async def next_turn(
                     "actor_id": sheet.id,
                     "event": "death_save",
                     "roll": save.roll,
+                    "total": save.total,
                     "outcome": save.outcome.value,
                     "successes": save.successes,
                     "failures": save.failures,

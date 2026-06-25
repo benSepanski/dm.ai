@@ -74,6 +74,14 @@ in `combat.py`), ensure **all** fields from the target dataclass's `from_dict`
 are populated — not just the obvious combat stats. Check `CharacterSheet.from_dict`
 for the full field list whenever this bridge is modified.
 
+### Death saves are D20 Tests (2024 PHB) — exhaustion applies
+
+Death saving throws in 2024 are "special D20 Tests." The exhaustion penalty
+(−2 per level, `CharacterSheet.d20_modifier`) applies to the 10+ success
+threshold. Natural 1/20 special effects trigger on the raw d20 roll, not the
+adjusted total. See `_death.py`; the result carries both `roll` (raw) and
+`total` (adjusted). Do **not** omit `char.d20_modifier` from death saves.
+
 ### Proposal content schema rule (learned from `char_class` vs `"class"` bug)
 
 AI proposal content uses the **same field names** as `CharacterSheet.to_dict()` /

@@ -211,3 +211,42 @@ class TestDeathSaves:
         assert char.death_saves.is_stable
         assert char.death_saves.failures == 0
         assert char.hp_current == 0
+
+    def test_result_exposes_roll_and_total(self, engine):
+        """DeathSaveResult.roll is raw; total includes exhaustion modifier."""
+        char = self._dying(engine)
+        with patch("game_engine.rules.dnd_5_5e._death.roll_dice", return_value=(12, [12])):
+            result = engine.roll_death_save(char)
+        assert result.roll == 12
+        assert result.total == 12  # no exhaustion
+
+    def test_exhaustion_penalizes_death_save_threshold(self, engine):
+        """2024 PHB: death saves are D20 Tests; exhaustion −2/level lowers total.
+
+        A raw roll of 11 with exhaustion level 2 (−4) gives total = 7 → failure.
+        """
+        char = self._dying(engine)
+        char.exhaustion_level = 2  # d20_modifier = −4
+        with patch("game_engine.rules.dnd_5_5e._death.roll_dice", return_value=(11, [11])):
+            result = engine.roll_death_save(char)
+        assert result.roll == 11
+        assert result.total == 7  # 11 − 4
+        assert result.outcome is DeathSaveOutcome.FAILURE
+
+    def test_exhaustion_does_not_affect_natural_20(self, engine):
+        """Natural 20 triggers CRITICAL_SUCCESS regardless of exhaustion."""
+        char = self._dying(engine)
+        char.exhaustion_level = 5  # d20_modifier = −10
+        with patch("game_engine.rules.dnd_5_5e._death.roll_dice", return_value=(20, [20])):
+            result = engine.roll_death_save(char)
+        assert result.outcome is DeathSaveOutcome.CRITICAL_SUCCESS
+        assert result.regained_hp is True
+
+    def test_exhaustion_does_not_affect_natural_1(self, engine):
+        """Natural 1 triggers CRITICAL_FAILURE regardless of exhaustion."""
+        char = self._dying(engine)
+        char.exhaustion_level = 1  # d20_modifier = −2
+        with patch("game_engine.rules.dnd_5_5e._death.roll_dice", return_value=(1, [1])):
+            result = engine.roll_death_save(char)
+        assert result.outcome is DeathSaveOutcome.CRITICAL_FAILURE
+        assert result.failures == 2
