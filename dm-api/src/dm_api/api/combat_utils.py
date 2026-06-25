@@ -12,8 +12,10 @@ import uuid
 from typing import Any
 
 from game_engine.rules.dnd_5_5e.classes import CLASSES
+from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
 from game_engine.rules.dnd_5_5e.spellcasting import compute_spell_slots
 from game_engine.types import (
+    Ability,
     AttackDetails,
     CharacterClass,
     CharacterSheet,
@@ -121,6 +123,31 @@ def missing_combat_stats(characters: list[Character]) -> list[str]:
     fake combatant the DM never asked for.
     """
     return [c.name for c in characters if c.hp_max is None or c.ac is None]
+
+
+def roll_and_sort_initiatives(
+    characters: list[Character],
+    engine: DnD55eEngine,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Roll initiative for each character and return sorted (order, combatants).
+
+    Ties are broken by Dexterity score (2024 PHB tie-break rule).
+    Returns two parallel lists: the initiative-order metadata dicts and the
+    full serialised CharacterSheet dicts, both sorted highest-initiative first.
+    """
+    rolled: list[tuple[dict[str, Any], dict[str, Any], int]] = []
+    for char in characters:
+        sheet = character_to_sheet(char)
+        initiative = engine.roll_initiative(sheet)
+        rolled.append(
+            (
+                {"character_id": str(char.id), "name": char.name, "initiative": initiative},
+                sheet.to_dict(),
+                sheet.ability_scores.get(Ability.DEXTERITY),
+            )
+        )
+    rolled.sort(key=lambda x: (x[0]["initiative"], x[2]), reverse=True)
+    return [r[0] for r in rolled], [r[1] for r in rolled]
 
 
 def _normalize_char_class(raw: str | None) -> str:

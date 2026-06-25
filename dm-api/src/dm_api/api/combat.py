@@ -28,7 +28,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
-from game_engine.types import Ability, CharacterSheet, ChatRole, CombatStateData, TurnState
+from game_engine.types import CharacterSheet, ChatRole, CombatStateData, TurnState
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,11 +37,11 @@ from dm_api.api.combat_utils import (
     advance_turn_index,
     broadcast_combat,
     build_attack_details,
-    character_to_sheet,
     combat_summary_text,
     dump_turn_states,
     load_turn_states,
     missing_combat_stats,
+    roll_and_sort_initiatives,
     sync_combatants_to_db,
 )
 from dm_api.api.ws import broadcast_to_session
@@ -130,22 +130,7 @@ async def start_combat(
                 ),
             )
 
-        rolled: list[tuple[dict[str, Any], dict[str, Any], int]] = []
-        for char in characters:
-            sheet = character_to_sheet(char)
-            initiative = _engine.roll_initiative(sheet)
-            rolled.append(
-                (
-                    {"character_id": str(char.id), "name": char.name, "initiative": initiative},
-                    sheet.to_dict(),
-                    sheet.ability_scores.get(Ability.DEXTERITY),
-                )
-            )
-
-        # Ties are broken by Dexterity score (2024 PHB initiative tie-break).
-        rolled.sort(key=lambda x: (x[0]["initiative"], x[2]), reverse=True)
-        initiative_order = [r[0] for r in rolled]
-        combatants = [r[1] for r in rolled]
+        initiative_order, combatants = roll_and_sort_initiatives(characters, _engine)
 
     combat = CombatState(
         session_id=session_id,
