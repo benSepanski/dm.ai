@@ -107,6 +107,18 @@ as `severity: blocking`, and write up how far you got.
   phases exercise both attacks and spells.
 - **Check:** each PC lands in the left sidebar with HP/AC/stats populated; review
   step warnings (if any) are understandable.
+- **Also test what *shouldn't* work (adversarial).** A valid party isn't enough —
+  probe the guardrails. Try at least one clearly illegal build and confirm the
+  system either **rejects it with a clear message** or **routes it to the DM for
+  approval** (never silently accepts it). Examples to attempt through the UI / API:
+  - all ability scores at 20 (or otherwise out of legal range)
+  - point-buy that exceeds the budget; standard-array values reused/missing
+  - empty name, no class/species, or 0/negative level
+  - duplicate skill picks, or more skills/languages than allowed
+  - obviously broken combat stats (negative HP, AC 0) on monster/NPC creation
+  Log every guardrail that's missing or that fails silently as a `bug`. The
+  principle under test: invalid game state must be impossible to commit through
+  the UI, or must surface as an explicit, human-readable rejection.
 
 ### Phase 2 — Story hook
 - **Intent:** the DM agent can open the fiction and the AI co-DM responds with a
