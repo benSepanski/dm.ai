@@ -35,20 +35,25 @@ _CHARACTER_TYPES = "|".join(ct.value for ct in CharacterType)
 class WorldContext:
     """Typed world-grounding input for the system prompt.
 
-    Carries durable campaign knowledge (world setting/lore and summaries of
-    previously ended sessions) so the orchestrator keeps continuity across
-    sessions. Built by the Runtime layer from the worlds/sessions tables.
+    Carries durable campaign knowledge (world setting/lore, summaries of
+    previously ended sessions, and the entity roster of known NPCs/monsters and
+    locations) so the orchestrator keeps continuity across sessions. Built by
+    the Runtime layer from the worlds/sessions/characters/locations tables.
     """
 
     setting_description: str | None = None
     lore_summary: str | None = None
     prior_session_summaries: tuple[str, ...] = field(default_factory=tuple)
+    known_npcs: tuple[str, ...] = field(default_factory=tuple)
+    known_locations: tuple[str, ...] = field(default_factory=tuple)
 
     def is_empty(self) -> bool:
         return (
             not self.setting_description
             and not self.lore_summary
             and not self.prior_session_summaries
+            and not self.known_npcs
+            and not self.known_locations
         )
 
 
@@ -56,7 +61,7 @@ def _world_context_block(world_context: WorldContext | None) -> str:
     """Render the WORLD CONTEXT prompt section.
 
     Silent no-op (empty string) when there is no durable world knowledge yet,
-    e.g. a brand-new world with no lore and no ended sessions.
+    e.g. a brand-new world with no lore, no ended sessions, and no entities.
     """
     if world_context is None or world_context.is_empty():
         return ""
@@ -68,6 +73,12 @@ def _world_context_block(world_context: WorldContext | None) -> str:
     if world_context.prior_session_summaries:
         lines.append("Previous sessions (oldest first):")
         lines.extend(f"- {summary}" for summary in world_context.prior_session_summaries)
+    if world_context.known_npcs:
+        lines.append("Known NPCs and monsters:")
+        lines.extend(f"- {npc}" for npc in world_context.known_npcs)
+    if world_context.known_locations:
+        lines.append("Known locations:")
+        lines.extend(f"- {loc}" for loc in world_context.known_locations)
     return "\n".join(lines) + "\n\n"
 
 

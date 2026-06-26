@@ -333,3 +333,50 @@ async def test_session_chat_rejected_after_end(client, world_id):
     )
     assert r.status_code == 409
     assert r.json()["detail"] == "Session has ended"
+
+
+@pytest.mark.asyncio
+async def test_session_chat_includes_world_entities(client, world_id):
+    """World context passed to the orchestrator includes known NPCs and locations."""
+    # Create an NPC (open endpoint — no DM token needed for characters).
+    r = await client.post(
+        "/api/characters/",
+        json={
+            "world_id": world_id,
+            "type": "NPC",
+            "name": "Old Hag Meredith",
+            "race": "Human",
+            "alignment": "neutral evil",
+            "personality_traits": "Speaks in riddles and always asks a price.",
+        },
+    )
+    assert r.status_code == 201
+
+    # Create a location (DM-only; client fixture sends DM headers).
+    r = await client.post(
+        "/api/locations/",
+        json={
+            "world_id": world_id,
+            "type": "building",
+            "name": "The Rusty Anchor",
+            "description": "A seedy dockside tavern frequented by smugglers.",
+        },
+    )
+    assert r.status_code == 201
+
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "Entity Test"})
+    session_id = r.json()["id"]
+
+    mock_orch = _mock_orchestrator("Welcome.")
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        await client.post(f"/api/sessions/{session_id}/chat", json={"message": "Begin."})
+
+    ctx = mock_orch.handle_message.call_args.kwargs["world_context"]
+    npc_entries = [e for e in ctx.known_npcs if "Old Hag Meredith" in e]
+    assert len(npc_entries) == 1, f"Expected NPC entry, got known_npcs={ctx.known_npcs}"
+    assert "Human" in npc_entries[0]
+
+    loc_entries = [e for e in ctx.known_locations if "The Rusty Anchor" in e]
+    assert (
+        len(loc_entries) == 1
+    ), f"Expected location entry, got known_locations={ctx.known_locations}"

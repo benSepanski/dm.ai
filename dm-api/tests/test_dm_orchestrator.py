@@ -215,6 +215,28 @@ def test_system_prompt_world_context_silent_when_empty() -> None:
     )
 
 
+def test_system_prompt_includes_known_entities() -> None:
+    """Known NPCs and locations appear in the WORLD CONTEXT section."""
+    ctx = WorldContext(
+        known_npcs=("Gareth (NPC, Human Fighter, lawful neutral)",),
+        known_locations=("Thornwall Keep (building) — ancient fortress",),
+    )
+    prompt = build_system_prompt(world_id="w", session_id="s", world_context=ctx)
+    assert "WORLD CONTEXT" in prompt
+    assert "Known NPCs and monsters:" in prompt
+    assert "Gareth (NPC, Human Fighter, lawful neutral)" in prompt
+    assert "Known locations:" in prompt
+    assert "Thornwall Keep (building) — ancient fortress" in prompt
+
+
+def test_system_prompt_known_entities_silent_when_absent() -> None:
+    """No entity-roster sections when no NPCs or locations are provided."""
+    ctx = WorldContext(setting_description="A dark realm.")
+    prompt = build_system_prompt(world_id="w", session_id="s", world_context=ctx)
+    assert "Known NPCs" not in prompt
+    assert "Known locations" not in prompt
+
+
 @pytest.mark.asyncio
 async def test_handle_message_passes_world_context_to_system_prompt() -> None:
     backend = _ScriptedBackend(["reply"])
