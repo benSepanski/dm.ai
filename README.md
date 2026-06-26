@@ -199,6 +199,8 @@ dm.ai/
 ├── docs/
 │   ├── running-a-game.md    — DM guide: game night setup, LAN play, persistence
 │   ├── sample-session.md    — annotated transcript from a real playtest
+│   ├── playtest/            — repeatable agentic UI playtest: playbook,
+│   │                          pending-items log, per-run transcripts
 │   ├── architecture.md      — technical deep-dive
 │   └── api.md               — REST + WebSocket reference
 ├── game-engine/
