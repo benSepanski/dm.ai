@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from game_engine.types import ChatRole, ProposalStatus
+from game_engine.types import CharacterType, ChatRole, ProposalStatus
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,8 +18,10 @@ from dm_api.ai.prompts.system_prompt import WorldContext
 from dm_api.api.auth import ClientRole, require_dm
 from dm_api.api.ws import broadcast_to_session
 from dm_api.config import settings
+from dm_api.db.models.character import Character
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
 from dm_api.db.models.game_config import EffectiveGameConfig, GameConfig, resolve_game_config
+from dm_api.db.models.location import Location
 from dm_api.db.models.proposal import Proposal, ProposalRead
 from dm_api.db.models.session import GameSession, SessionCreate, SessionRead
 from dm_api.db.models.world import World
@@ -32,6 +34,10 @@ router = APIRouter()
 # prompt for cross-session continuity. Summaries are 2-3 sentences each, so
 # the token cost stays negligible.
 _PRIOR_SESSION_LIMIT = 10
+
+# Max NPCs/monsters and locations injected into the system prompt entity roster.
+# Each entry is a compact one-liner (~30–120 chars); 20 of each ≈ 1–3 k tokens.
+_WORLD_ENTITY_LIMIT = 20
 
 
 @functools.lru_cache(maxsize=None)
@@ -48,6 +54,25 @@ def _get_backend(provider: str) -> AIBackend:
         provider=provider,
         api_key=settings.anthropic_api_key,
     )
+
+
+def _format_npc_entry(char: Character) -> str:
+    """Compact one-liner for an NPC/monster in the system-prompt entity roster."""
+    parts = list(filter(None, [char.type.value, char.race, char.char_class, char.alignment]))
+    entry = f"{char.name} ({', '.join(parts)})"
+    if char.personality_traits:
+        snippet = char.personality_traits[:100]
+        entry += f" — {snippet}{'…' if len(char.personality_traits) > 100 else ''}"
+    return entry
+
+
+def _format_location_entry(loc: Location) -> str:
+    """Compact one-liner for a location in the system-prompt entity roster."""
+    entry = f"{loc.name} ({loc.type.value})"
+    if loc.description:
+        snippet = loc.description[:100]
+        entry += f" — {snippet}{'…' if len(loc.description) > 100 else ''}"
+    return entry
 
 
 async def _fetch_effective_config(db: AsyncSession, world_id: uuid.UUID) -> EffectiveGameConfig:
@@ -107,10 +132,11 @@ async def _fetch_world_context(
     """Build the typed cross-session context for the orchestrator's system prompt.
 
     Combines the world's setting/lore with summaries of the most recently
-    ended sessions in the same world (chronological order, oldest first).
+    ended sessions, plus a compact entity roster of known NPCs/monsters and
+    locations (oldest-first up to _WORLD_ENTITY_LIMIT each).
     """
     world = (await db.execute(select(World).where(World.id == world_id))).scalar_one_or_none()
-    result = await db.execute(
+    session_result = await db.execute(
         select(GameSession)
         .where(
             GameSession.world_id == world_id,
@@ -120,11 +146,30 @@ async def _fetch_world_context(
         .order_by(GameSession.started_at.desc())
         .limit(_PRIOR_SESSION_LIMIT)
     )
-    prior_sessions = list(reversed(result.scalars().all()))
+    prior_sessions = list(reversed(session_result.scalars().all()))
+
+    npc_result = await db.execute(
+        select(Character)
+        .where(Character.world_id == world_id, Character.type != CharacterType.PC)
+        .order_by(Character.created_at.asc())
+        .limit(_WORLD_ENTITY_LIMIT)
+    )
+    npcs = npc_result.scalars().all()
+
+    loc_result = await db.execute(
+        select(Location)
+        .where(Location.world_id == world_id)
+        .order_by(Location.created_at.asc())
+        .limit(_WORLD_ENTITY_LIMIT)
+    )
+    locations = loc_result.scalars().all()
+
     return WorldContext(
         setting_description=world.setting_description if world else None,
         lore_summary=world.lore_summary if world else None,
         prior_session_summaries=tuple(f"{s.name}: {s.session_summary}" for s in prior_sessions),
+        known_npcs=tuple(_format_npc_entry(c) for c in npcs),
+        known_locations=tuple(_format_location_entry(loc) for loc in locations),
     )
 
 

@@ -15,7 +15,7 @@ from dm_api.db.models.game_config import (
     build_game_config_read,
 )
 from dm_api.db.models.location import Location, LocationRead
-from dm_api.db.models.world import World, WorldCreate, WorldRead
+from dm_api.db.models.world import World, WorldCreate, WorldRead, WorldUpdate
 from dm_api.db.session import get_db
 
 router = APIRouter()
@@ -118,6 +118,27 @@ async def put_game_config(
     await db.commit()
     await db.refresh(config)
     return build_game_config_read(world_id, config)
+
+
+@router.patch("/{world_id}", response_model=WorldRead)
+async def patch_world(
+    world_id: uuid.UUID,
+    payload: WorldUpdate,
+    db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
+) -> WorldRead:
+    """Partially update a world's metadata.
+
+    Omitted fields are left unchanged. Pass ``null`` for ``setting_description``,
+    ``themes``, or ``lore_summary`` to clear them; ``name`` is required to be a
+    non-empty string if provided.
+    """
+    world = await _fetch_world_or_404(db, world_id)
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(world, field, value)
+    await db.commit()
+    await db.refresh(world)
+    return WorldRead.model_validate(world)
 
 
 @router.delete("/{world_id}", status_code=status.HTTP_204_NO_CONTENT)

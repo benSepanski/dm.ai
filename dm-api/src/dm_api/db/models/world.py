@@ -45,6 +45,13 @@ class WorldCreate(BaseModel):
     lore_summary: str | None = None
 
 
+class WorldUpdate(BaseModel):
+    name: str | None = None
+    setting_description: str | None = None
+    themes: list[str] | None = None
+    lore_summary: str | None = None
+
+
 class WorldRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
