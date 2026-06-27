@@ -96,6 +96,28 @@ def _make_orchestrator(config: EffectiveGameConfig) -> DMOrchestrator:
     )
 
 
+def _classify_ai_error(exc: Exception) -> str:
+    """Map a backend exception to a user-readable error string for the DM chat."""
+    try:
+        import anthropic as _anthropic
+
+        if isinstance(exc, _anthropic.AuthenticationError):
+            return (
+                "AI provider authentication failed — check ANTHROPIC_API_KEY. "
+                "Your message was saved; fix the key and retry."
+            )
+        if isinstance(exc, _anthropic.RateLimitError):
+            return "AI provider rate limit reached — wait a moment and try again."
+        if isinstance(exc, _anthropic.APIStatusError):
+            return (
+                f"AI provider returned HTTP {exc.status_code}. "
+                "Your message was saved; try again shortly."
+            )
+    except ImportError:
+        pass
+    return "AI provider is temporarily unavailable. Your message was saved — try again shortly."
+
+
 async def _fetch_session_or_404(db: AsyncSession, session_id: uuid.UUID) -> GameSession:
     result = await db.execute(select(GameSession).where(GameSession.id == session_id))
     session = result.scalar_one_or_none()
@@ -332,13 +354,18 @@ async def session_chat(
     game_config = await _fetch_effective_config(db, game_session.world_id)
 
     # Condense → build messages → call backend → extract proposal.
-    result = await _make_orchestrator(game_config).handle_message(
-        message=payload.message,
-        session_id=str(session_id),
-        world_id=str(game_session.world_id),
-        history=history,
-        world_context=world_context,
-    )
+    try:
+        result = await _make_orchestrator(game_config).handle_message(
+            message=payload.message,
+            session_id=str(session_id),
+            world_id=str(game_session.world_id),
+            history=history,
+            world_context=world_context,
+        )
+    except Exception as exc:
+        detail = _classify_ai_error(exc)
+        logger.warning("AI backend error session_id=%s: %s", session_id, exc)
+        raise HTTPException(status_code=503, detail=detail)
 
     ai_message = ChatMessage(
         session_id=session_id,

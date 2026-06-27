@@ -162,10 +162,12 @@ export function skillsStepValid(draft: CharacterDraft, classOption: ClassOption)
 export function toBuildRequest(
   draft: CharacterDraft,
   worldId: string,
-  background: BackgroundOption
+  background: BackgroundOption,
+  sessionId?: string | null
 ): CharacterBuildRequest {
   return {
     world_id: worldId,
+    ...(sessionId ? { session_id: sessionId } : {}),
     name: draft.name.trim(),
     character_class: draft.characterClass as string,
     species: draft.species as string,

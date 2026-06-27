@@ -125,6 +125,9 @@ class CharacterBuildRequest(BaseModel):
     """Request body for building a level-1 PC via the rule engine."""
 
     world_id: uuid.UUID
+    # When provided the API broadcasts an entity_update event so all connected
+    # clients in the session receive the new character without a page refresh.
+    session_id: uuid.UUID | None = None
     name: str = Field(min_length=1, max_length=255)
     character_class: CharacterClass
     species: Species

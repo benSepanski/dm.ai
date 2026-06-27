@@ -165,17 +165,23 @@ function CombatActions({
 export default function CombatTracker() {
   // Players see the initiative tracker live but only the DM gets the
   // controls — the server enforces this too (combat mutations are DM-only).
-  const { sessionId, combat, setCombat, isDM } = useGameStore();
+  const { sessionId, combat, setCombat, isDM, characters } = useGameStore();
 
   const handleStart = useCallback(async () => {
     if (!sessionId) return;
+    // Enroll all PCs that have combat stats. NPCs/monsters from AI proposals
+    // typically lack hp_max/ac until the DM sets them; excluding them avoids a
+    // 422 and surfaces a clear error only when they're the only combatants.
+    const pcIds = characters
+      .filter((c) => c.type === "PC" && c.hp_max != null && c.ac != null)
+      .map((c) => c.id);
     try {
-      const result = await api.startCombat(sessionId);
+      const result = await api.startCombat(sessionId, pcIds);
       setCombat(mapCombatResponse(result));
     } catch (err) {
-      console.error("Failed to start combat:", err);
+      console.error("Failed to start combat:", err instanceof Error ? err.message : err);
     }
-  }, [sessionId, setCombat]);
+  }, [sessionId, setCombat, characters]);
 
   const handleEnd = useCallback(async () => {
     if (!sessionId) return;

@@ -11,6 +11,8 @@ from __future__ import annotations
 import functools
 import uuid
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from game_engine.rules.dnd_5_5e import (
     CLASSES,
@@ -37,10 +39,12 @@ from dm_api.api.character_creation_schemas import (
     SpeciesOptionRead,
     SpeciesTraitRead,
 )
+from dm_api.api.ws import broadcast_to_session
 from dm_api.db.models.character import Character, CharacterRead
 from dm_api.db.models.world import World
 from dm_api.db.session import get_db
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -178,6 +182,21 @@ async def build_player_character(
     db.add(character)
     await db.commit()
     await db.refresh(character)
+
+    if payload.session_id is not None:
+        try:
+            await broadcast_to_session(
+                payload.session_id,
+                {
+                    "type": "entity_update",
+                    "session_id": str(payload.session_id),
+                    "entity_type": "character",
+                    "entity_id": str(char_id),
+                },
+            )
+        except Exception:
+            logger.exception("ws broadcast failed after character build char_id=%s", char_id)
+
     return CharacterBuildRead(
         character=CharacterRead.model_validate(character),
         warnings=result.warnings,

@@ -35,7 +35,7 @@ hard/confusing/missing an affordance a real player or DM would expect.
 ## Open
 
 ### PT-13 — End Session uses a blocking native confirm() (froze the page; can't complete under automation)
-- **Status:** open
+- **Status:** resolved
 - **Severity:** minor
 - **Type:** usability
 - **Phase:** 8 — More discussion + End Session
@@ -48,18 +48,18 @@ hard/confusing/missing an affordance a real player or DM would expect.
 
 ### PT-12 — Combat is unwinnable through the UI: Start Combat enrolls nobody (+ monsters have no stats)
 - **Status:** open
-- **Severity:** blocking
+- **Severity:** major (was blocking; PC enrollment now fixed)
 - **Type:** bug
 - **Phase:** 6 — Combat
 - **Found:** runs/2026-06-26-first-pass.md
 - **Steps:** With a party and an accepted hostile (Cinder Hound) present, click **Start Combat** in the combat tracker.
 - **Observed:** Combat starts (`COMBAT · ROUND 1`) but shows **"No combatants in initiative order"** — the Attack/Dash/Dodge and Next Turn controls are all disabled, and the battle map goes **blank** ("Tokens appear here once characters join…"). Neither the party nor the monster is enrolled. The combat is completely empty and there is no UI to add anyone.
 - **Root cause (two stacked blockers):**
-  1. The API `POST /sessions/{id}/combat` accepts `character_ids: list[UUID] = []` (`db/models/combat.py:66` `StartCombatRequest`, enrolled in `api/combat.py:106`), but the UI client sends **no body** — `startCombat: POST /sessions/{id}/combat` with `{ method: "POST" }` and no `character_ids` (`dm-ui/src/api/client.ts:321`). So it always rolls initiative for an empty set. There is also no combatant-selection UI.
-  2. Even if the UI sent ids, **AI-proposed monsters have no combat stats** (HP/AC/ability scores) — the Cinder Hound proposal carried only narrative fields — and there is **no UI to set them** (the wizard is PC-only; PATCH is Swagger/DM-token-only). running-a-game.md confirms combat start 422s such characters. So a UI-only DM cannot field an AI-generated enemy at all.
-- **Expected:** Start Combat should enroll the relevant combatants (at minimum the party, plus a way to pick which present NPCs/monsters join), i.e. send `character_ids`. And there must be a UI path to give an accepted monster/NPC combat stats (a stat-block editor, or AI proposals should include a full stat block for MONSTER-type characters). Without both, the entire combat pillar is inaccessible from the UI.
+  1. ~~The UI client sent no body to `POST /sessions/{id}/combat`.~~ **Fixed:** `startCombat` now sends all PCs with combat stats as `character_ids`.
+  2. **Still open:** **AI-proposed monsters have no combat stats** (HP/AC/ability scores) — the Cinder Hound proposal carried only narrative fields — and there is **no UI to set them** (the wizard is PC-only; PATCH is Swagger/DM-token-only). running-a-game.md confirms combat start 422s such characters. So a UI-only DM cannot field an AI-generated enemy at all.
+- **Expected:** A UI path to give an accepted monster/NPC combat stats (a stat-block editor, or AI proposals should include a full stat block for MONSTER-type characters). Without this, monsters can't be enrolled.
 - **Evidence:** Post-"Start Combat" screenshot (empty initiative, blank map); api log `POST /combat 201`; code refs above.
-- **Notes:** This blocks Phase 6 for UI-only play. Combat resolution itself (engine) was NOT reachable this run because nothing could be enrolled via the UI. Highest-impact fix: have `startCombat` send the party (and selected present hostiles) and surface a combatant picker; pair with a monster stat-block path (relates to PT-2's "AI characters lack combat stats / no UI to set them"). **Compounding cause:** the ended session's `player_character_ids` was `null` (confirmed via `GET /api/sessions/{id}`) — PCs built in the wizard are attached to the *world* but never enrolled into the *session*, so even a smarter Start Combat has no party list to draw from. The New Session form also doesn't let you pick PCs (they don't exist yet at that point). Worth fixing session↔PC linkage generally; it likely also affects any session-scoped party feature.
+- **Notes:** PC enrollment root cause fixed. Monster stat-block path still missing. Relates to PT-2 "AI characters lack combat stats / no UI to set them".
 
 ### PT-11 — [visual] Friendly NPC shows as a red "enemy" token, and appears out of scene
 - **Status:** open
@@ -74,7 +74,7 @@ hard/confusing/missing an affordance a real player or DM would expect.
 - **Notes:** Token label is also truncated ("Mare" for "Maret Solde") — minor. Disposition coloring likely keys off CharacterType (PC vs NPC vs MONSTER) rather than combat allegiance. Consider location-scoping the roster shown on the map.
 
 ### PT-10 — [visual] Chat does not render markdown; emphasis/quotes/rules show as raw syntax
-- **Status:** open
+- **Status:** resolved
 - **Severity:** major — **top-priority readability fix (user-flagged twice during the run)**
 - **Type:** usability
 - **Phase:** 2 — Story hook (recurs on every AI turn)
@@ -139,7 +139,7 @@ hard/confusing/missing an affordance a real player or DM would expect.
 - **Notes:** Verify whether sending from a player client is actually accepted by the API or just a stray UI affordance — either way the control shouldn't show. Likely a missing `isDM` gate in the chat input component.
 
 ### PT-5 — New characters don't appear on player clients without a manual refresh
-- **Status:** open
+- **Status:** resolved
 - **Severity:** major
 - **Type:** bug
 - **Phase:** 1 — Character creation (real-time sync)
@@ -163,7 +163,7 @@ hard/confusing/missing an affordance a real player or DM would expect.
 - **Notes:** Pairs with PT-3 (better runtime error message). This one is about catching it *before* anyone is playing. Likely a startup hook in `dm_api.main` / config validation in `config.py`, plus an AI-backend readiness field on `/health`.
 
 ### PT-3 — AI provider errors surface to the DM as a bare "Internal Server Error"
-- **Status:** open
+- **Status:** resolved
 - **Severity:** major
 - **Type:** bug
 - **Phase:** 2 — Story hook
@@ -200,4 +200,18 @@ hard/confusing/missing an affordance a real player or DM would expect.
 
 ## Resolved
 
-_None yet._
+### PT-13 — End Session uses a blocking native confirm()
+- **Resolved in:** PR #78 (claude/gifted-hawking-ebnwrt)
+- Replaced `window.confirm()` with an in-app styled confirmation modal in `DMDashboard.tsx`.
+
+### PT-10 — Chat does not render markdown
+- **Resolved in:** PR #78 (claude/gifted-hawking-ebnwrt)
+- Added `react-markdown` to chat message rendering in `DMDashboard.tsx`. All roles (DM, AI, system) now render bold, italic, blockquotes, horizontal rules, headings, and lists.
+
+### PT-5 — New characters don't appear on player clients without a manual refresh
+- **Resolved in:** PR #78 (claude/gifted-hawking-ebnwrt)
+- `POST /characters/creation/build` now accepts an optional `session_id` and broadcasts an `entity_update` WebSocket event when provided. The character creation wizard passes the current session id so all connected clients receive the new character live.
+
+### PT-3 — AI provider errors surface as a bare "Internal Server Error"
+- **Resolved in:** PR #78 (claude/gifted-hawking-ebnwrt)
+- `session_chat` now catches backend exceptions and raises a 503 with a provider-specific message (authentication failure, rate limit, or transient error). The frontend `request()` helper also extracts the FastAPI `detail` string from error JSON so the DM sees the actual reason, not an HTTP status phrase.

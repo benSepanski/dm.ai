@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
 import { api } from "../../api/client";
 import { mapCharacterResponse, mapCombatResponse } from "../../api/mappers";
 import { useSessionWebSocket } from "../../api/ws";
@@ -205,11 +206,11 @@ export default function DMDashboard() {
   // (used for "previously on…" context in future sessions), then this
   // browser detaches. The session itself stays in the database.
   const [ending, setEnding] = useState(false);
-  const endSession = useCallback(async () => {
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+
+  const confirmEndSession = useCallback(async () => {
     if (!sessionId || ending) return;
-    if (!window.confirm("End this session? An AI summary will be saved for next time.")) {
-      return;
-    }
+    setShowEndConfirm(false);
     setEnding(true);
     try {
       await api.endSession(sessionId);
@@ -368,7 +369,7 @@ export default function DMDashboard() {
           {isDM && (
             <>
               <button
-                onClick={endSession}
+                onClick={() => setShowEndConfirm(true)}
                 disabled={ending}
                 title="End the session for everyone — saves an AI summary the next session will recall"
                 style={{
@@ -447,7 +448,35 @@ export default function DMDashboard() {
                   {new Date(m.timestamp).toLocaleTimeString()}
                 </span>
               </div>
-              <p style={{ margin: 0, lineHeight: 1.6, fontSize: 14 }}>{m.content}</p>
+              <div style={{ margin: 0, lineHeight: 1.6, fontSize: 14 }}>
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p style={{ margin: "0 0 8px" }}>{children}</p>,
+                    blockquote: ({ children }) => (
+                      <blockquote
+                        style={{
+                          borderLeft: "3px solid #555",
+                          margin: "8px 0",
+                          paddingLeft: 10,
+                          color: "#ccc",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        {children}
+                      </blockquote>
+                    ),
+                    hr: () => <hr style={{ border: "none", borderTop: "1px solid #444", margin: "8px 0" }} />,
+                    h1: ({ children }) => <h1 style={{ fontSize: 16, margin: "8px 0 4px", color: "#e0d7ff" }}>{children}</h1>,
+                    h2: ({ children }) => <h2 style={{ fontSize: 15, margin: "8px 0 4px", color: "#e0d7ff" }}>{children}</h2>,
+                    h3: ({ children }) => <h3 style={{ fontSize: 14, margin: "8px 0 4px", color: "#e0d7ff" }}>{children}</h3>,
+                    ul: ({ children }) => <ul style={{ margin: "4px 0", paddingLeft: 20 }}>{children}</ul>,
+                    ol: ({ children }) => <ol style={{ margin: "4px 0", paddingLeft: 20 }}>{children}</ol>,
+                    strong: ({ children }) => <strong style={{ color: "#f0eaff" }}>{children}</strong>,
+                  }}
+                >
+                  {m.content}
+                </ReactMarkdown>
+              </div>
             </div>
           ))}
           <div ref={bottomRef} />
@@ -568,6 +597,68 @@ export default function DMDashboard() {
 
       {showSettings && worldId && (
         <GameSettingsModal worldId={worldId} onClose={() => setShowSettings(false)} />
+      )}
+
+      {showEndConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: "#1a1a2e",
+              border: "1px solid #444",
+              borderRadius: 8,
+              padding: 24,
+              maxWidth: 360,
+              width: "90%",
+            }}
+          >
+            <h3 style={{ margin: "0 0 12px", color: "#e0d7ff", fontSize: 16 }}>End Session?</h3>
+            <p style={{ color: "#aaa", fontSize: 14, margin: "0 0 20px", lineHeight: 1.5 }}>
+              This will end the session for everyone. An AI summary will be saved so the next
+              session can pick up where you left off.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowEndConfirm(false)}
+                style={{
+                  padding: "6px 16px",
+                  background: "#333",
+                  color: "#ccc",
+                  border: "1px solid #555",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void confirmEndSession()}
+                style={{
+                  padding: "6px 16px",
+                  background: "#8e2f2f",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: "bold",
+                }}
+              >
+                End Session
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

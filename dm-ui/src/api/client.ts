@@ -153,6 +153,9 @@ export interface CreationOptions {
 
 export interface CharacterBuildRequest {
   world_id: string;
+  // When provided the API broadcasts an entity_update so all session clients
+  // receive the new character without a manual refresh (PT-5).
+  session_id?: string;
   name: string;
   character_class: string;
   species: string;
@@ -280,7 +283,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(body || `API ${res.status}: ${res.statusText}`);
+    // Prefer the FastAPI "detail" string over the raw HTTP status phrase.
+    let message = body || `API ${res.status}: ${res.statusText}`;
+    try {
+      const json = JSON.parse(body) as unknown;
+      if (json && typeof json === "object" && "detail" in json && typeof (json as Record<string, unknown>).detail === "string") {
+        message = (json as { detail: string }).detail;
+      }
+    } catch {
+      // body is not JSON — use the raw text as-is
+    }
+    throw new Error(message);
   }
   return res.json() as Promise<T>;
 }
@@ -318,8 +331,11 @@ export const api = {
     request<SessionResponse>(`/sessions/${sessionId}/end`, { method: "PUT" }),
 
   // Combat
-  startCombat: (sessionId: string) =>
-    request<CombatStateResponse>(`/sessions/${sessionId}/combat`, { method: "POST" }),
+  startCombat: (sessionId: string, characterIds: string[] = []) =>
+    request<CombatStateResponse>(`/sessions/${sessionId}/combat`, {
+      method: "POST",
+      body: JSON.stringify({ character_ids: characterIds }),
+    }),
   getCombat: (sessionId: string) =>
     request<CombatStateResponse>(`/sessions/${sessionId}/combat`),
   submitAction: (sessionId: string, action: CombatActionRequest) =>
