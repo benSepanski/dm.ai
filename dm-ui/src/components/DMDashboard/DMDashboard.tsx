@@ -10,6 +10,8 @@ import LocationPanel from "../LocationPanel/LocationPanel";
 import BattleMap from "../BattleMap/BattleMap";
 import GameSettingsModal from "../GameSettings/GameSettingsModal";
 import ProposalCard from "../ProposalCard/ProposalCard";
+import ConfirmDialog from "../common/ConfirmDialog";
+import ChatMarkdown from "./ChatMarkdown";
 import DMUnlock from "./DMUnlock";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -205,17 +207,16 @@ export default function DMDashboard() {
   // (used for "previously on…" context in future sessions), then this
   // browser detaches. The session itself stays in the database.
   const [ending, setEnding] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
   const endSession = useCallback(async () => {
     if (!sessionId || ending) return;
-    if (!window.confirm("End this session? An AI summary will be saved for next time.")) {
-      return;
-    }
     setEnding(true);
     try {
       await api.endSession(sessionId);
       clearSession();
       navigate("/", { replace: true });
     } catch (err) {
+      setConfirmEnd(false);
       addMessage({
         id: crypto.randomUUID(),
         role: "system",
@@ -368,7 +369,7 @@ export default function DMDashboard() {
           {isDM && (
             <>
               <button
-                onClick={endSession}
+                onClick={() => setConfirmEnd(true)}
                 disabled={ending}
                 title="End the session for everyone — saves an AI summary the next session will recall"
                 style={{
@@ -447,7 +448,11 @@ export default function DMDashboard() {
                   {new Date(m.timestamp).toLocaleTimeString()}
                 </span>
               </div>
-              <p style={{ margin: 0, lineHeight: 1.6, fontSize: 14 }}>{m.content}</p>
+              {m.role === "system" ? (
+                <p style={{ margin: 0, lineHeight: 1.6, fontSize: 14 }}>{m.content}</p>
+              ) : (
+                <ChatMarkdown content={m.content} />
+              )}
             </div>
           ))}
           <div ref={bottomRef} />
@@ -566,6 +571,16 @@ export default function DMDashboard() {
         )}
       </aside>
 
+      {confirmEnd && (
+        <ConfirmDialog
+          title="End this session?"
+          message="An AI summary will be saved so the next session can recall what happened. This detaches your browser from the session."
+          confirmLabel="End Session"
+          busy={ending}
+          onConfirm={endSession}
+          onCancel={() => setConfirmEnd(false)}
+        />
+      )}
       {showSettings && worldId && (
         <GameSettingsModal worldId={worldId} onClose={() => setShowSettings(false)} />
       )}

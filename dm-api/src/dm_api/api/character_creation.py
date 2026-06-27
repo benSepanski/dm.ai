@@ -22,7 +22,14 @@ from game_engine.rules.dnd_5_5e import (
 from game_engine.rules.dnd_5_5e.data.armor import ARMOR
 from game_engine.rules.dnd_5_5e.data.backgrounds import BACKGROUNDS
 from game_engine.rules.dnd_5_5e.data.species import SPECIES
-from game_engine.types import Alignment, ArmorCategory, CharacterType, Language, Skill
+from game_engine.types import (
+    Alignment,
+    ArmorCategory,
+    CharacterType,
+    Language,
+    ProposalType,
+    Skill,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +44,7 @@ from dm_api.api.character_creation_schemas import (
     SpeciesOptionRead,
     SpeciesTraitRead,
 )
+from dm_api.api.ws import broadcast_entity_update
 from dm_api.db.models.character import Character, CharacterRead
 from dm_api.db.models.world import World
 from dm_api.db.session import get_db
@@ -178,6 +186,12 @@ async def build_player_character(
     db.add(character)
     await db.commit()
     await db.refresh(character)
+    # Tell other connected clients (e.g. players watching) that the roster
+    # changed so the new PC shows up without a manual refresh.
+    if payload.session_id is not None:
+        await broadcast_entity_update(
+            payload.session_id, ProposalType.CHARACTER.value, character.id
+        )
     return CharacterBuildRead(
         character=CharacterRead.model_validate(character),
         warnings=result.warnings,

@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from dm_api.ai.backends import check_ai_readiness
 from dm_api.api.auth import log_dm_token_source
 from dm_api.api.router import router
 from dm_api.config import settings
@@ -25,6 +26,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.ai_provider,
         settings.orchestrator_model,
     )
+    readiness = check_ai_readiness(settings.ai_provider, settings.anthropic_api_key)
+    if readiness.ready:
+        logger.info("AI backend ready  provider=%s", readiness.provider)
+    else:
+        # Loud, but don't crash the boot — the rest of the app (and /health) is
+        # still useful while the operator fixes the AI config.
+        logger.warning(
+            "AI BACKEND NOT READY  provider=%s — %s "
+            "The first chat turn will fail until this is fixed.",
+            readiness.provider,
+            readiness.detail,
+        )
     log_dm_token_source()
     yield
     logger.info("dm-api shutting down")
@@ -69,5 +82,13 @@ app.include_router(router, prefix="/api")
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok", "service": "dm-api"}
+async def health() -> dict[str, object]:
+    """Liveness plus AI-backend readiness so a bad config is catchable here."""
+    readiness = check_ai_readiness(settings.ai_provider, settings.anthropic_api_key)
+    return {
+        "status": "ok",
+        "service": "dm-api",
+        "ai_provider": readiness.provider,
+        "ai_ready": readiness.ready,
+        "ai_detail": readiness.detail,
+    }

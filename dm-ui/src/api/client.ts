@@ -153,6 +153,9 @@ export interface CreationOptions {
 
 export interface CharacterBuildRequest {
   world_id: string;
+  // Set when building from inside a live session so the server can broadcast a
+  // roster update to other connected clients (players see the new PC live).
+  session_id?: string;
   name: string;
   character_class: string;
   species: string;

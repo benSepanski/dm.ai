@@ -63,7 +63,9 @@ export default function CharacterCreationWizard() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await api.buildCharacter(toBuildRequest(draft, worldId, background));
+      const result = await api.buildCharacter(
+        toBuildRequest(draft, worldId, background, sessionId)
+      );
       upsertCharacter(mapCharacterResponse(result.character));
       setCreated(result);
     } catch (err) {
@@ -71,7 +73,7 @@ export default function CharacterCreationWizard() {
     } finally {
       setSubmitting(false);
     }
-  }, [options, worldId, draft, upsertCharacter]);
+  }, [options, worldId, draft, sessionId, upsertCharacter]);
 
   if (!worldId) {
     return <Shell>Missing world id in URL.</Shell>;

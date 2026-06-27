@@ -205,8 +205,10 @@ def build_character(
     if progression is not None:
         mastery_count = progression.resource_at_level(ClassResource.WEAPON_MASTERY, 1)
         if mastery_count:
+            weapon_word = "weapon mastery" if mastery_count == 1 else "weapon masteries"
             warnings.append(
-                f"Choose {mastery_count} weapon masteries (set sheet.weapon_masteries)."
+                f"Your class can choose {mastery_count} {weapon_word} — "
+                "set them later via character edit."
             )
 
     sheet = CharacterSheet(

@@ -8,9 +8,35 @@ import time
 import anthropic
 from anthropic.types import MessageParam, TextBlock
 
-from dm_api.ai.backends.base import AIBackend, AIMessage, AIResponse
+from dm_api.ai.backends.base import (
+    AIBackend,
+    AIBackendError,
+    AIErrorCategory,
+    AIMessage,
+    AIResponse,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _to_backend_error(exc: anthropic.APIError) -> AIBackendError:
+    """Map an anthropic SDK error to a categorized, DM-facing AIBackendError."""
+    if isinstance(exc, (anthropic.AuthenticationError, anthropic.PermissionDeniedError)):
+        return AIBackendError(
+            AIErrorCategory.AUTH,
+            "AI provider rejected the request (authentication failed) — "
+            "check ANTHROPIC_API_KEY.",
+        )
+    if isinstance(exc, anthropic.RateLimitError):
+        return AIBackendError(
+            AIErrorCategory.RATE_LIMIT,
+            "AI provider rate limit reached — wait a moment and try again.",
+        )
+    logger.warning("anthropic provider error: %s", exc)
+    return AIBackendError(
+        AIErrorCategory.TRANSIENT,
+        "The AI provider is temporarily unavailable — your message was saved; try again.",
+    )
 
 
 class AnthropicBackend(AIBackend):
@@ -34,12 +60,15 @@ class AnthropicBackend(AIBackend):
             {"role": m.role, "content": m.content} for m in messages
         ]
         start = time.monotonic()
-        response = await self._client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=sdk_messages,
-        )
+        try:
+            response = await self._client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                system=system,
+                messages=sdk_messages,
+            )
+        except anthropic.APIError as exc:
+            raise _to_backend_error(exc) from exc
         duration_ms = int((time.monotonic() - start) * 1000)
         text_blocks = [b for b in response.content if isinstance(b, TextBlock)]
         if not text_blocks:
