@@ -65,6 +65,12 @@ export default function AbilitiesStep({
             Points spent: {spent} / {options.point_buy_budget}
           </p>
         )}
+        {draft.method === "manual" && (
+          <p style={{ margin: "0 0 10px", fontSize: 13, color: "#aaa" }}>
+            Base scores must be 3–18; values outside this range are clamped.
+            Background increases can raise a final score above 18.
+          </p>
+        )}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
           {ABILITIES.map((ability) => (
             <div

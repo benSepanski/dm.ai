@@ -30,7 +30,13 @@ import logging
 import shutil
 import time
 
-from dm_api.ai.backends.base import AIBackend, AIMessage, AIResponse
+from dm_api.ai.backends.base import (
+    AIBackend,
+    AIBackendError,
+    AIErrorCategory,
+    AIMessage,
+    AIResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,17 +76,28 @@ class ClaudeCLIBackend(AIBackend):
             prompt,
         ]
         start = time.monotonic()
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await proc.communicate()
+        except OSError as exc:
+            raise AIBackendError(
+                AIErrorCategory.TRANSIENT,
+                "Could not run the claude CLI — your message was saved; try again.",
+            ) from exc
         duration_ms = int((time.monotonic() - start) * 1000)
 
         if proc.returncode != 0:
             error = stderr.decode().strip()
-            raise RuntimeError(f"claude CLI failed (exit {proc.returncode}): {error}")
+            logger.warning("claude CLI failed (exit %s): %s", proc.returncode, error)
+            raise AIBackendError(
+                AIErrorCategory.TRANSIENT,
+                "The claude CLI returned an error — verify it is authenticated "
+                "(run `claude` once); your message was saved.",
+            )
 
         result = self._parse_output(stdout.decode(), model)
         logger.debug(

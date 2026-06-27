@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from dm_api.ai.backends.base import AIBackend
+from dm_api.ai.backends.base import AIBackend, AIBackendError, AIErrorCategory
 from dm_api.ai.condenser import HistoryMessage, MessageAnchor
 from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
 from dm_api.ai.prompts.system_prompt import WorldContext
@@ -306,6 +306,16 @@ async def get_session_messages(
     return [ChatMessageRead.model_validate(m) for m in result.scalars().all()]
 
 
+# HTTP status per AI failure category. AUTH is a server-side misconfiguration
+# (502 Bad Gateway), rate limits map to 429, and everything else is a transient
+# upstream outage (503).
+_AI_ERROR_STATUS: dict[AIErrorCategory, int] = {
+    AIErrorCategory.AUTH: status.HTTP_502_BAD_GATEWAY,
+    AIErrorCategory.RATE_LIMIT: status.HTTP_429_TOO_MANY_REQUESTS,
+    AIErrorCategory.TRANSIENT: status.HTTP_503_SERVICE_UNAVAILABLE,
+}
+
+
 @router.post("/{session_id}/chat", response_model=ChatResponse)
 async def session_chat(
     session_id: uuid.UUID,
@@ -331,14 +341,23 @@ async def session_chat(
     world_context = await _fetch_world_context(db, game_session.world_id, session_id)
     game_config = await _fetch_effective_config(db, game_session.world_id)
 
-    # Condense → build messages → call backend → extract proposal.
-    result = await _make_orchestrator(game_config).handle_message(
-        message=payload.message,
-        session_id=str(session_id),
-        world_id=str(game_session.world_id),
-        history=history,
-        world_context=world_context,
-    )
+    # Condense → build messages → call backend → extract proposal. The AI call
+    # is an untrusted boundary: provider failures are surfaced as an actionable
+    # message instead of a bare 500, and the DM's message is preserved.
+    try:
+        result = await _make_orchestrator(game_config).handle_message(
+            message=payload.message,
+            session_id=str(session_id),
+            world_id=str(game_session.world_id),
+            history=history,
+            world_context=world_context,
+        )
+    except AIBackendError as exc:
+        await db.commit()  # keep the DM message that was already flushed
+        raise HTTPException(
+            status_code=_AI_ERROR_STATUS[exc.category],
+            detail=exc.message,
+        ) from exc
 
     ai_message = ChatMessage(
         session_id=session_id,

@@ -25,9 +25,19 @@ Without Docker, run the three pieces yourself — see "Running locally" in the
 [README](../README.md). Either way, keep the API single-process: WebSocket
 fan-out is in-memory.
 
+> **`AI_PROVIDER=claude_cli` does not work inside Docker.** The API image is a
+> plain Python base — it has no `claude` binary and none of your host's
+> `~/.claude` authentication. If you set `claude_cli`, run the **API on the
+> host** instead (see "Running locally" in the README), where it can find your
+> installed, authenticated CLI. The Docker stack supports `AI_PROVIDER=anthropic`
+> (with `ANTHROPIC_API_KEY`).
+
 ### Sanity checks
 
-- `curl http://localhost:8000/health` → `{"status": "ok", ...}`
+- `curl http://localhost:8000/health` → `{"status": "ok", ..., "ai_ready": true}`.
+  If `ai_ready` is `false`, the AI backend is misconfigured (bad/placeholder
+  `ANTHROPIC_API_KEY`, or `claude` not on PATH) — fix it **before** game night;
+  `ai_detail` says what's wrong. The API also logs a loud warning at startup.
 - Open `http://localhost:8000/docs` — the interactive Swagger UI you'll use
   for character creation.
 
@@ -178,7 +188,69 @@ Everything is live for every connected browser:
   bar detaches your browser from the current session (the session itself
   stays in the database).
 
-## 5. Troubleshooting
+## 5. Operating your game — config, data & independent runs
+
+A first-time operator hits a few sharp edges; here's where everything lives.
+
+### Which config is in effect
+
+- **The canonical config is the repo-root `.env`.** `docker-compose` loads it
+  via `env_file`, so every Docker service reads it. Running the API **from
+  `dm-api/` does _not_ load the root `.env`** — settings like `DM_TOKEN` then
+  fall back to defaults. When running the API on the host, start it from the
+  repo root (or pass an explicit env file) so the same `.env` applies.
+- **Effective config is observable.** `GET /health` reports the active
+  `ai_provider` and whether it's ready; the API also logs the provider, models,
+  and DM-token source at startup. Per-world overrides (provider, models, context
+  budget, storage URLs) live in the **Game Settings** modal and
+  `GET/PUT /api/worlds/{world_id}/config`.
+
+### The DM token
+
+- `DM_TOKEN` is the password that unlocks DM controls. **Set it explicitly.**
+  If it's unset, the API generates a *new* token on every startup (printed in
+  the logs) — which silently invalidates any browser you'd already unlocked.
+  Pinning `DM_TOKEN` in `.env` keeps the DM logged in across restarts.
+
+### Where your data lives & backups
+
+- All durable state is in PostgreSQL, persisted in the `postgres_data` Docker
+  volume (see §4). To back up or move a campaign, dump the database:
+
+  ```bash
+  # Back up
+  docker-compose exec -T db pg_dump -U dmuser dmdb > campaign-backup.sql
+  # Restore into a fresh stack
+  docker-compose exec -T db psql -U dmuser dmdb < campaign-backup.sql
+  ```
+
+- A "game" is identified by its world id (and the session ids under it),
+  visible in the session URL and via `GET /api/worlds/...`.
+
+### Running independent games
+
+- Everything shares one database and one in-process WebSocket registry, so a
+  single stack is one logical deployment. To run **two isolated games in
+  parallel** (separate data and ports), start a second stack with its own
+  Compose project name and host ports:
+
+  ```bash
+  # Second, isolated instance: distinct volumes + ports
+  docker-compose -p dmai-table2 up
+  # (override the published 5173/8000/5432 ports in an override file or env)
+  ```
+
+  The `-p` project name gives the second stack its own `postgres_data` volume,
+  so the two campaigns never share state.
+
+### Which provider needs which runtime
+
+- `AI_PROVIDER=anthropic` works anywhere (Docker or host) given a valid
+  `ANTHROPIC_API_KEY`. `AI_PROVIDER=claude_cli` requires the **API on the host**
+  with an installed, authenticated `claude` CLI — it cannot run in the Docker
+  image (see §1).
+
+## 6. Troubleshooting
 
 | Symptom | Likely cause / fix |
 |---|---|
@@ -189,7 +261,7 @@ Everything is live for every connected browser:
 | `docker-compose up` UI changes not appearing | Only `src/` is volume-mounted; config changes (vite.config.ts, package.json) need an image rebuild: `docker-compose up --build ui`. |
 | Wiped DB but browser stuck on dead session | The UI detects the missing session and returns to the new-session screen automatically. |
 
-## 6. Sample session
+## 7. Sample session
 
 See [sample-session.md](./sample-session.md) for a real transcript produced
 by playtesting this exact setup, annotated with the API calls behind it.

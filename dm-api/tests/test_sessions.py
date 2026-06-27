@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from game_engine.types import ProposalType
 
+from dm_api.ai.backends.base import AIBackendError, AIErrorCategory
 from dm_api.ai.dm_orchestrator import DMResponse, ProposalPayload
 
 
@@ -170,6 +171,55 @@ async def test_session_chat_returns_ai_response(client, world_id):
     data = r.json()
     assert data["response"] == "The tavern smells of pipe smoke and old ale."
     assert data["proposals"] == []
+
+
+@pytest.mark.asyncio
+async def test_session_chat_surfaces_ai_auth_error(client, world_id):
+    """An AI auth failure becomes a 502 with an actionable, non-bare message."""
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "Err"})
+    session_id = r.json()["id"]
+
+    mock_orch = MagicMock()
+    mock_orch.handle_message = AsyncMock(
+        side_effect=AIBackendError(
+            AIErrorCategory.AUTH,
+            "AI provider rejected the request (authentication failed) — "
+            "check ANTHROPIC_API_KEY.",
+        )
+    )
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        r = await client.post(
+            f"/api/sessions/{session_id}/chat",
+            json={"message": "Begin the tale."},
+        )
+
+    assert r.status_code == 502
+    assert "ANTHROPIC_API_KEY" in r.json()["detail"]
+    assert "Internal Server Error" not in r.json()["detail"]
+
+    # The DM's message is preserved even though the AI turn failed.
+    r = await client.get(f"/api/sessions/{session_id}/messages")
+    contents = [m["content"] for m in r.json()]
+    assert "Begin the tale." in contents
+
+
+@pytest.mark.asyncio
+async def test_session_chat_rate_limit_maps_to_429(client, world_id):
+    """A provider rate-limit failure maps to HTTP 429."""
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "RL"})
+    session_id = r.json()["id"]
+
+    mock_orch = MagicMock()
+    mock_orch.handle_message = AsyncMock(
+        side_effect=AIBackendError(AIErrorCategory.RATE_LIMIT, "Slow down.")
+    )
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        r = await client.post(
+            f"/api/sessions/{session_id}/chat",
+            json={"message": "Onward."},
+        )
+
+    assert r.status_code == 429
 
 
 @pytest.mark.asyncio

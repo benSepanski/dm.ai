@@ -125,6 +125,10 @@ class CharacterBuildRequest(BaseModel):
     """Request body for building a level-1 PC via the rule engine."""
 
     world_id: uuid.UUID
+    # When the PC is created from inside a live session, the session id lets the
+    # server broadcast a roster update so other connected clients (players) see
+    # the new character without a manual refresh.
+    session_id: uuid.UUID | None = None
     name: str = Field(min_length=1, max_length=255)
     character_class: CharacterClass
     species: Species

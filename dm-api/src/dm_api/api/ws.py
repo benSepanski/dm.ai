@@ -99,6 +99,31 @@ async def broadcast_to_session(
         )
 
 
+async def broadcast_entity_update(
+    session_id: str | uuid.UUID,
+    entity_type: str,
+    entity_id: str | uuid.UUID,
+) -> None:
+    """Notify a session's clients that an entity changed and should be refetched.
+
+    Clients listen for ``entity_update`` and re-fetch the named entity, so this
+    keeps party rosters and locations in sync after creates/edits. Failures are
+    swallowed: a broadcast must never break the HTTP request that triggered it.
+    """
+    try:
+        await broadcast_to_session(
+            session_id,
+            {
+                "type": "entity_update",
+                "session_id": str(session_id),
+                "entity_type": entity_type,
+                "entity_id": str(entity_id),
+            },
+        )
+    except Exception:
+        logger.exception("entity_update broadcast failed session_id=%s", session_id)
+
+
 @router.websocket("/ws/sessions/{session_id}")
 async def session_websocket(
     websocket: WebSocket,

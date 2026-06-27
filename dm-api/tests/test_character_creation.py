@@ -1,6 +1,7 @@
 """Tests for the character-creation API (engine-backed options + build)."""
 
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -83,6 +84,8 @@ async def test_build_fighter(client, world_id):
     assert "Shield" in char["equipment"]
     # Fighters must still pick weapon masteries — surfaced as a warning.
     assert any("weapon masteries" in w for w in data["warnings"])
+    # The warning is human-facing: no internal field paths leak to the user.
+    assert not any("sheet.weapon_masteries" in w for w in data["warnings"])
 
     # The built character is visible through the regular characters API.
     r = await client.get(f"/api/characters/{char['id']}")
@@ -111,6 +114,42 @@ async def test_build_unknown_world_404(client):
         json={"world_id": str(uuid.uuid4()), **FIGHTER_BUILD},
     )
     assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_build_with_session_broadcasts_roster_update(client, world_id):
+    """Building inside a session broadcasts an entity_update so players sync."""
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "S"})
+    session_id = r.json()["id"]
+
+    with patch(
+        "dm_api.api.character_creation.broadcast_entity_update", new_callable=AsyncMock
+    ) as mock_bcast:
+        r = await client.post(
+            "/api/characters/creation/build",
+            json={"world_id": world_id, "session_id": session_id, **FIGHTER_BUILD},
+        )
+    assert r.status_code == 201
+    char_id = r.json()["character"]["id"]
+    mock_bcast.assert_awaited_once()
+    args = mock_bcast.await_args.args
+    assert str(args[0]) == session_id
+    assert args[1] == "character"
+    assert str(args[2]) == char_id
+
+
+@pytest.mark.asyncio
+async def test_build_without_session_does_not_broadcast(client, world_id):
+    """No session id → no roster broadcast (nothing to notify)."""
+    with patch(
+        "dm_api.api.character_creation.broadcast_entity_update", new_callable=AsyncMock
+    ) as mock_bcast:
+        r = await client.post(
+            "/api/characters/creation/build",
+            json={"world_id": world_id, **FIGHTER_BUILD},
+        )
+    assert r.status_code == 201
+    mock_bcast.assert_not_awaited()
 
 
 @pytest.mark.asyncio

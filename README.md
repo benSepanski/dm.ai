@@ -98,12 +98,18 @@ can be added by subclassing it without touching the API or UI layers.
 
 ```bash
 cp .env.example .env
-# Edit .env — set ANTHROPIC_API_KEY, or set AI_PROVIDER=claude_cli
+# Edit .env — set ANTHROPIC_API_KEY (Docker-supported provider)
 docker-compose up
 ```
 
+> **Note:** `AI_PROVIDER=claude_cli` is **not** supported inside Docker — the
+> API image has no `claude` binary or host authentication. Use it only when
+> [running the API locally on the host](#running-locally-development). The
+> Docker stack uses `AI_PROVIDER=anthropic`.
+
 - DM Dashboard: http://localhost:5173
 - API + interactive docs: http://localhost:8000/docs
+- Health + AI readiness: `curl http://localhost:8000/health` (check `ai_ready`)
 
 The `api` container waits for `postgres` and `redis` health checks before
 starting. Alembic migrations run automatically on first start.
@@ -175,8 +181,8 @@ fill in the values relevant to your setup.
 
 | Variable | Default | Description |
 |---|---|---|
-| `AI_PROVIDER` | `anthropic` | `anthropic` (API key) or `claude_cli` (local CLI) |
-| `ANTHROPIC_API_KEY` | — | Required when `AI_PROVIDER=anthropic` |
+| `AI_PROVIDER` | `anthropic` | `anthropic` (API key) or `claude_cli` (local CLI — **host only, not Docker**) |
+| `ANTHROPIC_API_KEY` | — | Required when `AI_PROVIDER=anthropic`. Validated at startup and surfaced on `/health` (`ai_ready`) |
 | `ORCHESTRATOR_MODEL` | `claude-sonnet-4-6` | Main chat / proposal model |
 | `GENERATION_MODEL` | `claude-haiku-4-5-20251001` | Fast tasks: summaries, dialogue |
 | `DATABASE_URL` | `postgresql+asyncpg://dmuser:dmpass@localhost:5432/dmdb` | PostgreSQL (asyncpg) |

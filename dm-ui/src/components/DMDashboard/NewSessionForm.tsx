@@ -7,6 +7,7 @@ import { useGameStore } from "../../store/gameStore";
 export default function NewSessionForm() {
   const { setSession, setCharacters, setDmToken, setIsDM, dmToken } = useGameStore();
   const [worldName, setWorldName] = useState("My World");
+  const [settingDescription, setSettingDescription] = useState("");
   const [sessionName, setSessionName] = useState("Session 1");
   // Creating a world/session is a DM action — the server wants the DM token
   // (set DM_TOKEN in .env, or copy the generated one from the API logs).
@@ -21,7 +22,10 @@ export default function NewSessionForm() {
     // Store the token first so the API client sends it on the calls below.
     setDmToken(token.trim() || null);
     try {
-      const world = await api.createWorld({ name: worldName });
+      const world = await api.createWorld({
+        name: worldName,
+        setting_description: settingDescription.trim() || undefined,
+      });
       // The DM-gated call succeeded, so this browser is the DM.
       setIsDM(true);
       const session = await api.createSession({
@@ -96,6 +100,31 @@ export default function NewSessionForm() {
               color: "#fff",
               fontSize: 14,
               boxSizing: "border-box",
+            }}
+          />
+        </label>
+
+        <label style={{ display: "block", marginBottom: 16 }}>
+          <span style={{ fontSize: 12, color: "#aaa", display: "block", marginBottom: 4 }}>
+            World Setting <span style={{ color: "#666" }}>(optional)</span>
+          </span>
+          <textarea
+            value={settingDescription}
+            onChange={(e) => setSettingDescription(e.target.value)}
+            disabled={loading}
+            rows={3}
+            placeholder="Tone, themes, and premise — the AI co-DM uses this to set the scene."
+            style={{
+              width: "100%",
+              padding: "8px 10px",
+              borderRadius: 4,
+              border: "1px solid #444",
+              background: "#111",
+              color: "#fff",
+              fontSize: 14,
+              boxSizing: "border-box",
+              resize: "vertical",
+              fontFamily: "inherit",
             }}
           />
         </label>
