@@ -9,9 +9,8 @@ sheet — the engine is the single source of truth for creation rules.
 from __future__ import annotations
 
 import functools
-import uuid
-
 import logging
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from game_engine.rules.dnd_5_5e import (
