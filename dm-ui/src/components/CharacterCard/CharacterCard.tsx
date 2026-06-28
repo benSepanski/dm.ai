@@ -87,25 +87,42 @@ function CharacterEntry({ char }: { char: CharacterData }) {
 
 export default function CharacterCard() {
   const { characters } = useGameStore();
-  // The world roster includes NPCs and monsters; the party panel is PCs only.
   const party = characters.filter((c) => c.type === "PC");
+  const nonPcs = characters.filter((c) => c.type !== "PC");
   return (
-    <section style={{ marginTop: 16 }}>
-      <h3
-        style={{
-          margin: "0 0 8px",
-          fontSize: 14,
-          color: "#ccc",
-          textTransform: "uppercase",
-        }}
-      >
-        Party ({party.length})
-      </h3>
-      {party.length === 0 ? (
-        <p style={{ color: "#555", fontSize: 13 }}>No characters loaded.</p>
-      ) : (
-        party.map((c) => <CharacterEntry key={c.id} char={c} />)
+    <>
+      <section style={{ marginTop: 16 }}>
+        <h3
+          style={{
+            margin: "0 0 8px",
+            fontSize: 14,
+            color: "#ccc",
+            textTransform: "uppercase",
+          }}
+        >
+          Party ({party.length})
+        </h3>
+        {party.length === 0 ? (
+          <p style={{ color: "#555", fontSize: 13 }}>No characters loaded.</p>
+        ) : (
+          party.map((c) => <CharacterEntry key={c.id} char={c} />)
+        )}
+      </section>
+      {nonPcs.length > 0 && (
+        <section style={{ marginTop: 16 }}>
+          <h3
+            style={{
+              margin: "0 0 8px",
+              fontSize: 14,
+              color: "#ccc",
+              textTransform: "uppercase",
+            }}
+          >
+            Monsters & NPCs ({nonPcs.length})
+          </h3>
+          {nonPcs.map((c) => <CharacterEntry key={c.id} char={c} />)}
+        </section>
       )}
-    </section>
+    </>
   );
 }

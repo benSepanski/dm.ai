@@ -225,6 +225,17 @@ export interface CombatStateResponse {
   ended_at: string | null;
 }
 
+export interface StartCombatRequest {
+  character_ids: string[];
+}
+
+export interface CharacterPatchRequest {
+  hp_max?: number;
+  hp_current?: number;
+  ac?: number;
+  name?: string;
+}
+
 export interface CombatActionRequest {
   actor_id: string;
   action_type: string;
@@ -321,8 +332,11 @@ export const api = {
     request<SessionResponse>(`/sessions/${sessionId}/end`, { method: "PUT" }),
 
   // Combat
-  startCombat: (sessionId: string) =>
-    request<CombatStateResponse>(`/sessions/${sessionId}/combat`, { method: "POST" }),
+  startCombat: (sessionId: string, characterIds: string[]) =>
+    request<CombatStateResponse>(`/sessions/${sessionId}/combat`, {
+      method: "POST",
+      body: JSON.stringify({ character_ids: characterIds } satisfies StartCombatRequest),
+    }),
   getCombat: (sessionId: string) =>
     request<CombatStateResponse>(`/sessions/${sessionId}/combat`),
   submitAction: (sessionId: string, action: CombatActionRequest) =>
@@ -356,6 +370,11 @@ export const api = {
     request<CharacterResponse[]>(`/characters/world/${worldId}`),
   getCharacter: (charId: string) =>
     request<CharacterResponse>(`/characters/${charId}`),
+  patchCharacter: (charId: string, data: CharacterPatchRequest) =>
+    request<CharacterResponse>(`/characters/${charId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
 
   // Character creation (engine-backed)
   getCreationOptions: () =>

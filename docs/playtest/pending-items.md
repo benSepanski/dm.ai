@@ -34,24 +34,22 @@ hard/confusing/missing an affordance a real player or DM would expect.
 
 ## Open
 
-### PT-12 — Combat is unwinnable through the UI: Start Combat enrolls nobody (+ monsters have no stats)
-- **Status:** open
-- **Severity:** blocking
-- **Type:** bug
-- **Phase:** 6 — Combat
-- **Found:** runs/2026-06-26-first-pass.md
-- **Steps:** With a party and an accepted hostile (Cinder Hound) present, click **Start Combat** in the combat tracker.
-- **Observed:** Combat starts (`COMBAT · ROUND 1`) but shows **"No combatants in initiative order"** — the Attack/Dash/Dodge and Next Turn controls are all disabled, and the battle map goes **blank** ("Tokens appear here once characters join…"). Neither the party nor the monster is enrolled. The combat is completely empty and there is no UI to add anyone.
-- **Root cause (two stacked blockers):**
-  1. The API `POST /sessions/{id}/combat` accepts `character_ids: list[UUID] = []` (`db/models/combat.py:66` `StartCombatRequest`, enrolled in `api/combat.py:106`), but the UI client sends **no body** — `startCombat: POST /sessions/{id}/combat` with `{ method: "POST" }` and no `character_ids` (`dm-ui/src/api/client.ts:321`). So it always rolls initiative for an empty set. There is also no combatant-selection UI.
-  2. Even if the UI sent ids, **AI-proposed monsters have no combat stats** (HP/AC/ability scores) — the Cinder Hound proposal carried only narrative fields — and there is **no UI to set them** (the wizard is PC-only; PATCH is Swagger/DM-token-only). running-a-game.md confirms combat start 422s such characters. So a UI-only DM cannot field an AI-generated enemy at all.
-- **Expected:** Start Combat should enroll the relevant combatants (at minimum the party, plus a way to pick which present NPCs/monsters join), i.e. send `character_ids`. And there must be a UI path to give an accepted monster/NPC combat stats (a stat-block editor, or AI proposals should include a full stat block for MONSTER-type characters). Without both, the entire combat pillar is inaccessible from the UI.
-- **Evidence:** Post-"Start Combat" screenshot (empty initiative, blank map); api log `POST /combat 201`; code refs above.
-- **Notes:** This blocks Phase 6 for UI-only play. Combat resolution itself (engine) was NOT reachable this run because nothing could be enrolled via the UI. Highest-impact fix: have `startCombat` send the party (and selected present hostiles) and surface a combatant picker; pair with a monster stat-block path (relates to PT-2's "AI characters lack combat stats / no UI to set them"). **Compounding cause:** the ended session's `player_character_ids` was `null` (confirmed via `GET /api/sessions/{id}`) — PCs built in the wizard are attached to the *world* but never enrolled into the *session*, so even a smarter Start Combat has no party list to draw from. The New Session form also doesn't let you pick PCs (they don't exist yet at that point). Worth fixing session↔PC linkage generally; it likely also affects any session-scoped party feature. **Deferred** in the PT-1..PT-13 fix pass (explicitly out of scope) — still open.
+_No open items. Next id is **PT-14**._
 
 ## Resolved
 
-_Fixed in the PT-1..PT-13 fix pass (branch `claude/jolly-lehmann-aafa53`). PT-12 remains open (deferred)._
+### PT-12 — Combat is unwinnable through the UI: Start Combat enrolls nobody (+ monsters have no stats)
+- **Status:** resolved
+- **Severity:** blocking — **Type:** bug — **Phase:** 6 — Combat
+- **Resolution:** Replaced the no-op `startCombat()` call (sent an empty body) with a
+  **"Start Combat" dialog** (`CombatTracker.tsx`). The dialog lists all world characters
+  grouped as Party / Monsters & NPCs. PCs are pre-checked; monsters are optional. Any
+  selected character missing `hp_max` or `ac` gets inline number inputs — on **Begin
+  Combat** those values are PATCHed first via the existing `PATCH /characters/{id}`
+  endpoint, then `POST /sessions/{id}/combat` is called with the full `character_ids`
+  list. `CharacterCard.tsx` also now shows a **Monsters & NPCs** section below the Party
+  so DMs can see the roster at a glance. `client.ts` gained `patchCharacter()` and the
+  `startCombat()` signature now requires `characterIds: string[]`.
 
 ### PT-13 — End Session uses a blocking native confirm()
 - **Status:** resolved
