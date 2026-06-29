@@ -21,11 +21,15 @@ from game_engine.rules.dnd_5_5e import (
 )
 from game_engine.rules.dnd_5_5e.data.armor import ARMOR
 from game_engine.rules.dnd_5_5e.data.backgrounds import BACKGROUNDS
+from game_engine.rules.dnd_5_5e.data.class_features import CLASS_PROGRESSIONS
 from game_engine.rules.dnd_5_5e.data.species import SPECIES
+from game_engine.rules.dnd_5_5e.data.weapons import WEAPONS
 from game_engine.types import (
     Alignment,
     ArmorCategory,
+    CharacterClass,
     CharacterType,
+    ClassResource,
     Language,
     ProposalType,
     Skill,
@@ -43,6 +47,7 @@ from dm_api.api.character_creation_schemas import (
     SkillOptionRead,
     SpeciesOptionRead,
     SpeciesTraitRead,
+    WeaponMasteryOption,
 )
 from dm_api.api.ws import broadcast_entity_update
 from dm_api.db.models.character import Character, CharacterRead
@@ -59,6 +64,13 @@ def _creation_options() -> CreationOptionsRead:
     Cached: all input data comes from module-level constants that never
     change at runtime, so repeated GET /options requests are O(1).
     """
+
+    def _mastery_count(char_class: CharacterClass) -> int:
+        prog = CLASS_PROGRESSIONS.get(char_class)
+        if prog is None:
+            return 0
+        return prog.resource_at_level(ClassResource.WEAPON_MASTERY, 1)
+
     return CreationOptionsRead(
         classes=[
             ClassOptionRead(
@@ -71,6 +83,7 @@ def _creation_options() -> CreationOptionsRead:
                 skill_choices=data.skill_choices,
                 num_skill_choices=data.num_skill_choices,
                 spellcasting=data.spellcasting,
+                weapon_mastery_count=_mastery_count(data.character_class),
             )
             for data in CLASSES.values()
         ],
@@ -119,6 +132,16 @@ def _creation_options() -> CreationOptionsRead:
         standard_array=STANDARD_ARRAY,
         point_buy_budget=POINT_BUY_BUDGET,
         point_buy_costs=POINT_BUY_COSTS,
+        weapon_mastery_options=[
+            WeaponMasteryOption(
+                name=w.name,
+                category=w.category,
+                mastery_property=w.mastery.value,
+                is_melee=w.is_melee,
+                properties=list(w.properties),
+            )
+            for w in sorted(WEAPONS, key=lambda w: (w.category.value, w.name))
+        ],
     )
 
 
@@ -158,6 +181,7 @@ async def build_player_character(
         shield=payload.shield,
         alignment=payload.alignment,
         char_type=CharacterType.PC,
+        weapon_masteries=payload.weapon_masteries,
     )
     sheet = result.sheet
 

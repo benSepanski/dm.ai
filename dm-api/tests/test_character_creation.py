@@ -43,6 +43,29 @@ async def test_creation_options(client):
     assert fighter["hit_die"] == 10
     assert fighter["num_skill_choices"] == 2
     assert fighter["spellcasting"] is False
+    # Fighter gets 3 weapon masteries at level 1.
+    assert fighter["weapon_mastery_count"] == 3
+
+    barbarian = next(c for c in data["classes"] if c["character_class"] == "Barbarian")
+    assert barbarian["weapon_mastery_count"] == 2
+
+    rogue = next(c for c in data["classes"] if c["character_class"] == "Rogue")
+    assert rogue["weapon_mastery_count"] == 2
+
+    wizard = next(c for c in data["classes"] if c["character_class"] == "Wizard")
+    assert wizard["weapon_mastery_count"] == 0
+
+    # Weapon mastery options include every weapon (sorted by category, then name).
+    options = data["weapon_mastery_options"]
+    assert len(options) > 0
+    names = [o["name"] for o in options]
+    assert "Greatsword" in names
+    assert "Dagger" in names
+    # Each option has required fields.
+    greatsword = next(o for o in options if o["name"] == "Greatsword")
+    assert greatsword["category"] == "martial"
+    assert greatsword["mastery_property"] == "graze"
+    assert greatsword["is_melee"] is True
 
     soldier = next(b for b in data["backgrounds"] if b["background"] == "Soldier")
     assert soldier["origin_feat"] == "Savage Attacker"
@@ -82,15 +105,56 @@ async def test_build_fighter(client, world_id):
     assert char["stats"]["feats"] == ["Savage Attacker"]
     assert "Chain Mail" in char["equipment"]
     assert "Shield" in char["equipment"]
-    # Fighters must still pick weapon masteries — surfaced as a warning.
+    # No weapon_masteries in FIGHTER_BUILD → warning emitted.
     assert any("weapon masteries" in w for w in data["warnings"])
     # The warning is human-facing: no internal field paths leak to the user.
     assert not any("sheet.weapon_masteries" in w for w in data["warnings"])
+    # Sheet should have empty masteries list (deferred).
+    assert char["stats"]["weapon_masteries"] == []
 
     # The built character is visible through the regular characters API.
     r = await client.get(f"/api/characters/{char['id']}")
     assert r.status_code == 200
     assert r.json()["hp_max"] == 11
+
+
+@pytest.mark.asyncio
+async def test_build_fighter_with_masteries(client, world_id):
+    """Providing weapon_masteries removes the warning and sets them on the sheet."""
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={
+            "world_id": world_id,
+            **FIGHTER_BUILD,
+            "weapon_masteries": ["Greatsword", "Longsword", "Handaxe"],
+        },
+    )
+    assert r.status_code == 201
+    data = r.json()
+    # No mastery warning when masteries are supplied.
+    assert not any("weapon masteri" in w for w in data["warnings"])
+    assert data["character"]["stats"]["weapon_masteries"] == [
+        "Greatsword",
+        "Longsword",
+        "Handaxe",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_build_fighter_wrong_mastery_count_warns(client, world_id):
+    """Supplying the wrong number of masteries produces a warning but still builds."""
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={
+            "world_id": world_id,
+            **FIGHTER_BUILD,
+            "weapon_masteries": ["Greatsword"],  # Fighter expects 3
+        },
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert any("expects 3" in w for w in data["warnings"])
+    assert data["character"]["stats"]["weapon_masteries"] == ["Greatsword"]
 
 
 @pytest.mark.asyncio

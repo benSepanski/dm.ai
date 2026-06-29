@@ -5,6 +5,7 @@ import type {
   CharacterBuildRequest,
   ClassOption,
   CreationOptions,
+  WeaponMasteryOption,
 } from "../../api/client";
 
 // In-progress character draft plus the pure validation/derivation logic the
@@ -50,6 +51,8 @@ export interface CharacterDraft {
   extraLanguages: string[];
   armorName: string | null;
   shield: boolean;
+  // Weapon names chosen for mastery (only for classes that get masteries).
+  weaponMasteries: string[];
 }
 
 export function scoresForMethod(method: AbilityMethod): Record<AbilityName, number | null> {
@@ -76,7 +79,25 @@ export function emptyDraft(): CharacterDraft {
     extraLanguages: [],
     armorName: null,
     shield: false,
+    weaponMasteries: [],
   };
+}
+
+// Return weapons eligible for mastery selection for the given class.
+// Classes with both simple+martial get the full list; classes with only
+// simple training get simple + Light/Finesse martial weapons (covers Rogue).
+export function masteryWeaponsFor(
+  classOption: ClassOption,
+  allWeapons: WeaponMasteryOption[]
+): WeaponMasteryOption[] {
+  const categories = new Set(classOption.weapon_category_training);
+  if (categories.has("martial")) return allWeapons;
+  return allWeapons.filter(
+    (w) =>
+      w.category === "simple" ||
+      w.properties.includes("finesse") ||
+      w.properties.includes("light")
+  );
 }
 
 export function modifier(score: number): number {
@@ -156,7 +177,11 @@ export function abilitiesStepValid(draft: CharacterDraft, options: CreationOptio
 }
 
 export function skillsStepValid(draft: CharacterDraft, classOption: ClassOption): boolean {
-  return draft.skills.length === classOption.num_skill_choices;
+  if (draft.skills.length !== classOption.num_skill_choices) return false;
+  if (classOption.weapon_mastery_count > 0) {
+    return draft.weaponMasteries.length === classOption.weapon_mastery_count;
+  }
+  return true;
 }
 
 export function toBuildRequest(
@@ -181,5 +206,6 @@ export function toBuildRequest(
     armor_name: draft.armorName,
     shield: draft.shield,
     alignment: draft.alignment,
+    weapon_masteries: draft.weaponMasteries.length > 0 ? draft.weaponMasteries : null,
   };
 }
