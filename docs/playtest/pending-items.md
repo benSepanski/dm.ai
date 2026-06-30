@@ -34,19 +34,14 @@ hard/confusing/missing an affordance a real player or DM would expect.
 
 ## Open
 
-### PT-14 — AI co-DM emits no proposals for a whole session: invented NPCs/locations are never capturable, and LOCATION never gets set
-- **Status:** open
-- **Severity:** major
-- **Type:** bug
-- **Phase:** 2–5 (Story hook / Dialogue / Travel / Map)
-- **Found:** runs/2026-06-29-second-pass.md
-- **Steps:** Through the DM chat, ran a full 4-turn narrative arc (open scene → NPC dialogue → travel to a clearly-new named location → wind-down), each turn introducing durable entities by name (Harbormaster Aldric Gosse, Petra Maren, the lightkeeper, and a brand-new location "the Saltmarsh Light" / the keeper's cottage).
-- **Observed:** **Zero proposal cards** appeared across the entire session. The orchestrator logged `proposals=none` on all four turns; `GET /api/ai/sessions/{id}/proposals` returns `[]`; none of the 8 stored messages contains a `[PROPOSAL]` marker — so the model never emitted the blocks (it is **not** a parse/drop bug). Consequently the **LOCATION sidebar stayed "No location set"** the whole session, and there was **no way for the DM to accept/capture** Aldric, Petra, or the lighthouse as real entities. The Phase 3 "accept at least one proposal" check and the Phase 4 "new location arrives as a proposal" check could not be exercised at all. A downstream symptom: continuity drifted (the lightkeeper, implied to be Petra's *father* in turn 1, became "Edda Maren … she" by the wind-down) — with no accepted entities there is no canonical roster in the world context to anchor names.
-- **Expected:** Per the system prompt's **STRUCTURED PROPOSALS** directive (`dm-api/src/dm_api/ai/prompts/system_prompt.py:129-145`: "When you introduce a new location, character, dungeon… append a machine-readable proposal block"), introducing a new named NPC or location should append a `[PROPOSAL]` block, surface a proposal card, and on accept create the entity / set the location. The whole proposal→entity→location→map pillar depends on this.
-- **Evidence:** API log `proposals=none` ×4 (turns at 22:09/22:11/22:13/22:17, model claude-sonnet-4-6 via claude_cli); `proposals` endpoint `[]`; messages scan = 0 `[PROPOSAL]` markers; LOCATION sidebar "No location set" screenshots throughout.
-- **Notes:** **Nondeterministic model compliance** — the 2026-06-26 first pass got 2 proposals from the same model/backend; this run got none. So the mechanism is wired correctly end-to-end but the AI silently fails to emit proposals, and there is **no UI fallback** to create a location/NPC by hand (Create Character is PC-only). Because that fallback is missing, an AI that "forgets" to propose leaves the world permanently empty — locations never exist, so even map-for-a-place and any location-scoped feature can't be reached. Worth hardening: (a) reinforce/repeat the proposal directive (and/or a post-turn check that re-prompts for proposals when new proper nouns appear), and/or (b) add a manual "create location / NPC" affordance so the DM isn't fully dependent on AI compliance.
-
 ## Resolved
+
+### PT-14 — AI co-DM emits no proposals: invented NPCs/locations are never capturable
+- **Status:** resolved
+- **Severity:** major — **Type:** bug — **Phase:** 2–5
+- **Resolution:** Two-pronged fix in PR #83 (commit `b586f56`):
+  (a) Strengthened the `[PROPOSAL]` directive in `system_prompt.py` from a passive suggestion to an explicit "MUST" requirement, with a re-emit reminder for entities referenced before acceptance.
+  (b) Added DM-only UI fallbacks — **"+ New" buttons** in the Location sidebar (`LocationPanel.tsx`) and the Monsters & NPCs sidebar (`CharacterCard.tsx`) open modal dialogs (`CreateLocationDialog`, `CreateNpcDialog`) for manual entity creation. On creation the location or character is broadcast over WebSocket to all connected clients so the sidebar updates live. New `PATCH /sessions/{id}` endpoint lets the DM set `current_location_id` directly; new `?session_id=` query param on `POST /characters/` enables the broadcast.
 
 ### PT-12 — Combat is unwinnable through the UI: Start Combat enrolls nobody (+ monsters have no stats)
 - **Status:** resolved
