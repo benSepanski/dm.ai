@@ -1,4 +1,7 @@
+import { useState } from "react";
+import { mapCharacterResponse } from "../../api/mappers";
 import { useGameStore, type CharacterData } from "../../store/gameStore";
+import CreateNpcDialog from "../CreateNpcDialog/CreateNpcDialog";
 
 function abilityMod(score: number | null): string {
   if (score === null) return "–";
@@ -86,9 +89,11 @@ function CharacterEntry({ char }: { char: CharacterData }) {
 }
 
 export default function CharacterCard() {
-  const { characters } = useGameStore();
+  const { characters, isDM, worldId, sessionId, upsertCharacter } = useGameStore();
+  const [showCreateNpc, setShowCreateNpc] = useState(false);
   const party = characters.filter((c) => c.type === "PC");
   const nonPcs = characters.filter((c) => c.type !== "PC");
+
   return (
     <>
       <section style={{ marginTop: 16 }}>
@@ -108,20 +113,55 @@ export default function CharacterCard() {
           party.map((c) => <CharacterEntry key={c.id} char={c} />)
         )}
       </section>
-      {nonPcs.length > 0 && (
-        <section style={{ marginTop: 16 }}>
-          <h3
-            style={{
-              margin: "0 0 8px",
-              fontSize: 14,
-              color: "#ccc",
-              textTransform: "uppercase",
-            }}
-          >
-            Monsters & NPCs ({nonPcs.length})
-          </h3>
-          {nonPcs.map((c) => <CharacterEntry key={c.id} char={c} />)}
-        </section>
+
+      <section style={{ marginTop: 16 }}>
+        <h3
+          style={{
+            margin: "0 0 8px",
+            fontSize: 14,
+            color: "#ccc",
+            textTransform: "uppercase",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          Monsters & NPCs ({nonPcs.length})
+          {isDM && worldId && sessionId && (
+            <button
+              onClick={() => setShowCreateNpc(true)}
+              title="Create an NPC or monster manually (useful when AI forgets to propose one)"
+              style={{
+                fontSize: 11,
+                padding: "2px 8px",
+                background: "#333",
+                color: "#aaa",
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+              }}
+            >
+              + New
+            </button>
+          )}
+        </h3>
+        {nonPcs.length === 0 ? (
+          <p style={{ color: "#555", fontSize: 13 }}>No NPCs or monsters.</p>
+        ) : (
+          nonPcs.map((c) => <CharacterEntry key={c.id} char={c} />)
+        )}
+      </section>
+
+      {showCreateNpc && worldId && sessionId && (
+        <CreateNpcDialog
+          worldId={worldId}
+          sessionId={sessionId}
+          onCreated={(char) => {
+            upsertCharacter(mapCharacterResponse(char));
+            setShowCreateNpc(false);
+          }}
+          onCancel={() => setShowCreateNpc(false)}
+        />
       )}
     </>
   );

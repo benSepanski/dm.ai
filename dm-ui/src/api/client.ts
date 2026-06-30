@@ -193,6 +193,32 @@ export interface LocationResponse {
   description: string | null;
 }
 
+export interface CreateLocationRequest {
+  world_id: string;
+  type: string;
+  name: string;
+  description?: string;
+  lore?: string;
+  history?: string;
+}
+
+export interface CreateCharacterRequest {
+  world_id: string;
+  type: "NPC" | "MONSTER";
+  name: string;
+  race?: string;
+  char_class?: string;
+  level?: number;
+  hp_max?: number;
+  hp_current?: number;
+  ac?: number;
+  personality_traits?: string;
+}
+
+export interface SessionUpdateRequest {
+  current_location_id?: string | null;
+}
+
 export interface AcceptProposalRequest {
   dm_notes?: string;
   modifications?: Record<string, unknown>;
@@ -376,6 +402,13 @@ export const api = {
       body: JSON.stringify(opts),
     }),
 
+  // Sessions (mutable fields)
+  patchSession: (sessionId: string, data: SessionUpdateRequest) =>
+    request<SessionResponse>(`/sessions/${sessionId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
   // Characters
   listWorldCharacters: (worldId: string) =>
     request<CharacterResponse[]>(`/characters/world/${worldId}`),
@@ -386,6 +419,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
+  createCharacter: (data: CreateCharacterRequest, sessionId?: string) =>
+    request<CharacterResponse>(
+      `/characters/${sessionId ? `?session_id=${sessionId}` : ""}`,
+      { method: "POST", body: JSON.stringify(data) },
+    ),
 
   // Character creation (engine-backed)
   getCreationOptions: () =>
@@ -399,4 +437,11 @@ export const api = {
   // Locations
   getLocation: (locId: string) =>
     request<LocationResponse>(`/locations/${locId}`),
+  listWorldLocations: (worldId: string) =>
+    request<LocationResponse[]>(`/worlds/${worldId}/locations`),
+  createLocation: (data: CreateLocationRequest) =>
+    request<LocationResponse>("/locations/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
