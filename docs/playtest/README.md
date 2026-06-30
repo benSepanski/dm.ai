@@ -81,6 +81,17 @@ reproducible — attach the relevant one to every logged item.
    docker-compose up        # UI :5173, API :8000, Postgres, Redis
    ```
    or local dev (`uvicorn` + `npm run dev`) per the [README](../../README.md).
+
+   **Shortcut (host + `claude_cli`, no API key needed):** use the helper that
+   runs Postgres/Redis in Docker and the API + UI on the host with
+   `AI_PROVIDER=claude_cli`:
+   ```bash
+   docs/playtest/playtest-stack.sh up       # start + wait until healthy
+   docs/playtest/playtest-stack.sh status   # health of each piece
+   docs/playtest/playtest-stack.sh down     # ALWAYS tear down when you're done
+   ```
+   This is the path used by the 2026-06-29 run. **Always run `down` at the end of
+   a playtest** so nothing is left listening.
 2. **Health checks:**
    - `curl http://localhost:8000/health` → `{"status":"ok",...}`
    - Open `http://localhost:5173` in the DM tab — dashboard loads.
