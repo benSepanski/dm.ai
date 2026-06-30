@@ -1,6 +1,6 @@
 import type { BackgroundOption, ClassOption, CreationOptions } from "../../api/client";
 import type { CharacterDraft } from "./draft";
-import { ABILITY_LABELS, titleCase } from "./draft";
+import { ABILITY_LABELS, masteryWeaponsFor, titleCase } from "./draft";
 import { Pill, PillRow, Section, selectStyle } from "./ui";
 
 // Step 3: class skill choices (background skills are granted automatically),
@@ -29,6 +29,16 @@ export default function SkillsStep({
       onChange({ skills: [...draft.skills, skill] });
     }
   };
+
+  const toggleMastery = (weaponName: string) => {
+    if (draft.weaponMasteries.includes(weaponName)) {
+      onChange({ weaponMasteries: draft.weaponMasteries.filter((w) => w !== weaponName) });
+    } else if (draft.weaponMasteries.length < classOption.weapon_mastery_count) {
+      onChange({ weaponMasteries: [...draft.weaponMasteries, weaponName] });
+    }
+  };
+
+  const masteryWeapons = masteryWeaponsFor(classOption, options.weapon_mastery_options);
 
   const toggleLanguage = (language: string) => {
     if (draft.extraLanguages.includes(language)) {
@@ -136,6 +146,31 @@ export default function SkillsStep({
           </div>
         )}
       </Section>
+
+      {classOption.weapon_mastery_count > 0 && (
+        <Section
+          title={`Weapon Masteries (choose ${classOption.weapon_mastery_count} — ${draft.weaponMasteries.length} selected)`}
+        >
+          <PillRow>
+            {masteryWeapons.map((w) => (
+              <Pill
+                key={w.name}
+                label={`${w.name} (${titleCase(w.mastery_property)})`}
+                selected={draft.weaponMasteries.includes(w.name)}
+                disabled={
+                  !draft.weaponMasteries.includes(w.name) &&
+                  draft.weaponMasteries.length >= classOption.weapon_mastery_count
+                }
+                onClick={() => toggleMastery(w.name)}
+              />
+            ))}
+          </PillRow>
+          <p style={{ margin: "10px 0 0", fontSize: 12, color: "#777" }}>
+            Choose weapons you're proficient with. Each weapon's mastery property activates when
+            you attack with it and have it selected.
+          </p>
+        </Section>
+      )}
     </div>
   );
 }

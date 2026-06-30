@@ -26,6 +26,7 @@ from game_engine.types import (
     Skill,
     Species,
     WeaponCategory,
+    WeaponProperty,
 )
 from pydantic import BaseModel, Field
 
@@ -44,6 +45,17 @@ class ClassOptionRead(BaseModel):
     skill_choices: list[Skill]
     num_skill_choices: int
     spellcasting: bool
+    weapon_mastery_count: int
+
+
+class WeaponMasteryOption(BaseModel):
+    """A choosable weapon for mastery selection during character creation."""
+
+    name: str
+    category: WeaponCategory
+    mastery_property: str
+    is_melee: bool
+    properties: list[WeaponProperty]
 
 
 class SpeciesTraitRead(BaseModel):
@@ -105,6 +117,7 @@ class CreationOptionsRead(BaseModel):
     standard_array: list[int]
     point_buy_budget: int
     point_buy_costs: dict[int, int]
+    weapon_mastery_options: list[WeaponMasteryOption]
 
 
 class AbilityScoresWrite(BaseModel):
@@ -140,6 +153,7 @@ class CharacterBuildRequest(BaseModel):
     armor_name: str | None = None
     shield: bool = False
     alignment: Alignment | None = None
+    weapon_masteries: list[str] | None = None
 
 
 class CharacterBuildRead(BaseModel):

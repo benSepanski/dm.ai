@@ -86,6 +86,14 @@ export type AbilityName =
 
 export type AbilityScores = Record<AbilityName, number>;
 
+export interface WeaponMasteryOption {
+  name: string;
+  category: string;
+  mastery_property: string;
+  is_melee: boolean;
+  properties: string[];
+}
+
 export interface ClassOption {
   character_class: string;
   hit_die: number;
@@ -96,6 +104,7 @@ export interface ClassOption {
   skill_choices: string[];
   num_skill_choices: number;
   spellcasting: boolean;
+  weapon_mastery_count: number;
 }
 
 export interface SpeciesTrait {
@@ -149,6 +158,7 @@ export interface CreationOptions {
   standard_array: number[];
   point_buy_budget: number;
   point_buy_costs: Record<string, number>;
+  weapon_mastery_options: WeaponMasteryOption[];
 }
 
 export interface CharacterBuildRequest {
@@ -167,6 +177,7 @@ export interface CharacterBuildRequest {
   armor_name: string | null;
   shield: boolean;
   alignment: string | null;
+  weapon_masteries?: string[] | null;
 }
 
 export interface CharacterBuildResponse {

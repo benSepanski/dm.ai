@@ -145,6 +145,9 @@ _No open items. Next id is **PT-14**._
   co-DM's system prompt.
 
 ### Follow-ups created during the fix pass
-- **PT-2 weapon-mastery picker:** the wizard still can't *set* masteries in-UI
-  (only the warning text was fixed). A mastery-selection step for classes that
-  get masteries at level 1 (Fighter: 3) is worth adding.
+- **PT-2 weapon-mastery picker:** resolved in PR #81. The wizard now renders a
+  "Weapon Masteries" pill-picker in the Skills & Equipment step for Fighter (3),
+  Barbarian (2), and Rogue (2). Weapons are filtered to class-eligible choices;
+  the "Next" button requires the correct count before advancing; masteries are
+  written to the character sheet on create (no more "set later" warning when
+  chosen through the wizard).

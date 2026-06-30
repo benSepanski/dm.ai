@@ -113,6 +113,7 @@ def build_character(
     shield: bool = False,
     alignment: Alignment | None = None,
     char_type: CharacterType = CharacterType.PC,
+    weapon_masteries: list[str] | None = None,
 ) -> BuildResult:
     """Build a level-1 character (2024 PHB creation steps).
 
@@ -133,6 +134,10 @@ def build_character(
         shield: Whether a shield is equipped.
         alignment: Optional alignment.
         char_type: PC/NPC/MONSTER classification.
+        weapon_masteries: Weapon names to register as mastery weapons (must
+            equal the class's mastery count at level 1).  Pass ``None`` to
+            skip selection; a warning is emitted reminding the player to
+            choose later.
 
     Returns:
         :class:`BuildResult` with the sheet and any warnings.
@@ -206,10 +211,18 @@ def build_character(
         mastery_count = progression.resource_at_level(ClassResource.WEAPON_MASTERY, 1)
         if mastery_count:
             weapon_word = "weapon mastery" if mastery_count == 1 else "weapon masteries"
-            warnings.append(
-                f"Your class can choose {mastery_count} {weapon_word} — "
-                "set them later via character edit."
-            )
+            if weapon_masteries is not None:
+                masteries = list(weapon_masteries)
+                if len(masteries) != mastery_count:
+                    warnings.append(
+                        f"{character_class.value} expects {mastery_count} {weapon_word}, "
+                        f"got {len(masteries)}."
+                    )
+            else:
+                warnings.append(
+                    f"Your class can choose {mastery_count} {weapon_word} — "
+                    "set them later via character edit."
+                )
 
     sheet = CharacterSheet(
         id=char_id,

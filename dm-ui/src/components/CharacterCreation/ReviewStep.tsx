@@ -3,6 +3,7 @@ import type { CharacterDraft } from "./draft";
 import {
   ABILITIES,
   ABILITY_LABELS,
+  classOptionFor,
   finalScores,
   formatModifier,
   modifier,
@@ -24,6 +25,7 @@ export default function ReviewStep({
 }) {
   const finals = finalScores(draft, background);
   const speciesOption = options.species.find((s) => s.species === draft.species);
+  const classOption = classOptionFor(draft, options);
 
   return (
     <div>
@@ -84,6 +86,16 @@ export default function ReviewStep({
             value={`${draft.armorName ?? "Unarmored"}${draft.shield ? " + Shield" : ""}`}
           />
           <DetailLine label="Equipment" value={background.equipment.join(", ")} />
+          {classOption && classOption.weapon_mastery_count > 0 && (
+            <DetailLine
+              label="Weapon Masteries"
+              value={
+                draft.weaponMasteries.length > 0
+                  ? draft.weaponMasteries.join(", ")
+                  : "(none selected)"
+              }
+            />
+          )}
         </DetailCard>
         <p style={{ margin: "10px 0 0", fontSize: 12, color: "#777" }}>
           Hit points, armor class, and spell slots are computed by the rule engine when you
