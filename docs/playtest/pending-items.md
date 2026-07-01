@@ -28,11 +28,104 @@ broken but routable around; **minor** = cosmetic or small friction.
 `type`: **bug** = behaves incorrectly; **usability** = behaves as built but is
 hard/confusing/missing an affordance a real player or DM would expect.
 
-`PT-<n>` is a simple incrementing id — next id is **PT-24**.
+`PT-<n>` is a simple incrementing id — next id is **PT-27**.
 
 ---
 
 ## Open
+
+### PT-26 — Character build accepts illegal ability scores (all 20s) with no rejection or warning
+- **Status:** open
+- **Severity:** major
+- **Type:** bug
+- **Phase:** 1 — Character creation
+- **Found:** runs/2026-06-30-third-pass.md
+- **Steps:** `POST /api/characters/creation/build` with all six ability scores
+  set to 20 (impossible for a level-1 PHB 2024 PC under any method — standard
+  array/point buy/manual all cap well below that) for a Human Fighter.
+- **Observed:** `201 Created`. The character is persisted with STR/DEX/CON/
+  INT/WIS/CHA all 20, HP 15, AC 15. The only `warnings` entry returned is
+  unrelated ("Your class can choose 3 weapon masteries — set them later via
+  character edit.") — nothing flags the ability scores as out of range. The UI
+  wizard prevents this (Standard Array/Point Buy/Manual all constrain the
+  values you can reach), but the API endpoint itself performs no server-side
+  legality check, so it's exploitable by anyone who can reach the API directly,
+  and there's no defense-in-depth if the UI ever regresses.
+- **Expected:** Per the Phase 1 guardrail principle ("invalid game state must
+  be impossible to commit through the UI, or must surface as an explicit,
+  human-readable rejection") and this project's "typed boundaries everywhere"
+  standard, the build endpoint should reject (422) or at minimum surface a
+  clear warning when ability scores fall outside what any of the three
+  supported generation methods can produce.
+- **Evidence:** raw response — `"ability_scores":{"strength":20,"dexterity":20,...}`,
+  HTTP 201, character id `287f31b7-52d9-4ac0-8f47-4ef6cbee45df` in world
+  `680531c2-9265-4166-a77f-8f6531208466`.
+- **Notes:** Combined with PT-24 (no auth on this endpoint), an unauthenticated
+  player can inject an arbitrarily overpowered PC into any world with a single
+  request. Worth checking whether `build_player_character` in
+  `dm-api/src/dm_api/api/character_creation.py` validates scores against the
+  chosen `ability_method`'s legal range before calling into the engine.
+  Related to PT-20 (illegal combat stats on NPC/Monster creation) — same
+  "invalid state slips through the API" root cause, different endpoint
+  (character build vs. `CreateNpcDialog`); worth fixing both with one shared
+  validation approach.
+
+### PT-25 — DM state is shared across browser tabs via localStorage; no in-app way to preview/exit DM mode
+- **Status:** open
+- **Severity:** usability
+- **Type:** usability
+- **Phase:** cross-cutting (surfaced in Phase 1 while trying to test the player view)
+- **Found:** runs/2026-06-30-third-pass.md
+- **Steps:** As the DM, opened a second tab in the **same browser** and
+  navigated to the session URL (i.e. followed "Copy Invite Link" the way a DM
+  naturally would to preview what a player sees).
+- **Observed:** The second tab loaded with full DM controls (End Session, New
+  Session, chat input, DM badge) — not the read-only player view — because
+  `dmToken`/`isDM` are persisted to `localStorage` (`gameStore.ts`), which is
+  shared by every tab on the same origin. The only way to see the real
+  read-only player view in the same browser was to manually clear
+  `localStorage` via devtools and reload; there is no "log out of DM" / "view
+  as player" control anywhere in the DM dashboard UI.
+- **Expected:** A DM should be able to preview the player experience (or
+  deliberately step out of DM mode) without devtools. At minimum, the invite
+  link / player view should not silently inherit DM authority just because
+  it's opened in the same browser as the DM tab.
+- **Evidence:** screenshot showing the "player" tab with full DM toolbar before
+  the localStorage clear.
+- **Notes:** Doubles as a real-world risk: DM_TOKEN is a single global secret
+  (per `.env`) with no scoping to a session/world and no visible logout —
+  anyone who ever obtains it (shared screen, browser history, synced devices)
+  has standing DM access to every world on the instance indefinitely.
+
+### PT-24 — Player role can create characters directly, with no DM review (violates "AI proposes, DM decides")
+- **Status:** open
+- **Severity:** major
+- **Type:** bug
+- **Phase:** 1 — Character creation
+- **Found:** runs/2026-06-30-third-pass.md
+- **Steps:** In a browser tab with no DM token (verified read-only: toolbar shows
+  "Player" badge, "Unlock DM" button, footer "You're watching as a player — the
+  DM drives the story."), clicked **Create Character**, built a full PC through
+  all 4 wizard steps, clicked **Create Character** on the review step.
+- **Observed:** The character (`Dorn Ironfist`) was created immediately —
+  `POST /characters/creation/build` returned `201` with no auth check — and
+  appeared live in the DM's party sidebar via the WebSocket with no approval
+  step of any kind. Confirmed in the source:
+  `dm-api/src/dm_api/api/character_creation.py`'s `build_player_character`
+  (mounted at `/characters/creation/build`) has no `Depends(require_dm)` /
+  `Depends(client_role)` guard at all, unlike `update_character` and
+  `rest_character` in `characters.py` which do require DM. `create_character`
+  (`POST /characters/`) also has no role dependency.
+- **Expected:** Per the project's own stated philosophy ("AI proposes, DM
+  decides" / "Nothing writes to your campaign database without your explicit
+  approval") and the README's DM/player split, an unauthenticated player should
+  not be able to unilaterally create a permanent character — this should either
+  require the DM token, or land as a reviewable proposal.
+- **Evidence:** screenshot of DM sidebar showing "Dorn Ironfist" (party count 1)
+  immediately after the player-tab wizard submit, with no accept/reject step.
+- **Notes:** Also worth checking whether the same gap lets a "player" edit/delete
+  other party members' data indirectly, or spam-create characters in someone
+  else's world if they know/guess the `world_id` UUID from the session URL.
 
 ### PT-23 — Combat actions produce no visible feedback and Attack has no target-selection UI
 - **Status:** open
@@ -77,9 +170,11 @@ hard/confusing/missing an affordance a real player or DM would expect.
   of a silently-wasted turn; (3) render `combat_log`/`outcome.flavor_text` in
   the main chat feed after every action so the table can see what happened.
   This supersedes the "actions resolve" half of PT-12's fix — enrollment
-  works now, but no attack can ever land. Another in-flight PR independently
-  found the target-picker half of this same bug as its own PT-18 — worth
-  de-duplicating against that when both land.
+  works now, but no attack can ever land. Independently re-confirmed by a
+  second run (runs/2026-06-30-third-pass.md): same root cause (no
+  `target_id`/`attack_details` collected in `CombatTracker.tsx`'s
+  `handleAction`), reproduced against a different monster/party. De-duped
+  into this single entry rather than filing a separate PT.
 
 ### PT-22 — Duplicate NPC entities when the AI re-introduces an already-established character
 - **Status:** open
