@@ -34,42 +34,6 @@ hard/confusing/missing an affordance a real player or DM would expect.
 
 ## Open
 
-### PT-26 — Character build accepts illegal ability scores (all 20s) with no rejection or warning
-- **Status:** open
-- **Severity:** major
-- **Type:** bug
-- **Phase:** 1 — Character creation
-- **Found:** runs/2026-06-30-third-pass.md
-- **Steps:** `POST /api/characters/creation/build` with all six ability scores
-  set to 20 (impossible for a level-1 PHB 2024 PC under any method — standard
-  array/point buy/manual all cap well below that) for a Human Fighter.
-- **Observed:** `201 Created`. The character is persisted with STR/DEX/CON/
-  INT/WIS/CHA all 20, HP 15, AC 15. The only `warnings` entry returned is
-  unrelated ("Your class can choose 3 weapon masteries — set them later via
-  character edit.") — nothing flags the ability scores as out of range. The UI
-  wizard prevents this (Standard Array/Point Buy/Manual all constrain the
-  values you can reach), but the API endpoint itself performs no server-side
-  legality check, so it's exploitable by anyone who can reach the API directly,
-  and there's no defense-in-depth if the UI ever regresses.
-- **Expected:** Per the Phase 1 guardrail principle ("invalid game state must
-  be impossible to commit through the UI, or must surface as an explicit,
-  human-readable rejection") and this project's "typed boundaries everywhere"
-  standard, the build endpoint should reject (422) or at minimum surface a
-  clear warning when ability scores fall outside what any of the three
-  supported generation methods can produce.
-- **Evidence:** raw response — `"ability_scores":{"strength":20,"dexterity":20,...}`,
-  HTTP 201, character id `287f31b7-52d9-4ac0-8f47-4ef6cbee45df` in world
-  `680531c2-9265-4166-a77f-8f6531208466`.
-- **Notes:** Combined with PT-24 (no auth on this endpoint), an unauthenticated
-  player can inject an arbitrarily overpowered PC into any world with a single
-  request. Worth checking whether `build_player_character` in
-  `dm-api/src/dm_api/api/character_creation.py` validates scores against the
-  chosen `ability_method`'s legal range before calling into the engine.
-  Related to PT-20 (illegal combat stats on NPC/Monster creation) — same
-  "invalid state slips through the API" root cause, different endpoint
-  (character build vs. `CreateNpcDialog`); worth fixing both with one shared
-  validation approach.
-
 ### PT-25 — DM state is shared across browser tabs via localStorage; no in-app way to preview/exit DM mode
 - **Status:** open
 - **Severity:** usability
@@ -277,6 +241,23 @@ hard/confusing/missing an affordance a real player or DM would expect.
   mastery picker.
 
 ## Resolved
+
+### PT-26 — Character build accepts illegal ability scores (all 20s) with no rejection or warning
+- **Status:** resolved
+- **Severity:** major — **Type:** bug — **Phase:** 1 — Character creation
+- **Resolution:** `game_engine.rules.dnd_5_5e.character_builder` gains
+  `is_valid_manual_scores` (3-18, the rolled/manual range) and
+  `is_legal_ability_scores` (true iff the six base scores are a Standard
+  Array permutation, a legal Point Buy, or all within the Manual/Rolled
+  range) — composing the `is_standard_array`/`is_valid_point_buy` helpers
+  that already existed but were never wired into the actual build path.
+  `build_character` now raises `ValueError` when the check fails, and
+  `POST /characters/creation/build` (`dm-api/src/dm_api/api/character_creation.py`)
+  catches it and returns 422 with a human-readable detail message. This is
+  server-side, so it holds regardless of which client (or lack thereof)
+  calls the endpoint — closing the gap the UI wizard already prevented.
+  PT-24's separate finding (no auth on this endpoint) is unaffected by this
+  fix and remains open.
 
 ### PT-14 — AI co-DM emits no proposals: invented NPCs/locations are never capturable
 - **Status:** resolved

@@ -8,7 +8,9 @@ from game_engine.rules.dnd_5_5e.character_builder import (
     POINT_BUY_BUDGET,
     STANDARD_ARRAY,
     build_character,
+    is_legal_ability_scores,
     is_standard_array,
+    is_valid_manual_scores,
     is_valid_point_buy,
     point_buy_cost,
 )
@@ -141,6 +143,31 @@ class TestAbilityGeneration:
         with pytest.raises(ValueError):
             point_buy_cost(_scores(strength=18))
 
+    def test_manual_range(self):
+        assert is_valid_manual_scores(_scores(strength=18, charisma=3))
+        assert not is_valid_manual_scores(_scores(strength=19))
+
+    def test_legal_ability_scores_accepts_any_supported_method(self):
+        standard = _scores(
+            strength=15, dexterity=14, constitution=13, intelligence=12, wisdom=10, charisma=8
+        )
+        point_buy = _scores(
+            strength=15, dexterity=15, constitution=15, intelligence=8, wisdom=8, charisma=8
+        )
+        rolled = _scores(
+            strength=18, dexterity=16, constitution=14, intelligence=12, wisdom=9, charisma=3
+        )
+        assert is_legal_ability_scores(standard)
+        assert is_legal_ability_scores(point_buy)
+        assert is_legal_ability_scores(rolled)
+
+    def test_legal_ability_scores_rejects_impossible_scores(self):
+        assert not is_legal_ability_scores(_scores(strength=20))
+        all_twenties = _scores(
+            strength=20, dexterity=20, constitution=20, intelligence=20, wisdom=20, charisma=20
+        )
+        assert not is_legal_ability_scores(all_twenties)
+
 
 class TestBuildCharacter:
     def _build(self, **overrides):
@@ -227,3 +254,18 @@ class TestBuildCharacter:
             armor_name="Plate Armor",
         )
         assert any("armor training" in w for w in result.warnings)
+
+    def test_impossible_ability_scores_rejected(self):
+        # All-20s isn't reachable by Standard Array, Point Buy, or Manual/Rolled
+        # (max 18) generation — must be rejected, not silently accepted (PT-26).
+        with pytest.raises(ValueError):
+            self._build(
+                ability_scores=_scores(
+                    strength=20,
+                    dexterity=20,
+                    constitution=20,
+                    intelligence=20,
+                    wisdom=20,
+                    charisma=20,
+                )
+            )

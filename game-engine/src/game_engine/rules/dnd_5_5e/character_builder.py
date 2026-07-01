@@ -39,6 +39,12 @@ POINT_BUY_COSTS: dict[int, int] = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7
 
 POINT_BUY_BUDGET = 27
 
+#: Manual/rolled entry range (2024 PHB): a single 4d6-drop-lowest roll can
+#: reach as low as 3 and as high as 18; there is no total-budget constraint
+#: for this method, unlike point buy.
+MANUAL_SCORE_MIN = 3
+MANUAL_SCORE_MAX = 18
+
 # Trait name checked during character creation to apply the HP bonus.
 # Matches SpeciesTraitData.name for Dwarf's "Dwarven Toughness" entry.
 _TRAIT_DWARVEN_TOUGHNESS = "Dwarven Toughness"
@@ -70,6 +76,23 @@ def is_valid_point_buy(scores: AbilityScoreSet) -> bool:
 def is_standard_array(scores: AbilityScoreSet) -> bool:
     """True when *scores* is a permutation of the standard array."""
     return sorted(scores.get(a) for a in Ability) == sorted(STANDARD_ARRAY)
+
+
+def is_valid_manual_scores(scores: AbilityScoreSet) -> bool:
+    """True when every score falls within the manual/rolled entry range."""
+    return all(MANUAL_SCORE_MIN <= scores.get(a) <= MANUAL_SCORE_MAX for a in Ability)
+
+
+def is_legal_ability_scores(scores: AbilityScoreSet) -> bool:
+    """True when *scores* is achievable by at least one 2024 PHB generation
+    method: Standard Array, Point Buy, or Manual/Rolled entry.
+
+    Used as a server-side guardrail so illegal scores (e.g. all 20s) can't
+    be committed regardless of which client sent the request.
+    """
+    return (
+        is_standard_array(scores) or is_valid_point_buy(scores) or is_valid_manual_scores(scores)
+    )
 
 
 @dataclass
@@ -144,9 +167,19 @@ def build_character(
 
     Raises:
         KeyError: If species or background data is not registered.
+        ValueError: If ``ability_scores`` is not achievable by Standard
+            Array, Point Buy, or Manual/Rolled generation.
     """
     from game_engine.rules.dnd_5_5e.data.class_features import CLASS_PROGRESSIONS
     from game_engine.rules.dnd_5_5e.spellcasting import compute_spell_slots
+
+    if not is_legal_ability_scores(ability_scores):
+        raise ValueError(
+            "Ability scores are not achievable by Standard Array, Point Buy, or "
+            "Manual/Rolled generation (2024 PHB): each base score must be in the "
+            f"standard array {STANDARD_ARRAY}, a legal {POINT_BUY_BUDGET}-point buy, "
+            f"or {MANUAL_SCORE_MIN}-{MANUAL_SCORE_MAX}."
+        )
 
     warnings: list[str] = []
     class_data = CLASSES[character_class]
