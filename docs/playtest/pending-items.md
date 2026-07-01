@@ -139,33 +139,6 @@ hard/confusing/missing an affordance a real player or DM would expect.
   playtest agent would have caught without the prompt. Worth a product
   decision, not just a bug fix.
 
-### PT-20 — Illegal combat stats (negative HP, AC 0) are silently accepted on NPC/Monster creation
-- **Status:** open
-- **Severity:** major — **Type:** bug — **Phase:** 1 (adversarial guardrail check)
-- **Found:** runs/2026-06-30-first-full-scenario.md
-- **Steps:** Opened the "Create NPC / Monster" dialog (Monsters & NPCs → "+
-  New"), selected Monster, entered `HP Max = -10` and `AC = 0`. The HP field
-  accepted the literal "-10" keystrokes (unlike the character wizard's ability
-  score fields, which reject a leading "-" outright). The **Create** button
-  stayed enabled the whole time.
-- **Observed:** A monster named "Test Illegal Monster" was created with
-  `HP -10/-10 · AC 0`, no rejection, no warning. It now sits in the world
-  roster indefinitely — there is no delete/edit affordance for NPCs/monsters
-  in the UI, so it can't be cleaned up without a DB or Swagger operation.
-- **Expected:** Per the playtest guardrail principle, invalid combat stats
-  should be rejected with a clear message or clamped, never silently
-  committed.
-- **Evidence:** screenshot in run log; monster visible in sidebar with
-  `HP -10/-10 · AC 0` for the remainder of the session.
-- **Notes:** Likely `dm-ui/src/components/CreateNpcDialog/CreateNpcDialog.tsx`
-  is missing min-value validation/clamping that the character-creation ability
-  score inputs already have. A same-repo precedent for the fix exists (Manual/
-  Rolled ability score inputs in the wizard clamp to 3–18 and block "-").
-  Related follow-up: no way to delete an NPC/Monster from the UI once created.
-  Another in-flight PR independently found a related gap as its own PT-17
-  (illegal ability scores on character build) — worth de-duplicating against
-  that when both land.
-
 ### PT-19 — Character creation wizard skips required class/species sub-choices (spells, Elf lineage, Keen Senses)
 - **Status:** open
 - **Severity:** major — **Type:** bug — **Phase:** 1
@@ -231,6 +204,23 @@ hard/confusing/missing an affordance a real player or DM would expect.
   independently re-confirmed by a second run (`runs/2026-06-30-third-pass.md`) against a
   different monster/party before this fix landed — same root cause, de-duped into this
   single entry.
+
+### PT-20 — Illegal combat stats (negative HP, AC 0) are silently accepted on NPC/Monster creation
+- **Status:** resolved
+- **Severity:** major — **Type:** bug — **Phase:** 1 (adversarial guardrail check)
+- **Resolution:** Two-layer fix. (a) Server-side: `CharacterCreate`/`CharacterUpdate`
+  (`dm-api/src/dm_api/db/models/character.py`) now use Pydantic `Field` constraints
+  (`hp_max`/`ac` `gt=0`, `hp_current`/`speed` `ge=0`, `level` `ge=1, le=20`), so
+  `POST /api/characters/` and `PATCH /api/characters/{id}` reject illegal stats
+  with a 422 regardless of client — closing the gap for any caller, not just the
+  UI dialog. (b) Client-side: `CreateNpcDialog.tsx`'s HP Max/AC number inputs now
+  clamp to a positive integer on every keystroke (mirroring the existing
+  `AbilitiesStep.tsx` manual-entry pattern), so a leading "-" is rejected
+  immediately instead of producing a negative value at submit time. Added
+  regression tests `test_create_character_rejects_negative_hp` and
+  `test_patch_character_rejects_negative_hp` in `tests/test_characters.py`.
+  Delete/edit affordance for NPCs/monsters remains a separate follow-up, not
+  addressed here.
 
 ### PT-14 — AI co-DM emits no proposals: invented NPCs/locations are never capturable
 - **Status:** resolved

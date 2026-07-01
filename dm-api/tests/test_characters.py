@@ -66,6 +66,34 @@ async def test_create_character_monster(client, world_id):
 
 
 @pytest.mark.asyncio
+async def test_create_character_rejects_negative_hp(client, world_id):
+    r = await client.post(
+        "/api/characters/",
+        json={
+            "world_id": world_id,
+            "type": "MONSTER",
+            "name": "Test Illegal Monster",
+            "hp_max": -10,
+            "hp_current": -10,
+            "ac": 0,
+        },
+    )
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_character_rejects_negative_hp(client, world_id):
+    r = await client.post(
+        "/api/characters/",
+        json={"world_id": world_id, "type": "MONSTER", "name": "Ogre"},
+    )
+    char_id = r.json()["id"]
+
+    r = await client.patch(f"/api/characters/{char_id}", json={"hp_max": -5, "ac": 0})
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_get_character(client, world_id):
     # Create first
     r = await client.post(

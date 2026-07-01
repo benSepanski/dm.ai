@@ -20,6 +20,15 @@ export default function CreateNpcDialog({ worldId, sessionId, onCreated, onCance
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const setPositiveInt = (setter: (v: string) => void) => (raw: string) => {
+    if (raw.trim() === "") {
+      setter("");
+      return;
+    }
+    const parsed = parseInt(raw, 10);
+    setter(String(Math.max(1, Number.isNaN(parsed) ? 1 : parsed)));
+  };
+
   const handleSubmit = async () => {
     if (!name.trim()) {
       setError("Name is required.");
@@ -179,7 +188,7 @@ export default function CreateNpcDialog({ worldId, sessionId, onCreated, onCance
               min={1}
               style={numberInputStyle}
               value={hpMax}
-              onChange={(e) => setHpMax(e.target.value)}
+              onChange={(e) => setPositiveInt(setHpMax)(e.target.value)}
               placeholder="—"
             />
           </div>
@@ -192,7 +201,7 @@ export default function CreateNpcDialog({ worldId, sessionId, onCreated, onCance
               min={1}
               style={numberInputStyle}
               value={ac}
-              onChange={(e) => setAc(e.target.value)}
+              onChange={(e) => setPositiveInt(setAc)(e.target.value)}
               placeholder="—"
             />
           </div>
