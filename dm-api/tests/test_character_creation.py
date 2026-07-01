@@ -233,3 +233,23 @@ async def test_build_out_of_range_score_422(client, world_id):
         json={"world_id": world_id, **FIGHTER_BUILD, "ability_scores": bad_scores},
     )
     assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_build_rejects_scores_unachievable_by_any_generation_method(client, world_id):
+    # PT-26: all-20s passes the per-field 3-20 bound but isn't reachable by
+    # Standard Array, Point Buy, or Manual/Rolled (max 18) generation.
+    all_twenties = {
+        "strength": 20,
+        "dexterity": 20,
+        "constitution": 20,
+        "intelligence": 20,
+        "wisdom": 20,
+        "charisma": 20,
+    }
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={"world_id": world_id, **FIGHTER_BUILD, "ability_scores": all_twenties},
+    )
+    assert r.status_code == 422
+    assert "Standard Array" in r.json()["detail"]

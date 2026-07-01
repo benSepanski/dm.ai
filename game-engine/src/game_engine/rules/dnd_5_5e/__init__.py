@@ -2,12 +2,16 @@
 
 from game_engine.rules.dnd_5_5e._spell_resolution import cast_spell
 from game_engine.rules.dnd_5_5e.character_builder import (
+    MANUAL_SCORE_MAX,
+    MANUAL_SCORE_MIN,
     POINT_BUY_BUDGET,
     POINT_BUY_COSTS,
     STANDARD_ARRAY,
     BuildResult,
     build_character,
+    is_legal_ability_scores,
     is_standard_array,
+    is_valid_manual_scores,
     is_valid_point_buy,
     point_buy_cost,
 )
@@ -35,12 +39,16 @@ __all__ = [
     "CLASSES",
     "ClassData",
     # creation & advancement
+    "MANUAL_SCORE_MAX",
+    "MANUAL_SCORE_MIN",
     "POINT_BUY_BUDGET",
     "POINT_BUY_COSTS",
     "STANDARD_ARRAY",
     "BuildResult",
     "build_character",
+    "is_legal_ability_scores",
     "is_standard_array",
+    "is_valid_manual_scores",
     "is_valid_point_buy",
     "point_buy_cost",
     "XP_THRESHOLDS",

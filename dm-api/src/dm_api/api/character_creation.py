@@ -167,22 +167,25 @@ async def build_player_character(
         raise HTTPException(status_code=404, detail="World not found")
 
     char_id = uuid.uuid4()
-    result = build_character(
-        char_id=str(char_id),
-        name=payload.name,
-        character_class=payload.character_class,
-        species=payload.species,
-        background=payload.background,
-        ability_scores=payload.ability_scores.to_engine(),
-        skill_choices=payload.skill_choices,
-        background_ability_allocation=payload.background_ability_allocation,
-        languages=payload.languages,
-        armor_name=payload.armor_name,
-        shield=payload.shield,
-        alignment=payload.alignment,
-        char_type=CharacterType.PC,
-        weapon_masteries=payload.weapon_masteries,
-    )
+    try:
+        result = build_character(
+            char_id=str(char_id),
+            name=payload.name,
+            character_class=payload.character_class,
+            species=payload.species,
+            background=payload.background,
+            ability_scores=payload.ability_scores.to_engine(),
+            skill_choices=payload.skill_choices,
+            background_ability_allocation=payload.background_ability_allocation,
+            languages=payload.languages,
+            armor_name=payload.armor_name,
+            shield=payload.shield,
+            alignment=payload.alignment,
+            char_type=CharacterType.PC,
+            weapon_masteries=payload.weapon_masteries,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     sheet = result.sheet
 
     equipment = list(BACKGROUNDS[payload.background].equipment)
