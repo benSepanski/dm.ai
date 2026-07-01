@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { api, type CharacterResponse } from "../../api/client";
 
+/** Clamps a numeric text input to [min, max] (or [min, +inf) if max is omitted); blank stays blank. */
+function clampInput(raw: string, min: number, max?: number): string {
+  if (raw.trim() === "") return "";
+  const parsed = Number(raw);
+  if (Number.isNaN(parsed)) return "";
+  const clamped = Math.max(min, max !== undefined ? Math.min(max, parsed) : parsed);
+  return String(clamped);
+}
+
 interface Props {
   worldId: string;
   sessionId: string;
@@ -167,7 +176,7 @@ export default function CreateNpcDialog({ worldId, sessionId, onCreated, onCance
               max={20}
               style={numberInputStyle}
               value={level}
-              onChange={(e) => setLevel(e.target.value)}
+              onChange={(e) => setLevel(clampInput(e.target.value, 1, 20))}
             />
           </div>
           <div>
@@ -179,7 +188,7 @@ export default function CreateNpcDialog({ worldId, sessionId, onCreated, onCance
               min={1}
               style={numberInputStyle}
               value={hpMax}
-              onChange={(e) => setHpMax(e.target.value)}
+              onChange={(e) => setHpMax(clampInput(e.target.value, 1))}
               placeholder="—"
             />
           </div>
@@ -192,11 +201,14 @@ export default function CreateNpcDialog({ worldId, sessionId, onCreated, onCance
               min={1}
               style={numberInputStyle}
               value={ac}
-              onChange={(e) => setAc(e.target.value)}
+              onChange={(e) => setAc(clampInput(e.target.value, 1))}
               placeholder="—"
             />
           </div>
         </div>
+        <p style={{ margin: "-4px 0 10px", fontSize: 11, color: "#888" }}>
+          Level, HP Max, and AC must be positive — values below 1 are clamped.
+        </p>
 
         <label style={{ fontSize: 12, color: "#aaa", display: "block", marginBottom: 4 }}>
           Notes / Personality (optional)
