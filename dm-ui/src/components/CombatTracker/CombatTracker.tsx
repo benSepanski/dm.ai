@@ -77,36 +77,71 @@ function CombatantRow({ combatant }: { combatant: Combatant }) {
 
 // ActionType enum values from the backend (case must match exactly).
 const ACTION_BUTTONS = [
-  { label: "Attack", action: "Attack" },
-  { label: "Dash", action: "Dash" },
-  { label: "Dodge", action: "Dodge" },
+  { label: "Attack", action: "Attack", needsTarget: true },
+  { label: "Dash", action: "Dash", needsTarget: false },
+  { label: "Dodge", action: "Dodge", needsTarget: false },
 ] as const;
+
+// The server returns FastAPI's default error shape ({"detail": "..."}) for
+// HTTPExceptions; fall back to the raw text for anything else.
+function parseApiError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  try {
+    const parsed = JSON.parse(message) as { detail?: string };
+    return parsed.detail ?? message;
+  } catch {
+    return message;
+  }
+}
 
 function CombatActions({
   sessionId,
   currentActorId,
+  combatants,
   disabled,
 }: {
   sessionId: string;
   currentActorId: string | undefined;
+  combatants: Combatant[];
   disabled: boolean;
 }) {
-  const { setCombat } = useGameStore();
+  const { setCombat, addMessage } = useGameStore();
+  const [targetId, setTargetId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const targets = combatants.filter((c) => c.char_id !== currentActorId);
 
   const handleAction = useCallback(
-    async (actionType: string) => {
+    async (actionType: string, needsTarget: boolean) => {
       if (!currentActorId) return;
+      if (needsTarget && !targetId) {
+        setError("Select a target first.");
+        return;
+      }
+      setError(null);
       try {
         const result = await api.submitAction(sessionId, {
           actor_id: currentActorId,
           action_type: actionType,
+          ...(needsTarget && targetId ? { target_id: targetId } : {}),
         });
         setCombat(mapCombatResponse(result));
+        const lastLog = result.combat_log?.[result.combat_log.length - 1];
+        const flavorText = lastLog?.flavor_text;
+        if (typeof flavorText === "string" && flavorText) {
+          addMessage({
+            id: `combat-${result.id}-${result.combat_log!.length}`,
+            role: "system",
+            content: flavorText,
+            timestamp: new Date().toISOString(),
+          });
+        }
+        setTargetId(null);
       } catch (err) {
-        console.error(`Failed to submit action ${actionType}:`, err);
+        setError(parseApiError(err));
       }
     },
-    [sessionId, currentActorId, setCombat]
+    [sessionId, currentActorId, targetId, setCombat, addMessage]
   );
 
   const handleNextTurn = useCallback(async () => {
@@ -120,11 +155,40 @@ function CombatActions({
 
   return (
     <div style={{ marginTop: 8 }}>
+      {targets.length > 0 && (
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>
+            Target (for Attack)
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {targets.map((t) => (
+              <button
+                key={t.char_id}
+                onClick={() => setTargetId(t.char_id === targetId ? null : t.char_id)}
+                style={{
+                  padding: "3px 8px",
+                  background: t.char_id === targetId ? "#7c6af7" : "#222",
+                  color: "#fff",
+                  border: "1px solid #444",
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  fontSize: 11,
+                }}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {error && (
+        <p style={{ color: "#f44336", fontSize: 11, margin: "0 0 6px" }}>{error}</p>
+      )}
       <div style={{ display: "flex", gap: 6 }}>
-        {ACTION_BUTTONS.map(({ label, action }) => (
+        {ACTION_BUTTONS.map(({ label, action, needsTarget }) => (
           <button
             key={action}
-            onClick={() => handleAction(action)}
+            onClick={() => handleAction(action, needsTarget)}
             disabled={disabled || !currentActorId}
             style={{
               flex: 1,
@@ -572,8 +636,10 @@ export default function CombatTracker() {
       )}
       {sessionId && isDM && (
         <CombatActions
+          key={currentActorId}
           sessionId={sessionId}
           currentActorId={currentActorId}
+          combatants={combat.combatants}
           disabled={combat.combatants.length === 0}
         />
       )}

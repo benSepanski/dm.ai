@@ -28,7 +28,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
-from game_engine.types import CharacterSheet, ChatRole, CombatStateData, TurnState
+from game_engine.types import ActionType, CharacterSheet, ChatRole, CombatStateData, TurnState
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -205,6 +205,8 @@ async def submit_combat_action(
         raise HTTPException(status_code=404, detail="Actor is not a combatant in this combat")
     if payload.target_id is not None and payload.target_id not in combatant_ids:
         raise HTTPException(status_code=404, detail="Target is not a combatant in this combat")
+    if payload.action_type is ActionType.ATTACK and payload.target_id is None:
+        raise HTTPException(status_code=422, detail="Attack requires a target_id.")
 
     # Stage 2: build-state — including the persisted per-combatant turn
     # states, so the action/bonus-action economy is enforced across requests.
@@ -226,7 +228,14 @@ async def submit_combat_action(
 
     # Rule rejections (incapacitated actor, action economy exhausted) are
     # client errors: surface them as 409 and keep the combat log clean.
-    if outcome.log_entry.get("error") in ("cannot_act", "action_used", "bonus_action_used"):
+    if outcome.log_entry.get("error") in (
+        "cannot_act",
+        "action_used",
+        "bonus_action_used",
+        "target_not_found",
+        "actor_not_found",
+        "total_cover",
+    ):
         raise HTTPException(status_code=409, detail=outcome.flavor_text)
 
     # Stage 4: persist — updated sheets, turn states, + enriched log entry.
@@ -239,6 +248,7 @@ async def submit_combat_action(
         "turn": combat.current_turn_index,
         "actor_id": payload.actor_id,
         "action_type": payload.action_type.value,
+        "flavor_text": outcome.flavor_text,
         **outcome.log_entry,
     }
     combat.combat_log = [*(combat.combat_log or []), log_entry]

@@ -257,7 +257,7 @@ export interface CombatStateResponse {
   current_turn_index: number;
   initiative_order: InitiativeEntry[] | null;
   combatants: CombatantState[] | null;
-  combat_log: Record<string, unknown>[] | null;
+  combat_log: (Record<string, unknown> & { flavor_text?: string })[] | null;
   started_at: string;
   ended_at: string | null;
 }
