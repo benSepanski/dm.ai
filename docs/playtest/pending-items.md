@@ -34,8 +34,10 @@ hard/confusing/missing an affordance a real player or DM would expect.
 
 ## Open
 
+## Resolved
+
 ### PT-25 — DM state is shared across browser tabs via localStorage; no in-app way to preview/exit DM mode
-- **Status:** open
+- **Status:** resolved
 - **Severity:** usability
 - **Type:** usability
 - **Phase:** cross-cutting (surfaced in Phase 1 while trying to test the player view)
@@ -60,9 +62,125 @@ hard/confusing/missing an affordance a real player or DM would expect.
   (per `.env`) with no scoping to a session/world and no visible logout —
   anyone who ever obtains it (shared screen, browser history, synced devices)
   has standing DM access to every world on the instance indefinitely.
+- **Resolution:** `gameStore.ts`'s `persist` middleware now uses a custom
+  `splitStorage` `StateStorage` adapter that routes `dmToken`/`isDM` to
+  `sessionStorage` (per-tab) and leaves `sessionId`/`worldId`/`tokenPositions`
+  in `localStorage` as before, so a fresh tab on the same session URL no
+  longer inherits DM authority. `DMDashboard.tsx`'s toolbar gained an "Exit DM
+  Mode" button next to the DM badge that calls `setDmToken(null)` /
+  `setIsDM(false)` and navigates to the same session's URL, landing on the
+  read-only player view without devtools.
+
+### PT-19 — Character creation wizard skips required class/species sub-choices (spells, Elf lineage, Keen Senses)
+- **Status:** resolved
+- **Severity:** major — **Type:** bug — **Phase:** 1
+- **Found:** runs/2026-06-30-first-full-scenario.md
+- **Steps:** Built a Level 1 Elf Wizard (Maret Sable) through the full 4-step
+  wizard (Origin → Ability Scores → Skills & Equipment → Review). At no step
+  was she asked to choose cantrips/spells known, an Elven Lineage (Drow/High
+  Elf/Wood Elf), or the Keen Senses skill (Insight/Perception/Survival)
+  despite the Species step's own description text calling out that these are
+  required choices.
+- **Observed:** `GET /api/characters/world/{id}` shows `"spells": null` for
+  the finished character — a Level 1 Wizard with zero spells known/prepared.
+  Confirmed via API inspection, not routing around the UI for gameplay.
+- **Expected:** Spellcasting classes should be prompted to choose starting
+  cantrips/spells before Review; species with a sub-choice (Elf lineage, Keen
+  Senses) should present that picker, mirroring the existing Weapon Masteries
+  picker (resolved in PT-2's follow-up) which is the right pattern to copy.
+- **Evidence:** wizard step screenshots (no spell/lineage UI at any step); API
+  response `spells: null`.
+- **Notes:** This blocked exercising "one spell (attack-roll and/or save)" in
+  Phase 6 even before the combat-action bug (PT-23) made it moot — Maret had
+  no spell to cast. Likely needs a new wizard step or an addition to "3.
+  Skills & Equipment," analogous to `CreateCharacterWizard`'s existing weapon
+  mastery picker.
+- **Resolution:** Added a `SpeciesTraitChoice` (Skill/`SpeciesLineage`) field
+  on `SpeciesTraitData` so Elf's Elven Lineage and Keen Senses traits
+  advertise their closed option sets, plus a `get_spells_for_class` lookup so
+  the API can enumerate legal level-1 cantrips/spells per class from
+  `ClassProgression.cantrips_known[0]`/`prepared_spells[0]`. `build_character`
+  now takes `species_trait_choices`/`starting_cantrips`/`starting_spells`,
+  validates every submission against the class/species registries server-side
+  (422 on an illegal pick), and populates `CharacterSheet.species_lineage` /
+  `known_spells` / `prepared_spells` accordingly; missing choices warn instead
+  of failing, mirroring the Weapon Masteries pattern. `SkillsStep.tsx` gained
+  "Species Traits" and "Starting Spells" pill sections wired the same way as
+  Weapon Masteries, gated into `skillsStepValid`.
+
+### PT-21 — Proposal narration commits an entity as fact before the DM can accept/reject it
+- **Status:** resolved
+- **Severity:** major — **Type:** usability — **Phase:** cross-cutting (2–5)
+- **Found:** runs/2026-06-30-first-full-scenario.md
+- **Steps:** Sent an opening-scene prompt. The AI narration text (displayed in
+  the chat) already describes a new location/NPC as established fact (e.g.
+  "**Saltmere** spreads above the waterfront...") in the same turn that emits
+  the matching `[PROPOSAL]` block for that entity.
+- **Observed:** Confirmed in code: `DMOrchestrator.handle_message` generates
+  narration and `[PROPOSAL]` blocks in one model call; `[PROPOSAL]` tags are
+  stripped from `response` but the narration around them already asserts the
+  entity as real (`dm_orchestrator.py` docstring: "response is the display
+  narration with all `[PROPOSAL]` blocks stripped"). Narration and the pending
+  proposal card render simultaneously — there's no gate. If the DM clicks
+  **Reject**, nothing retracts the sentences already sitting in the chat log;
+  all players already read the entity as canon.
+- **Expected:** Either (a) the AI should not narrate a new entity as settled
+  fact until it's accepted, or (b) a rejected proposal should visibly flag/
+  strike the relevant narration, or (c) accept this as a deliberate design
+  tradeoff and document it so DMs know rejecting is "erase from data, not from
+  the story so far."
+- **Evidence:** `dm-api/src/dm_api/ai/dm_orchestrator.py:53` docstring +
+  observed chat transcript in run log.
+- **Notes:** Raised by the user mid-session; not something the automated
+  playtest agent would have caught without the prompt. Worth a product
+  decision, not just a bug fix.
+- **Resolution:** Gated at the source — the system prompt now instructs the
+  model to wrap any narration sentence(s) that commit a brand-new
+  location/character to canon in `[PENDING]...[/PENDING]`, adjacent to that
+  entity's `[PROPOSAL]` block. `dm_orchestrator.py`'s new
+  `_extract_narration_and_proposals` pairs the Nth `[PENDING]` with the Nth
+  `[PROPOSAL]` (dropping all pending text on a count mismatch, never
+  guessing), strips both tag families from the narration, and stores the
+  paired text on `ProposalPayload.pending_narration`. `Proposal` gained
+  `pending_narration`/`source_anchor` columns (migration `0004`); accepting a
+  proposal now appends the held narration as a new AI `ChatMessage` (citing
+  the original turn's `msg:<uuid>@<timestamp>` anchor via `entity_refs`) and
+  broadcasts it, while rejecting simply discards it — never persisted, never
+  shown.
+
+### PT-22 — Duplicate NPC entities when the AI re-introduces an already-established character
+- **Status:** resolved
+- **Severity:** minor — **Type:** bug — **Phase:** 3–4
+- **Found:** runs/2026-06-30-first-full-scenario.md
+- **Steps:** Accepted a "Vess Moray" character proposal (Level 5 Rogue). Later,
+  after changing the orchestrator model mid-session (Game Settings), resent an
+  identical DM narration line. The AI regenerated the turn and emitted a
+  *second* `[PROPOSAL]` for a character also named "Vess Moray" (Level 4,
+  slightly different stat block). Accepted it without realizing.
+- **Observed:** Two "Vess Moray" entries exist in the Monsters & NPCs sidebar
+  and in the Start Combat roster, with different levels/stats.
+- **Expected:** Proposals should be deduplicated by name (or the AI should
+  recognize an already-accepted entity and not re-propose it), or the UI
+  should warn the DM before creating a same-named character a second time.
+- **Evidence:** sidebar showed "Vess Moray" twice; screenshot in run log.
+- **Notes:** Root cause is likely that proposal extraction/acceptance has no
+  identity check against existing `characters` for the world. Low priority —
+  triggered by resending a duplicate message, but could recur naturally in a
+  long session if the AI reintroduces a character without checking prior
+  turns.
+- **Resolution:** `dm-api/src/dm_api/api/ai.py`'s `_create_character_from_proposal`
+  now calls a new `_find_existing_character_by_name` helper that queries for a
+  Character in the same `world_id` with a case-insensitive name match before
+  inserting; if found, it reuses that row (returned via the new
+  `CharacterCreationResult` dataclass) instead of creating a duplicate.
+  `ProposalRead` (`dm-api/src/dm_api/db/models/proposal.py`) gained a typed
+  `duplicate_merged: bool` field so `accept_proposal`'s response tells the
+  caller a duplicate was merged rather than a new entity created. Regression
+  test added in `dm-api/tests/test_proposals.py`
+  (`test_accept_second_character_proposal_same_name_merges_not_duplicates`).
 
 ### PT-24 — Player role can create characters directly, with no DM review (violates "AI proposes, DM decides")
-- **Status:** open
+- **Status:** resolved
 - **Severity:** major
 - **Type:** bug
 - **Phase:** 1 — Character creation
@@ -90,81 +208,18 @@ hard/confusing/missing an affordance a real player or DM would expect.
 - **Notes:** Also worth checking whether the same gap lets a "player" edit/delete
   other party members' data indirectly, or spam-create characters in someone
   else's world if they know/guess the `world_id` UUID from the session URL.
-
-### PT-22 — Duplicate NPC entities when the AI re-introduces an already-established character
-- **Status:** open
-- **Severity:** minor — **Type:** bug — **Phase:** 3–4
-- **Found:** runs/2026-06-30-first-full-scenario.md
-- **Steps:** Accepted a "Vess Moray" character proposal (Level 5 Rogue). Later,
-  after changing the orchestrator model mid-session (Game Settings), resent an
-  identical DM narration line. The AI regenerated the turn and emitted a
-  *second* `[PROPOSAL]` for a character also named "Vess Moray" (Level 4,
-  slightly different stat block). Accepted it without realizing.
-- **Observed:** Two "Vess Moray" entries exist in the Monsters & NPCs sidebar
-  and in the Start Combat roster, with different levels/stats.
-- **Expected:** Proposals should be deduplicated by name (or the AI should
-  recognize an already-accepted entity and not re-propose it), or the UI
-  should warn the DM before creating a same-named character a second time.
-- **Evidence:** sidebar showed "Vess Moray" twice; screenshot in run log.
-- **Notes:** Root cause is likely that proposal extraction/acceptance has no
-  identity check against existing `characters` for the world. Low priority —
-  triggered by resending a duplicate message, but could recur naturally in a
-  long session if the AI reintroduces a character without checking prior
-  turns.
-
-### PT-21 — Proposal narration commits an entity as fact before the DM can accept/reject it
-- **Status:** open
-- **Severity:** major — **Type:** usability — **Phase:** cross-cutting (2–5)
-- **Found:** runs/2026-06-30-first-full-scenario.md
-- **Steps:** Sent an opening-scene prompt. The AI narration text (displayed in
-  the chat) already describes a new location/NPC as established fact (e.g.
-  "**Saltmere** spreads above the waterfront...") in the same turn that emits
-  the matching `[PROPOSAL]` block for that entity.
-- **Observed:** Confirmed in code: `DMOrchestrator.handle_message` generates
-  narration and `[PROPOSAL]` blocks in one model call; `[PROPOSAL]` tags are
-  stripped from `response` but the narration around them already asserts the
-  entity as real (`dm_orchestrator.py` docstring: "response is the display
-  narration with all `[PROPOSAL]` blocks stripped"). Narration and the pending
-  proposal card render simultaneously — there's no gate. If the DM clicks
-  **Reject**, nothing retracts the sentences already sitting in the chat log;
-  all players already read the entity as canon.
-- **Expected:** Either (a) the AI should not narrate a new entity as settled
-  fact until it's accepted, or (b) a rejected proposal should visibly flag/
-  strike the relevant narration, or (c) accept this as a deliberate design
-  tradeoff and document it so DMs know rejecting is "erase from data, not from
-  the story so far."
-- **Evidence:** `dm-api/src/dm_api/ai/dm_orchestrator.py:53` docstring +
-  observed chat transcript in run log.
-- **Notes:** Raised by the user mid-session; not something the automated
-  playtest agent would have caught without the prompt. Worth a product
-  decision, not just a bug fix.
-
-### PT-19 — Character creation wizard skips required class/species sub-choices (spells, Elf lineage, Keen Senses)
-- **Status:** open
-- **Severity:** major — **Type:** bug — **Phase:** 1
-- **Found:** runs/2026-06-30-first-full-scenario.md
-- **Steps:** Built a Level 1 Elf Wizard (Maret Sable) through the full 4-step
-  wizard (Origin → Ability Scores → Skills & Equipment → Review). At no step
-  was she asked to choose cantrips/spells known, an Elven Lineage (Drow/High
-  Elf/Wood Elf), or the Keen Senses skill (Insight/Perception/Survival)
-  despite the Species step's own description text calling out that these are
-  required choices.
-- **Observed:** `GET /api/characters/world/{id}` shows `"spells": null` for
-  the finished character — a Level 1 Wizard with zero spells known/prepared.
-  Confirmed via API inspection, not routing around the UI for gameplay.
-- **Expected:** Spellcasting classes should be prompted to choose starting
-  cantrips/spells before Review; species with a sub-choice (Elf lineage, Keen
-  Senses) should present that picker, mirroring the existing Weapon Masteries
-  picker (resolved in PT-2's follow-up) which is the right pattern to copy.
-- **Evidence:** wizard step screenshots (no spell/lineage UI at any step); API
-  response `spells: null`.
-- **Notes:** This blocked exercising "one spell (attack-roll and/or save)" in
-  Phase 6 even before the combat-action bug (PT-23) made it moot — Maret had
-  no spell to cast. Likely needs a new wizard step or an addition to "3.
-  Skills & Equipment," analogous to `CreateCharacterWizard`'s existing weapon
-  mastery picker.
-
-## Resolved
+- **Resolution:** Not a bug — working as intended. A player creating their own
+  character is normal TTRPG practice and doesn't need DM review; "AI proposes,
+  DM decides" governs the AI co-DM inventing NPCs/locations/characters
+  mid-narrative, which is already gated by the proposal accept/reject flow (see
+  PT-14's resolution above). The original finding conflated "no auth on a
+  player self-service endpoint" with a violation of that principle, but the two
+  are different concerns. The separate observation in this entry's original
+  Notes — whether a player could spam-create characters or write into an
+  unrelated `world_id` they merely guessed — is a distinct access-control
+  question, not addressed by this resolution; it was never reproduced or
+  confirmed during the original playtest run, so it's left out of scope here
+  rather than investigated.
 
 ### PT-26 — Character build accepts illegal ability scores (all 20s) with no rejection or warning
 - **Status:** resolved

@@ -1,6 +1,12 @@
 import type { BackgroundOption, ClassOption, CreationOptions } from "../../api/client";
 import type { CharacterDraft } from "./draft";
-import { ABILITY_LABELS, masteryWeaponsFor, titleCase } from "./draft";
+import {
+  ABILITY_LABELS,
+  masteryWeaponsFor,
+  speciesOptionFor,
+  spellsForClass,
+  titleCase,
+} from "./draft";
 import { Pill, PillRow, Section, selectStyle } from "./ui";
 
 // Step 3: class skill choices (background skills are granted automatically),
@@ -57,6 +63,33 @@ export default function SkillsStep({
     classOption.armor_training.includes(a.armor_type)
   );
   const canUseShield = classOption.armor_training.includes("shield");
+
+  const speciesOption = speciesOptionFor(draft, options);
+  const choiceTraits = speciesOption?.traits.filter((t) => t.choice !== null) ?? [];
+
+  const chooseTrait = (traitName: string, value: string) => {
+    onChange({
+      speciesTraitChoices: { ...draft.speciesTraitChoices, [traitName]: value },
+    });
+  };
+
+  const toggleCantrip = (name: string) => {
+    if (draft.startingCantrips.includes(name)) {
+      onChange({ startingCantrips: draft.startingCantrips.filter((c) => c !== name) });
+    } else if (draft.startingCantrips.length < classOption.cantrips_known) {
+      onChange({ startingCantrips: [...draft.startingCantrips, name] });
+    }
+  };
+
+  const toggleSpell = (name: string) => {
+    if (draft.startingSpells.includes(name)) {
+      onChange({ startingSpells: draft.startingSpells.filter((s) => s !== name) });
+    } else if (draft.startingSpells.length < classOption.prepared_spells_known) {
+      onChange({ startingSpells: [...draft.startingSpells, name] });
+    }
+  };
+
+  const { cantrips, spells } = spellsForClass(classOption, options.spells);
 
   return (
     <div>
@@ -170,6 +203,79 @@ export default function SkillsStep({
             you attack with it and have it selected.
           </p>
         </Section>
+      )}
+
+      {choiceTraits.length > 0 && (
+        <Section title="Species Traits">
+          {choiceTraits.map((trait) => {
+            const options_ = trait.choice?.skill_options.length
+              ? trait.choice.skill_options
+              : (trait.choice?.lineage_options ?? []);
+            const isSkillChoice = (trait.choice?.skill_options.length ?? 0) > 0;
+            const selected = draft.speciesTraitChoices[trait.name];
+            return (
+              <div key={trait.name} style={{ marginBottom: 12 }}>
+                <p style={{ margin: "0 0 6px", fontSize: 13, color: "#ccc" }}>{trait.name}</p>
+                <PillRow>
+                  {options_.map((choice) => (
+                    <Pill
+                      key={choice}
+                      label={isSkillChoice ? titleCase(choice) : choice}
+                      selected={selected === choice}
+                      onClick={() => chooseTrait(trait.name, choice)}
+                    />
+                  ))}
+                </PillRow>
+              </div>
+            );
+          })}
+        </Section>
+      )}
+
+      {classOption.spellcasting && (
+        <>
+          {classOption.cantrips_known > 0 && (
+            <Section
+              title={`Starting Cantrips (choose ${classOption.cantrips_known} — ${draft.startingCantrips.length} selected)`}
+            >
+              <PillRow>
+                {cantrips.map((s) => (
+                  <Pill
+                    key={s.name}
+                    label={s.name}
+                    selected={draft.startingCantrips.includes(s.name)}
+                    disabled={
+                      !draft.startingCantrips.includes(s.name) &&
+                      draft.startingCantrips.length >= classOption.cantrips_known
+                    }
+                    onClick={() => toggleCantrip(s.name)}
+                  />
+                ))}
+              </PillRow>
+            </Section>
+          )}
+
+          {classOption.prepared_spells_known > 0 && (
+            <Section
+              title={`Starting Spells (choose ${classOption.prepared_spells_known} — ${draft.startingSpells.length} selected)`}
+            >
+              <PillRow>
+                {spells.map((s) => (
+                  <Pill
+                    key={s.name}
+                    label={s.name}
+                    selected={draft.startingSpells.includes(s.name)}
+                    disabled={
+                      !draft.startingSpells.includes(s.name) &&
+                      draft.startingSpells.length >= classOption.prepared_spells_known
+                    }
+                    onClick={() => toggleSpell(s.name)}
+                  />
+                ))}
+              </PillRow>
+            </Section>
+          )}
+        </>
       )}
     </div>
   );

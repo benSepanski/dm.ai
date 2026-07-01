@@ -33,6 +33,7 @@ from game_engine.types.enums import (
     Language,
     Skill,
     Species,
+    SpeciesLineage,
     Subclass,
     UnarmedStrikeOption,
     WeaponCategory,
@@ -106,6 +107,7 @@ class CharacterSheet:
     char_type: CharacterType = CharacterType.PC
     # Origin & build (2024 PHB chapters 2-5)
     species: Species | None = None
+    species_lineage: SpeciesLineage | None = None
     background: Background | None = None
     alignment: Alignment | None = None
     subclass: Subclass | None = None

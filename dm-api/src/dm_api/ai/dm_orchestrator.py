@@ -40,19 +40,42 @@ class ProposalPayload:
     Parsed and validated at the AI boundary inside ``_extract_proposal``.
     The ``content`` field is free-form JSON (varies by proposal type) and
     remains untyped, but ``type`` is always a known :class:`ProposalType`.
+
+    ``pending_narration`` carries the gated narration sentence(s) — wrapped by
+    the model in ``[PENDING]...[/PENDING]`` adjacent to this proposal's
+    ``[PROPOSAL]`` block — that assert this (not-yet-canon) entity as settled
+    fact. ``None`` when the turn had no matching pending block for this
+    proposal (either the model omitted one, or PENDING/PROPOSAL pairing was
+    unsafe for this message).
     """
 
     type: ProposalType
     content: dict[str, Any] | None
+    pending_narration: str | None = None
+
+
+@dataclass
+class NarrationExtraction:
+    """Result of :func:`_extract_narration_and_proposals`.
+
+    ``narration`` has both ``[PROPOSAL]`` and ``[PENDING]`` tag families
+    stripped; ``proposals`` carries each proposal's paired ``pending_narration``
+    (if any).
+    """
+
+    narration: str
+    proposals: list[ProposalPayload]
 
 
 @dataclass
 class DMResponse:
     """Typed orchestrator result — no ``dict[str, Any]`` at the API boundary.
 
-    ``response`` is the display narration with all ``[PROPOSAL]`` blocks
-    stripped; the parsed blocks live in ``proposals`` (the model may emit one
-    block per new entity, so a single turn can carry several).
+    ``response`` is the display narration with all ``[PROPOSAL]`` and
+    ``[PENDING]`` blocks stripped; the parsed proposals live in ``proposals``
+    (the model may emit one block per new entity, so a single turn can carry
+    several), each carrying its own gated ``pending_narration`` (PT-21) that
+    only reaches chat once the DM accepts that proposal.
     """
 
     response: str
@@ -145,10 +168,12 @@ class DMOrchestrator:
             model=self._orchestrator_model,
         )
 
-        # Stage 4: extract structured proposals (validated at the AI boundary)
-        # and strip the raw blocks from the narration shown to players.
-        proposals = _extract_proposals(response.content)
-        narration = _strip_proposal_blocks(response.content)
+        # Stage 4: extract structured proposals (validated at the AI boundary),
+        # pair each with its gated [PENDING] narration, and strip both tag
+        # families from the narration shown to players.
+        extraction = _extract_narration_and_proposals(response.content)
+        proposals = extraction.proposals
+        narration = extraction.narration
         duration_ms = int((time.monotonic() - start) * 1000)
         logger.info(
             "orchestrator done  session_id=%s model=%s tokens_in=%d tokens_out=%d "
@@ -264,6 +289,27 @@ def _iter_proposal_spans(text: str) -> list[tuple[int, int, str]]:
     return spans
 
 
+def _iter_pending_spans(text: str) -> list[tuple[int, int, str]]:
+    """Locate every [PENDING]...[/PENDING] block in ``text``.
+
+    Mirrors :func:`_iter_proposal_spans`. Returns (start, end_exclusive,
+    inner_text) tuples covering the full block including its markers.
+    """
+    spans: list[tuple[int, int, str]] = []
+    cursor = 0
+    while True:
+        start = text.find("[PENDING]", cursor)
+        if start == -1:
+            break
+        end = text.find("[/PENDING]", start)
+        if end == -1:
+            break
+        inner = text[start + len("[PENDING]") : end].strip()
+        spans.append((start, end + len("[/PENDING]"), inner))
+        cursor = end + len("[/PENDING]")
+    return spans
+
+
 def _parse_proposal(json_str: str) -> ProposalPayload | None:
     """Parse one proposal body. Validates at the AI boundary: malformed JSON
     or unknown proposal types are silently dropped rather than raised, so a
@@ -287,31 +333,14 @@ def _parse_proposal(json_str: str) -> ProposalPayload | None:
     )
 
 
-def _extract_proposals(text: str) -> list[ProposalPayload]:
-    """Extract every [PROPOSAL] block from the AI response, in order.
-
-    The system prompt instructs the model to emit one block per new entity,
-    so a single narrative turn may legitimately carry several. Handles models
-    that wrap the JSON in markdown fences despite instructions.
-    """
-    proposals = []
-    for _, _, inner in _iter_proposal_spans(text):
-        parsed = _parse_proposal(inner)
-        if parsed is not None:
-            proposals.append(parsed)
-    return proposals
-
-
-def _strip_proposal_blocks(text: str) -> str:
-    """Remove [PROPOSAL] blocks from the narration shown to (and stored for)
-    players, leaving clean prose. The parsed payloads are carried separately
-    on :class:`DMResponse`."""
-    spans = _iter_proposal_spans(text)
+def _strip_spans(text: str, spans: list[tuple[int, int, str]]) -> str:
+    """Remove the given (start, end_exclusive, ...) spans from ``text``,
+    collapsing resulting blank-line runs down to a single blank line."""
     if not spans:
         return text
     pieces: list[str] = []
     cursor = 0
-    for start, end, _ in spans:
+    for start, end, *_ in sorted(spans, key=lambda s: s[0]):
         pieces.append(text[cursor:start])
         cursor = end
     pieces.append(text[cursor:])
@@ -319,3 +348,56 @@ def _strip_proposal_blocks(text: str) -> str:
     while "\n\n\n" in cleaned:
         cleaned = cleaned.replace("\n\n\n", "\n\n")
     return cleaned.strip()
+
+
+def _extract_narration_and_proposals(text: str) -> NarrationExtraction:
+    """Extract every [PROPOSAL] block plus its paired [PENDING] narration.
+
+    The system prompt allows a [PROPOSAL] to have zero PENDING blocks
+    (partial coverage — e.g. a location merely noticed, not yet described),
+    so pairing cannot assume the Nth PENDING matches the Nth PROPOSAL by
+    count alone. Instead each PENDING block is paired with the nearest
+    following, not-yet-claimed [PROPOSAL] block — mirroring the system
+    prompt's instruction to place a PENDING block "immediately adjacent" to
+    (i.e. directly before) the proposal it gates. If any PENDING block has no
+    following unclaimed proposal to attach to, pairing is unsafe: a warning
+    is logged and ALL pending text in this message is dropped — never
+    guessed — while every proposal is still kept and shown normally. Both tag
+    families are stripped from the returned narration regardless.
+    """
+    proposal_spans = _iter_proposal_spans(text)
+    pending_spans = _iter_pending_spans(text)
+
+    pending_by_proposal_index: dict[int, str] = {}
+    pairing_failed = False
+    next_proposal_idx = 0
+    for pending_start, _, pending_inner in pending_spans:
+        while (
+            next_proposal_idx < len(proposal_spans)
+            and proposal_spans[next_proposal_idx][0] < pending_start
+        ):
+            next_proposal_idx += 1
+        if next_proposal_idx >= len(proposal_spans):
+            pairing_failed = True
+            break
+        pending_by_proposal_index[next_proposal_idx] = pending_inner
+        next_proposal_idx += 1
+
+    if pairing_failed:
+        logger.warning(
+            "PENDING/PROPOSAL pairing failed (pending=%d proposals=%d) — "
+            "dropping all pending narration for this message",
+            len(pending_spans),
+            len(proposal_spans),
+        )
+        pending_by_proposal_index = {}
+
+    proposals: list[ProposalPayload] = []
+    for idx, (_, _, inner) in enumerate(proposal_spans):
+        parsed = _parse_proposal(inner)
+        if parsed is not None:
+            parsed.pending_narration = pending_by_proposal_index.get(idx)
+            proposals.append(parsed)
+
+    narration = _strip_spans(text, [*proposal_spans, *pending_spans])
+    return NarrationExtraction(narration=narration, proposals=proposals)

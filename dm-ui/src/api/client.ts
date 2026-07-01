@@ -105,11 +105,19 @@ export interface ClassOption {
   num_skill_choices: number;
   spellcasting: boolean;
   weapon_mastery_count: number;
+  cantrips_known: number;
+  prepared_spells_known: number;
+}
+
+export interface SpeciesTraitChoice {
+  skill_options: string[];
+  lineage_options: string[];
 }
 
 export interface SpeciesTrait {
   name: string;
   description: string;
+  choice: SpeciesTraitChoice | null;
 }
 
 export interface SpeciesOption {
@@ -120,6 +128,14 @@ export interface SpeciesOption {
   darkvision_ft: number;
   traits: SpeciesTrait[];
   damage_resistances: string[];
+  description: string;
+}
+
+export interface SpellOption {
+  name: string;
+  level: number;
+  school: string;
+  classes: string[];
   description: string;
 }
 
@@ -159,6 +175,7 @@ export interface CreationOptions {
   point_buy_budget: number;
   point_buy_costs: Record<string, number>;
   weapon_mastery_options: WeaponMasteryOption[];
+  spells: SpellOption[];
 }
 
 export interface CharacterBuildRequest {
@@ -178,6 +195,9 @@ export interface CharacterBuildRequest {
   shield: boolean;
   alignment: string | null;
   weapon_masteries?: string[] | null;
+  species_trait_choices?: Record<string, string> | null;
+  starting_cantrips?: string[] | null;
+  starting_spells?: string[] | null;
 }
 
 export interface CharacterBuildResponse {

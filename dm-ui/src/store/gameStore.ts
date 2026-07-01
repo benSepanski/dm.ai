@@ -1,5 +1,52 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
+
+// dmToken/isDM are security-sensitive and must never leak between browser
+// tabs on the same origin (e.g. via "Copy Invite Link" into a second tab) —
+// they live in sessionStorage, which is per-tab. Everything else persisted
+// (sessionId, worldId, tokenPositions) is fine to share across tabs/refreshes
+// and stays in localStorage. Zustand's persist middleware only accepts one
+// storage, so this adapter splits the single serialized blob's top-level keys
+// across the two backing stores on write/read/remove.
+const SESSION_STORAGE_KEYS = new Set(["dmToken", "isDM"]);
+
+const splitStorage: StateStorage = {
+  getItem: (name) => {
+    const localRaw = window.localStorage.getItem(name);
+    const sessionRaw = window.sessionStorage.getItem(name);
+    if (localRaw === null && sessionRaw === null) return null;
+
+    const localParsed = localRaw ? JSON.parse(localRaw) : { state: {} };
+    const sessionParsed = sessionRaw ? JSON.parse(sessionRaw) : { state: {} };
+    // Session-only keys (dmToken/isDM) must come exclusively from
+    // sessionStorage: a stale value left in localStorage (e.g. by a
+    // pre-upgrade build that persisted them there) must never leak into a
+    // tab whose sessionStorage doesn't have it, or DM authority would leak
+    // across tabs — the exact bug this split storage exists to prevent.
+    const localState = { ...localParsed.state };
+    for (const key of SESSION_STORAGE_KEYS) {
+      delete localState[key];
+    }
+    return JSON.stringify({
+      ...localParsed,
+      state: { ...localState, ...sessionParsed.state },
+    });
+  },
+  setItem: (name, value) => {
+    const parsed = JSON.parse(value) as { state: Record<string, unknown>; version?: number };
+    const localState: Record<string, unknown> = {};
+    const sessionState: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(parsed.state)) {
+      (SESSION_STORAGE_KEYS.has(key) ? sessionState : localState)[key] = val;
+    }
+    window.localStorage.setItem(name, JSON.stringify({ ...parsed, state: localState }));
+    window.sessionStorage.setItem(name, JSON.stringify({ ...parsed, state: sessionState }));
+  },
+  removeItem: (name) => {
+    window.localStorage.removeItem(name);
+    window.sessionStorage.removeItem(name);
+  },
+};
 
 // ---- Domain types ----
 
@@ -114,7 +161,9 @@ const initialState = {
 
 // sessionId / worldId / tokenPositions are persisted to localStorage so a
 // page refresh (or closing the laptop between game days) resumes the same
-// session. Everything else is re-hydrated from the API on load.
+// session. dmToken / isDM are persisted to sessionStorage instead (see
+// splitStorage above) so DM authority stays scoped to the tab it was entered
+// in. Everything else is re-hydrated from the API on load.
 export const useGameStore = create<GameState>()(
   persist(
     (set) => ({
@@ -166,10 +215,12 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: "dmai-game",
+      storage: createJSONStorage(() => splitStorage),
       partialize: (s) => ({
         sessionId: s.sessionId,
         worldId: s.worldId,
         dmToken: s.dmToken,
+        isDM: s.isDM,
         tokenPositions: s.tokenPositions,
       }),
     }

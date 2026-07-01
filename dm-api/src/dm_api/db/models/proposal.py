@@ -47,6 +47,18 @@ class Proposal(Base):
         default=ProposalStatus.PENDING,
     )
     dm_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Gated narration sentence(s) tied to this proposal (PT-21): text the model
+    # wrapped in [PENDING]...[/PENDING] adjacent to this proposal's block,
+    # asserting the not-yet-canon entity as settled fact. None when the turn
+    # had no matching pending block (mismatch case, or this proposal type
+    # never carries narration — only LOCATION/CHARACTER do).
+    pending_narration: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Precomputed msg:<uuid>@<timestamp> citation anchor (condenser.py's
+    # MessageAnchor scheme) for the AI ChatMessage this proposal/pending
+    # narration originated from. Computed once at persist time so the
+    # accepted narration's anchor reflects the original AI turn, not whenever
+    # accept happens (avoids a re-fetch/join on accept).
+    source_anchor: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -67,7 +79,13 @@ class ProposalRead(BaseModel):
     content: dict[str, Any] | None
     status: ProposalStatus
     dm_notes: str | None
+    pending_narration: str | None = None
+    source_anchor: str | None = None
     created_at: datetime
+    # True when accepting this proposal reused an existing entity (matched by
+    # case-insensitive name within the world) instead of creating a new row.
+    # Always False outside of the accept endpoint.
+    duplicate_merged: bool = False
 
 
 class ProposalAccept(BaseModel):

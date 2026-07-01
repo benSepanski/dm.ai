@@ -296,3 +296,173 @@ async def test_extract_proposal_non_dict_content_is_none() -> None:
         message="test", session_id="s1", world_id="w1", history=_history(1)
     )
     assert result.proposals == [ProposalPayload(type=ProposalType.LOCATION, content=None)]
+
+
+# ---------------------------------------------------------------------------
+# PT-21: [PENDING] narration is gated at the source until the paired
+# [PROPOSAL] is accepted.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_handle_message_strips_pending_narration_from_response() -> None:
+    """Narration wrapped in [PENDING] is withheld from the returned response
+    and instead carried on the paired proposal's ``pending_narration``."""
+    body = (
+        "You crest the hill and the coastline comes into view.\n"
+        "[PENDING]**Saltmere** spreads above the waterfront, its lantern-lit "
+        "docks humming with trade.[/PENDING]\n"
+        "[PROPOSAL]"
+        '{"type": "location", "content": {"name": "Saltmere"}}'
+        "[/PROPOSAL]"
+    )
+    backend = _ScriptedBackend([body])
+    orchestrator = DMOrchestrator(
+        backend=backend, orchestrator_model="main", generation_model="fast"
+    )
+
+    result = await orchestrator.handle_message(
+        message="What do we see?", session_id="s1", world_id="w1", history=_history(1)
+    )
+
+    assert "[PENDING]" not in result.response
+    assert "[/PENDING]" not in result.response
+    assert "Saltmere" not in result.response
+    assert "You crest the hill and the coastline comes into view." in result.response
+
+    assert len(result.proposals) == 1
+    assert result.proposals[0].type == ProposalType.LOCATION
+    assert result.proposals[0].pending_narration == (
+        "**Saltmere** spreads above the waterfront, its lantern-lit docks " "humming with trade."
+    )
+
+
+@pytest.mark.asyncio
+async def test_handle_message_pairs_multiple_pending_blocks_by_order() -> None:
+    """Nth [PENDING] pairs with Nth [PROPOSAL], in emission order."""
+    body = (
+        "The road forks ahead.\n"
+        "[PENDING]Mirebrook squats in the marsh, half-swallowed by reeds.[/PENDING]\n"
+        "[PROPOSAL]"
+        '{"type": "location", "content": {"name": "Mirebrook"}}'
+        "[/PROPOSAL]\n"
+        "A figure steps from the shadows.\n"
+        "[PENDING]Ossian Dray, cloaked and wary, blocks the path.[/PENDING]\n"
+        "[PROPOSAL]"
+        '{"type": "character", "content": {"name": "Ossian Dray"}}'
+        "[/PROPOSAL]"
+    )
+    backend = _ScriptedBackend([body])
+    orchestrator = DMOrchestrator(
+        backend=backend, orchestrator_model="main", generation_model="fast"
+    )
+
+    result = await orchestrator.handle_message(
+        message="Onward.", session_id="s1", world_id="w1", history=_history(1)
+    )
+
+    assert len(result.proposals) == 2
+    location_proposal, character_proposal = result.proposals
+    assert location_proposal.type == ProposalType.LOCATION
+    assert location_proposal.pending_narration == (
+        "Mirebrook squats in the marsh, half-swallowed by reeds."
+    )
+    assert character_proposal.type == ProposalType.CHARACTER
+    assert character_proposal.pending_narration == (
+        "Ossian Dray, cloaked and wary, blocks the path."
+    )
+    assert "Mirebrook squats" not in result.response
+    assert "Ossian Dray, cloaked" not in result.response
+    assert "The road forks ahead." in result.response
+    assert "A figure steps from the shadows." in result.response
+
+
+@pytest.mark.asyncio
+async def test_handle_message_pending_count_mismatch_drops_all_pending_text() -> None:
+    """A PENDING/PROPOSAL count mismatch drops ALL pending text (never
+    guessed) but keeps every proposal intact."""
+    body = (
+        "You arrive at the crossroads.\n"
+        "[PENDING]Glenbrook's rooftops catch the last light.[/PENDING]\n"
+        "[PENDING]An extra, unpaired pending block.[/PENDING]\n"
+        "[PROPOSAL]"
+        '{"type": "location", "content": {"name": "Glenbrook"}}'
+        "[/PROPOSAL]"
+    )
+    backend = _ScriptedBackend([body])
+    orchestrator = DMOrchestrator(
+        backend=backend, orchestrator_model="main", generation_model="fast"
+    )
+
+    result = await orchestrator.handle_message(
+        message="test", session_id="s1", world_id="w1", history=_history(1)
+    )
+
+    assert len(result.proposals) == 1
+    assert result.proposals[0].type == ProposalType.LOCATION
+    assert result.proposals[0].pending_narration is None
+    assert "Glenbrook's rooftops" not in result.response
+    assert "unpaired pending block" not in result.response
+    assert "[PENDING]" not in result.response
+    assert "You arrive at the crossroads." in result.response
+
+
+@pytest.mark.asyncio
+async def test_handle_message_proposal_without_pending_block_has_none() -> None:
+    """A proposal that introduces nothing narratively pre-committed may omit
+    its [PENDING] block entirely — pending_narration stays None."""
+    body = (
+        "You notice a distant tower on the horizon, unremarked upon.\n"
+        "[PROPOSAL]"
+        '{"type": "location", "content": {"name": "Distant Tower"}}'
+        "[/PROPOSAL]"
+    )
+    backend = _ScriptedBackend([body])
+    orchestrator = DMOrchestrator(
+        backend=backend, orchestrator_model="main", generation_model="fast"
+    )
+
+    result = await orchestrator.handle_message(
+        message="test", session_id="s1", world_id="w1", history=_history(1)
+    )
+
+    assert len(result.proposals) == 1
+    assert result.proposals[0].pending_narration is None
+    assert "You notice a distant tower on the horizon, unremarked upon." in result.response
+
+
+@pytest.mark.asyncio
+async def test_handle_message_partial_pending_coverage_pairs_by_adjacency() -> None:
+    """One proposal with no [PENDING] block followed by another that has one
+    is NOT a count mismatch — the system prompt explicitly allows partial
+    coverage. The single PENDING block must still pair with its adjacent
+    proposal instead of being dropped for every proposal."""
+    body = (
+        "You spot a distant tower on the horizon, unremarked upon.\n"
+        "[PROPOSAL]"
+        '{"type": "location", "content": {"name": "Distant Tower"}}'
+        "[/PROPOSAL]\n"
+        "A figure steps from the shadows nearby.\n"
+        "[PENDING]Ossian Dray, cloaked and wary, blocks the path.[/PENDING]\n"
+        "[PROPOSAL]"
+        '{"type": "character", "content": {"name": "Ossian Dray"}}'
+        "[/PROPOSAL]"
+    )
+    backend = _ScriptedBackend([body])
+    orchestrator = DMOrchestrator(
+        backend=backend, orchestrator_model="main", generation_model="fast"
+    )
+
+    result = await orchestrator.handle_message(
+        message="test", session_id="s1", world_id="w1", history=_history(1)
+    )
+
+    assert len(result.proposals) == 2
+    location_proposal, character_proposal = result.proposals
+    assert location_proposal.type == ProposalType.LOCATION
+    assert location_proposal.pending_narration is None
+    assert character_proposal.type == ProposalType.CHARACTER
+    assert character_proposal.pending_narration == (
+        "Ossian Dray, cloaked and wary, blocks the path."
+    )
+    assert "Ossian Dray, cloaked" not in result.response

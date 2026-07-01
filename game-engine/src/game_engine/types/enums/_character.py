@@ -53,6 +53,15 @@ class Species(str, Enum):
     TIEFLING = "Tiefling"
 
 
+class SpeciesLineage(str, Enum):
+    """Sub-lineage choices for species traits with a closed lineage pick
+    (e.g. Elf's Elven Lineage: Drow, High Elf, or Wood Elf)."""
+
+    DROW = "Drow"
+    HIGH_ELF = "High Elf"
+    WOOD_ELF = "Wood Elf"
+
+
 class Background(str, Enum):
     """Character backgrounds (2024 PHB chapter 4)."""
 

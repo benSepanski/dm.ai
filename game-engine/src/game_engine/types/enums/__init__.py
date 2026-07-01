@@ -22,6 +22,7 @@ from game_engine.types.enums._character import (
     ClassResource,
     Language,
     Species,
+    SpeciesLineage,
     SpellcasterType,
 )
 from game_engine.types.enums._combat import (
@@ -79,6 +80,7 @@ __all__ = [
     "Language",
     "Species",
     "SpellcasterType",
+    "SpeciesLineage",
     # _subclasses
     "Subclass",
     "subclasses_for",

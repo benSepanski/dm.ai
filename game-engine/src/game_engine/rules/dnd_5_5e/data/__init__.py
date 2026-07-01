@@ -37,6 +37,7 @@ from game_engine.rules.dnd_5_5e.data.monsters import MONSTERS, MonsterAction, Mo
 from game_engine.rules.dnd_5_5e.data.species import (
     SPECIES,
     SpeciesData,
+    SpeciesTraitChoice,
     SpeciesTraitData,
     get_species,
 )
@@ -45,6 +46,7 @@ from game_engine.rules.dnd_5_5e.data.spells import (
     SPELLS_BY_NAME,
     SpellData,
     get_spell,
+    get_spells_for_class,
 )
 from game_engine.rules.dnd_5_5e.data.weapons import (
     WEAPONS,
@@ -59,6 +61,7 @@ __all__ = [
     "SPELLS_BY_NAME",
     "SpellData",
     "get_spell",
+    "get_spells_for_class",
     # monsters
     "MONSTERS",
     "MonsterData",
@@ -85,6 +88,7 @@ __all__ = [
     # origins
     "SPECIES",
     "SpeciesData",
+    "SpeciesTraitChoice",
     "SpeciesTraitData",
     "get_species",
     "BACKGROUNDS",

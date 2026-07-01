@@ -269,3 +269,116 @@ class TestBuildCharacter:
                     charisma=20,
                 )
             )
+
+
+class TestBuildCharacterSpeciesAndSpellChoices:
+    """PT-19: species sub-choices (Elf) and starting cantrips/spells."""
+
+    def _build(self, **overrides):
+        params = dict(
+            char_id="pc1",
+            name="Maret",
+            character_class=CharacterClass.WIZARD,
+            species=Species.ELF,
+            background=Background.SAGE,
+            ability_scores=_scores(
+                strength=8, dexterity=14, constitution=13, intelligence=15, wisdom=12, charisma=10
+            ),
+            skill_choices=[Skill.ARCANA, Skill.INVESTIGATION],
+        )
+        params.update(overrides)
+        return build_character(**params)
+
+    def test_elf_wizard_persists_lineage_keen_senses_and_spells(self):
+        from game_engine.types import SpeciesLineage
+
+        result = self._build(
+            species_trait_choices={"Elven Lineage": "Drow", "Keen Senses": "perception"},
+            starting_cantrips=["Fire Bolt", "Light", "Acid Splash"],
+            starting_spells=["Magic Missile", "Shield", "Mage Armor", "Detect Magic"],
+        )
+        sheet = result.sheet
+        assert sheet.species_lineage is SpeciesLineage.DROW
+        assert Skill.PERCEPTION in sheet.proficient_skills
+        assert sheet.known_spells == ["Fire Bolt", "Light", "Acid Splash"]
+        assert sheet.prepared_spells == [
+            "Magic Missile",
+            "Shield",
+            "Mage Armor",
+            "Detect Magic",
+        ]
+        assert not result.warnings
+
+    def test_missing_species_trait_choices_warns_not_errors(self):
+        result = self._build(
+            starting_cantrips=["Fire Bolt", "Light", "Acid Splash"],
+            starting_spells=["Magic Missile", "Shield", "Mage Armor", "Detect Magic"],
+        )
+        assert any("Elven Lineage requires a choice" in w for w in result.warnings)
+        assert any("Keen Senses requires a choice" in w for w in result.warnings)
+        assert result.sheet.species_lineage is None
+
+    def test_missing_starting_spells_warns_not_errors(self):
+        result = self._build(
+            species_trait_choices={"Elven Lineage": "Drow", "Keen Senses": "perception"},
+        )
+        assert any("starting cantrip" in w for w in result.warnings)
+        assert any("starting spell" in w for w in result.warnings)
+        assert result.sheet.known_spells == []
+        assert result.sheet.prepared_spells == []
+
+    def test_illegal_lineage_choice_rejected(self):
+        with pytest.raises(ValueError, match="Elven Lineage"):
+            self._build(
+                species_trait_choices={"Elven Lineage": "Sun Elf", "Keen Senses": "perception"},
+                starting_cantrips=["Fire Bolt", "Light", "Acid Splash"],
+                starting_spells=["Magic Missile", "Shield", "Mage Armor", "Detect Magic"],
+            )
+
+    def test_illegal_keen_senses_choice_rejected(self):
+        with pytest.raises(ValueError, match="Keen Senses"):
+            self._build(
+                species_trait_choices={"Elven Lineage": "Drow", "Keen Senses": "athletics"},
+                starting_cantrips=["Fire Bolt", "Light", "Acid Splash"],
+                starting_spells=["Magic Missile", "Shield", "Mage Armor", "Detect Magic"],
+            )
+
+    def test_illegal_cantrip_for_class_rejected(self):
+        with pytest.raises(ValueError, match="Guidance"):
+            self._build(
+                species_trait_choices={"Elven Lineage": "Drow", "Keen Senses": "perception"},
+                starting_cantrips=["Guidance", "Light", "Acid Splash"],
+                starting_spells=["Magic Missile", "Shield", "Mage Armor", "Detect Magic"],
+            )
+
+    def test_illegal_spell_for_class_rejected(self):
+        with pytest.raises(ValueError, match="Cure Wounds"):
+            self._build(
+                species_trait_choices={"Elven Lineage": "Drow", "Keen Senses": "perception"},
+                starting_cantrips=["Fire Bolt", "Light", "Acid Splash"],
+                starting_spells=["Cure Wounds", "Shield", "Mage Armor", "Detect Magic"],
+            )
+
+    def test_wrong_cantrip_count_warns(self):
+        result = self._build(
+            species_trait_choices={"Elven Lineage": "Drow", "Keen Senses": "perception"},
+            starting_cantrips=["Fire Bolt", "Light"],
+            starting_spells=["Magic Missile", "Shield", "Mage Armor", "Detect Magic"],
+        )
+        assert any("expects 3 starting cantrip" in w for w in result.warnings)
+
+    def test_non_wizard_caster_uses_known_spells(self):
+        result = self._build(
+            character_class=CharacterClass.SORCERER,
+            species=Species.HUMAN,
+            background=Background.NOBLE,
+            skill_choices=[Skill.PERSUASION, Skill.INTIMIDATION],
+            starting_cantrips=["Fire Bolt", "Light", "Acid Splash", "Ray of Frost"],
+            starting_spells=["Magic Missile", "Shield"],
+        )
+        sheet = result.sheet
+        # Sorcerer is a known-spell caster: level-1 spells land in known_spells,
+        # not prepared_spells (Wizard-only).
+        assert "Magic Missile" in sheet.known_spells
+        assert "Shield" in sheet.known_spells
+        assert sheet.prepared_spells == []

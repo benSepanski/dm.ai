@@ -13,7 +13,8 @@ from dataclasses import dataclass, field
 from game_engine.rules.dnd_5_5e.classes import CLASSES
 from game_engine.rules.dnd_5_5e.data.armor import compute_armor_class, get_armor
 from game_engine.rules.dnd_5_5e.data.backgrounds import get_background
-from game_engine.rules.dnd_5_5e.data.species import get_species
+from game_engine.rules.dnd_5_5e.data.species import SpeciesData, get_species
+from game_engine.rules.dnd_5_5e.data.spells import get_spells_for_class
 from game_engine.types import (
     Ability,
     AbilityScoreSet,
@@ -29,6 +30,7 @@ from game_engine.types import (
     Language,
     Skill,
     Species,
+    SpeciesLineage,
 )
 
 #: The standard array of ability scores (2024 PHB chapter 2).
@@ -122,6 +124,126 @@ def _apply_background_increases(
         scores.set(ability, min(20, scores.get(ability) + bonus))
 
 
+def _resolve_species_trait_choices(
+    species_data: SpeciesData,
+    species_trait_choices: dict[str, str],
+    warnings: list[str],
+) -> tuple[SpeciesLineage | None, Skill | None]:
+    """Validate and resolve every choice-bearing trait on *species_data*.
+
+    Returns ``(species_lineage, keen_senses_skill)`` — currently the only two
+    choice-bearing traits in the registry (Elf's Elven Lineage and Keen
+    Senses). Raises :class:`ValueError` if a submitted choice isn't in that
+    trait's closed option set; emits a warning (not an error) if a
+    choice-bearing trait was left unanswered.
+    """
+    species_lineage: SpeciesLineage | None = None
+    keen_senses_skill: Skill | None = None
+    for trait in species_data.traits:
+        if trait.choice is None:
+            continue
+        raw_choice = species_trait_choices.get(trait.name)
+        if raw_choice is None:
+            warnings.append(f"{trait.name} requires a choice — set it later via character edit.")
+            continue
+        if trait.choice.lineage_options:
+            try:
+                lineage = SpeciesLineage(raw_choice)
+            except ValueError as exc:
+                raise ValueError(
+                    f"{raw_choice!r} is not a valid choice for {trait.name} "
+                    f"(options: {', '.join(o.value for o in trait.choice.lineage_options)})."
+                ) from exc
+            if lineage not in trait.choice.lineage_options:
+                raise ValueError(
+                    f"{lineage.value!r} is not a valid choice for {trait.name} "
+                    f"(options: {', '.join(o.value for o in trait.choice.lineage_options)})."
+                )
+            species_lineage = lineage
+        elif trait.choice.skill_options:
+            try:
+                skill = Skill(raw_choice.lower())
+            except ValueError as exc:
+                raise ValueError(
+                    f"{raw_choice!r} is not a valid choice for {trait.name} "
+                    f"(options: {', '.join(o.value for o in trait.choice.skill_options)})."
+                ) from exc
+            if skill not in trait.choice.skill_options:
+                raise ValueError(
+                    f"{skill.value!r} is not a valid choice for {trait.name} "
+                    f"(options: {', '.join(o.value for o in trait.choice.skill_options)})."
+                )
+            keen_senses_skill = skill
+    return species_lineage, keen_senses_skill
+
+
+def _resolve_starting_spells(
+    character_class: CharacterClass,
+    cantrips_known_count: int,
+    prepared_spells_count: int,
+    starting_cantrips: list[str] | None,
+    starting_spells: list[str] | None,
+    warnings: list[str],
+) -> tuple[list[str], list[str]]:
+    """Validate submitted cantrip/spell names against the class's level-1 list.
+
+    Returns ``(known_spells, prepared_spells)`` — cantrips are always placed
+    in ``known_spells``; level-1 spells go to ``prepared_spells`` for Wizard
+    (prepared caster) and to ``known_spells`` for known-spell casters, mirroring
+    :class:`CharacterSheet`'s two spell lists.
+    """
+    legal_cantrips = {s.name for s in get_spells_for_class(character_class, 1, cantrip=True)}
+    legal_spells = {s.name for s in get_spells_for_class(character_class, 1, cantrip=False)}
+
+    known: list[str] = []
+    prepared: list[str] = []
+
+    if cantrips_known_count > 0:
+        if starting_cantrips is None:
+            warnings.append(
+                f"{character_class.value} can choose {cantrips_known_count} starting "
+                "cantrip(s) — set them later via character edit."
+            )
+        else:
+            for cantrip in starting_cantrips:
+                if cantrip not in legal_cantrips:
+                    raise ValueError(
+                        f"{cantrip!r} is not a level-1 {character_class.value} cantrip."
+                    )
+                if cantrip not in known:
+                    known.append(cantrip)
+            if len(known) != cantrips_known_count:
+                warnings.append(
+                    f"{character_class.value} expects {cantrips_known_count} starting "
+                    f"cantrip(s), got {len(known)}."
+                )
+
+    if prepared_spells_count > 0:
+        if starting_spells is None:
+            warnings.append(
+                f"{character_class.value} can choose {prepared_spells_count} starting "
+                "spell(s) — set them later via character edit."
+            )
+        else:
+            chosen_spells: list[str] = []
+            for spell in starting_spells:
+                if spell not in legal_spells:
+                    raise ValueError(f"{spell!r} is not a level-1 {character_class.value} spell.")
+                if spell not in chosen_spells:
+                    chosen_spells.append(spell)
+            if len(chosen_spells) != prepared_spells_count:
+                warnings.append(
+                    f"{character_class.value} expects {prepared_spells_count} starting "
+                    f"spell(s), got {len(chosen_spells)}."
+                )
+            if character_class is CharacterClass.WIZARD:
+                prepared = chosen_spells
+            else:
+                known.extend(s for s in chosen_spells if s not in known)
+
+    return known, prepared
+
+
 def build_character(
     char_id: str,
     name: str,
@@ -137,6 +259,9 @@ def build_character(
     alignment: Alignment | None = None,
     char_type: CharacterType = CharacterType.PC,
     weapon_masteries: list[str] | None = None,
+    species_trait_choices: dict[str, str] | None = None,
+    starting_cantrips: list[str] | None = None,
+    starting_spells: list[str] | None = None,
 ) -> BuildResult:
     """Build a level-1 character (2024 PHB creation steps).
 
@@ -161,6 +286,18 @@ def build_character(
             equal the class's mastery count at level 1).  Pass ``None`` to
             skip selection; a warning is emitted reminding the player to
             choose later.
+        species_trait_choices: Map of trait name → chosen option value, for
+            species traits that require a pick (e.g. ``{"Elven Lineage":
+            "Drow", "Keen Senses": "perception"}``). Every value is validated
+            against that trait's closed option set; an invalid pick raises
+            :class:`ValueError`. Missing choices for a choice-bearing trait
+            emit a warning rather than failing the build.
+        starting_cantrips: Cantrip names known at level 1, validated against
+            :func:`get_spells_for_class`. Required count comes from
+            ``ClassProgression.cantrips_known[0]``.
+        starting_spells: Level-1 spell names known/prepared at level 1,
+            validated the same way. Required count comes from
+            ``ClassProgression.prepared_spells[0]``.
 
     Returns:
         :class:`BuildResult` with the sheet and any warnings.
@@ -168,7 +305,9 @@ def build_character(
     Raises:
         KeyError: If species or background data is not registered.
         ValueError: If ``ability_scores`` is not achievable by Standard
-            Array, Point Buy, or Manual/Rolled generation.
+            Array, Point Buy, or Manual/Rolled generation, or if a species
+            trait choice / starting cantrip / starting spell is not a legal
+            option for this species/class.
     """
     from game_engine.rules.dnd_5_5e.data.class_features import CLASS_PROGRESSIONS
     from game_engine.rules.dnd_5_5e.spellcasting import compute_spell_slots
@@ -210,6 +349,12 @@ def build_character(
     for skill in background_data.skill_proficiencies:
         if skill not in chosen:
             chosen.append(skill)
+
+    species_lineage, keen_senses_skill = _resolve_species_trait_choices(
+        species_data, species_trait_choices or {}, warnings
+    )
+    if keen_senses_skill is not None and keen_senses_skill not in chosen:
+        chosen.append(keen_senses_skill)
 
     con_mod = scores.modifier(Ability.CONSTITUTION)
     hp_max = class_data.hit_die + con_mod
@@ -257,6 +402,23 @@ def build_character(
                     "set them later via character edit."
                 )
 
+    known_spells: list[str] = []
+    prepared_spells: list[str] = []
+    if progression is not None:
+        cantrips_known_count = progression.cantrips_known[0] if progression.cantrips_known else 0
+        prepared_spells_count = (
+            progression.prepared_spells[0] if progression.prepared_spells else 0
+        )
+        if cantrips_known_count or prepared_spells_count:
+            known_spells, prepared_spells = _resolve_starting_spells(
+                character_class,
+                cantrips_known_count,
+                prepared_spells_count,
+                starting_cantrips,
+                starting_spells,
+                warnings,
+            )
+
     sheet = CharacterSheet(
         id=char_id,
         name=name,
@@ -271,6 +433,7 @@ def build_character(
         proficient_abilities=list(class_data.saving_throw_proficiencies),
         char_type=char_type,
         species=species,
+        species_lineage=species_lineage,
         background=background,
         alignment=alignment,
         class_levels=class_levels,
@@ -278,6 +441,8 @@ def build_character(
         languages=languages or [Language.COMMON],
         hit_dice=[HitDicePool(die_size=class_data.hit_die, maximum=1, remaining=1)],
         spell_slots=spell_slots,
+        known_spells=known_spells,
+        prepared_spells=prepared_spells,
         armor_training=list(class_data.armor_training),
         weapon_category_training=list(class_data.weapon_category_training),
         weapon_training=list(class_data.weapon_training_notes),

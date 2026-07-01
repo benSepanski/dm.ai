@@ -25,6 +25,8 @@ from game_engine.types import (
     Language,
     Skill,
     Species,
+    SpeciesLineage,
+    SpellSchool,
     WeaponCategory,
     WeaponProperty,
 )
@@ -46,6 +48,8 @@ class ClassOptionRead(BaseModel):
     num_skill_choices: int
     spellcasting: bool
     weapon_mastery_count: int
+    cantrips_known: int
+    prepared_spells_known: int
 
 
 class WeaponMasteryOption(BaseModel):
@@ -58,9 +62,17 @@ class WeaponMasteryOption(BaseModel):
     properties: list[WeaponProperty]
 
 
+class SpeciesTraitChoiceRead(BaseModel):
+    """Closed option set for a species trait requiring a player pick."""
+
+    skill_options: list[Skill] = Field(default_factory=list)
+    lineage_options: list[SpeciesLineage] = Field(default_factory=list)
+
+
 class SpeciesTraitRead(BaseModel):
     name: str
     description: str
+    choice: SpeciesTraitChoiceRead | None = None
 
 
 class SpeciesOptionRead(BaseModel):
@@ -73,6 +85,16 @@ class SpeciesOptionRead(BaseModel):
     darkvision_ft: int
     traits: list[SpeciesTraitRead]
     damage_resistances: list[DamageType]
+    description: str
+
+
+class SpellOptionRead(BaseModel):
+    """Creation-relevant view of an engine ``SpellData`` entry."""
+
+    name: str
+    level: int
+    school: SpellSchool
+    classes: list[CharacterClass]
     description: str
 
 
@@ -118,6 +140,7 @@ class CreationOptionsRead(BaseModel):
     point_buy_budget: int
     point_buy_costs: dict[int, int]
     weapon_mastery_options: list[WeaponMasteryOption]
+    spells: list[SpellOptionRead]
 
 
 class AbilityScoresWrite(BaseModel):
@@ -154,6 +177,9 @@ class CharacterBuildRequest(BaseModel):
     shield: bool = False
     alignment: Alignment | None = None
     weapon_masteries: list[str] | None = None
+    species_trait_choices: dict[str, str] | None = None
+    starting_cantrips: list[str] | None = None
+    starting_spells: list[str] | None = None
 
 
 class CharacterBuildRead(BaseModel):

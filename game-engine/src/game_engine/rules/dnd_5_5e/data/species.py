@@ -4,7 +4,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from game_engine.types import CreatureSize, CreatureType, DamageType, Species
+from game_engine.types import (
+    CreatureSize,
+    CreatureType,
+    DamageType,
+    Skill,
+    Species,
+    SpeciesLineage,
+)
+
+
+@dataclass(frozen=True)
+class SpeciesTraitChoice:
+    """Marks a trait as requiring a player pick from a closed option set.
+
+    Exactly one of ``skill_options`` / ``lineage_options`` is non-empty,
+    matching the trait this choice is attached to (e.g. Elf's Keen Senses
+    picks a :class:`Skill`, Elven Lineage picks a :class:`SpeciesLineage`).
+    """
+
+    skill_options: list[Skill] = field(default_factory=list)
+    lineage_options: list[SpeciesLineage] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -13,6 +33,7 @@ class SpeciesTraitData:
 
     name: str
     description: str
+    choice: SpeciesTraitChoice | None = None
 
 
 @dataclass(frozen=True)
@@ -81,6 +102,13 @@ SPECIES: dict[Species, SpeciesData] = {
                     "an extra benefit at level 1 and additional spells at levels "
                     "3 and 5."
                 ),
+                choice=SpeciesTraitChoice(
+                    lineage_options=[
+                        SpeciesLineage.DROW,
+                        SpeciesLineage.HIGH_ELF,
+                        SpeciesLineage.WOOD_ELF,
+                    ]
+                ),
             ),
             SpeciesTraitData(
                 name="Fey Ancestry",
@@ -93,6 +121,9 @@ SPECIES: dict[Species, SpeciesData] = {
                 name="Keen Senses",
                 description=(
                     "You gain proficiency in Insight, Perception, or Survival " "(your choice)."
+                ),
+                choice=SpeciesTraitChoice(
+                    skill_options=[Skill.INSIGHT, Skill.PERCEPTION, Skill.SURVIVAL]
                 ),
             ),
             SpeciesTraitData(
