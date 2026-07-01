@@ -252,6 +252,37 @@ async def test_submit_combat_action_unknown_target_is_404(client, world_id):
 
 
 @pytest.mark.asyncio
+async def test_submit_combat_action_attack_without_target_is_422(client, world_id):
+    """An Attack with no target_id at all must be rejected up front and must
+    NOT consume the actor's action (regression: PT-23 — this used to silently
+    burn the turn with no dice roll, no error, no feedback)."""
+    session_id = await _create_session(client, world_id)
+    attacker_id = await _create_character(client, world_id, name="Attacker")
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [attacker_id]},
+    )
+    assert r.status_code == 201
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={"actor_id": attacker_id, "action_type": ActionType.ATTACK.value},
+    )
+    assert r.status_code == 422
+
+    # The combat log stays clean and the action is still available.
+    r = await client.get(f"/api/sessions/{session_id}/combat")
+    assert r.json()["combat_log"] in (None, [])
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={"actor_id": attacker_id, "action_type": ActionType.DODGE.value},
+    )
+    assert r.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_submit_combat_action_attack_resolves(client, world_id):
     """Attack action resolves through the rule engine; HP is updated in state."""
     session_id = await _create_session(client, world_id)

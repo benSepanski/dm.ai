@@ -91,55 +91,6 @@ hard/confusing/missing an affordance a real player or DM would expect.
   other party members' data indirectly, or spam-create characters in someone
   else's world if they know/guess the `world_id` UUID from the session URL.
 
-### PT-23 — Combat actions produce no visible feedback and Attack has no target-selection UI
-- **Status:** open
-- **Severity:** blocking — **Type:** bug — **Phase:** 6 — Combat
-- **Found:** runs/2026-06-30-first-full-scenario.md
-- **Steps:** Started combat via the Start Combat dialog (2 PCs + 2
-  manually-created "Ledger Enforcer" monsters). On each combatant's turn,
-  clicked **Attack**, **Dash**, and **Dodge** in the Combat sidebar.
-- **Observed:** Every click updated nothing visible — no dice roll, no
-  hit/miss, no damage, no flavor text ever appeared in the chat panel, for any
-  action type. Console showed a second `Attack` click was rejected with
-  `{"detail":"Action already used this turn."}`, proving the *first* click had
-  silently succeeded and consumed the turn. Ending combat after 1 round showed
-  the system message "Final state: ... Ledger Enforcer 2: 11/11 HP - Ledger
-  Enforcer 1: 11/11 HP - Dorn Ironfoot: 13/13 HP" — nobody took any damage the
-  entire encounter.
-- **Expected:** Per the scenario's Phase 6 acceptance check, "actions resolve
-  with dice + 2024 rules" and results should be visible to the table.
-- **Evidence:** Confirmed via code, not just observation —
-  `dm-ui/src/components/CombatTracker/CombatTracker.tsx`'s `handleAction` only
-  ever calls `api.submitAction(sessionId, {actor_id, action_type})`; there is
-  **no target-selection UI anywhere** (no click-to-target on the map or in the
-  combatant list, `target_id` is never populated). Server-side,
-  `dm-api/src/dm_api/api/combat.py:206`'s `submit_combat_action` passes the
-  untargeted action into the engine; `game-engine/.../_attacks.py:241` returns
-  `_failure(action, "target_not_found", "No target found.")` for an
-  Attack with no target — but `"target_not_found"` is **not** in the
-  route's rejected-error list (`combat.py`'s check only rejects
-  `cannot_act`/`action_used`/`bonus_action_used`), so it persists as a normal
-  200 OK log entry. Separately, the action-economy gate
-  (`game-engine/.../_actions.py:134-138`) sets `ts.action_used = True`
-  *before* dispatching to the attack resolver, so the wasted action still
-  burns the turn. Finally, whatever `outcome.log_entry`/flavor text *does*
-  get produced is written only to the DB's `combat_log` column — the frontend
-  chat panel never renders `combat_log` entries at all, for any action type
-  (confirmed via Dodge, which needs no target and still showed nothing).
-- **Notes:** Three compounding issues, likely all need fixing together: (1)
-  add a target picker to `CombatActions` (click a combatant row or map token
-  to select `target_id` before Attack); (2) add `"target_not_found"` (and any
-  other resolver-level errors) to the rejected-error list in
-  `combat.py:submit_combat_action` so a bad request surfaces as a 4xx instead
-  of a silently-wasted turn; (3) render `combat_log`/`outcome.flavor_text` in
-  the main chat feed after every action so the table can see what happened.
-  This supersedes the "actions resolve" half of PT-12's fix — enrollment
-  works now, but no attack can ever land. Independently re-confirmed by a
-  second run (runs/2026-06-30-third-pass.md): same root cause (no
-  `target_id`/`attack_details` collected in `CombatTracker.tsx`'s
-  `handleAction`), reproduced against a different monster/party. De-duped
-  into this single entry rather than filing a separate PT.
-
 ### PT-22 — Duplicate NPC entities when the AI re-introduces an already-established character
 - **Status:** open
 - **Severity:** minor — **Type:** bug — **Phase:** 3–4
@@ -258,6 +209,28 @@ hard/confusing/missing an affordance a real player or DM would expect.
   calls the endpoint — closing the gap the UI wizard already prevented.
   PT-24's separate finding (no auth on this endpoint) is unaffected by this
   fix and remains open.
+
+### PT-23 — Combat actions produce no visible feedback and Attack has no target-selection UI
+- **Status:** resolved
+- **Severity:** blocking — **Type:** bug — **Phase:** 6 — Combat
+- **Resolution:** Three-pronged fix, all in one pass:
+  (a) Added a target picker to `CombatActions` (`CombatTracker.tsx`) — clickable chips for
+  every other combatant; Attack requires a selection before it submits, and the picker
+  resets each turn (`key={currentActorId}` remounts the component).
+  (b) `combat.py:submit_combat_action` now rejects an Attack with no `target_id` up front
+  with a 422 *before* the action economy is touched, so a bad request never burns the
+  actor's turn; `"target_not_found"`/`"actor_not_found"`/`"total_cover"` were also added to
+  the resolver-error rejection list as defense in depth (a stale/invalid target still
+  can't silently persist as a normal log entry).
+  (c) The persisted `combat_log` entry now includes `outcome.flavor_text`; the frontend
+  pushes it into the chat feed (`role: "system"`) after every resolved action, and surfaces
+  rejection errors (parsed from the FastAPI `{"detail": ...}` body) inline in the Combat
+  panel instead of only logging to the console.
+  Added a regression test (`test_submit_combat_action_attack_without_target_is_422`)
+  covering the exact silently-wasted-turn scenario from the run log. This finding was
+  independently re-confirmed by a second run (`runs/2026-06-30-third-pass.md`) against a
+  different monster/party before this fix landed — same root cause, de-duped into this
+  single entry.
 
 ### PT-14 — AI co-DM emits no proposals: invented NPCs/locations are never capturable
 - **Status:** resolved
