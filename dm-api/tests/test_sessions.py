@@ -386,6 +386,72 @@ async def test_session_chat_rejected_after_end(client, world_id):
 
 
 @pytest.mark.asyncio
+async def test_patch_session_sets_location(client, world_id):
+    """PATCH /sessions/{id} with current_location_id updates the session location."""
+    r = await client.post(
+        "/api/sessions/",
+        json={"world_id": world_id, "name": "Location Test Session"},
+    )
+    assert r.status_code == 201
+    session_id = r.json()["id"]
+
+    # Create a location first.
+    r = await client.post(
+        "/api/locations/",
+        json={"world_id": world_id, "type": "town", "name": "Testtown"},
+    )
+    assert r.status_code == 201
+    loc_id = r.json()["id"]
+
+    r = await client.patch(
+        f"/api/sessions/{session_id}",
+        json={"current_location_id": loc_id},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["current_location_id"] == loc_id
+
+
+@pytest.mark.asyncio
+async def test_patch_session_location_wrong_world_is_404(client, world_id):
+    """PATCH with a location from a different world returns 404."""
+    r = await client.post(
+        "/api/sessions/",
+        json={"world_id": world_id, "name": "Another Session"},
+    )
+    assert r.status_code == 201
+    session_id = r.json()["id"]
+
+    # Create a second world and a location in it.
+    r2 = await client.post("/api/worlds/", json={"name": "Other World"})
+    assert r2.status_code == 201
+    other_world_id = r2.json()["id"]
+    r3 = await client.post(
+        "/api/locations/",
+        json={"world_id": other_world_id, "type": "town", "name": "Wrongtown"},
+    )
+    assert r3.status_code == 201
+    other_loc_id = r3.json()["id"]
+
+    r = await client.patch(
+        f"/api/sessions/{session_id}",
+        json={"current_location_id": other_loc_id},
+    )
+    assert r.status_code == 404
+    assert "Location not found" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_patch_session_not_found(client):
+    """PATCH /sessions/{id} with a non-existent session returns 404."""
+    r = await client.patch(
+        f"/api/sessions/{uuid.uuid4()}",
+        json={"current_location_id": None},
+    )
+    assert r.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_session_chat_includes_world_entities(client, world_id):
     """World context passed to the orchestrator includes known NPCs and locations."""
     # Create an NPC (open endpoint — no DM token needed for characters).

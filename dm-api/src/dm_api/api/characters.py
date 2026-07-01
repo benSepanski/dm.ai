@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from game_engine.rules.dnd_5_5e import long_rest, short_rest
 from game_engine.types import RestType
 from sqlalchemy import select
@@ -19,6 +19,7 @@ from dm_api.api.combat_utils import (
     character_to_sheet,
 )
 from dm_api.api.visibility import character_read_for
+from dm_api.api.ws import broadcast_entity_update
 from dm_api.db.models.character import (
     Character,
     CharacterCreate,
@@ -38,11 +39,19 @@ router = APIRouter()
 async def create_character(
     payload: CharacterCreate,
     db: AsyncSession = Depends(get_db),
+    session_id: uuid.UUID | None = Query(default=None),
 ) -> CharacterRead:
+    """Create a character directly (bypassing the creation wizard).
+
+    Pass ``session_id`` to broadcast an ``entity_update`` so all connected
+    clients add the new character to their roster without reloading.
+    """
     character = Character(**payload.model_dump())
     db.add(character)
     await db.commit()
     await db.refresh(character)
+    if session_id is not None:
+        await broadcast_entity_update(session_id, "character", character.id)
     return CharacterRead.model_validate(character)
 
 

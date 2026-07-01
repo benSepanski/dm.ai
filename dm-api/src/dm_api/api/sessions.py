@@ -1,3 +1,6 @@
+# NOTE: This file exceeds the 400-line guideline (session orchestration +
+# chat + location management are tightly coupled; splitting would fragment
+# the broadcast/world-context logic across too many modules).
 from __future__ import annotations
 
 import functools
@@ -16,7 +19,7 @@ from dm_api.ai.condenser import HistoryMessage, MessageAnchor
 from dm_api.ai.dm_orchestrator import DMOrchestrator, ProposalPayload
 from dm_api.ai.prompts.system_prompt import WorldContext
 from dm_api.api.auth import ClientRole, require_dm
-from dm_api.api.ws import broadcast_to_session
+from dm_api.api.ws import broadcast_entity_update, broadcast_to_session
 from dm_api.config import settings
 from dm_api.db.models.character import Character
 from dm_api.db.models.chat import ChatMessage, ChatMessageRead
@@ -289,6 +292,43 @@ async def get_session(
     db: AsyncSession = Depends(get_db),
 ) -> SessionRead:
     session = await _fetch_session_or_404(db, session_id)
+    return SessionRead.model_validate(session)
+
+
+class SessionUpdate(BaseModel):
+    current_location_id: uuid.UUID | None = None
+
+
+@router.patch("/{session_id}", response_model=SessionRead)
+async def patch_session(
+    session_id: uuid.UUID,
+    payload: SessionUpdate,
+    db: AsyncSession = Depends(get_db),
+    _role: ClientRole = Depends(require_dm),
+) -> SessionRead:
+    """Update mutable session fields. Currently supports setting the active location.
+
+    Broadcasts ``entity_update{location}`` so all connected clients immediately
+    reflect the new location in the sidebar without a full page reload.
+    """
+    session = await _fetch_session_or_404(db, session_id)
+    update_data = payload.model_dump(exclude_unset=True)
+    if "current_location_id" in update_data:
+        new_loc_id: uuid.UUID | None = update_data["current_location_id"]
+        if new_loc_id is not None:
+            loc_result = await db.execute(
+                select(Location).where(
+                    Location.id == new_loc_id,
+                    Location.world_id == session.world_id,
+                )
+            )
+            if loc_result.scalar_one_or_none() is None:
+                raise HTTPException(status_code=404, detail="Location not found in this world")
+        session.current_location_id = new_loc_id
+    await db.commit()
+    await db.refresh(session)
+    if session.current_location_id is not None:
+        await broadcast_entity_update(session_id, "location", session.current_location_id)
     return SessionRead.model_validate(session)
 
 
