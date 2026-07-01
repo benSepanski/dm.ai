@@ -5,6 +5,7 @@ import type {
   CharacterBuildRequest,
   ClassOption,
   CreationOptions,
+  SpellOption,
   WeaponMasteryOption,
 } from "../../api/client";
 
@@ -53,6 +54,12 @@ export interface CharacterDraft {
   shield: boolean;
   // Weapon names chosen for mastery (only for classes that get masteries).
   weaponMasteries: string[];
+  // Map of species trait name -> chosen option value (e.g. "Elven Lineage" ->
+  // "Drow", "Keen Senses" -> "perception").
+  speciesTraitChoices: Record<string, string>;
+  // Starting cantrips/level-1 spells for spellcasting classes.
+  startingCantrips: string[];
+  startingSpells: string[];
 }
 
 export function scoresForMethod(method: AbilityMethod): Record<AbilityName, number | null> {
@@ -80,6 +87,9 @@ export function emptyDraft(): CharacterDraft {
     armorName: null,
     shield: false,
     weaponMasteries: [],
+    speciesTraitChoices: {},
+    startingCantrips: [],
+    startingSpells: [],
   };
 }
 
@@ -125,6 +135,23 @@ export function classOptionFor(draft: CharacterDraft, options: CreationOptions) 
 
 export function backgroundOptionFor(draft: CharacterDraft, options: CreationOptions) {
   return options.backgrounds.find((b) => b.background === draft.background) ?? null;
+}
+
+export function speciesOptionFor(draft: CharacterDraft, options: CreationOptions) {
+  return options.species.find((s) => s.species === draft.species) ?? null;
+}
+
+// Level-1 spells/cantrips on *classOption*'s spell list, split by cantrip vs
+// leveled spell so the UI can render two separate pickers.
+export function spellsForClass(
+  classOption: ClassOption,
+  allSpells: SpellOption[]
+): { cantrips: SpellOption[]; spells: SpellOption[] } {
+  const legal = allSpells.filter((s) => s.classes.includes(classOption.character_class));
+  return {
+    cantrips: legal.filter((s) => s.level === 0),
+    spells: legal.filter((s) => s.level === 1),
+  };
 }
 
 // The +2/+1 (or +1/+1/+1) allocation among the background's three abilities.
@@ -176,10 +203,23 @@ export function abilitiesStepValid(draft: CharacterDraft, options: CreationOptio
   return true;
 }
 
-export function skillsStepValid(draft: CharacterDraft, classOption: ClassOption): boolean {
+export function skillsStepValid(
+  draft: CharacterDraft,
+  classOption: ClassOption,
+  options: CreationOptions
+): boolean {
   if (draft.skills.length !== classOption.num_skill_choices) return false;
   if (classOption.weapon_mastery_count > 0) {
-    return draft.weaponMasteries.length === classOption.weapon_mastery_count;
+    if (draft.weaponMasteries.length !== classOption.weapon_mastery_count) return false;
+  }
+  const speciesOption = speciesOptionFor(draft, options);
+  if (speciesOption) {
+    const choiceTraits = speciesOption.traits.filter((t) => t.choice !== null);
+    if (choiceTraits.some((t) => !draft.speciesTraitChoices[t.name])) return false;
+  }
+  if (classOption.spellcasting) {
+    if (draft.startingCantrips.length !== classOption.cantrips_known) return false;
+    if (draft.startingSpells.length !== classOption.prepared_spells_known) return false;
   }
   return true;
 }
@@ -207,5 +247,9 @@ export function toBuildRequest(
     shield: draft.shield,
     alignment: draft.alignment,
     weapon_masteries: draft.weaponMasteries.length > 0 ? draft.weaponMasteries : null,
+    species_trait_choices:
+      Object.keys(draft.speciesTraitChoices).length > 0 ? draft.speciesTraitChoices : null,
+    starting_cantrips: draft.startingCantrips.length > 0 ? draft.startingCantrips : null,
+    starting_spells: draft.startingSpells.length > 0 ? draft.startingSpells : null,
   };
 }

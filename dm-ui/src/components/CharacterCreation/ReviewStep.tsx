@@ -96,6 +96,29 @@ export default function ReviewStep({
               }
             />
           )}
+          {Object.entries(draft.speciesTraitChoices).map(([trait, choice]) => (
+            <DetailLine key={trait} label={trait} value={choice} />
+          ))}
+          {classOption && classOption.cantrips_known > 0 && (
+            <DetailLine
+              label="Starting Cantrips"
+              value={
+                draft.startingCantrips.length > 0
+                  ? draft.startingCantrips.join(", ")
+                  : "(none selected)"
+              }
+            />
+          )}
+          {classOption && classOption.prepared_spells_known > 0 && (
+            <DetailLine
+              label="Starting Spells"
+              value={
+                draft.startingSpells.length > 0
+                  ? draft.startingSpells.join(", ")
+                  : "(none selected)"
+              }
+            />
+          )}
         </DetailCard>
         <p style={{ margin: "10px 0 0", fontSize: 12, color: "#777" }}>
           Hit points, armor class, and spell slots are computed by the rule engine when you

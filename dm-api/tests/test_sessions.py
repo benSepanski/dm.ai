@@ -283,6 +283,148 @@ async def test_session_chat_creates_pending_proposal(client, world_id):
     assert {p["type"] for p in proposals} == {"location", "character"}
 
 
+# ---------------------------------------------------------------------------
+# PT-21: gated narration only reaches chat once the paired proposal is
+# accepted; rejecting the proposal never surfaces it.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_session_chat_pending_narration_not_in_response_before_accept(client, world_id):
+    """Narration gated behind a proposal is not present in the chat response
+    (nor persisted to the chat transcript) before the proposal is resolved."""
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "Gated"})
+    session_id = r.json()["id"]
+
+    gated_text = "**Saltmere** spreads above the waterfront, lantern-lit and humming."
+    payloads = [
+        ProposalPayload(
+            type=ProposalType.LOCATION,
+            content={"name": "Saltmere"},
+            pending_narration=gated_text,
+        )
+    ]
+    mock_orch = _mock_orchestrator(
+        "You crest the hill and the coastline comes into view.", proposals=payloads
+    )
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        r = await client.post(
+            f"/api/sessions/{session_id}/chat",
+            json={"message": "What do we see?"},
+        )
+
+    assert r.status_code == 200
+    data = r.json()
+    assert gated_text not in data["response"]
+    assert len(data["proposals"]) == 1
+    proposal = data["proposals"][0]
+    assert proposal["pending_narration"] == gated_text
+    assert proposal["status"] == "pending"
+
+    # Not persisted to the visible chat transcript either.
+    r = await client.get(f"/api/sessions/{session_id}/messages")
+    contents = [m["content"] for m in r.json()]
+    assert not any(gated_text in c for c in contents)
+
+
+@pytest.mark.asyncio
+async def test_session_chat_pending_narration_appears_after_accept(client, world_id):
+    """Accepting the proposal releases the held narration into the chat
+    transcript as a new AI ChatMessage."""
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "GatedAccept"})
+    session_id = r.json()["id"]
+
+    gated_text = "**Saltmere** spreads above the waterfront, lantern-lit and humming."
+    payloads = [
+        ProposalPayload(
+            type=ProposalType.LOCATION,
+            content={"name": "Saltmere"},
+            pending_narration=gated_text,
+        )
+    ]
+    mock_orch = _mock_orchestrator("You crest the hill.", proposals=payloads)
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        r = await client.post(
+            f"/api/sessions/{session_id}/chat",
+            json={"message": "What do we see?"},
+        )
+    proposal_id = r.json()["proposals"][0]["id"]
+
+    r = await client.post(f"/api/ai/proposals/{proposal_id}/accept", json={})
+    assert r.status_code == 200
+
+    r = await client.get(f"/api/sessions/{session_id}/messages")
+    assert r.status_code == 200
+    contents = [m["content"] for m in r.json()]
+    assert gated_text in contents
+
+
+@pytest.mark.asyncio
+async def test_session_chat_pending_narration_never_surfaces_after_reject(client, world_id):
+    """Rejecting the proposal discards the held narration — it never appears
+    in the chat transcript."""
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "GatedReject"})
+    session_id = r.json()["id"]
+
+    gated_text = "**Saltmere** spreads above the waterfront, lantern-lit and humming."
+    payloads = [
+        ProposalPayload(
+            type=ProposalType.LOCATION,
+            content={"name": "Saltmere"},
+            pending_narration=gated_text,
+        )
+    ]
+    mock_orch = _mock_orchestrator("You crest the hill.", proposals=payloads)
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        r = await client.post(
+            f"/api/sessions/{session_id}/chat",
+            json={"message": "What do we see?"},
+        )
+    proposal_id = r.json()["proposals"][0]["id"]
+
+    r = await client.post(f"/api/ai/proposals/{proposal_id}/reject", json={})
+    assert r.status_code == 200
+
+    r = await client.get(f"/api/sessions/{session_id}/messages")
+    assert r.status_code == 200
+    contents = [m["content"] for m in r.json()]
+    assert not any(gated_text in c for c in contents)
+
+
+@pytest.mark.asyncio
+async def test_session_chat_pending_mismatch_drops_narration_but_keeps_proposal(client, world_id):
+    """A PENDING/PROPOSAL count mismatch degrades gracefully: the orchestrator
+    already drops unpairable pending text, so the proposal is persisted with
+    ``pending_narration=None`` rather than crashing the request."""
+    r = await client.post("/api/sessions/", json={"world_id": world_id, "name": "Mismatch"})
+    session_id = r.json()["id"]
+
+    # Mismatch handling lives in the orchestrator; here we assert the API
+    # layer tolerates a proposal with no pending narration without erroring.
+    payloads = [ProposalPayload(type=ProposalType.LOCATION, content={"name": "Glenbrook"})]
+    mock_orch = _mock_orchestrator("You arrive at the crossroads.", proposals=payloads)
+    with patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch):
+        r = await client.post(
+            f"/api/sessions/{session_id}/chat",
+            json={"message": "Onward."},
+        )
+
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["proposals"]) == 1
+    assert data["proposals"][0]["pending_narration"] is None
+
+    proposal_id = data["proposals"][0]["id"]
+    r = await client.post(f"/api/ai/proposals/{proposal_id}/accept", json={})
+    assert r.status_code == 200
+
+    # No spurious narration message was appended to chat.
+    r = await client.get(f"/api/sessions/{session_id}/messages")
+    ai_messages = [m for m in r.json() if m["role"] == "ai"]
+    assert len(ai_messages) == 1
+    assert ai_messages[0]["content"] == "You arrive at the crossroads."
+
+
 @pytest.mark.asyncio
 async def test_session_chat_ai_message_uses_actual_token_count(client, world_id):
     """AI message token_count must come from DMResponse.tokens_out, not len()/4 estimate.

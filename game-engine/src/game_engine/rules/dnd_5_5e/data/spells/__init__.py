@@ -2,6 +2,8 @@
 D&D 5.5e spell registry (SRD 5.2 content), organised by spell level.
 """
 
+from __future__ import annotations
+
 from game_engine.rules.dnd_5_5e.data.spells._base import SpellData
 from game_engine.rules.dnd_5_5e.data.spells.cantrips import CANTRIPS
 from game_engine.rules.dnd_5_5e.data.spells.level1 import LEVEL_1_SPELLS
@@ -13,6 +15,7 @@ from game_engine.rules.dnd_5_5e.data.spells.level6 import LEVEL_6_SPELLS
 from game_engine.rules.dnd_5_5e.data.spells.level7 import LEVEL_7_SPELLS
 from game_engine.rules.dnd_5_5e.data.spells.level8 import LEVEL_8_SPELLS
 from game_engine.rules.dnd_5_5e.data.spells.level9 import LEVEL_9_SPELLS
+from game_engine.types import CharacterClass
 
 SPELLS: list[SpellData] = (
     CANTRIPS
@@ -35,9 +38,25 @@ def get_spell(name: str) -> SpellData | None:
     return SPELLS_BY_NAME.get(name.lower())
 
 
+def get_spells_for_class(
+    character_class: CharacterClass, level: int, *, cantrip: bool
+) -> list[SpellData]:
+    """Return *character_class*'s legal spell choices at *level*.
+
+    ``cantrip=True`` restricts to cantrips (``level`` is ignored); otherwise
+    restricts to leveled spells at exactly ``level``. Used to enumerate legal
+    starting cantrip/spell choices during character creation — the backend
+    must check submitted spell names against this list, never trust the
+    client's selection blindly.
+    """
+    target_level = 0 if cantrip else level
+    return [s for s in SPELLS if s.level == target_level and character_class in s.classes]
+
+
 __all__ = [
     "SpellData",
     "SPELLS",
     "SPELLS_BY_NAME",
     "get_spell",
+    "get_spells_for_class",
 ]

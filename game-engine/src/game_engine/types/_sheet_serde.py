@@ -35,6 +35,7 @@ from game_engine.types.enums import (
     Language,
     Skill,
     Species,
+    SpeciesLineage,
     Subclass,
     WeaponCategory,
 )
@@ -84,6 +85,7 @@ def sheet_to_dict(sheet: "CharacterSheet") -> dict[str, Any]:
         "condition_immunities": [c.value for c in sheet.condition_immunities],
         "type": sheet.char_type.value,
         "species": sheet.species.value if sheet.species else None,
+        "species_lineage": sheet.species_lineage.value if sheet.species_lineage else None,
         "background": sheet.background.value if sheet.background else None,
         "alignment": sheet.alignment.value if sheet.alignment else None,
         "subclass": sheet.subclass.value if sheet.subclass else None,
@@ -155,6 +157,7 @@ def sheet_from_dict(d: dict[str, Any]) -> "CharacterSheet":
         ),
         char_type=char_type,
         species=_enum_or_none(Species, d.get("species")),
+        species_lineage=_enum_or_none(SpeciesLineage, d.get("species_lineage")),
         background=_enum_or_none(Background, d.get("background")),
         alignment=_enum_or_none(Alignment, d.get("alignment")),
         subclass=_enum_or_none(Subclass, d.get("subclass")),

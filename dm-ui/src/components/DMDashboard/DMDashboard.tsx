@@ -47,6 +47,7 @@ export default function DMDashboard() {
     dmToken,
     isDM,
     setIsDM,
+    setDmToken,
   } = useGameStore();
   const [input, setInput] = useState("");
   const [showMap, setShowMap] = useState(false);
@@ -203,6 +204,15 @@ export default function DMDashboard() {
     navigate("/", { replace: true });
   }, [clearSession, navigate]);
 
+  // Drop DM authority in this tab only (dmToken/isDM live in sessionStorage,
+  // so other tabs are unaffected) and land on the same session's read-only
+  // player view.
+  const exitDmMode = useCallback(() => {
+    setDmToken(null);
+    setIsDM(false);
+    if (sessionId) navigate(`/session/${sessionId}`, { replace: true });
+  }, [setDmToken, setIsDM, sessionId, navigate]);
+
   // Wrap up the session: the server generates and stores an AI summary
   // (used for "previously on…" context in future sessions), then this
   // browser detaches. The session itself stays in the database.
@@ -313,6 +323,23 @@ export default function DMDashboard() {
           >
             {isDM ? "DM" : "Player"}
           </span>
+          {isDM && (
+            <button
+              onClick={exitDmMode}
+              title="Drop DM authority in this tab and view this session as a player would"
+              style={{
+                padding: "4px 10px",
+                background: "#333",
+                color: "#fff",
+                border: "none",
+                borderRadius: 4,
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              Exit DM Mode
+            </button>
+          )}
           <div style={{ flex: 1 }} />
           {!isDM && <DMUnlock />}
           {/* Game settings edit AI models and storage — DM only (the API

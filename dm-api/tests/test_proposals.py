@@ -351,3 +351,64 @@ async def test_accept_character_proposal_uses_class_key_not_char_class(
     )
     char = result.scalar_one()
     assert char.char_class == "Bard"
+
+
+# ---------------------------------------------------------------------------
+# PT-22: duplicate NPC entities when the AI re-introduces an already-
+# established character (same name, possibly different casing/stat block).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_accept_second_character_proposal_same_name_merges_not_duplicates(
+    client, world_id, db_session
+):
+    """Accepting a second CHARACTER proposal with an already-existing
+    character name (case-insensitive) in the same world must not create a
+    second Character row — it should reuse the existing one and flag the
+    response as a merged duplicate.
+    """
+    from sqlalchemy import select
+
+    session_id = await _make_session(client, world_id, "DupeCharacter")
+
+    first_proposal_id = await _insert_proposal(
+        db_session,
+        world_id=world_id,
+        session_id=session_id,
+        ptype=ProposalType.CHARACTER,
+        content={"name": "Vess Moray", "type": "npc", "class": "Rogue", "level": 5},
+    )
+    r1 = await client.post(f"/api/ai/proposals/{first_proposal_id}/accept", json={})
+    assert r1.status_code == 200
+    data1 = r1.json()
+    assert data1["duplicate_merged"] is False
+    first_entity_id = data1["content"]["created_entity_id"]
+
+    # Second proposal re-introduces the same character, different casing and
+    # a slightly different stat block (mirrors the playtest repro).
+    second_proposal_id = await _insert_proposal(
+        db_session,
+        world_id=world_id,
+        session_id=session_id,
+        ptype=ProposalType.CHARACTER,
+        content={"name": "vess moray", "type": "npc", "class": "Rogue", "level": 4},
+    )
+    r2 = await client.post(f"/api/ai/proposals/{second_proposal_id}/accept", json={})
+    assert r2.status_code == 200
+    data2 = r2.json()
+    assert data2["duplicate_merged"] is True
+    second_entity_id = data2["content"]["created_entity_id"]
+
+    # Same entity id was reused — no new row was created.
+    assert second_entity_id == first_entity_id
+
+    result = await db_session.execute(
+        select(Character).where(Character.world_id == uuid.UUID(world_id))
+    )
+    characters = result.scalars().all()
+    matching = [c for c in characters if c.name.lower() == "vess moray"]
+    assert len(matching) == 1
+    # The original stat block is preserved — the duplicate proposal did not
+    # overwrite the existing entity.
+    assert matching[0].level == 5

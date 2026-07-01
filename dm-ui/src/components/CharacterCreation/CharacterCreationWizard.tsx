@@ -98,7 +98,7 @@ export default function CharacterCreationWizard() {
   const stepValid = [
     originStepValid(draft),
     abilitiesStepValid(draft, options),
-    classOption !== null && skillsStepValid(draft, classOption),
+    classOption !== null && skillsStepValid(draft, classOption, options),
     true,
   ][step];
   const isLastStep = step === STEP_TITLES.length - 1;

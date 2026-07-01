@@ -24,6 +24,25 @@ FIGHTER_BUILD = {
     "alignment": "Lawful Good",
 }
 
+ELF_WIZARD_BUILD = {
+    "name": "Maret Sable",
+    "character_class": "Wizard",
+    "species": "Elf",
+    "background": "Sage",
+    "ability_scores": {
+        "strength": 8,
+        "dexterity": 14,
+        "constitution": 13,
+        "intelligence": 15,
+        "wisdom": 12,
+        "charisma": 10,
+    },
+    "skill_choices": ["arcana", "investigation"],
+    "species_trait_choices": {"Elven Lineage": "Drow", "Keen Senses": "perception"},
+    "starting_cantrips": ["Fire Bolt", "Light", "Acid Splash"],
+    "starting_spells": ["Magic Missile", "Shield", "Mage Armor", "Detect Magic"],
+}
+
 
 @pytest.mark.asyncio
 async def test_creation_options(client):
@@ -73,6 +92,32 @@ async def test_creation_options(client):
 
     # Shield is a flag on the build request, not an armor choice.
     assert all(a["armor_type"] != "shield" for a in data["armor"])
+
+    # PT-19: classes expose their level-1 cantrip/spell counts.
+    assert wizard["cantrips_known"] == 3
+    assert wizard["prepared_spells_known"] == 4
+    assert fighter["cantrips_known"] == 0
+    assert fighter["prepared_spells_known"] == 0
+
+    # PT-19: Elf's choice-bearing traits (Elven Lineage, Keen Senses) expose
+    # their closed option sets; non-choice traits (Fey Ancestry, Trance) don't.
+    elf = next(s for s in data["species"] if s["species"] == "Elf")
+    lineage_trait = next(t for t in elf["traits"] if t["name"] == "Elven Lineage")
+    assert set(lineage_trait["choice"]["lineage_options"]) == {"Drow", "High Elf", "Wood Elf"}
+    keen_senses_trait = next(t for t in elf["traits"] if t["name"] == "Keen Senses")
+    assert set(keen_senses_trait["choice"]["skill_options"]) == {
+        "insight",
+        "perception",
+        "survival",
+    }
+    fey_ancestry_trait = next(t for t in elf["traits"] if t["name"] == "Fey Ancestry")
+    assert fey_ancestry_trait["choice"] is None
+
+    # PT-19: level-1 spells/cantrips are enumerated so the UI can build pickers.
+    spell_names = [s["name"] for s in data["spells"]]
+    assert "Fire Bolt" in spell_names
+    assert "Magic Missile" in spell_names
+    assert all(s["level"] <= 1 for s in data["spells"])
 
 
 @pytest.mark.asyncio
@@ -253,3 +298,76 @@ async def test_build_rejects_scores_unachievable_by_any_generation_method(client
     )
     assert r.status_code == 422
     assert "Standard Array" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_build_elf_wizard_persists_lineage_keen_senses_and_spells(client, world_id):
+    """PT-19: species sub-choices and starting cantrips/spells reach the sheet."""
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={"world_id": world_id, **ELF_WIZARD_BUILD},
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert data["warnings"] == []
+    stats = data["character"]["stats"]
+    assert stats["species_lineage"] == "Drow"
+    assert "perception" in stats["proficiencies"]
+    assert stats["known_spells"] == ["Fire Bolt", "Light", "Acid Splash"]
+    assert stats["prepared_spells"] == [
+        "Magic Missile",
+        "Shield",
+        "Mage Armor",
+        "Detect Magic",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_build_illegal_lineage_choice_422(client, world_id):
+    """The backend must reject a lineage that isn't a real Elven Lineage option."""
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={
+            "world_id": world_id,
+            **ELF_WIZARD_BUILD,
+            "species_trait_choices": {"Elven Lineage": "Sun Elf", "Keen Senses": "perception"},
+        },
+    )
+    assert r.status_code == 422
+    assert "Elven Lineage" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_build_illegal_cantrip_for_class_422(client, world_id):
+    """The backend must reject a cantrip not on that class's level-1 list,
+    never trusting the client-submitted spell name blindly."""
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={
+            "world_id": world_id,
+            **ELF_WIZARD_BUILD,
+            "starting_cantrips": ["Guidance", "Light", "Acid Splash"],
+        },
+    )
+    assert r.status_code == 422
+    assert "Guidance" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_build_missing_species_and_spell_choices_warns(client, world_id):
+    """Omitting the sub-choices still builds (deferred), with warnings — matching
+    the existing weapon-masteries warning pattern rather than failing the build."""
+    minimal = {**ELF_WIZARD_BUILD}
+    del minimal["species_trait_choices"]
+    del minimal["starting_cantrips"]
+    del minimal["starting_spells"]
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={"world_id": world_id, **minimal},
+    )
+    assert r.status_code == 201
+    warnings = r.json()["warnings"]
+    assert any("Elven Lineage requires a choice" in w for w in warnings)
+    assert any("Keen Senses requires a choice" in w for w in warnings)
+    assert any("starting cantrip" in w for w in warnings)
+    assert any("starting spell" in w for w in warnings)

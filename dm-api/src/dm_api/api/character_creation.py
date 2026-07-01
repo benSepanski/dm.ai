@@ -23,6 +23,7 @@ from game_engine.rules.dnd_5_5e.data.armor import ARMOR
 from game_engine.rules.dnd_5_5e.data.backgrounds import BACKGROUNDS
 from game_engine.rules.dnd_5_5e.data.class_features import CLASS_PROGRESSIONS
 from game_engine.rules.dnd_5_5e.data.species import SPECIES
+from game_engine.rules.dnd_5_5e.data.spells import SPELLS
 from game_engine.rules.dnd_5_5e.data.weapons import WEAPONS
 from game_engine.types import (
     Alignment,
@@ -46,7 +47,9 @@ from dm_api.api.character_creation_schemas import (
     CreationOptionsRead,
     SkillOptionRead,
     SpeciesOptionRead,
+    SpeciesTraitChoiceRead,
     SpeciesTraitRead,
+    SpellOptionRead,
     WeaponMasteryOption,
 )
 from dm_api.api.ws import broadcast_entity_update
@@ -71,6 +74,18 @@ def _creation_options() -> CreationOptionsRead:
             return 0
         return prog.resource_at_level(ClassResource.WEAPON_MASTERY, 1)
 
+    def _cantrips_known(char_class: CharacterClass) -> int:
+        prog = CLASS_PROGRESSIONS.get(char_class)
+        if prog is None or not prog.cantrips_known:
+            return 0
+        return prog.cantrips_known[0]
+
+    def _prepared_spells_known(char_class: CharacterClass) -> int:
+        prog = CLASS_PROGRESSIONS.get(char_class)
+        if prog is None or not prog.prepared_spells:
+            return 0
+        return prog.prepared_spells[0]
+
     return CreationOptionsRead(
         classes=[
             ClassOptionRead(
@@ -84,6 +99,8 @@ def _creation_options() -> CreationOptionsRead:
                 num_skill_choices=data.num_skill_choices,
                 spellcasting=data.spellcasting,
                 weapon_mastery_count=_mastery_count(data.character_class),
+                cantrips_known=_cantrips_known(data.character_class),
+                prepared_spells_known=_prepared_spells_known(data.character_class),
             )
             for data in CLASSES.values()
         ],
@@ -95,7 +112,19 @@ def _creation_options() -> CreationOptionsRead:
                 speed=data.speed,
                 darkvision_ft=data.darkvision_ft,
                 traits=[
-                    SpeciesTraitRead(name=t.name, description=t.description) for t in data.traits
+                    SpeciesTraitRead(
+                        name=t.name,
+                        description=t.description,
+                        choice=(
+                            SpeciesTraitChoiceRead(
+                                skill_options=t.choice.skill_options,
+                                lineage_options=t.choice.lineage_options,
+                            )
+                            if t.choice is not None
+                            else None
+                        ),
+                    )
+                    for t in data.traits
                 ],
                 damage_resistances=data.damage_resistances,
                 description=data.description,
@@ -142,6 +171,17 @@ def _creation_options() -> CreationOptionsRead:
             )
             for w in sorted(WEAPONS, key=lambda w: (w.category.value, w.name))
         ],
+        spells=[
+            SpellOptionRead(
+                name=s.name,
+                level=s.level,
+                school=s.school,
+                classes=s.classes,
+                description=s.description,
+            )
+            for s in sorted(SPELLS, key=lambda s: (s.level, s.name))
+            if s.level <= 1
+        ],
     )
 
 
@@ -183,6 +223,9 @@ async def build_player_character(
             alignment=payload.alignment,
             char_type=CharacterType.PC,
             weapon_masteries=payload.weapon_masteries,
+            species_trait_choices=payload.species_trait_choices,
+            starting_cantrips=payload.starting_cantrips,
+            starting_spells=payload.starting_spells,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from game_engine.types import CharacterType, RestType
 from pgvector.sqlalchemy import Vector
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,7 +16,25 @@ from dm_api.db.session import Base
 
 
 class Character(Base):
+    """A PC, NPC, or monster instance in a world.
+
+    PT-22/PT-23: ``ix_characters_world_id_lower_name`` enforces at the
+    database layer that two Characters in the same world cannot share a
+    case-insensitive name, so concurrent CHARACTER-proposal acceptances race
+    on the DB's uniqueness check (one wins, the other gets an IntegrityError
+    it can recover from) instead of both slipping past the
+    check-then-insert application-level dedupe and creating duplicate rows.
+    """
+
     __tablename__ = "characters"
+    __table_args__ = (
+        Index(
+            "ix_characters_world_id_lower_name",
+            "world_id",
+            sa.text("lower(name)"),
+            unique=True,
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     world_id: Mapped[uuid.UUID] = mapped_column(

@@ -241,7 +241,12 @@ async def _persist_proposals(
     session_id: uuid.UUID,
     world_id: uuid.UUID,
     payloads: list[ProposalPayload],
+    source_anchor: str,
 ) -> list[ProposalRead]:
+    """Persist each proposal, tagging any gated ``pending_narration`` with the
+    precomputed citation anchor (``msg:<uuid>@<timestamp>``) of the AI turn it
+    originated from, so an accept later cites the *original* turn rather than
+    the newly-inserted narration message."""
     persisted: list[ProposalRead] = []
     for payload in payloads:
         proposal = Proposal(
@@ -250,6 +255,8 @@ async def _persist_proposals(
             type=payload.type,
             content=payload.content,
             status=ProposalStatus.PENDING,
+            pending_narration=payload.pending_narration,
+            source_anchor=source_anchor if payload.pending_narration is not None else None,
         )
         db.add(proposal)
         await db.flush()
@@ -407,8 +414,14 @@ async def session_chat(
     )
     db.add(ai_message)
     await db.flush()
+    await db.refresh(ai_message)
+    source_anchor = MessageAnchor(
+        message_id=ai_message.id,
+        timestamp=ai_message.timestamp,
+        role=ChatRole.AI,
+    ).to_citation()
     proposals_read = await _persist_proposals(
-        db, session_id, game_session.world_id, result.proposals
+        db, session_id, game_session.world_id, result.proposals, source_anchor
     )
     await db.commit()
 
