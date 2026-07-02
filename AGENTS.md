@@ -143,6 +143,8 @@ dm.ai/
 
 ## Before Every Commit
 
+- Run `python3 scripts/check_file_lengths.py` from the repo root — no
+  unexplained file-length violations
 - Run `pytest tests/ -v` inside `game-engine/` — all tests must pass
 - Run `pytest tests/ -v` inside `dm-api/` — all tests must pass
 - Run `npx tsc --noEmit` inside `dm-ui/` — zero type errors
@@ -200,12 +202,16 @@ Key types: `CharacterSheet`, `CombatStateData`, `AttackDetails`, `AbilityScoreSe
 ### 3. File length — prefer short files
 
 **Target:** <= 400 lines per production file, <= 600 lines per test file.
+**Mechanically enforced** by `scripts/check_file_lengths.py`, run in CI as the
+`structure-check` job (`.github/workflows/ci.yml`) — run it locally with
+`python3 scripts/check_file_lengths.py` from the repo root.
 
 Split files at natural seams when approaching the limit (e.g., split a large route
 file into multiple focused route files; extract helpers into `_utils.py`).
 
 When an exception is genuinely necessary (e.g., a long data table), add a comment
-at the top of the file:
+as one of the first 5 lines of the file — this is what the script looks for to
+allow the file through with no line-count ceiling:
 
 ```python
 # NOTE: This file intentionally exceeds the 400-line guideline because
@@ -213,7 +219,7 @@ at the top of the file:
 ```
 
 When you find an existing file that exceeds the limit without a noted exception,
-**refactor it** before adding new code to it.
+**refactor it** before adding new code to it — CI will already be failing on it.
 
 ### 4. Short, focused functions
 

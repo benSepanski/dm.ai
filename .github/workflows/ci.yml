@@ -7,6 +7,19 @@ on:
     branches: ["**"]
 
 jobs:
+  structure-check:
+    name: structure / file-length guideline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Enforce <=400 LoC production / <=600 LoC test files
+        run: python3 scripts/check_file_lengths.py
+
   game-engine-lint:
     name: game-engine / lint
     runs-on: ubuntu-latest
