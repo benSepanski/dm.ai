@@ -180,6 +180,46 @@ class TestWeaponMasteries:
             engine.resolve_action(_attack(weapon_name="Rapier", mastery=WeaponMastery.VEX), state)
         assert state.turn_state_for("a").vexed_target_id == "b"
 
+        # 2024 PHB: Vex lasts "before the end of your next turn" — it must
+        # survive the attacker's own begin_turn one round later...
+        state.round_number = 2
+        engine.begin_turn(actor, state)
+        assert state.turn_state_for("a").vexed_target_id == "b"
+
+        # ...and actually grant advantage on the follow-up attack.
+        with patch(f"{ATTACKS}.roll_with_advantage", return_value=(15, [15, 3])) as adv:
+            engine.resolve_action(_attack(), state)
+        adv.assert_called_once()
+        assert state.turn_state_for("a").vexed_target_id is None
+
+    def test_vex_expires_after_attackers_turn_after_next(self, engine, state):
+        actor = state.get_combatant("a")
+        actor.weapon_masteries = ["Rapier"]
+        with patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])):
+            engine.resolve_action(_attack(weapon_name="Rapier", mastery=WeaponMastery.VEX), state)
+        state.round_number = 3
+        engine.begin_turn(actor, state)
+        assert state.turn_state_for("a").vexed_target_id is None
+
+    def test_sap_disadvantages_target_after_targets_own_begin_turn(self, engine, state):
+        actor = state.get_combatant("a")
+        target = state.get_combatant("b")
+        actor.weapon_masteries = ["Scimitar"]
+        with patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])):
+            engine.resolve_action(
+                _attack(weapon_name="Scimitar", mastery=WeaponMastery.SAP), state
+            )
+        assert state.turn_state_for("b").sapped is True
+
+        # Sap expires on the sapper's next turn, not the target's — the
+        # target's own begin_turn must not clear it.
+        engine.begin_turn(target, state)
+        assert state.turn_state_for("b").sapped is True
+
+        with patch(f"{ATTACKS}.roll_with_disadvantage", return_value=(3, [3, 15])) as dis:
+            engine.resolve_action(_attack(actor="b", target="a"), state)
+        dis.assert_called_once()
+
     def test_mastery_requires_training(self, engine, state):
         # No entry in weapon_masteries → no Topple effect.
         with (
@@ -287,6 +327,14 @@ class TestActionEconomyAndConcentration:
             result = engine.resolve_action(_attack(), state)
         assert result.success is True
 
+    def test_begin_turn_does_not_clear_cross_turn_effect_flags(self, engine, state):
+        """begin_turn resets action economy but not Help/Sap/Vex/Hide — those
+        expire on their own rule-defined trigger (see CombatStateData.reset_turn)."""
+        ts = state.turn_state_for("a")
+        ts.hidden = True
+        engine.begin_turn(state.get_combatant("a"), state)
+        assert state.turn_state_for("a").hidden is True
+
     def test_damage_forces_concentration_save(self, engine, state):
         target = state.get_combatant("b")
         target.concentrating_on = "Bless"
@@ -319,3 +367,44 @@ class TestActionEconomyAndConcentration:
         actor.prepared_spells = ["Fire Bolt"]
         actions = {a.action_type for a in engine.get_available_actions(actor, state)}
         assert ActionType.MAGIC in actions
+
+
+class TestHelpAndHideSurviveBeginTurn:
+    """2024 PHB: Help and Hide grant advantage that outlives a turn boundary
+    other than the granting one — begin_turn must not wipe them early."""
+
+    def test_help_grants_allys_next_attack_advantage_after_allys_begin_turn(self, engine):
+        state = CombatStateData(combatants=[_char("a"), _char("b"), _char("c")])
+        engine.resolve_action(Action(ActionType.HELP, "a", "c"), state)
+        assert state.turn_state_for("c").helped is True
+
+        # Help expires at the start of the helper's (a's) next turn, not
+        # the helped ally's (c's) own turn.
+        engine.begin_turn(state.get_combatant("c"), state)
+        assert state.turn_state_for("c").helped is True
+
+        with patch(f"{ATTACKS}.roll_with_advantage", return_value=(15, [15, 3])) as adv:
+            engine.resolve_action(_attack(actor="c", target="b"), state)
+        adv.assert_called_once()
+        assert state.turn_state_for("c").helped is False
+
+    def test_help_expires_at_start_of_helpers_next_turn(self, engine):
+        state = CombatStateData(combatants=[_char("a"), _char("b"), _char("c")])
+        engine.resolve_action(Action(ActionType.HELP, "a", "c"), state)
+        state.round_number = 2
+        engine.begin_turn(state.get_combatant("a"), state)
+        assert state.turn_state_for("c").helped is False
+
+    def test_hide_grant_survives_own_begin_turn_until_hider_attacks(self, engine, state):
+        actor = state.get_combatant("a")
+        with patch("game_engine.rules.dnd_5_5e._checks.roll_dice", return_value=(18, [18])):
+            engine.resolve_action(Action(ActionType.HIDE, "a", None), state)
+        assert state.turn_state_for("a").hidden is True
+
+        engine.begin_turn(actor, state)
+        assert state.turn_state_for("a").hidden is True
+
+        with patch(f"{ATTACKS}.roll_with_advantage", return_value=(15, [15, 3])) as adv:
+            engine.resolve_action(_attack(), state)
+        adv.assert_called_once()
+        assert state.turn_state_for("a").hidden is False

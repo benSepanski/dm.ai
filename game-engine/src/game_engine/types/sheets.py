@@ -1,8 +1,10 @@
 """
-Typed dataclasses for the game engine.
+Typed character dataclasses for the game engine.
 
-These structured objects represent characters, combat state, and attack
-details in a fully typed, enum-keyed format for use by the rule engine.
+``AbilityScoreSet`` and ``CharacterSheet`` — a character's persistent state,
+in a fully typed, enum-keyed format for use by the rule engine.
+Per-encounter combat state (``TurnState``, ``CombatStateData``,
+``AttackDetails``) lives in :mod:`game_engine.types.combat_state`.
 Serialisation lives in :mod:`game_engine.types._sheet_serde`.
 """
 
@@ -27,7 +29,6 @@ from game_engine.types.enums import (
     CharacterClass,
     CharacterType,
     Condition,
-    CoverType,
     DamageType,
     Feat,
     Language,
@@ -35,12 +36,8 @@ from game_engine.types.enums import (
     Species,
     SpeciesLineage,
     Subclass,
-    UnarmedStrikeOption,
     WeaponCategory,
-    WeaponMastery,
-    WeaponProperty,
 )
-from game_engine.types.values import DiceNotation
 
 
 @dataclass
@@ -201,99 +198,3 @@ class CharacterSheet:
         from game_engine.types._sheet_serde import sheet_from_dict
 
         return sheet_from_dict(d)
-
-
-@dataclass
-class TurnState:
-    """Per-combatant action economy and transient flags for the current round."""
-
-    action_used: bool = False
-    bonus_action_used: bool = False
-    reaction_used: bool = False
-    movement_used_ft: int = 0
-    attacks_made: int = 0
-    dodging: bool = False
-    disengaging: bool = False
-    dashing: bool = False
-    hidden: bool = False
-    helped: bool = False
-    # Weapon mastery carry-over effects
-    sapped: bool = False
-    vexed_target_id: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        """Return a JSON-serialisable dict so turn state survives between requests."""
-        return {
-            "action_used": self.action_used,
-            "bonus_action_used": self.bonus_action_used,
-            "reaction_used": self.reaction_used,
-            "movement_used_ft": self.movement_used_ft,
-            "attacks_made": self.attacks_made,
-            "dodging": self.dodging,
-            "disengaging": self.disengaging,
-            "dashing": self.dashing,
-            "hidden": self.hidden,
-            "helped": self.helped,
-            "sapped": self.sapped,
-            "vexed_target_id": self.vexed_target_id,
-        }
-
-    @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "TurnState":
-        """Create a :class:`TurnState` from a dict; tolerant of missing keys."""
-        vexed = d.get("vexed_target_id")
-        return cls(
-            action_used=bool(d.get("action_used", False)),
-            bonus_action_used=bool(d.get("bonus_action_used", False)),
-            reaction_used=bool(d.get("reaction_used", False)),
-            movement_used_ft=int(d.get("movement_used_ft", 0)),
-            attacks_made=int(d.get("attacks_made", 0)),
-            dodging=bool(d.get("dodging", False)),
-            disengaging=bool(d.get("disengaging", False)),
-            dashing=bool(d.get("dashing", False)),
-            hidden=bool(d.get("hidden", False)),
-            helped=bool(d.get("helped", False)),
-            sapped=bool(d.get("sapped", False)),
-            vexed_target_id=str(vexed) if vexed is not None else None,
-        )
-
-
-@dataclass
-class CombatStateData:
-    """Typed combat state for use by the rule engine."""
-
-    combatants: list[CharacterSheet] = field(default_factory=list)
-    round_number: int = 1
-    current_turn_index: int = 0
-    turn_states: dict[str, TurnState] = field(default_factory=dict)
-
-    def get_combatant(self, char_id: str) -> CharacterSheet | None:
-        """Return the combatant with *char_id*, or None."""
-        return next((c for c in self.combatants if c.id == char_id), None)
-
-    def turn_state_for(self, char_id: str) -> TurnState:
-        """Return (creating if needed) the :class:`TurnState` for *char_id*."""
-        return self.turn_states.setdefault(char_id, TurnState())
-
-    def reset_turn(self, char_id: str) -> TurnState:
-        """Reset action economy for *char_id* at the start of their turn."""
-        self.turn_states[char_id] = TurnState()
-        return self.turn_states[char_id]
-
-
-@dataclass
-class AttackDetails:
-    """Details for an Attack action."""
-
-    weapon_name: str = "Unarmed Strike"
-    damage_dice: DiceNotation = DiceNotation("1d4")
-    damage_type: DamageType = DamageType.BLUDGEONING
-    attack_ability: Ability = Ability.STRENGTH
-    is_ranged: bool = False
-    properties: list[WeaponProperty] = field(default_factory=list)
-    mastery: WeaponMastery | None = None
-    proficient: bool = True
-    is_offhand: bool = False
-    long_range: bool = False
-    target_cover: CoverType | None = None
-    unarmed_option: UnarmedStrikeOption | None = None

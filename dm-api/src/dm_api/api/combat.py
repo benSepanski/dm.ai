@@ -28,7 +28,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from game_engine.interface import Action
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
-from game_engine.types import ActionType, CharacterSheet, ChatRole, CombatStateData, TurnState
+from game_engine.types import ActionType, CharacterSheet, ChatRole, CombatStateData
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -304,11 +304,17 @@ async def next_turn(
     combat.round_number += rounds_advanced
     combat.current_turn_index = next_index
 
-    turn_states = dict(combat.turn_states or {})
+    # Cross-turn effects (Help/Sap/Vex) expire on their own rule-defined
+    # trigger, not simply because a turn began, so the reset must run
+    # through CombatStateData.reset_turn rather than replacing the entry
+    # with a bare TurnState() — see game_engine.types.combat_state for the model.
+    turn_state_data = CombatStateData(
+        round_number=combat.round_number, turn_states=load_turn_states(combat)
+    )
     if next_index < len(combatants):
         sheet = CharacterSheet.from_dict(combatants[next_index])
         # A new turn resets the combatant's action economy.
-        turn_states[sheet.id] = TurnState().to_dict()
+        turn_state_data.reset_turn(sheet.id)
         # A dying creature makes a death save at the start of its turn (2024
         # PHB). Rolled automatically here so "PC down" is playable without an
         # extra endpoint; the result lands in combat_log for the table to see.
@@ -333,7 +339,7 @@ async def next_turn(
                 },
             ]
 
-    combat.turn_states = turn_states
+    combat.turn_states = dump_turn_states(turn_state_data.turn_states)
     combat.combatants = combatants
 
     await db.commit()

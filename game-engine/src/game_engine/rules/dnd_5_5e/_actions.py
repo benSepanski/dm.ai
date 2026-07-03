@@ -171,7 +171,7 @@ def _resolve_non_attack(
         )
     if action.action_type is ActionType.HELP:
         if action.target_id:
-            combat_state.turn_state_for(action.target_id).helped = True
+            combat_state.grant_help(action.actor_id, action.target_id)
         return _simple_result(
             action, True, f"{name} helps an ally, granting advantage on their next roll."
         )

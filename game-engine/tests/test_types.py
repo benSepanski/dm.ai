@@ -16,6 +16,7 @@ from game_engine.types import (
     CombatStateData,
     Condition,
     DamageType,
+    EffectExpiry,
     Skill,
     TurnState,
 )
@@ -419,6 +420,78 @@ class TestCombatStateData:
         state = CombatStateData()
         assert state.get_combatant("nonexistent") is None
 
+    def test_reset_turn_clears_economy_only(self):
+        state = CombatStateData(round_number=1)
+        ts = state.turn_state_for("a")
+        ts.action_used = True
+        ts.bonus_action_used = True
+        ts.reaction_used = True
+        ts.movement_used_ft = 30
+        ts.attacks_made = 2
+        ts.dodging = True
+        ts.disengaging = True
+        ts.dashing = True
+        ts.hidden = True
+
+        state.reset_turn("a")
+
+        reset = state.turn_state_for("a")
+        assert reset.action_used is False
+        assert reset.bonus_action_used is False
+        assert reset.reaction_used is False
+        assert reset.movement_used_ft == 0
+        assert reset.attacks_made == 0
+        assert reset.dodging is False
+        assert reset.disengaging is False
+        assert reset.dashing is False
+        # Hide is a cross-turn effect (Invisible until attack/verbal-spell/
+        # found) — a bare turn reset must never clear it.
+        assert reset.hidden is True
+
+    def test_grant_vex_survives_attacker_next_turn_expires_after(self):
+        state = CombatStateData(round_number=1)
+        state.grant_vex("a", "b")
+        assert state.turn_state_for("a").vexed_target_id == "b"
+
+        # "before the end of your next turn" — survives through round 2
+        # (attacker a's next turn).
+        state.round_number = 2
+        state.reset_turn("a")
+        assert state.turn_state_for("a").vexed_target_id == "b"
+
+        # Cleared once round 3 begins (the turn after a's next turn).
+        state.round_number = 3
+        state.reset_turn("a")
+        assert state.turn_state_for("a").vexed_target_id is None
+
+    def test_grant_sap_expires_at_start_of_sappers_next_turn(self):
+        state = CombatStateData(round_number=1)
+        state.grant_sap("a", "b")
+        assert state.turn_state_for("b").sapped is True
+
+        # Unrelated combatant's turn beginning must not clear it.
+        state.reset_turn("c")
+        assert state.turn_state_for("b").sapped is True
+
+        # Sapper a's next turn (round 2) clears it if unused.
+        state.round_number = 2
+        state.reset_turn("a")
+        assert state.turn_state_for("b").sapped is False
+
+    def test_grant_help_expires_at_start_of_helpers_next_turn(self):
+        state = CombatStateData(round_number=1)
+        state.grant_help("a", "c")
+        assert state.turn_state_for("c").helped is True
+
+        # The helped ally's own turn beginning must not clear the flag —
+        # only the helper's next turn does.
+        state.reset_turn("c")
+        assert state.turn_state_for("c").helped is True
+
+        state.round_number = 2
+        state.reset_turn("a")
+        assert state.turn_state_for("c").helped is False
+
 
 # ---------------------------------------------------------------------------
 # AttackDetails
@@ -468,8 +541,11 @@ class TestTurnStateSerde:
             dashing=True,
             hidden=True,
             helped=True,
+            helped_expiry=EffectExpiry("helper-1", 3),
             sapped=True,
+            sapped_expiry=EffectExpiry("sapper-1", 4),
             vexed_target_id="target-7",
+            vexed_expiry=EffectExpiry("attacker-1", 5),
         )
         assert TurnState.from_dict(ts.to_dict()) == ts
 
