@@ -122,8 +122,7 @@ def _apply_mastery_effects(
     actor: CharacterSheet,
     target: CharacterSheet,
     details: AttackDetails,
-    actor_ts: TurnState,
-    target_ts: TurnState,
+    combat_state: CombatStateData,
     log: dict[str, Any],
 ) -> list[Condition]:
     """Apply on-hit weapon mastery effects. Returns conditions applied."""
@@ -141,10 +140,10 @@ def _apply_mastery_effects(
             target.conditions.append(Condition.PRONE)
             applied.append(Condition.PRONE)
     elif mastery is WeaponMastery.SAP:
-        target_ts.sapped = True
+        combat_state.grant_sap(actor.id, target.id)
         log["sapped"] = True
     elif mastery is WeaponMastery.VEX:
-        actor_ts.vexed_target_id = target.id
+        combat_state.grant_vex(actor.id, target.id)
         log["vexed"] = True
     elif mastery is WeaponMastery.SLOW:
         log["slowed_ft"] = 10
@@ -326,9 +325,7 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
     if target.hp_current == 0 and not was_dying and Condition.UNCONSCIOUS in target.conditions:
         conditions_applied.append(Condition.UNCONSCIOUS)
     if _has_mastery(actor, details):
-        conditions_applied += _apply_mastery_effects(
-            actor, target, details, actor_ts, target_ts, log
-        )
+        conditions_applied += _apply_mastery_effects(actor, target, details, combat_state, log)
 
     log.update(
         critical=critical,

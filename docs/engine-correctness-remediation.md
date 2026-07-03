@@ -18,7 +18,7 @@ The 12 workstreams below (A–M) group the findings by root cause. This section 
 
 | Work | Findings | Size |
 |------|----------|------|
-| **A** — TurnState lifecycle: split per-turn economy state from cross-turn effect state with per-effect expiry | ACT-03, ACT-19 (check half) | M |
+| **A** — TurnState lifecycle: split per-turn economy state from cross-turn effect state with per-effect expiry | ACT-03 ✅ done, ACT-19 (check half — still open, needs Workstream H) | M |
 | **C** — Weapon-registry ↔ attack-resolution bridge (`WeaponData` → `AttackDetails`, incl. dm-api) | EQP-01, EQP-08, ACT-18 | L |
 | **F.1** — Make `_apply_damage_impl` return post-mitigation damage; route all damage paths through one concentration check | groundwork for SPL-02, EFF-07 | M |
 
@@ -84,6 +84,8 @@ As each workstream lands, flip the corresponding `docs/phb-parity-spec.md` rows 
 ---
 
 ## Workstream A — TurnState cross-turn effect lifecycle (root cause: `reset_turn` wipes persistent flags)
+
+**Status: ACT-03 done.** `EffectExpiry` (`game-engine/src/game_engine/types/combat_state.py`) now tracks, per cross-turn flag, which combatant's turn boundary clears it and at which round; `CombatStateData.reset_turn` only clears action-economy fields and calls `_expire_cross_turn_effects`, and `grant_help`/`grant_sap`/`grant_vex` compute the correct expiry round. `dm-api/src/dm_api/api/combat.py`'s `next_turn` now runs the same `reset_turn` instead of overwriting the entry with a bare `TurnState()`. ACT-19 (Help on ability checks) is still open — it needs Workstream H to thread `CombatStateData` into `_roll_check_impl`.
 
 The single highest-leverage bug. `TurnState.reset_turn` (`game-engine/src/game_engine/types/sheets.py:276-279`) installs a fresh `TurnState()` at the start of each combatant's turn, and dm-api mirrors this (`dm-api/src/dm_api/api/combat.py:310-311`). But `helped`, `sapped`, `vexed_target_id`, and `hidden` encode effects that by rule persist across turn boundaries and are consumed on a *later* turn — so they are erased before they can ever fire.
 

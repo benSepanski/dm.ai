@@ -19,6 +19,12 @@ from game_engine.types.character_state import (
     InventoryItem,
     SpellSlotState,
 )
+from game_engine.types.combat_state import (
+    AttackDetails,
+    CombatStateData,
+    EffectExpiry,
+    TurnState,
+)
 from game_engine.types.enums import (
     Ability,
     ActionType,
@@ -63,10 +69,7 @@ from game_engine.types.enums import (
 )
 from game_engine.types.sheets import (
     AbilityScoreSet,
-    AttackDetails,
     CharacterSheet,
-    CombatStateData,
-    TurnState,
 )
 from game_engine.types.values import (
     DiceNotation,
@@ -119,6 +122,7 @@ __all__ = [
     "AttackDetails",
     "CharacterSheet",
     "CombatStateData",
+    "EffectExpiry",
     "TurnState",
     # character state
     "ClassLevelEntry",

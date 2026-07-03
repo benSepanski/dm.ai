@@ -304,6 +304,44 @@ async def test_action_economy_resets_when_turn_comes_around(client, world_id):
 
 
 @pytest.mark.asyncio
+async def test_help_advantage_survives_allys_own_next_turn(client, world_id, monkeypatch):
+    """Regression (ACT-03): next-turn used to overwrite the *entering*
+    combatant's TurnState with a bare ``TurnState()``, silently erasing a
+    Help grant before the helped ally ever got to use it. 2024 PHB: Help
+    grants advantage until the *helper's* next turn, not the ally's."""
+    initiative = {"Helper": 20, "Ally": 15, "Enemy": 10}
+    monkeypatch.setattr(
+        DnD55eEngine, "roll_initiative", lambda self, sheet: initiative[sheet.name]
+    )
+    helper_id = await _create_character(client, world_id, name="Helper")
+    ally_id = await _create_character(client, world_id, name="Ally")
+    enemy_id = await _create_character(client, world_id, name="Enemy")
+    session_id = await _create_session(client, world_id)
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [helper_id, ally_id, enemy_id]},
+    )
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={"actor_id": helper_id, "action_type": ActionType.HELP.value, "target_id": ally_id},
+    )
+    assert r.status_code == 200
+
+    # Advance to the ally's turn — this is exactly the next-turn call that
+    # used to wipe the ally's TurnState (and the helped flag with it).
+    r = await client.post(f"/api/sessions/{session_id}/combat/next-turn")
+    assert r.json()["current_turn_index"] == 1
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={"actor_id": ally_id, "action_type": ActionType.ATTACK.value, "target_id": enemy_id},
+    )
+    assert r.status_code == 200
+    assert r.json()["combat_log"][-1]["advantage"] is True
+
+
+@pytest.mark.asyncio
 async def test_incapacitated_actor_is_409_and_keeps_log_clean(client, world_id):
     """An unconscious actor can't act; the rejection never pollutes the log."""
     downed_id = await _create_downed_character(client, world_id)
