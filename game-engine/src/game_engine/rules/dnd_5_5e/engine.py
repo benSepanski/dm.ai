@@ -91,16 +91,16 @@ class DnD55eEngine(RuleEngine):
     # ------------------------------------------------------------------
 
     def roll_initiative(self, char: CharacterSheet) -> int:
-        """Roll initiative: d20 + Dexterity modifier.
+        """Roll initiative: d20 + Dexterity modifier + exhaustion penalty.
 
         Args:
             char: Character sheet.
 
         Returns:
-            Integer initiative total (raw roll + DEX modifier).
+            Integer initiative total (raw roll + DEX modifier + d20_modifier).
         """
         raw = _roll_initiative_impl(char)
-        return raw + char.ability_scores.modifier(Ability.DEXTERITY)
+        return raw + char.ability_scores.modifier(Ability.DEXTERITY) + char.d20_modifier
 
     # ------------------------------------------------------------------
     # Skill / ability checks

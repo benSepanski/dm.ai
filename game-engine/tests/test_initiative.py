@@ -190,6 +190,50 @@ class TestRemoveCombatant:
         char_ids = [e["char_id"] for e in entries]
         assert "b" not in char_ids
 
+    def test_removing_current_combatant_vacates_current_turn(self, tracker: InitiativeTracker):
+        """ACT-12: removing the acting combatant must not make current_turn()
+        report the *previous* combatant as if their turn continued."""
+        tracker.add_combatant("a", "A", roll=20, dex_modifier=0)
+        tracker.add_combatant("b", "B", roll=10, dex_modifier=0)
+        tracker.add_combatant("c", "C", roll=5, dex_modifier=0)
+        tracker.sort()
+        tracker.next_turn()  # a's turn
+        tracker.next_turn()  # b's turn — b is now "current"
+
+        tracker.remove_combatant("b")
+
+        assert tracker.current_turn() is None
+
+    def test_next_turn_after_removing_current_combatant_advances_correctly(
+        self, tracker: InitiativeTracker
+    ):
+        tracker.add_combatant("a", "A", roll=20, dex_modifier=0)
+        tracker.add_combatant("b", "B", roll=10, dex_modifier=0)
+        tracker.add_combatant("c", "C", roll=5, dex_modifier=0)
+        tracker.sort()
+        tracker.next_turn()  # a's turn
+        tracker.next_turn()  # b's turn
+
+        tracker.remove_combatant("b")
+        entry = tracker.next_turn()
+
+        assert entry.char_id == "c"
+        assert tracker.current_turn() is entry
+
+    def test_removing_non_current_combatant_leaves_current_turn_unchanged(
+        self, tracker: InitiativeTracker
+    ):
+        tracker.add_combatant("a", "A", roll=20, dex_modifier=0)
+        tracker.add_combatant("b", "B", roll=10, dex_modifier=0)
+        tracker.add_combatant("c", "C", roll=5, dex_modifier=0)
+        tracker.sort()
+        tracker.next_turn()  # a's turn
+        current = tracker.next_turn()  # b's turn
+
+        tracker.remove_combatant("c")
+
+        assert tracker.current_turn() is current
+
 
 # ---------------------------------------------------------------------------
 # set_active()

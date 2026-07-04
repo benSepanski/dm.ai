@@ -54,7 +54,7 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 | **D1+D2** — Worn-armor identity, equip/unequip AC recompute, shield-as-armor guard, Str-min speed, stealth disadvantage, armor-training penalties | EQP-04, EQP-02, EQP-03, EQP-06, EQP-07 | L |
 | **E** — Mastery mechanics: Slow/Push/Cleave wired, Graze floor removed, grapple/shove size gate | ACT-07, ACT-17, ACT-16 | M |
 | **I1** — Stale 2024 condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, single source of truth | EFF-06, EFF-05, EFF-14, EFF-11 | S–M |
-| **H** — Check/initiative correctness (independent quick win; can land in any phase) | ACT-10, ACT-20, ACT-12 | S |
+| **H** — Check/initiative correctness ✅ done (independent quick win; can land in any phase) | ACT-10, ACT-20, ACT-12 | S |
 
 **Exit criteria:** massive damage at 0 HP kills; crits double dice only; heavy armor slows weak wearers and noisy armor hinders Hide; Slow/Push/Cleave have table effects; save proficiency no longer leaks into ability checks.
 
@@ -255,6 +255,20 @@ Discrete correctness bugs in `_damage.py`/`_death.py` around the 0-HP state.
 
 ## Workstream H — Ability-check & roll correctness (root cause: save proficiency leaking into checks; missing d20_modifier/condition plumbing on non-attack rolls)
 
+**Status: done.** `_roll_check_impl` (`game-engine/src/game_engine/rules/dnd_5_5e/_checks.py`)
+now only consults `Skill` proficiency/expertise for a check bonus — a raw
+`Ability` check never reads `proficient_abilities` (saving-throw
+proficiency). `_roll_initiative_impl` rolls with disadvantage when the
+character is Poisoned/Frightened, and `DnD55eEngine.roll_initiative`
+(`engine.py`) now adds `char.d20_modifier` (exhaustion) to the total.
+`InitiativeTracker.remove_combatant` (`game_engine/core/initiative.py`) now
+tracks a `_current_vacated` flag: removing the current combatant still
+advances `_current_index` so the next `next_turn()` lands on the correct
+successor, but `current_turn()` reports `None` (a "between turns" state)
+instead of the previous combatant until `next_turn()` runs again. The
+Invisible initiative-advantage clause (EFF-15) remains out of scope here —
+tracked under Workstream I.
+
 Roll-modifier bugs where check/initiative paths diverge from the (correct) attack/save paths.
 
 **Findings**
@@ -405,7 +419,7 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 8. **Workstream D** (armor/proficiency/inventory) — D1 worn-armor field first; independent of A/B.
 9. **Workstream E** (mastery mechanics) — depends on C (registry bridge) and shares speed-reduction/economy plumbing with A/B.
 10. **Workstream I1/I3/I4** (stale condition definitions, source-identity, exhaustion/repeat-save) — I1 is independent; I3/I4 share source-identity with I2 and repeat-save with J.
-11. **Workstream H** (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
+11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
 12. **Workstream J** (remaining spell-schema gaps) & **Workstream K** (slot/upcast math) — parallelizable; K is largely independent.
 
 **Minors (fix last):**
