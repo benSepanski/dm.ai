@@ -20,6 +20,7 @@ class ClassFeatureData:
     level: int
     description: str
     subclass: Subclass | None = None  # None = base-class feature
+    attacks_granted: int | None = None  # Extra Attack: attacks per Attack action
 
 
 @dataclass(frozen=True)

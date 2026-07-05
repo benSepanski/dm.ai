@@ -232,6 +232,7 @@ async def submit_combat_action(
         "cannot_act",
         "action_used",
         "bonus_action_used",
+        "nick_used",
         "target_not_found",
         "actor_not_found",
         "total_cover",

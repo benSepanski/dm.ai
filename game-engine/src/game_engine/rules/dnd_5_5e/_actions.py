@@ -11,14 +11,18 @@ from __future__ import annotations
 from typing import Any
 
 from game_engine.interface import Action, ActionResult
-from game_engine.rules.dnd_5_5e._attacks import _resolve_attack
+from game_engine.rules.dnd_5_5e._attacks import _has_mastery, _resolve_attack, _validate_attack
 from game_engine.rules.dnd_5_5e._checks import _roll_check_impl
+from game_engine.rules.dnd_5_5e.data.class_features import CLASS_PROGRESSIONS
 from game_engine.types import (
     ActionType,
     CharacterSheet,
+    ClassLevelEntry,
     CombatStateData,
     Skill,
     TurnState,
+    UnarmedStrikeOption,
+    WeaponMastery,
 )
 
 # Actions every conscious creature can always take (2024 PHB).
@@ -96,16 +100,49 @@ def _simple_result(
     )
 
 
+def _attacks_per_action(actor: CharacterSheet) -> int:
+    """How many attacks *actor* makes per Attack action (2024 Extra Attack).
+
+    Reads the ``attacks_granted`` field of each class's "Extra Attack"
+    feature (``data/class_features/*.py``) through the actor's level in
+    that class. Multiclass characters take the single best tier available
+    from any one class — 2024 PHB: Extra Attack features don't stack, so a
+    Fighter 11/Barbarian 5 attacks 3 times (the Fighter tier), not 5.
+    """
+    class_levels = actor.class_levels or [
+        ClassLevelEntry(
+            character_class=actor.char_class, level=actor.level, subclass=actor.subclass
+        )
+    ]
+    best = 1
+    for entry in class_levels:
+        progression = CLASS_PROGRESSIONS.get(entry.character_class)
+        if progression is None:
+            continue
+        subclass = entry.subclass or actor.subclass
+        for feature in progression.features_through_level(entry.level, subclass):
+            if feature.attacks_granted is not None:
+                best = max(best, feature.attacks_granted)
+    return best
+
+
 def _resolve_action_impl(
     action: Action,
     combat_state: CombatStateData,
 ) -> ActionResult:
     """Resolve *action*, enforcing the action/bonus-action economy.
 
-    An off-hand attack (``details.is_offhand``) consumes the bonus action;
-    every other action type consumes the action. The Magic action is
-    validated and resolved by the spellcasting module — here it only
-    consumes the action slot.
+    An off-hand attack (``details.is_offhand``) consumes the bonus action
+    unless the weapon's Nick mastery is unlocked, in which case it folds
+    into the Attack action itself, once per turn (ACT-08). Every other
+    action type consumes the action. Extra Attack (ACT-01) lets the Attack
+    action resolve up to :func:`_attacks_per_action` attacks before the
+    action slot is spent. Validation (unknown actor/target, total cover)
+    always runs before any economy slot is touched (ACT-05), so a rejected
+    attack costs the actor nothing and an unknown actor never creates a
+    "ghost" :class:`TurnState` entry. The Magic action is validated and
+    resolved by the spellcasting module — here it only consumes the action
+    slot.
 
     Args:
         action: The action to resolve.
@@ -115,45 +152,107 @@ def _resolve_action_impl(
         :class:`~game_engine.interface.ActionResult`.
     """
     actor = combat_state.get_combatant(action.actor_id)
-    if actor is not None and not actor.can_act:
+    if actor is None:
+        return _simple_result(action, False, "Attacker not found.", {"error": "actor_not_found"})
+    if not actor.can_act:
         return _simple_result(action, False, f"{actor.name} can't act.", {"error": "cannot_act"})
 
-    ts = combat_state.turn_state_for(action.actor_id)
-    uses_bonus_action = (
-        action.action_type is ActionType.ATTACK
-        and action.details is not None
-        and action.details.is_offhand
+    ts = combat_state.turn_state_for(actor.id)
+
+    if action.action_type is ActionType.ATTACK:
+        return _resolve_attack_action(action, actor, ts, combat_state)
+
+    if ts.action_used:
+        return _simple_result(
+            action, False, "Action already used this turn.", {"error": "action_used"}
+        )
+    ts.action_used = True
+    return _resolve_non_attack(action, actor, combat_state, ts)
+
+
+def _resolve_attack_action(
+    action: Action,
+    actor: CharacterSheet,
+    ts: TurnState,
+    combat_state: CombatStateData,
+) -> ActionResult:
+    """Gate an Attack-action submission's economy, then resolve it.
+
+    Validates the attack (actor/target/cover) before spending any slot.
+    Off-hand attacks spend the bonus action, unless Nick applies (spends a
+    once-per-turn Nick slot instead). Ordinary main-hand attacks draw from
+    the actor's Extra Attack pool, and the action slot is only marked spent
+    once that pool is exhausted; an unarmed grapple/shove is a single use of
+    the action regardless of Extra Attack (its interaction with multiple
+    attacks is Workstream E, out of scope here).
+    """
+    validated = _validate_attack(action, combat_state)
+    if isinstance(validated, ActionResult):
+        return validated
+    _, _, details = validated
+
+    is_nick_bonus_attack = (
+        details.is_offhand
+        and details.mastery is WeaponMastery.NICK
+        and _has_mastery(actor, details)
     )
-    if uses_bonus_action:
+
+    if details.is_offhand and not is_nick_bonus_attack:
         if ts.bonus_action_used:
             return _simple_result(
                 action, False, "Bonus action already used.", {"error": "bonus_action_used"}
             )
         ts.bonus_action_used = True
-    else:
-        if ts.action_used:
-            return _simple_result(
-                action, False, "Action already used this turn.", {"error": "action_used"}
-            )
-        ts.action_used = True
-
-    if action.action_type is ActionType.ATTACK:
         return _resolve_attack(action, combat_state)
-    return _resolve_non_attack(action, actor, combat_state, ts)
+
+    if is_nick_bonus_attack:
+        if ts.nick_used:
+            return _simple_result(
+                action,
+                False,
+                "Nick's extra attack already used this turn.",
+                {"error": "nick_used"},
+            )
+        ts.nick_used = True
+        return _resolve_attack(action, combat_state)
+
+    if ts.action_used:
+        return _simple_result(
+            action, False, "Action already used this turn.", {"error": "action_used"}
+        )
+
+    is_unarmed_special = details.unarmed_option in (
+        UnarmedStrikeOption.GRAPPLE,
+        UnarmedStrikeOption.SHOVE,
+    )
+    if is_unarmed_special:
+        ts.action_used = True
+        return _resolve_attack(action, combat_state)
+
+    max_attacks = _attacks_per_action(actor)
+    if ts.attacks_made >= max_attacks:
+        ts.action_used = True
+        return _simple_result(
+            action, False, "Action already used this turn.", {"error": "action_used"}
+        )
+    result = _resolve_attack(action, combat_state)
+    if ts.attacks_made >= max_attacks:
+        ts.action_used = True
+    return result
 
 
 def _resolve_non_attack(
     action: Action,
-    actor: CharacterSheet | None,
+    actor: CharacterSheet,
     combat_state: CombatStateData,
     ts: TurnState,
 ) -> ActionResult:
     """Resolve the non-attack 2024 actions."""
-    name = actor.name if actor else action.actor_id
+    name = actor.name
 
     if action.action_type is ActionType.DASH:
         ts.dashing = True
-        speed = actor.effective_speed if actor else 30
+        speed = actor.effective_speed
         return _simple_result(
             action, True, f"{name} dashes (+{speed} ft of movement).", {"extra_movement": speed}
         )
@@ -175,7 +274,7 @@ def _resolve_non_attack(
         return _simple_result(
             action, True, f"{name} helps an ally, granting advantage on their next roll."
         )
-    if action.action_type is ActionType.HIDE and actor is not None:
+    if action.action_type is ActionType.HIDE:
         check = _roll_check_impl(actor, Skill.STEALTH, _HIDE_DC)
         ts.hidden = check.success
         outcome = "hides successfully" if check.success else "fails to hide"
@@ -186,10 +285,10 @@ def _resolve_non_attack(
             {"stealth_total": check.total, "dc": _HIDE_DC},
         )
 
-    # Influence / Magic / Ready / Search / Study / Utilize / Hide-without-actor:
-    # generic success; detailed resolution happens at the orchestration layer
-    # (Influence uses a CHA check against the monster's Influence DC; Magic is
-    # resolved by the spellcasting module).
+    # Influence / Magic / Ready / Search / Study / Utilize: generic success;
+    # detailed resolution happens at the orchestration layer (Influence uses
+    # a CHA check against the monster's Influence DC; Magic is resolved by
+    # the spellcasting module).
     return _simple_result(action, True, f"{name} uses {action.action_type.value}.")
 
 

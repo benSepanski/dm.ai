@@ -56,6 +56,7 @@ FIGHTER_PROGRESSION = ClassProgression(
             "Extra Attack",
             5,
             "When you take the Attack action, you can make two attacks instead of one.",
+            attacks_granted=2,
         ),
         ClassFeatureData(
             "Tactical Shift",
@@ -89,6 +90,7 @@ FIGHTER_PROGRESSION = ClassProgression(
             "Two Extra Attacks",
             11,
             "When you take the Attack action, you can make three attacks instead of one.",
+            attacks_granted=3,
         ),
         ClassFeatureData(
             "Ability Score Improvement",
@@ -121,6 +123,7 @@ FIGHTER_PROGRESSION = ClassProgression(
             "Three Extra Attacks",
             20,
             "When you take the Attack action, you can make four attacks instead of one.",
+            attacks_granted=4,
         ),
         ClassFeatureData(
             "Improved Critical",
