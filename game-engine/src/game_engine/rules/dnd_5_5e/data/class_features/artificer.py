@@ -135,6 +135,7 @@ ARTIFICER_PROGRESSION = ClassProgression(
             5,
             "When you take the Attack action, you can make two attacks instead of one.",
             subclass=Subclass.BATTLE_SMITH,
+            attacks_granted=2,
         ),
         ClassFeatureData(
             "Arcane Jolt",

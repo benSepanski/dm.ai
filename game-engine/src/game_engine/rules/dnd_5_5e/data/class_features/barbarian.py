@@ -62,6 +62,7 @@ BARBARIAN_PROGRESSION = ClassProgression(
             "Extra Attack",
             5,
             "When you take the Attack action, you can make two attacks instead of one.",
+            attacks_granted=2,
         ),
         ClassFeatureData(
             "Fast Movement",

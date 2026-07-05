@@ -30,7 +30,7 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 
 | Work | Findings | Size |
 |------|----------|------|
-| **B1** — Extra Attack (attacks-per-action by class level), validation-before-consumption, Nick economy | ACT-01, ACT-05, ACT-08 | M |
+| **B1** ✅ done — Extra Attack (attacks-per-action by class level), validation-before-consumption, Nick economy | ACT-01, ACT-05, ACT-08 | M |
 | **B2** — Reaction slot, opportunity attacks, Ready semantics | ACT-02, ACT-06 | M |
 | **B3** — Spell casting-time → economy slot; 2024 one-slot-spell-per-turn; TWF Light validation | SPL-03, SPL-06, ACT-04 | M |
 
@@ -103,33 +103,35 @@ The single highest-leverage bug. `TurnState.reset_turn` (`game-engine/src/game_e
 
 ## Workstream B — Action economy model (root cause: no attacks-per-action / reaction / casting-time concept)
 
+**Status: B1 done.** `_attacks_per_action` (`game-engine/src/game_engine/rules/dnd_5_5e/_actions.py`) now reads the `attacks_granted` field of each class's "Extra Attack" `ClassFeatureData` (`data/class_features/*.py`) through the actor's level — Fighter 5/11/20 → 2/3/4, Barbarian/Monk/Paladin/Ranger/Artificer(Battle Smith) 5 → 2; multiclass characters take the best tier, not the sum. `_resolve_action_impl`/`_resolve_attack_action` validate the attack (`_attacks._validate_attack`) *before* touching any economy slot, so a rejected attack (unknown actor/target, total cover) costs nothing and an unknown actor creates no ghost `TurnState` — the action slot is only marked spent once `attacks_made` reaches the Extra Attack pool. Nick-mastery off-hand attacks now consume a once-per-turn `TurnState.nick_used` flag instead of the bonus action. B2 (reactions/opportunity/Ready) and B3 (spell casting-time, one-slot-per-turn, TWF Light validation — ACT-02, ACT-06, SPL-03, SPL-06, ACT-04) are still open.
+
 `_resolve_action_impl` (`game-engine/src/game_engine/rules/dnd_5_5e/_actions.py:121-142`) charges exactly one attack per Attack action, has no reaction slot logic, and picks the economy slot purely from `is_offhand`. The engine has no representation of how many attacks a character gets, no reaction-consuming path, and never consults spell casting time.
 
 **Findings**
-- Extra Attack impossible — one attack per Attack action (`_actions.py:134` [ACT-01], **critical**)
+- Extra Attack impossible — one attack per Attack action (`_actions.py:134` [ACT-01], **critical**) ✅ done
 - Reaction economy & opportunity attacks unimplemented (`_actions.py:196` [ACT-02], **critical**)
 - Spell `casting_time` ignored — bonus/reaction spells consume the Action (`_actions.py:133` [SPL-03], **major**)
 - 2024 "one spell-slot spell per turn" not enforceable (`_spell_resolution.py:104` [SPL-06], **major**)
 - Ready action has no trigger/stored-action/reaction semantics (`_actions.py:189` [ACT-06], **major**)
-- Action/bonus slot consumed *before* attack validation, so rejected attacks burn the slot; unknown actor creates a ghost TurnState (`_actions.py:138` [ACT-05], **major**)
-- Nick mastery: off-hand attack always consumes the bonus action (`_attacks.py:155` [ACT-08], **major**)
+- Action/bonus slot consumed *before* attack validation, so rejected attacks burn the slot; unknown actor creates a ghost TurnState (`_actions.py:138` [ACT-05], **major**) ✅ done
+- Nick mastery: off-hand attack always consumes the bonus action (`_attacks.py:155` [ACT-08], **major**) ✅ done
 - Two-weapon fighting never validates the Light property or a prior Attack action — any weapon works off-hand (`_actions.py:122` [ACT-04], **major**)
 - `get_available_actions` ignores turn state & bonus/reaction economy (`_actions.py:43` [ACT-13], **minor**)
 - Dash flag / `movement_used_ft` are dead (`_actions.py:155` [ACT-14], **minor**)
 
 **Fix approach**:
-1. Add an **attacks-per-Attack-action** computation (Fighter 5/11/20 → 2/3/4; Barbarian/Monk/Paladin/Ranger 5 → 2) driven off class levels; allow up to that many attack resolutions before setting `action_used`, tracking with the now-live `attacks_made`.
+1. ✅ Add an **attacks-per-Attack-action** computation (Fighter 5/11/20 → 2/3/4; Barbarian/Monk/Paladin/Ranger 5 → 2) driven off class levels; allow up to that many attack resolutions before setting `action_used`, tracking with the now-live `attacks_made`.
 2. Add `is_reaction` to `Action`/`AttackDetails` and a reaction-resolution path that consumes `reaction_used` instead of the on-turn action; wire `provokes_opportunity_attack` (move it to `_attacks.py` per the spec's claim, export it, and have it consume the mover-provoker's reaction) and enforce one reaction per round.
 3. Thread spell `casting_time` (`CastingTime.BONUS_ACTION`/`REACTION`) into slot selection so MAGIC actions charge the correct slot; add a `spell_slot_expended_this_turn` flag to `TurnState` and reject a second leveled-spell cast per turn (cantrips exempt).
-4. **Reorder validation before consumption** in `_resolve_action_impl`: run the `actor_not_found`/`target_not_found`/`total_cover` guards first, only setting `action_used`/`bonus_action_used` after the attack is legal; do not create a TurnState for an unknown actor.
-5. Nick: when the off-hand weapon has the Nick mastery unlocked, resolve the extra Light attack as part of the Attack action (do not set `bonus_action_used`), once per turn — independent of hit.
+4. ✅ **Reorder validation before consumption** in `_resolve_action_impl`: run the `actor_not_found`/`target_not_found`/`total_cover` guards first, only setting `action_used`/`bonus_action_used` after the attack is legal; do not create a TurnState for an unknown actor.
+5. ✅ Nick: when the off-hand weapon has the Nick mastery unlocked, resolve the extra Light attack as part of the Attack action (do not set `bonus_action_used`), once per turn — independent of hit.
 5b. Validate two-weapon fighting: an `is_offhand` attack requires both weapons to have the Light property (from the Workstream C bridge) and a prior Attack action this turn; reject otherwise.
 6. Ready: store a readied `(trigger, action)` on `TurnState`; resolve later via the reaction path (depends on step 2). Readied spells require concentration.
 7. Make `get_available_actions` consult `turn_state_for` and surface remaining action/bonus/reaction options.
 
-**Tests**: level-5 fighter makes 2 attacks then is rejected on the 3rd; opportunity attack consumes reaction and a second in the same round is rejected; Healing Word (bonus) leaves the action free; a second leveled spell same turn is rejected while a cantrip is allowed; an attack behind total cover leaves `action_used=False` and a follow-up legal attack succeeds; Nick off-hand attack leaves `bonus_action_used=False`; an off-hand greatsword attack (non-Light) is rejected, as is an off-hand attack with no prior Attack action; Ready stores and later fires via reaction. Replace `test_action_used_once_per_turn` with an Extra-Attack-aware version.
+**Tests**: ✅ level-5 fighter makes 2 attacks then is rejected on the 3rd; ✅ an attack behind total cover leaves `action_used=False` and a follow-up legal attack succeeds; ✅ Nick off-hand attack leaves `bonus_action_used=False`. Still open: opportunity attack consumes reaction and a second in the same round is rejected; Healing Word (bonus) leaves the action free; a second leveled spell same turn is rejected while a cantrip is allowed; an off-hand greatsword attack (non-Light) is rejected, as is an off-hand attack with no prior Attack action; Ready stores and later fires via reaction.
 
-**Size**: L. Depends on Workstream A (shared `TurnState` refactor). This is the largest single workstream; consider splitting into B1 (Extra Attack + validation ordering + Nick), B2 (reactions/opportunity/Ready), B3 (spell casting-time + one-slot-per-turn).
+**Size**: L. Depends on Workstream A (shared `TurnState` refactor). This is the largest single workstream; split into B1 ✅ (Extra Attack + validation ordering + Nick — done), B2 (reactions/opportunity/Ready), B3 (spell casting-time + one-slot-per-turn + TWF Light validation).
 
 ---
 

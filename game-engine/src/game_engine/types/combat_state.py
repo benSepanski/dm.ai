@@ -61,6 +61,7 @@ class TurnState:
     reaction_used: bool = False
     movement_used_ft: int = 0
     attacks_made: int = 0
+    nick_used: bool = False
     dodging: bool = False
     disengaging: bool = False
     dashing: bool = False
@@ -81,6 +82,7 @@ class TurnState:
             "reaction_used": self.reaction_used,
             "movement_used_ft": self.movement_used_ft,
             "attacks_made": self.attacks_made,
+            "nick_used": self.nick_used,
             "dodging": self.dodging,
             "disengaging": self.disengaging,
             "dashing": self.dashing,
@@ -106,6 +108,7 @@ class TurnState:
             reaction_used=bool(d.get("reaction_used", False)),
             movement_used_ft=int(d.get("movement_used_ft", 0)),
             attacks_made=int(d.get("attacks_made", 0)),
+            nick_used=bool(d.get("nick_used", False)),
             dodging=bool(d.get("dodging", False)),
             disengaging=bool(d.get("disengaging", False)),
             dashing=bool(d.get("dashing", False)),
@@ -149,8 +152,9 @@ class CombatStateData:
         """Reset action economy for *char_id* at the start of their turn.
 
         Only the action-economy fields (action/bonus-action/reaction used,
-        movement, attacks made, dodging/disengaging/dashing) are cleared
-        here. Cross-turn effect flags (Help/Sap/Vex, and Hide's ``hidden``)
+        movement, attacks made, Nick's once-per-turn attack,
+        dodging/disengaging/dashing) are cleared here. Cross-turn effect
+        flags (Help/Sap/Vex, and Hide's ``hidden``)
         are left alone — they expire on their own rule-defined trigger, not
         simply because *some* combatant's turn began. See
         :meth:`grant_help`, :meth:`grant_sap`, :meth:`grant_vex`, and
@@ -162,6 +166,7 @@ class CombatStateData:
         ts.reaction_used = False
         ts.movement_used_ft = 0
         ts.attacks_made = 0
+        ts.nick_used = False
         ts.dodging = False
         ts.disengaging = False
         ts.dashing = False

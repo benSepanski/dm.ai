@@ -228,8 +228,15 @@ def _resolve_unarmed_special(
     )
 
 
-def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResult:
-    """Resolve an Attack action under the 2024 rules."""
+def _validate_attack(
+    action: Action, combat_state: CombatStateData
+) -> ActionResult | tuple[CharacterSheet, CharacterSheet, AttackDetails]:
+    """Check that *action* names a real actor/target not behind total cover.
+
+    Pure lookup — rolls no dice and mutates no state — so callers (notably
+    :mod:`._actions`'s action-economy gate, ACT-05) can validate an attack
+    *before* spending any action-economy slot on it.
+    """
     actor = combat_state.get_combatant(action.actor_id)
     target = combat_state.get_combatant(action.target_id) if action.target_id else None
     details = action.details or _DEFAULT_ATTACK
@@ -242,6 +249,15 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
         return _failure(
             action, "total_cover", f"{target.name} has total cover and can't be targeted."
         )
+    return actor, target, details
+
+
+def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResult:
+    """Resolve an Attack action under the 2024 rules."""
+    validated = _validate_attack(action, combat_state)
+    if isinstance(validated, ActionResult):
+        return validated
+    actor, target, details = validated
 
     actor_ts = combat_state.turn_state_for(actor.id)
     target_ts = combat_state.turn_state_for(target.id)

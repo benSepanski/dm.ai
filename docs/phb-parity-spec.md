@@ -112,10 +112,10 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Feature | Module | Status |
 |---|---|---|
 | 2024 action list (Attack, Dash, Disengage, Dodge, Help, Hide, Influence, Magic, Ready, Search, Study, Utilize) | `types.enums.ActionType` + `_actions` | ✅ |
-| Action / bonus action / reaction economy per turn | `types.TurnState` + `_actions` | ✅ |
+| Action / bonus action / reaction economy per turn | `types.TurnState` + `_actions` | 🟡 Extra Attack, validation-before-consumption, and Nick's once-per-turn slot are wired (`engine-correctness-remediation.md` Workstream B1); reaction slot / spell casting-time economy / one-slot-spell-per-turn are not (B2/B3, ACT-02, ACT-06, SPL-03, SPL-06) |
 | Initiative & turn order | `core.initiative` | ✅ |
-| Opportunity attacks | `_attacks` | ✅ |
-| Two-weapon fighting (Light property, Nick) | `_attacks` | ✅ |
+| Opportunity attacks | `_actions.provokes_opportunity_attack` | ⬜ only a disengage-suppression predicate exists; nothing consumes a reaction or rolls the attack (ACT-02, Workstream B2) |
+| Two-weapon fighting (Light property, Nick) | `_attacks` | 🟡 Nick's once-per-turn free attack is wired (B1); off-hand attacks don't yet validate the Light property or require a prior Attack action this turn (ACT-04, Workstream B3) |
 | Unarmed strike (damage / grapple / shove) | `_attacks` | ✅ |
 | Dodge / Disengage / Dash effects | `_actions` + `_attacks` + `_spell_resolution` | ✅ attack-disadvantage (melee + spell); DEX save advantage (grapple/shove + spell saves) |
 | Mounted/underwater combat | — | ⬜ (needs positional model; out of theater-of-mind scope) |

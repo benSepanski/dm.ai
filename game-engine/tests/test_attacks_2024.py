@@ -311,13 +311,124 @@ class TestUnarmedOptions:
         mock_flat.assert_called_once()
 
 
+class TestExtraAttack:
+    """ACT-01/ACT-05: attacks-per-Attack-action by class level, and
+    validation running before any economy slot is consumed."""
+
+    def test_level5_fighter_makes_two_attacks_then_third_is_rejected(self, engine):
+        state = CombatStateData(combatants=[_char("a", level=5), _char("b")])
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            first = engine.resolve_action(_attack(), state)
+            second = engine.resolve_action(_attack(), state)
+            third = engine.resolve_action(_attack(), state)
+        assert first.success and second.success
+        assert third.success is False
+        assert third.log_entry["error"] == "action_used"
+        assert state.turn_state_for("a").attacks_made == 2
+
+    def test_extra_attack_survives_begin_turn_reset(self, engine):
+        state = CombatStateData(combatants=[_char("a", level=5), _char("b")])
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            engine.resolve_action(_attack(), state)
+            engine.resolve_action(_attack(), state)
+        engine.begin_turn(state.get_combatant("a"), state)
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            first = engine.resolve_action(_attack(), state)
+            second = engine.resolve_action(_attack(), state)
+        assert first.success and second.success
+        assert state.turn_state_for("a").attacks_made == 2
+
+    def test_multiclass_takes_best_extra_attack_tier(self, engine):
+        # Fighter 11 (3 attacks) / Barbarian 5 (2 attacks) — 2024 PHB: Extra
+        # Attack features don't stack, so the higher tier wins, not the sum.
+        from game_engine.types import ClassLevelEntry
+
+        actor = _char(
+            "a",
+            level=16,
+            class_levels=[
+                ClassLevelEntry(character_class=CharacterClass.FIGHTER, level=11),
+                ClassLevelEntry(character_class=CharacterClass.BARBARIAN, level=5),
+            ],
+        )
+        state = CombatStateData(combatants=[actor, _char("b")])
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            for _ in range(3):
+                result = engine.resolve_action(_attack(), state)
+                assert result.success is True
+            fourth = engine.resolve_action(_attack(), state)
+        assert fourth.success is False
+        assert fourth.log_entry["error"] == "action_used"
+
+
 class TestActionEconomyAndConcentration:
     def test_action_used_once_per_turn(self, engine, state):
+        # Level-1 fighter: no Extra Attack, so a single attack already spends
+        # the action (see TestExtraAttack for the level-5+ multi-attack case).
         with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
             engine.resolve_action(_attack(), state)
             second = engine.resolve_action(_attack(), state)
         assert second.success is False
         assert second.log_entry["error"] == "action_used"
+
+    def test_total_cover_rejection_consumes_no_action_slot(self, engine, state):
+        """ACT-05: a rejected attack (total cover) must not burn the action —
+        the actor can retry against a legal target."""
+        result = engine.resolve_action(_attack(target_cover=CoverType.TOTAL), state)
+        assert result.success is False
+        assert state.turn_state_for("a").action_used is False
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            retry = engine.resolve_action(_attack(), state)
+        assert retry.success is True
+
+    def test_unknown_actor_creates_no_ghost_turn_state(self, engine, state):
+        """ACT-05: an action from an actor absent from combat must not create
+        a TurnState entry for it."""
+        result = engine.resolve_action(_attack(actor="ghost"), state)
+        assert result.success is False
+        assert result.log_entry["error"] == "actor_not_found"
+        assert "ghost" not in state.turn_states
+
+    def test_nick_offhand_attack_does_not_consume_bonus_action(self, engine, state):
+        actor = state.get_combatant("a")
+        actor.weapon_masteries = ["Scimitar"]
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            result = engine.resolve_action(
+                _attack(weapon_name="Scimitar", mastery=WeaponMastery.NICK, is_offhand=True),
+                state,
+            )
+        assert result.success is True
+        assert state.turn_state_for("a").bonus_action_used is False
+        assert state.turn_state_for("a").nick_used is True
+
+    def test_nick_offhand_attack_limited_to_once_per_turn(self, engine, state):
+        actor = state.get_combatant("a")
+        actor.weapon_masteries = ["Scimitar"]
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            engine.resolve_action(
+                _attack(weapon_name="Scimitar", mastery=WeaponMastery.NICK, is_offhand=True),
+                state,
+            )
+            second = engine.resolve_action(
+                _attack(weapon_name="Scimitar", mastery=WeaponMastery.NICK, is_offhand=True),
+                state,
+            )
+        assert second.success is False
+        assert second.log_entry["error"] == "nick_used"
+
+    def test_nick_without_mastery_still_consumes_bonus_action(self, engine, state):
+        # No Nick mastery unlocked for this weapon: behaves like ordinary TWF.
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            engine.resolve_action(
+                _attack(weapon_name="Scimitar", mastery=WeaponMastery.NICK, is_offhand=True),
+                state,
+            )
+            second = engine.resolve_action(
+                _attack(weapon_name="Scimitar", mastery=WeaponMastery.NICK, is_offhand=True),
+                state,
+            )
+        assert second.success is False
+        assert second.log_entry["error"] == "bonus_action_used"
 
     def test_begin_turn_resets_economy(self, engine, state):
         with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
