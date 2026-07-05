@@ -51,6 +51,10 @@ class InitiativeTracker:
     def __init__(self) -> None:
         self._entries: list[InitiativeEntry] = []
         self._current_index: int = -1
+        # True when the combatant whose turn it currently is was just removed
+        # from the tracker (e.g. death) — current_turn() must report "no one"
+        # rather than the previous combatant until next_turn() runs again.
+        self._current_vacated: bool = False
 
     # ------------------------------------------------------------------
     # Mutation helpers
@@ -99,6 +103,7 @@ class InitiativeTracker:
         )
         # Reset the current index so the first next_turn() call starts at index 0.
         self._current_index = -1
+        self._current_vacated = False
         return list(self._entries)
 
     def next_turn(self) -> InitiativeEntry:
@@ -125,6 +130,7 @@ class InitiativeTracker:
             self._current_index = (self._current_index + 1) % len(self._entries)
             entry = self._entries[self._current_index]
             if entry.is_active:
+                self._current_vacated = False
                 return entry
 
         raise RuntimeError("No active combatants found after full scan.")
@@ -134,9 +140,11 @@ class InitiativeTracker:
 
         Returns:
             The current :class:`InitiativeEntry`, or None if :meth:`next_turn`
-            has not yet been called or the tracker is empty.
+            has not yet been called, the tracker is empty, or the combatant
+            whose turn it was has just been removed (see
+            :meth:`remove_combatant`).
         """
-        if self._current_index < 0 or not self._entries:
+        if self._current_index < 0 or not self._entries or self._current_vacated:
             return None
         return self._entries[self._current_index]
 
@@ -144,8 +152,10 @@ class InitiativeTracker:
         """Remove a combatant from the tracker entirely.
 
         If the combatant being removed is the current combatant, the current
-        index is adjusted so that the next call to :meth:`next_turn` behaves
-        correctly.
+        index is adjusted so that the next call to :meth:`next_turn` advances
+        to the correct successor, and :meth:`current_turn` reports ``None``
+        (a "between turns" state) rather than the previous combatant, whose
+        turn is over.
 
         Args:
             char_id: The character ID to remove.
@@ -156,9 +166,11 @@ class InitiativeTracker:
         for idx, entry in enumerate(self._entries):
             if entry.char_id == char_id:
                 self._entries.pop(idx)
-                # Adjust current index to remain valid.
-                if idx <= self._current_index:
+                if idx == self._current_index:
                     self._current_index = max(-1, self._current_index - 1)
+                    self._current_vacated = True
+                elif idx < self._current_index:
+                    self._current_index -= 1
                 return True
         return False
 
@@ -180,6 +192,7 @@ class InitiativeTracker:
         """Clear all combatants and reset the tracker to its initial state."""
         self._entries.clear()
         self._current_index = -1
+        self._current_vacated = False
 
     # ------------------------------------------------------------------
     # Serialisation

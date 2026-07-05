@@ -66,19 +66,24 @@ def _passive_score_impl(char: CharacterSheet, skill: Skill) -> int:
 
 
 def _roll_initiative_impl(char: CharacterSheet) -> int:
-    """Roll the raw d20 for initiative.
+    """Roll the raw d20 for initiative, honoring check-disadvantage conditions.
 
     The caller (``DnD55eEngine.roll_initiative``) adds the DEX modifier and
-    returns the final total. Tie-breaking in combat uses the raw DEX score
-    directly, not a separate raw-roll value.
+    the exhaustion ``d20_modifier``, and returns the final total.
+    Tie-breaking in combat uses the raw DEX score directly, not a separate
+    raw-roll value.
 
     Args:
-        char: Character sheet (unused here; retained for interface symmetry).
+        char: Character sheet — consulted for Poisoned/Frightened
+            disadvantage (initiative is a Dexterity check).
 
     Returns:
         Raw d20 roll (1-20), without any modifier applied.
     """
-    raw, _ = roll_dice(1, 20)
+    if any(c in _CHECK_DISADVANTAGE_CONDITIONS for c in char.conditions):
+        raw, _ = roll_with_disadvantage(20)
+    else:
+        raw, _ = roll_dice(1, 20)
     return raw
 
 
@@ -124,15 +129,17 @@ def _roll_check_impl(
     ability_mod = char.ability_scores.modifier(ability)
     prof_bonus = _calc_prof_bonus(char.level)
 
-    # Proficiency check: match against skill name or ability name
+    # Proficiency check: only *skill* proficiency grants a bonus on a check.
+    # `CharacterSheet.proficient_abilities` records saving-throw proficiency
+    # (see `_saves.py`) and must never leak into a raw ability check.
     try:
-        proficiency_key: Skill | Ability = Skill(skill_key)
+        skill_key_enum = Skill(skill_key)
     except ValueError:
-        proficiency_key = ability
-    is_proficient = char.is_proficient(proficiency_key)
+        skill_key_enum = None
+    is_proficient = skill_key_enum is not None and char.is_proficient(skill_key_enum)
     total_mod = ability_mod + (prof_bonus if is_proficient else 0)
     # Expertise doubles the proficiency bonus.
-    if isinstance(proficiency_key, Skill) and char.has_expertise(proficiency_key):
+    if skill_key_enum is not None and char.has_expertise(skill_key_enum):
         total_mod += prof_bonus
     # Exhaustion: flat -2 per level on every d20 test (2024 rules).
     total_mod += char.d20_modifier

@@ -5,6 +5,7 @@ Tests for DnD55eEngine.roll_check(), roll_initiative(), and proficiency bonus.
 from __future__ import annotations
 
 import random
+from dataclasses import replace
 
 import pytest
 
@@ -16,6 +17,7 @@ from game_engine.types import (
     AbilityScoreSet,
     CharacterClass,
     CharacterSheet,
+    Condition,
     Skill,
 )
 
@@ -207,8 +209,11 @@ class TestProficiencyBonus:
         # STR mod = 0, no prof bonus → total = raw roll + 0
         assert result.total == raw_roll
 
-    def test_proficiency_bonus_for_proficient_ability(self, engine: DnD55eEngine):
-        """Proficiency in Ability.STRENGTH adds prof bonus to STR checks."""
+    def test_saving_throw_proficiency_does_not_grant_check_bonus(self, engine: DnD55eEngine):
+        """ACT-10: `proficient_abilities` records *saving-throw* proficiency
+        (see `_saves.py`) and must not leak into a raw ability check — a
+        fighter with STR save proficiency rolls a plain STR check with no
+        proficiency bonus."""
         char = make_fighter(
             strength=10,
             level=1,  # prof = +2
@@ -223,7 +228,7 @@ class TestProficiencyBonus:
         random.seed(15)
         result_non_prof = engine.roll_check(non_prof_char, Ability.STRENGTH, dc=1)
         assert result_prof.roll == result_non_prof.roll
-        assert result_prof.total == result_non_prof.total + 2
+        assert result_prof.total == result_non_prof.total
 
 
 # ---------------------------------------------------------------------------
@@ -301,6 +306,31 @@ class TestRollInitiative:
         low_totals = [engine.roll_initiative(low_dex_char) for _ in range(100)]
 
         assert sum(high_totals) > sum(low_totals)
+
+    def test_exhaustion_penalty_applied(self, engine: DnD55eEngine):
+        """ACT-20: initiative must include the exhaustion d20_modifier."""
+        char = make_fighter(dexterity=14)  # +2 modifier, no exhaustion
+        exhausted = replace(char, exhaustion_level=2)  # -4 penalty
+
+        random.seed(7)
+        normal_totals = [engine.roll_initiative(char) for _ in range(50)]
+        random.seed(7)
+        exhausted_totals = [engine.roll_initiative(exhausted) for _ in range(50)]
+
+        assert all(e == n - 4 for e, n in zip(exhausted_totals, normal_totals))
+
+    def test_poisoned_imposes_disadvantage(self, engine: DnD55eEngine):
+        """ACT-20: Poisoned/Frightened impose disadvantage on initiative
+        (a Dexterity check)."""
+        char = make_fighter(dexterity=14, level=1)
+        poisoned = replace(char, conditions=[Condition.POISONED])
+
+        random.seed(99)
+        normal_totals = [engine.roll_initiative(char) for _ in range(200)]
+        random.seed(99)
+        poisoned_totals = [engine.roll_initiative(poisoned) for _ in range(200)]
+
+        assert sum(poisoned_totals) < sum(normal_totals)
 
 
 # ---------------------------------------------------------------------------
