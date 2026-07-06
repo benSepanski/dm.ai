@@ -73,6 +73,10 @@ class TurnState:
     sapped_expiry: EffectExpiry | None = None
     vexed_target_id: str | None = None
     vexed_expiry: EffectExpiry | None = None
+    # Ready action (2024 PHB): the stored attack to trigger via a reaction.
+    # Lost if unused at the start of the readier's own next turn — see
+    # CombatStateData.reset_turn.
+    readied: ReadiedAction | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serialisable dict so turn state survives between requests."""
@@ -93,6 +97,7 @@ class TurnState:
             "sapped_expiry": self.sapped_expiry.to_dict() if self.sapped_expiry else None,
             "vexed_target_id": self.vexed_target_id,
             "vexed_expiry": self.vexed_expiry.to_dict() if self.vexed_expiry else None,
+            "readied": self.readied.to_dict() if self.readied else None,
         }
 
     @classmethod
@@ -102,6 +107,7 @@ class TurnState:
         helped_expiry = d.get("helped_expiry")
         sapped_expiry = d.get("sapped_expiry")
         vexed_expiry = d.get("vexed_expiry")
+        readied = d.get("readied")
         return cls(
             action_used=bool(d.get("action_used", False)),
             bonus_action_used=bool(d.get("bonus_action_used", False)),
@@ -116,6 +122,7 @@ class TurnState:
             helped=bool(d.get("helped", False)),
             helped_expiry=EffectExpiry.from_dict(helped_expiry) if helped_expiry else None,
             sapped=bool(d.get("sapped", False)),
+            readied=ReadiedAction.from_dict(readied) if readied else None,
             sapped_expiry=EffectExpiry.from_dict(sapped_expiry) if sapped_expiry else None,
             vexed_target_id=str(vexed) if vexed is not None else None,
             vexed_expiry=EffectExpiry.from_dict(vexed_expiry) if vexed_expiry else None,
@@ -153,12 +160,13 @@ class CombatStateData:
 
         Only the action-economy fields (action/bonus-action/reaction used,
         movement, attacks made, Nick's once-per-turn attack,
-        dodging/disengaging/dashing) are cleared here. Cross-turn effect
-        flags (Help/Sap/Vex, and Hide's ``hidden``)
-        are left alone — they expire on their own rule-defined trigger, not
-        simply because *some* combatant's turn began. See
-        :meth:`grant_help`, :meth:`grant_sap`, :meth:`grant_vex`, and
-        :meth:`_expire_cross_turn_effects`.
+        dodging/disengaging/dashing) are cleared here, plus an unused Readied
+        action — 2024 PHB: a readied action is lost if its trigger doesn't
+        happen before the start of your next turn. Cross-turn effect flags
+        (Help/Sap/Vex, and Hide's ``hidden``) are left alone — they expire on
+        their own rule-defined trigger, not simply because *some* combatant's
+        turn began. See :meth:`grant_help`, :meth:`grant_sap`,
+        :meth:`grant_vex`, and :meth:`_expire_cross_turn_effects`.
         """
         ts = self.turn_state_for(char_id)
         ts.action_used = False
@@ -170,6 +178,7 @@ class CombatStateData:
         ts.dodging = False
         ts.disengaging = False
         ts.dashing = False
+        ts.readied = None
         self._expire_cross_turn_effects(char_id)
         return ts
 
@@ -230,3 +239,75 @@ class AttackDetails:
     long_range: bool = False
     target_cover: CoverType | None = None
     unarmed_option: UnarmedStrikeOption | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serialisable dict (needed to persist a Readied attack)."""
+        return {
+            "weapon_name": self.weapon_name,
+            "damage_dice": str(self.damage_dice),
+            "damage_type": self.damage_type.value,
+            "attack_ability": self.attack_ability.value,
+            "is_ranged": self.is_ranged,
+            "properties": [p.value for p in self.properties],
+            "mastery": self.mastery.value if self.mastery else None,
+            "proficient": self.proficient,
+            "is_offhand": self.is_offhand,
+            "long_range": self.long_range,
+            "target_cover": self.target_cover.value if self.target_cover else None,
+            "unarmed_option": self.unarmed_option.value if self.unarmed_option else None,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "AttackDetails":
+        """Create an :class:`AttackDetails` from a dict; tolerant of missing keys."""
+        target_cover = d.get("target_cover")
+        unarmed_option = d.get("unarmed_option")
+        mastery = d.get("mastery")
+        return cls(
+            weapon_name=str(d.get("weapon_name", "Unarmed Strike")),
+            damage_dice=DiceNotation(d.get("damage_dice", "1d4")),
+            damage_type=DamageType(d.get("damage_type", DamageType.BLUDGEONING.value)),
+            attack_ability=Ability(d.get("attack_ability", Ability.STRENGTH.value)),
+            is_ranged=bool(d.get("is_ranged", False)),
+            properties=[WeaponProperty(p) for p in d.get("properties", [])],
+            mastery=WeaponMastery(mastery) if mastery else None,
+            proficient=bool(d.get("proficient", True)),
+            is_offhand=bool(d.get("is_offhand", False)),
+            long_range=bool(d.get("long_range", False)),
+            target_cover=CoverType(target_cover) if target_cover else None,
+            unarmed_option=UnarmedStrikeOption(unarmed_option) if unarmed_option else None,
+        )
+
+
+@dataclass(frozen=True)
+class ReadiedAction:
+    """A stored Ready action (2024 PHB), triggered later via a reaction.
+
+    Only readying an attack is supported — the common table use of Ready
+    ("I ready an attack on whoever comes through the door") — not readying a
+    spell or other action; ``trigger`` is a free-text record of the
+    player-stated condition for the DM/UI to adjudicate, not itself enforced
+    by the engine.
+    """
+
+    trigger: str
+    target_id: str | None
+    details: AttackDetails | None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serialisable dict."""
+        return {
+            "trigger": self.trigger,
+            "target_id": self.target_id,
+            "details": self.details.to_dict() if self.details else None,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "ReadiedAction":
+        """Create a :class:`ReadiedAction` from a dict."""
+        details = d.get("details")
+        return cls(
+            trigger=str(d.get("trigger", "")),
+            target_id=d.get("target_id"),
+            details=AttackDetails.from_dict(details) if details else None,
+        )

@@ -353,18 +353,34 @@ proposals; PATCH the character first).
 
 Resolves the action through the rule engine and appends it to `combat_log`.
 The action economy is enforced across requests via `turn_states`: each
-combatant gets one action and one bonus action per turn (an off-hand attack
-consumes the bonus action), reset when their turn comes around. Dodge /
-Dash / Disengage / Help flags carry over mechanically until then.
+combatant gets one action, one bonus action, and one reaction per turn (an
+off-hand attack consumes the bonus action), reset when their turn comes
+around. Dodge / Dash / Disengage / Help flags carry over mechanically
+until then.
 
-**Body:** `actor_id` (req), `action_type` (req — a 2024 action:
-`"Attack"`, `"Dash"`, `"Dodge"`, `"Disengage"`, `"Help"`, `"Hide"`, …),
-`target_id`, `attack_details` (`weapon_name`, `damage_dice`, `damage_type`,
-`attack_ability`, `is_ranged`)
+Two reaction events are submitted through this same endpoint, not a
+separate one: `"Opportunity Attack"` (`target_id` is the creature whose
+movement provoked it; rejected if that creature disengaged this turn or the
+reactor's reaction is already spent) and `"Readied Action"` (triggers the
+attack stored by an earlier `"Ready"` action on this actor — `target_id`/
+`attack_details` are ignored, since the stored action supplies them; both
+consume the reaction, not the action). `"Ready"` itself stores a trigger +
+target + weapon on the actor's turn state (consuming the action) via
+`readied_trigger` (free text, e.g. `"if a creature enters the doorway"`);
+if unused, it's lost at the start of the readier's own next turn.
+
+**Body:** `actor_id` (req), `action_type` (req — a 2024 action or reaction
+event: `"Attack"`, `"Dash"`, `"Dodge"`, `"Disengage"`, `"Help"`, `"Hide"`,
+`"Ready"`, `"Opportunity Attack"`, `"Readied Action"`, …), `target_id`,
+`attack_details` (`weapon_name`, `damage_dice`, `damage_type`,
+`attack_ability`, `is_ranged`), `readied_trigger` (only meaningful for
+`"Ready"`)
 
 **200** → `CombatStateRead` with updated `combat_log` | **404** unknown
-actor/target | **409** rule rejection (actor can't act, or its action /
-bonus action is already spent) — rejections never enter `combat_log`
+actor/target | **422** `"Attack"`/`"Opportunity Attack"` with no `target_id`
+| **409** rule rejection (actor can't act; its action / bonus action /
+reaction is already spent; no opportunity provoked; nothing readied) —
+rejections never enter `combat_log`
 
 ### POST /api/sessions/{session_id}/combat/cast-spell — cast a spell
 

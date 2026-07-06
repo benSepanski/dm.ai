@@ -226,9 +226,11 @@ simulated players (80/80 and 96/96 events).
 - The cast-spell endpoint doesn't verify the spell is on the caster's
   known/prepared list or class spell list — the DM submits casts, so table
   discipline covers it.
-- Reactions (opportunity attacks, Shield, Counterspell) have no dedicated
-  flow — adjudicate in chat; reaction-speed spells do consume the
-  caster's reaction slot when cast via the API.
+- Opportunity attacks and readied attacks have a dedicated flow (submit
+  `"Opportunity Attack"` / `"Readied Action"` to `combat/action` — see
+  `docs/api.md`); reaction spells (Shield, Counterspell) do not — adjudicate
+  in chat, though reaction-speed spells do consume the caster's reaction
+  slot when cast via the API.
 - Occasional narration slips: the AI can invent details beyond the
   mechanical summary or name proposed NPCs before acceptance. The system
   prompt now forbids both explicitly, which reduces but doesn't eliminate

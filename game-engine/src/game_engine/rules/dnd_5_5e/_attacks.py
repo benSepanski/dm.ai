@@ -4,7 +4,9 @@ D&D 5.5e attack resolution (2024 rules).
 Handles to-hit advantage/disadvantage from conditions and turn flags,
 cover, critical hits (including melee auto-crits vs paralyzed/unconscious),
 weapon masteries, off-hand attacks, unarmed grapple/shove, and
-concentration checks on damage.
+concentration checks on damage. Reaction resolution (opportunity attacks,
+readied actions) lives in :mod:`._reactions`, which reuses ``_validate_attack``/
+``_resolve_attack``/``_failure`` from here.
 
 Internal module — import via :class:`DnD55eEngine`.
 """

@@ -10,7 +10,14 @@ from enum import Enum
 
 
 class ActionType(str, Enum):
-    """The 2024 PHB action list."""
+    """The 2024 PHB action list, plus two reaction-resolution events.
+
+    ``OPPORTUNITY_ATTACK`` and ``READIED_ACTION`` are not on-turn actions —
+    a character never has them available at the start of its own turn — but
+    routing them through the same discriminated ``Action``/``resolve_action``
+    entry point the on-turn actions use lets a reaction be submitted through
+    the same API without a parallel dispatch mechanism.
+    """
 
     ATTACK = "Attack"
     DASH = "Dash"
@@ -24,6 +31,8 @@ class ActionType(str, Enum):
     SEARCH = "Search"
     STUDY = "Study"
     UTILIZE = "Utilize"
+    OPPORTUNITY_ATTACK = "Opportunity Attack"
+    READIED_ACTION = "Readied Action"
 
 
 class CoverType(str, Enum):

@@ -76,8 +76,13 @@ Result dataclasses (`CheckResult`, `SaveResult`, `DeathSaveResult`,
 2024 PHB rules (see `docs/phb-parity-spec.md` for the full feature matrix). It
 uses a **delegation pattern**: each method delegates to a focused private helper
 module in `game_engine/rules/dnd_5_5e/` (`_checks.py`, `_saves.py`,
-`_attacks.py`, `_actions.py`, `_conditions.py`, `_damage.py`, `_death.py`,
-`_validation.py`). Those helpers in turn use shared utilities from
+`_attacks.py`, `_reactions.py`, `_actions.py`, `_conditions.py`, `_damage.py`,
+`_death.py`, `_validation.py`). `_reactions.py` resolves opportunity attacks
+and triggered Ready actions — both consume `TurnState.reaction_used` via the
+same `Action`/`resolve_action` entry point on-turn actions use, dispatched by
+two reaction-only `ActionType` members (`OPPORTUNITY_ATTACK`,
+`READIED_ACTION`) rather than a parallel API. Those helpers in turn use
+shared utilities from
 `game_engine/core/` (dice, conditions, initiative). Beyond the ABC, the engine
 exposes 5.5e-specific methods (`roll_death_save`, `stabilize`, `grant_temp_hp`,
 `begin_turn`, `passive_score`, `concentration_save_dc`).
