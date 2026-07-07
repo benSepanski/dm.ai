@@ -205,8 +205,13 @@ async def submit_combat_action(
         raise HTTPException(status_code=404, detail="Actor is not a combatant in this combat")
     if payload.target_id is not None and payload.target_id not in combatant_ids:
         raise HTTPException(status_code=404, detail="Target is not a combatant in this combat")
-    if payload.action_type is ActionType.ATTACK and payload.target_id is None:
-        raise HTTPException(status_code=422, detail="Attack requires a target_id.")
+    if (
+        payload.action_type in (ActionType.ATTACK, ActionType.OPPORTUNITY_ATTACK)
+        and payload.target_id is None
+    ):
+        raise HTTPException(
+            status_code=422, detail=f"{payload.action_type.value} requires a target_id."
+        )
 
     # Stage 2: build-state — including the persisted per-combatant turn
     # states, so the action/bonus-action economy is enforced across requests.
@@ -223,6 +228,7 @@ async def submit_combat_action(
         actor_id=payload.actor_id,
         target_id=payload.target_id,
         details=build_attack_details(payload.attack_details),
+        readied_trigger=payload.readied_trigger,
     )
     outcome = _engine.resolve_action(action, state)
 
@@ -233,6 +239,9 @@ async def submit_combat_action(
         "action_used",
         "bonus_action_used",
         "nick_used",
+        "reaction_used",
+        "no_opportunity",
+        "no_readied_action",
         "target_not_found",
         "actor_not_found",
         "total_cover",
@@ -244,13 +253,17 @@ async def submit_combat_action(
         combat.combatants = [s.to_dict() for s in state.combatants]
     combat.turn_states = dump_turn_states(state.turn_states)
 
+    # action_type is pinned to what was *submitted*, not the engine's
+    # internal log_entry: a Readied Action resolves by reconstructing a
+    # plain Attack internally (see ``_resolve_readied_action``), whose log
+    # entry would otherwise clobber the outer "Readied Action" with "Attack".
     log_entry: dict[str, Any] = {
         "round": combat.round_number,
         "turn": combat.current_turn_index,
         "actor_id": payload.actor_id,
-        "action_type": payload.action_type.value,
         "flavor_text": outcome.flavor_text,
         **outcome.log_entry,
+        "action_type": payload.action_type.value,
     }
     combat.combat_log = [*(combat.combat_log or []), log_entry]
 

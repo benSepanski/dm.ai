@@ -133,13 +133,23 @@ class Action:
         action_type: Type of action (e.g. ActionType.ATTACK).
         actor_id: ID of the character performing the action.
         target_id: ID of the target character, or None for untargeted actions.
-        details: Rule-specific payload (weapon info, spell name, etc.).
+        details: Rule-specific payload (weapon info, spell name, etc.). For
+            ``ActionType.OPPORTUNITY_ATTACK``, ``target_id`` is the creature
+            whose movement provoked it and ``details`` is the reactor's
+            weapon. For ``ActionType.READIED_ACTION``, ``target_id`` and
+            ``details`` are ignored — the stored :class:`~game_engine.types.ReadiedAction`
+            on the actor's ``TurnState`` supplies them.
+        readied_trigger: Free-text trigger description, only meaningful when
+            ``action_type`` is ``ActionType.READY`` (e.g. "if a creature
+            enters the doorway"). Not itself enforced by the engine — it's
+            recorded on the actor's ``TurnState`` for the DM/UI to adjudicate.
     """
 
     action_type: ActionType
     actor_id: str
     target_id: str | None
     details: AttackDetails | None = None
+    readied_trigger: str | None = None
 
 
 class RuleEngine(ABC):

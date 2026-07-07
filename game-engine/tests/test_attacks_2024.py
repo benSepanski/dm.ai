@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from game_engine.interface import Action
-from game_engine.rules.dnd_5_5e._actions import provokes_opportunity_attack
+from game_engine.rules.dnd_5_5e._reactions import provokes_opportunity_attack
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
 from game_engine.types import (
     AbilityScoreSet,

@@ -139,6 +139,118 @@ async def test_submit_combat_action_attack_resolves(client, world_id):
 
 
 @pytest.mark.asyncio
+async def test_opportunity_attack_requires_target_id(client, world_id):
+    """ACT-02: an Opportunity Attack with no target_id is a 422, like Attack."""
+    session_id = await _create_session(client, world_id)
+    attacker_id = await _create_character(client, world_id, name="Attacker")
+    await client.post(f"/api/sessions/{session_id}/combat", json={"character_ids": [attacker_id]})
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={"actor_id": attacker_id, "action_type": ActionType.OPPORTUNITY_ATTACK.value},
+    )
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_opportunity_attack_resolves_and_consumes_reaction(client, world_id):
+    """ACT-02: an Opportunity Attack against a non-disengaging mover resolves
+    and a second one the same round is rejected (one reaction per round)."""
+    session_id = await _create_session(client, world_id)
+    attacker_id = await _create_character(client, world_id, name="Attacker")
+    mover_id = await _create_character(client, world_id, name="Mover")
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [attacker_id, mover_id]},
+    )
+
+    opportunity_attack = {
+        "actor_id": attacker_id,
+        "action_type": ActionType.OPPORTUNITY_ATTACK.value,
+        "target_id": mover_id,
+    }
+    r = await client.post(f"/api/sessions/{session_id}/combat/action", json=opportunity_attack)
+    assert r.status_code == 200
+    log = r.json()["combat_log"][0]
+    assert log["action_type"] == ActionType.OPPORTUNITY_ATTACK.value
+
+    r = await client.post(f"/api/sessions/{session_id}/combat/action", json=opportunity_attack)
+    assert r.status_code == 409
+    assert "Reaction already used" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_disengaged_mover_provokes_no_opportunity_attack(client, world_id):
+    session_id = await _create_session(client, world_id)
+    attacker_id = await _create_character(client, world_id, name="Attacker")
+    mover_id = await _create_character(client, world_id, name="Mover")
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [attacker_id, mover_id]},
+    )
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={"actor_id": mover_id, "action_type": ActionType.DISENGAGE.value},
+    )
+    assert r.status_code == 200
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={
+            "actor_id": attacker_id,
+            "action_type": ActionType.OPPORTUNITY_ATTACK.value,
+            "target_id": mover_id,
+        },
+    )
+    assert r.status_code == 409
+    assert "didn't provoke" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_ready_then_readied_action_resolves(client, world_id):
+    """ACT-06: Ready stores an attack; a later Readied Action resolves it
+    once, via the reaction, and a second trigger has nothing left to fire."""
+    session_id = await _create_session(client, world_id)
+    actor_id = await _create_character(client, world_id, name="Readier")
+    target_id = await _create_character(client, world_id, name="Target")
+    await client.post(
+        f"/api/sessions/{session_id}/combat",
+        json={"character_ids": [actor_id, target_id]},
+    )
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={
+            "actor_id": actor_id,
+            "action_type": ActionType.READY.value,
+            "target_id": target_id,
+            "attack_details": {"weapon_name": "Dagger", "damage_dice": "1d4"},
+            "readied_trigger": "if the target attacks",
+        },
+    )
+    assert r.status_code == 200
+    log = r.json()["combat_log"][0]
+    assert log["action_type"] == ActionType.READY.value
+    assert log["trigger"] == "if the target attacks"
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={"actor_id": actor_id, "action_type": ActionType.READIED_ACTION.value},
+    )
+    assert r.status_code == 200
+    log = r.json()["combat_log"][-1]
+    assert log["action_type"] == ActionType.READIED_ACTION.value
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/action",
+        json={"actor_id": actor_id, "action_type": ActionType.READIED_ACTION.value},
+    )
+    assert r.status_code == 409
+    assert "no readied action" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_submit_combat_action_non_attack(client, world_id):
     """Non-attack actions (Dash, Dodge, etc.) resolve successfully."""
     session_id = await _create_session(client, world_id)

@@ -100,13 +100,20 @@ class CombatActionRequest(BaseModel):
 
     action_type must be a valid :class:`~game_engine.types.ActionType` value
     (e.g. ``"Attack"``, ``"Dash"``). Validated at the API boundary so invalid
-    types are rejected with 422 before reaching the rule engine.
+    types are rejected with 422 before reaching the rule engine. Reactions
+    (``"Opportunity Attack"``, ``"Readied Action"``) are submitted through
+    this same endpoint — ``target_id``/``attack_details`` name the provoking
+    mover for an opportunity attack; both are ignored for a readied action
+    (the stored :class:`~game_engine.types.ReadiedAction` supplies them).
+    ``readied_trigger`` is only meaningful when ``action_type`` is
+    ``"Ready"`` — free text recording the player-stated trigger condition.
     """
 
     actor_id: str
     action_type: ActionType
     target_id: str | None = None
     attack_details: AttackDetailsRequest | None = None
+    readied_trigger: str | None = None
 
 
 class CastSpellRequest(BaseModel):

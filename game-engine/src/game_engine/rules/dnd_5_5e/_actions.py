@@ -1,7 +1,8 @@
 """
 D&D 5.5e action availability, action economy, and non-attack resolution.
 
-Attack resolution lives in :mod:`._attacks`.
+Attack resolution lives in :mod:`._attacks`; reaction resolution
+(opportunity attacks, triggering a stored Ready) lives in :mod:`._reactions`.
 
 Internal module — import via :class:`DnD55eEngine`.
 """
@@ -13,12 +14,17 @@ from typing import Any
 from game_engine.interface import Action, ActionResult
 from game_engine.rules.dnd_5_5e._attacks import _has_mastery, _resolve_attack, _validate_attack
 from game_engine.rules.dnd_5_5e._checks import _roll_check_impl
+from game_engine.rules.dnd_5_5e._reactions import (
+    resolve_opportunity_attack,
+    resolve_readied_action,
+)
 from game_engine.rules.dnd_5_5e.data.class_features import CLASS_PROGRESSIONS
 from game_engine.types import (
     ActionType,
     CharacterSheet,
     ClassLevelEntry,
     CombatStateData,
+    ReadiedAction,
     Skill,
     TurnState,
     UnarmedStrikeOption,
@@ -135,14 +141,17 @@ def _resolve_action_impl(
     An off-hand attack (``details.is_offhand``) consumes the bonus action
     unless the weapon's Nick mastery is unlocked, in which case it folds
     into the Attack action itself, once per turn (ACT-08). Every other
-    action type consumes the action. Extra Attack (ACT-01) lets the Attack
-    action resolve up to :func:`_attacks_per_action` attacks before the
-    action slot is spent. Validation (unknown actor/target, total cover)
+    on-turn action type consumes the action. Extra Attack (ACT-01) lets the
+    Attack action resolve up to :func:`_attacks_per_action` attacks before
+    the action slot is spent. Validation (unknown actor/target, total cover)
     always runs before any economy slot is touched (ACT-05), so a rejected
     attack costs the actor nothing and an unknown actor never creates a
     "ghost" :class:`TurnState` entry. The Magic action is validated and
     resolved by the spellcasting module — here it only consumes the action
-    slot.
+    slot. ``ActionType.OPPORTUNITY_ATTACK`` and ``ActionType.READIED_ACTION``
+    are reactions (ACT-02, ACT-06): they consume the reactor's reaction
+    instead of the action/bonus-action slot, so they're dispatched before the
+    on-turn ``action_used`` gate below.
 
     Args:
         action: The action to resolve.
@@ -161,6 +170,10 @@ def _resolve_action_impl(
 
     if action.action_type is ActionType.ATTACK:
         return _resolve_attack_action(action, actor, ts, combat_state)
+    if action.action_type is ActionType.OPPORTUNITY_ATTACK:
+        return resolve_opportunity_attack(action, combat_state)
+    if action.action_type is ActionType.READIED_ACTION:
+        return resolve_readied_action(action, actor, ts, combat_state)
 
     if ts.action_used:
         return _simple_result(
@@ -285,16 +298,21 @@ def _resolve_non_attack(
             {"stealth_total": check.total, "dc": _HIDE_DC},
         )
 
-    # Influence / Magic / Ready / Search / Study / Utilize: generic success;
-    # detailed resolution happens at the orchestration layer (Influence uses
-    # a CHA check against the monster's Influence DC; Magic is resolved by
-    # the spellcasting module).
+    if action.action_type is ActionType.READY:
+        ts.readied = ReadiedAction(
+            trigger=action.readied_trigger or "unspecified trigger",
+            target_id=action.target_id,
+            details=action.details,
+        )
+        return _simple_result(
+            action,
+            True,
+            f"{name} readies an action, waiting: {ts.readied.trigger}",
+            {"trigger": ts.readied.trigger},
+        )
+
+    # Influence / Magic / Search / Study / Utilize: generic success; detailed
+    # resolution happens at the orchestration layer (Influence uses a CHA
+    # check against the monster's Influence DC; Magic is resolved by the
+    # spellcasting module).
     return _simple_result(action, True, f"{name} uses {action.action_type.value}.")
-
-
-def provokes_opportunity_attack(mover_id: str, combat_state: CombatStateData) -> bool:
-    """True when a creature leaving reach would provoke an opportunity attack.
-
-    Disengaging suppresses opportunity attacks for the rest of the turn.
-    """
-    return not combat_state.turn_state_for(mover_id).disengaging
