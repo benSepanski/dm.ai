@@ -24,6 +24,7 @@ from game_engine.types import (
     Feat,
     UnarmedStrikeOption,
     WeaponMastery,
+    WeaponProperty,
 )
 
 ATTACKS = "game_engine.rules.dnd_5_5e._attacks"
@@ -258,6 +259,40 @@ class TestTwoWeaponFighting:
             second = engine.resolve_action(_attack(is_offhand=True), state)
         assert second.success is False
         assert second.log_entry["error"] == "bonus_action_used"
+
+    def test_offhand_attack_preserves_negative_ability_mod(self, engine, state):
+        # ACT-18: "omit the ability modifier" must not become "treat it as
+        # +0" — a negative modifier still reduces off-hand damage.
+        actor = state.get_combatant("a")
+        actor.ability_scores = AbilityScoreSet(strength=6)
+        with (
+            patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
+            patch(f"{ATTACKS}.dice_roll", return_value=(4, [4])),
+        ):
+            result = engine.resolve_action(_attack(is_offhand=True), state)
+        assert result.damage == 2
+
+
+class TestHeavyProperty:
+    def test_heavy_melee_disadvantage_below_str_13(self, engine, state):
+        state.get_combatant("a").ability_scores = AbilityScoreSet(strength=10)
+        with patch(f"{ATTACKS}.roll_with_disadvantage", return_value=(15, [15, 18])) as dis:
+            engine.resolve_action(_attack(properties=[WeaponProperty.HEAVY]), state)
+        dis.assert_called_once()
+
+    def test_heavy_melee_no_disadvantage_at_str_13(self, engine, state):
+        state.get_combatant("a").ability_scores = AbilityScoreSet(strength=13)
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])) as straight:
+            engine.resolve_action(_attack(properties=[WeaponProperty.HEAVY]), state)
+        straight.assert_called_once()
+
+    def test_heavy_ranged_checks_dexterity_not_strength(self, engine, state):
+        state.get_combatant("a").ability_scores = AbilityScoreSet(strength=18, dexterity=8)
+        with patch(f"{ATTACKS}.roll_with_disadvantage", return_value=(15, [15, 18])) as dis:
+            engine.resolve_action(
+                _attack(properties=[WeaponProperty.HEAVY], is_ranged=True), state
+            )
+        dis.assert_called_once()
 
 
 class TestUnarmedOptions:

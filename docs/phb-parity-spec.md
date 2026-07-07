@@ -87,10 +87,11 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 
 | Feature | Module | Status |
 |---|---|---|
-| Full 2024 weapon table (all simple/martial, melee/ranged) | `data.items` | ✅ |
-| Weapon masteries (Cleave, Graze, Nick, Push, Sap, Slow, Topple, Vex) | `data.items` + `_attacks` | ✅ |
-| Weapon properties (incl. range, ammunition) | `data.items` | ✅ |
-| Full armor table + AC computation (dex caps, str minimums) | `data.items` + `character_builder` | ✅ |
+| Full 2024 weapon table (all simple/martial, melee/ranged) | `data.weapons` | ✅ |
+| Weapon masteries (Cleave, Graze, Nick, Push, Sap, Slow, Topple, Vex) | `data.weapons` + `_attacks` + `_weapon_bridge` | ✅ dm-api's `build_attack_details` now bridges `WeaponData` into `AttackDetails` via `to_attack_details` (Workstream C, EQP-01) — masteries/proficiency reach real play, not just hand-built unit tests |
+| Weapon properties (Finesse, Heavy, Versatile) | `_weapon_bridge` + `_attacks._advantage_state` | ✅ Finesse picks the better ability, Versatile selects the two-handed die, Heavy imposes disadvantage below score 13 (EQP-08 partial) |
+| Weapon properties (Ammunition, Loading, Reach, Thrown, Special) | `data.weapons` | ⬜ properties are on the registry and copied onto `AttackDetails.properties`, but nothing tracks ammo, caps Loading weapons to one shot per action, or grants Reach/Thrown range (EQP-08 remainder) |
+| Full armor table + AC computation (dex caps, str minimums) | `data.armor` + `character_builder` | ✅ |
 | Adventuring gear, tools, packs | `data.gear` | ✅ |
 | Coinage (cp/sp/ep/gp/pp) | `types.Currency` | ✅ |
 | Carrying capacity / drag-lift-push | `rules.dnd_5_5e.exploration` | ✅ |

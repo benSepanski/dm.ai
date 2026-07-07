@@ -218,11 +218,12 @@ async def submit_combat_action(
     )
 
     # Stage 3: resolve — engine mutates sheets in-place.
+    actor_sheet = next(s for s in sheets if s.id == payload.actor_id)
     action = Action(
         action_type=payload.action_type,
         actor_id=payload.actor_id,
         target_id=payload.target_id,
-        details=build_attack_details(payload.attack_details),
+        details=build_attack_details(payload.attack_details, actor_sheet),
     )
     outcome = _engine.resolve_action(action, state)
 

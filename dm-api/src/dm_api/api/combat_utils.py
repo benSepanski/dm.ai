@@ -11,7 +11,9 @@ import logging
 import uuid
 from typing import Any
 
+from game_engine.rules.dnd_5_5e._weapon_bridge import to_attack_details
 from game_engine.rules.dnd_5_5e.classes import CLASSES
+from game_engine.rules.dnd_5_5e.data import get_weapon
 from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
 from game_engine.rules.dnd_5_5e.spellcasting import compute_spell_slots
 from game_engine.types import (
@@ -252,16 +254,35 @@ def dump_turn_states(turn_states: dict[str, TurnState]) -> dict[str, Any]:
     return {char_id: ts.to_dict() for char_id, ts in turn_states.items()}
 
 
-def build_attack_details(req: AttackDetailsRequest | None) -> AttackDetails | None:
-    """Convert typed Pydantic request into a game-engine AttackDetails dataclass."""
+def build_attack_details(
+    req: AttackDetailsRequest | None, actor: CharacterSheet
+) -> AttackDetails | None:
+    """Convert a typed Pydantic request into a game-engine AttackDetails.
+
+    When ``weapon_name`` matches the SRD weapon registry, bridges through
+    :func:`to_attack_details` so mastery, properties, and proficiency come
+    from the registry and the actor's training rather than being trusted
+    verbatim from the client. Falls back to the raw request fields for
+    weapons outside the registry (Unarmed Strike, monster natural weapons,
+    homebrew) — those never carry mastery/properties/proficiency.
+    """
     if req is None:
         return None
+    weapon = get_weapon(req.weapon_name)
+    if weapon is not None:
+        return to_attack_details(
+            weapon,
+            actor,
+            is_offhand=req.is_offhand,
+            two_handed=req.two_handed,
+        )
     return AttackDetails(
         weapon_name=req.weapon_name,
         damage_dice=DiceNotation(req.damage_dice),
         damage_type=req.damage_type,
         attack_ability=req.attack_ability,
         is_ranged=req.is_ranged,
+        is_offhand=req.is_offhand,
     )
 
 

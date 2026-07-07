@@ -21,7 +21,14 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from game_engine.types import Ability, CharacterClass, DamageType, TurnState
+from game_engine.types import (
+    Ability,
+    CharacterClass,
+    CharacterSheet,
+    DamageType,
+    TurnState,
+    WeaponCategory,
+)
 from game_engine.types.values import DiceNotation
 
 from dm_api.api.combat_utils import (
@@ -304,41 +311,46 @@ class TestMissingCombatStats:
 
 
 class TestBuildAttackDetails:
+    def _make_actor(self, *, training: list[WeaponCategory] | None = None) -> CharacterSheet:
+        return CharacterSheet(
+            id="actor-1",
+            name="Actor",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            weapon_category_training=training or [WeaponCategory.MARTIAL, WeaponCategory.SIMPLE],
+        )
+
     def test_none_returns_none(self):
-        assert build_attack_details(None) is None
+        assert build_attack_details(None, self._make_actor()) is None
 
     def test_basic_conversion(self):
-        req = AttackDetailsRequest(
-            weapon_name="Longsword",
-            damage_dice="1d8",
-            damage_type=DamageType.SLASHING,
-            attack_ability=Ability.STRENGTH,
-            is_ranged=False,
-        )
-        details = build_attack_details(req)
+        req = AttackDetailsRequest(weapon_name="Longsword")
+        details = build_attack_details(req, self._make_actor())
         assert details is not None
         assert details.weapon_name == "Longsword"
         assert details.damage_dice == DiceNotation("1d8")
         assert details.damage_type == DamageType.SLASHING
         assert details.attack_ability == Ability.STRENGTH
         assert details.is_ranged is False
+        assert details.proficient is True
 
     def test_ranged_weapon(self):
-        req = AttackDetailsRequest(
-            weapon_name="Shortbow",
-            damage_dice="1d6",
-            damage_type=DamageType.PIERCING,
-            attack_ability=Ability.DEXTERITY,
-            is_ranged=True,
-        )
-        details = build_attack_details(req)
+        req = AttackDetailsRequest(weapon_name="Shortbow")
+        details = build_attack_details(req, self._make_actor())
         assert details is not None
         assert details.is_ranged is True
         assert details.attack_ability == Ability.DEXTERITY
 
+    def test_untrained_weapon_not_proficient(self):
+        req = AttackDetailsRequest(weapon_name="Longsword")
+        actor = self._make_actor(training=[WeaponCategory.SIMPLE])
+        details = build_attack_details(req, actor)
+        assert details is not None
+        assert details.proficient is False
+
     def test_default_values(self):
         req = AttackDetailsRequest()
-        details = build_attack_details(req)
+        details = build_attack_details(req, self._make_actor())
         assert details is not None
         assert details.weapon_name == "Unarmed Strike"
         assert details.damage_type == DamageType.BLUDGEONING

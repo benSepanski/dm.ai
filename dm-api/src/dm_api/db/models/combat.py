@@ -87,6 +87,11 @@ class AttackDetailsRequest(BaseModel):
     damage_type: DamageType = DamageType.BLUDGEONING
     attack_ability: Ability = Ability.STRENGTH
     is_ranged: bool = False
+    # When weapon_name matches the SRD weapon registry, is_offhand/two_handed
+    # steer the registry bridge (off-hand light-weapon attack; Versatile
+    # two-handed damage die). Ignored for weapons outside the registry.
+    is_offhand: bool = False
+    two_handed: bool = False
 
     @field_validator("damage_dice")
     @classmethod
