@@ -24,6 +24,7 @@ from game_engine.types import (
     CombatStateData,
     Condition,
     DamageType,
+    DeathSaveState,
     DiceNotation,
     SpellComponent,
     SpellRangeType,
@@ -365,3 +366,89 @@ class TestRegistryIntegration:
         result = cast_spell(caster, fireball, Ability.INTELLIGENCE, state, ["t"])
         assert result.success
         assert result.outcomes[0].save_total is not None
+
+
+class TestRevival:
+    def _dead_target(self) -> CharacterSheet:
+        target = CharacterSheet(
+            id="t",
+            name="Target",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            hp_current=0,
+            hp_max=30,
+            ac=10,
+        )
+        target.death_saves = DeathSaveState(failures=3, is_dead=True)
+        target.conditions = [Condition.UNCONSCIOUS, Condition.PRONE]
+        return target
+
+    def test_non_revival_spell_cannot_heal_the_dead(self):
+        caster = _caster()
+        target = self._dead_target()
+        state = CombatStateData(combatants=[caster, target])
+        spell = _spell(healing_dice=DiceNotation("8d8"))
+        cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert target.death_saves.is_dead
+        assert target.hp_current == 0
+
+    def test_revivify_brings_target_back_at_one_hp(self):
+        revivify = get_spell("Revivify")
+        assert revivify is not None
+        caster = _caster()
+        target = self._dead_target()
+        state = CombatStateData(combatants=[caster, target])
+        result = cast_spell(caster, revivify, Ability.INTELLIGENCE, state, ["t"])
+        assert result.success
+        assert result.outcomes[0].revived
+        assert not target.death_saves.is_dead
+        assert target.hp_current == 1
+        assert Condition.UNCONSCIOUS not in target.conditions
+
+    def test_raise_dead_brings_target_back_at_one_hp(self):
+        raise_dead = get_spell("Raise Dead")
+        assert raise_dead is not None
+        caster = _caster(level=20)  # needs a 5th-level slot
+        target = self._dead_target()
+        state = CombatStateData(combatants=[caster, target])
+        result = cast_spell(caster, raise_dead, Ability.INTELLIGENCE, state, ["t"])
+        assert result.success
+        assert result.outcomes[0].revived
+        assert not target.death_saves.is_dead
+        assert target.hp_current == 1
+
+    def test_resurrection_restores_full_hp(self):
+        resurrection = get_spell("Resurrection")
+        assert resurrection is not None
+        caster = _caster(level=20)  # needs a 7th-level slot
+        target = self._dead_target()
+        state = CombatStateData(combatants=[caster, target])
+        result = cast_spell(caster, resurrection, Ability.INTELLIGENCE, state, ["t"])
+        assert result.success
+        assert result.outcomes[0].revived
+        assert not target.death_saves.is_dead
+        assert target.hp_current == target.hp_max == 30
+
+    def test_true_resurrection_restores_full_hp(self):
+        true_res = get_spell("True Resurrection")
+        assert true_res is not None
+        caster = _caster(level=20)  # needs a 9th-level slot
+        target = self._dead_target()
+        state = CombatStateData(combatants=[caster, target])
+        result = cast_spell(caster, true_res, Ability.INTELLIGENCE, state, ["t"])
+        assert result.success
+        assert result.outcomes[0].revived
+        assert not target.death_saves.is_dead
+        assert target.hp_current == target.hp_max == 30
+
+    def test_revival_spell_on_living_target_is_a_harmless_heal(self):
+        revivify = get_spell("Revivify")
+        assert revivify is not None
+        caster = _caster()
+        state = TestCasting()._state(caster, target_hp=20)
+        target = state.get_combatant("t")
+        target.hp_current = 15
+        result = cast_spell(caster, revivify, Ability.INTELLIGENCE, state, ["t"])
+        assert result.success
+        assert not result.outcomes[0].revived
+        assert target.hp_current == 16

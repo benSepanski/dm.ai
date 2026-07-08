@@ -42,7 +42,7 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 |------|----------|------|
 | **F.2–F.4** — Concentration: save on spell damage, break on incapacitation, end effects on loss, DC cap 30 | SPL-02, EFF-01, SPL-07, EFF-07, SPL-16 | M–L |
 | **I2** — Centralize condition application so immunities apply on every inflicting path | EFF-10 | M |
-| **J (carve-out)** — Revival effect type: Revivify/Raise Dead/True Resurrection actually revive | SPL-01 | S |
+| **J (carve-out)** — Revival effect type: Revivify/Raise Dead/Resurrection/True Resurrection actually revive ✅ done | SPL-01 | S |
 
 **Exit criteria:** Fireball forces a concentration save; stunning a caster drops their spell; losing Hold Person un-paralyzes the target; condition-immune creatures cannot receive the condition from any path; Revivify returns a dead target to 1 HP.
 
@@ -328,7 +328,7 @@ The 2024 condition set is partly stale and partly unwired. Many require relation
 A long tail of individual spells misfire because the schema lacks the fields to express their rules. These are grouped because they all require extending `SpellData` + the resolver rather than per-spell data tweaks.
 
 **Findings**
-- Revivify/Raise Dead/True Resurrection can never revive a dead target (`_damage.py:126` [SPL-01], **critical**)
+- Revivify/Raise Dead/Resurrection/True Resurrection can never revive a dead target (`_damage.py:126` [SPL-01], **critical**) ✅ done — `SpellData.revives`/`revive_full_heal` added; `cast_spell` clears `death_saves` before the healing step when `revives` is set and a target's `death_saves.is_dead` is true, then either applies the spell's normal healing (Revivify/Raise Dead → 1 HP) or sets `hp_current = hp_max` (Resurrection/True Resurrection, per their "full hit points" text — the original audit line omitted 7th-level Resurrection, which has the identical bug). `SpellTargetOutcome.revived` and flavor text surface the revival to callers. See `tests/test_spellcasting.py::TestRevival`.
 - Registry spells with no mechanical fields silently no-op: Shield, Counterspell, Power Word Kill, Mage Armor, Bless, Banishment, … (`level1.py:106` [SPL-09], **major**)
 - Multi-beam/ray spells collapse into one all-or-nothing attack with wrong upcast math: Scorching Ray, Eldritch Blast (`level2.py:85` [SPL-12], **major**)
 - Spell attack rolls ignore all condition-based advantage/disadvantage and never deal critical damage (`_spell_resolution.py:129` [SPL-08], **major**)
@@ -415,7 +415,7 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 2. **Workstream B** (action economy: Extra Attack, reactions, casting-time, one-slot-per-turn, validation ordering) — depends on A. B1 (Extra Attack + validation ordering) and B2 (reactions/opportunity attacks/Ready) ✅ done; B3 (spell casting-time, one-slot-per-turn) remains.
 3. **Workstream C** (weapon registry ↔ resolver bridge) — without it, masteries/proficiency are dead in the real dm-api pipeline regardless of any other fix.
 4. **Workstream F** (concentration lifecycle) — three critical/major concentration gaps; step 1 (effective-damage return) is shared with G.
-5. **Workstream J revival carve-out** (Revivify can't revive) — small, self-contained critical.
+5. **Workstream J revival carve-out** (Revivify can't revive) ✅ done — small, self-contained critical.
 6. **Workstream I2** (condition-immunity centralization + concentration-on-incapacitation break) — the two condition *critical* items.
 
 **Majors that affect ordinary play (fix next):**

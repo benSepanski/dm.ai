@@ -202,6 +202,7 @@ class SpellTargetOutcome:
     save_success: bool | None = None
     damage: int = 0
     healing: int = 0
+    revived: bool = False
     conditions_applied: list[Condition] = field(default_factory=list)
 
 
