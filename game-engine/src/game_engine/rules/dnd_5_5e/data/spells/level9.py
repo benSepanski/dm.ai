@@ -132,5 +132,7 @@ LEVEL_9_SPELLS: list[SpellData] = [
             "you can even provide a new body if the old one is gone."
         ),
         material="diamonds worth 25,000+ GP, which the spell consumes",
+        revives=True,
+        revive_full_heal=True,
     ),
 ]

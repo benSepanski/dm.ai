@@ -181,6 +181,7 @@ LEVEL_5_SPELLS: list[SpellData] = [
             "several long rests."
         ),
         material="a diamond worth 500+ GP, which the spell consumes",
+        revives=True,
         healing_flat=1,
     ),
     SpellData(

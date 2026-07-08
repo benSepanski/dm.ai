@@ -166,6 +166,14 @@ def cast_spell(
             _apply_damage_impl(target, secondary, spell.secondary_damage_type)
             outcome.damage += secondary
 
+        # Revival bypasses the "no healing while dead" rule: clearing the
+        # death-save state here lets the healing below (or the full-heal
+        # carve-out) reach a target that _apply_healing_impl would otherwise
+        # reject outright.
+        if spell.revives and target.death_saves.is_dead:
+            target.death_saves.reset()
+            outcome.revived = True
+
         healing = _roll_damage(
             spell, spell.healing_dice, spell.upcast_healing_per_slot, caster.level, upcast_levels
         )
@@ -175,6 +183,10 @@ def cast_spell(
         if healing > 0 and (spell.healing_dice is not None or spell.healing_flat > 0):
             _apply_healing_impl(target, max(0, healing))
             outcome.healing = max(0, healing)
+
+        if outcome.revived and spell.revive_full_heal:
+            target.hp_current = target.hp_max
+            outcome.healing = target.hp_max
 
         if not saved and spell.conditions_applied:
             for condition in spell.conditions_applied:
@@ -196,10 +208,13 @@ def cast_spell(
     if outcomes:
         total_damage = sum(o.damage for o in outcomes)
         total_healing = sum(o.healing for o in outcomes)
+        revived_count = sum(1 for o in outcomes if o.revived)
         if total_damage:
             flavor += f" {hits}/{len(outcomes)} targets affected for {total_damage} damage."
         if total_healing:
             flavor += f" Restores {total_healing} hit points."
+        if revived_count:
+            flavor += f" {revived_count} target(s) return to life."
 
     return SpellCastResult(
         success=True,

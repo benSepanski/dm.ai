@@ -115,6 +115,8 @@ LEVEL_7_SPELLS: list[SpellData] = [
             "weakened for a time afterward."
         ),
         material="a diamond worth 1,000+ GP, which the spell consumes",
+        revives=True,
+        revive_full_heal=True,
     ),
     SpellData(
         name="Plane Shift",

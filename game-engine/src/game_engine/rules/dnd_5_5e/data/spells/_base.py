@@ -59,6 +59,13 @@ class SpellData:
     healing_flat: int = 0
     upcast_healing_per_slot: DiceNotation | None = None
     upcast_healing_flat_per_slot: int = 0
+    # Revival — bypasses the "no healing while dead" rule for a target whose
+    # death saves record it as dead. ``revive_full_heal`` restores the target
+    # to full hit points instead of relying on ``healing_dice``/``healing_flat``
+    # (used by spells whose text specifies "full hit points" rather than a
+    # fixed amount, e.g. Resurrection/True Resurrection).
+    revives: bool = False
+    revive_full_heal: bool = False
     # Effects
     conditions_applied: list[Condition] = field(default_factory=list)
     area: AreaShape | None = None

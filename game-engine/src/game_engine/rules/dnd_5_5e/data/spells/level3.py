@@ -220,6 +220,7 @@ LEVEL_3_SPELLS: list[SpellData] = [
             "age."
         ),
         material="a diamond worth 300+ GP, which the spell consumes",
+        revives=True,
         healing_flat=1,
     ),
     SpellData(
