@@ -1,11 +1,13 @@
 """
 D&D 5.5e spellcasting engine: slot progression, save DCs, and result types.
 
-Action economy for the Magic action is enforced by :mod:`._actions`;
-this module owns slot bookkeeping, save DC / attack-bonus helpers, and the
-typed :class:`SpellCastResult` / :class:`SpellTargetOutcome` dataclasses.
-Spell effect resolution (damage, conditions, healing) lives in
-:mod:`._spell_resolution`.
+This module owns slot bookkeeping, save DC / attack-bonus helpers, the
+casting-time action-economy gate (SPL-03, SPL-06), and the typed
+:class:`SpellCastResult` / :class:`SpellTargetOutcome` dataclasses. Spell
+effect resolution (damage, conditions, healing) lives in
+:mod:`._spell_resolution`, which calls :func:`check_casting_economy` /
+:func:`commit_casting_economy` so the gate is enforced in exactly one place
+regardless of caller (dm-api's cast-spell endpoint, or any future caller).
 """
 
 from __future__ import annotations
@@ -14,15 +16,23 @@ import math
 from dataclasses import dataclass, field
 
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
+from game_engine.rules.dnd_5_5e.data.spells import SpellData
 from game_engine.types import (
     Ability,
+    CastingTime,
     CharacterSheet,
     ClassLevelEntry,
     Condition,
     DiceNotation,
     SpellcasterType,
     SpellSlotState,
+    TurnState,
 )
+
+# Casting times resolvable inside a combat turn, mapped to the TurnState
+# economy slot they consume. Anything longer (1 minute, 1 hour, rituals)
+# can't be cast mid-fight.
+_COMBAT_CASTING_TIMES = (CastingTime.ACTION, CastingTime.BONUS_ACTION, CastingTime.REACTION)
 
 # Shared full-caster slot table: SLOT_TABLE[caster_level][slot_level - 1].
 _FULL_CASTER_SLOTS: dict[int, list[int]] = {
@@ -229,3 +239,60 @@ def _consume_slot(caster: CharacterSheet, slot_level: int) -> bool:
         return False
     slot.remaining -= 1
     return True
+
+
+def check_casting_economy(
+    spell: SpellData, ts: TurnState, *, expends_slot: bool
+) -> tuple[str, str] | None:
+    """Read-only check: would casting *spell* right now violate the turn economy?
+
+    Returns ``(error_code, flavor_text)`` if the cast should be rejected, or
+    ``None`` if it's clear to proceed. Mutates nothing — callers validate
+    with this *before* touching a spell slot (ACT-05-style validate-before-
+    consume), then call :func:`commit_casting_economy` only once the cast
+    has actually succeeded.
+
+    Covers two 2024 PHB rules that apply only to the three casting times the
+    turn-based action economy defines (action/bonus action/reaction): a
+    spell is cast using the specific slot its ``casting_time`` names
+    (SPL-03), and a creature can expend only one spell slot per turn to
+    cast a spell — cantrips and ritual casts, which don't expend a slot, are
+    unrestricted (SPL-06). Longer casting times (10 minutes, 1 hour, ...)
+    are downtime rituals outside any single turn, so they're exempt from
+    both checks here; a caller representing an active combat turn (e.g. the
+    dm-api combat-cast-spell endpoint) is responsible for rejecting those
+    separately as inappropriate for its context.
+    """
+    if spell.casting_time not in _COMBAT_CASTING_TIMES:
+        return None
+    if spell.casting_time is CastingTime.ACTION and ts.action_used:
+        return ("action_used", "Action already used this turn.")
+    if spell.casting_time is CastingTime.BONUS_ACTION and ts.bonus_action_used:
+        return ("bonus_action_used", "Bonus action already used.")
+    if spell.casting_time is CastingTime.REACTION and ts.reaction_used:
+        return ("reaction_used", "Reaction already used this round.")
+    if expends_slot and ts.spell_slot_expended_this_turn:
+        return (
+            "spell_slot_already_used",
+            "Only one spell can be cast using a spell slot per turn.",
+        )
+    return None
+
+
+def commit_casting_economy(spell: SpellData, ts: TurnState, *, expends_slot: bool) -> None:
+    """Mark the casting-time economy slot spent. Call only after the cast succeeds.
+
+    No-op for casting times outside the turn economy (see
+    :func:`check_casting_economy`) — there's no TurnState slot for them to
+    consume.
+    """
+    if spell.casting_time not in _COMBAT_CASTING_TIMES:
+        return
+    if spell.casting_time is CastingTime.ACTION:
+        ts.action_used = True
+    elif spell.casting_time is CastingTime.BONUS_ACTION:
+        ts.bonus_action_used = True
+    else:
+        ts.reaction_used = True
+    if expends_slot:
+        ts.spell_slot_expended_this_turn = True

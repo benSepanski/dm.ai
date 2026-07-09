@@ -51,6 +51,7 @@ class TestCombatStateData:
         ts.reaction_used = True
         ts.movement_used_ft = 30
         ts.attacks_made = 2
+        ts.spell_slot_expended_this_turn = True
         ts.dodging = True
         ts.disengaging = True
         ts.dashing = True
@@ -64,6 +65,9 @@ class TestCombatStateData:
         assert reset.reaction_used is False
         assert reset.movement_used_ft == 0
         assert reset.attacks_made == 0
+        # The one-spell-slot-per-turn flag (SPL-06) is action-economy state,
+        # not a cross-turn effect — it resets every turn like the others.
+        assert reset.spell_slot_expended_this_turn is False
         assert reset.dodging is False
         assert reset.disengaging is False
         assert reset.dashing is False
@@ -200,6 +204,8 @@ class TestTurnStateSerde:
             reaction_used=True,
             movement_used_ft=25,
             attacks_made=2,
+            nick_used=True,
+            spell_slot_expended_this_turn=True,
             dodging=True,
             disengaging=True,
             dashing=True,

@@ -169,6 +169,9 @@ class TestCasting:
             cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"], slot_level=3)
             count_base = mock_roll.call_args_list[0][0][0]
         caster.spell_slots = compute_spell_slots([ClassLevelEntry(CharacterClass.WIZARD, 9)])
+        # A new turn: the one-spell-slot-per-turn flag from the first cast
+        # (SPL-06) must not carry over and block this second, unrelated cast.
+        state.reset_turn(caster.id)
         with patch(f"{RES}.roll_dice") as mock_roll:
             mock_roll.return_value = (40, [])
             cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"], slot_level=5)
@@ -262,6 +265,99 @@ class TestCasting:
         )
         assert not result.success
         assert result.error == "not_a_ritual"
+
+
+class TestCastingEconomy:
+    """SPL-03 (casting-time -> TurnState slot) and SPL-06 (one spell-slot-
+    per-turn) — the casting-time gate `cast_spell` enforces internally so it
+    applies to every caller, not just dm-api's cast-spell endpoint."""
+
+    def _state(self, caster) -> CombatStateData:
+        target = CharacterSheet(
+            id="t", name="Target", level=1, char_class=CharacterClass.FIGHTER, ac=10
+        )
+        return CombatStateData(combatants=[caster, target])
+
+    def test_bonus_action_spell_spends_bonus_action_not_action(self):
+        caster = _caster()
+        state = self._state(caster)
+        spell = _spell(casting_time=CastingTime.BONUS_ACTION)
+        result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, [])
+        assert result.success
+        ts = state.turn_state_for(caster.id)
+        assert ts.bonus_action_used is True
+        assert ts.action_used is False
+
+    def test_reaction_spell_spends_reaction(self):
+        caster = _caster()
+        state = self._state(caster)
+        spell = _spell(casting_time=CastingTime.REACTION)
+        result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, [])
+        assert result.success
+        ts = state.turn_state_for(caster.id)
+        assert ts.reaction_used is True
+        assert ts.action_used is False
+
+    def test_action_already_used_rejects_and_consumes_no_slot(self):
+        caster = _caster()
+        state = self._state(caster)
+        state.turn_state_for(caster.id).action_used = True
+        spell = _spell(casting_time=CastingTime.ACTION)
+        before = next(s for s in caster.spell_slots if s.slot_level == 1).remaining
+        result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, [])
+        assert not result.success
+        assert result.error == "action_used"
+        after = next(s for s in caster.spell_slots if s.slot_level == 1).remaining
+        assert after == before
+
+    def test_second_leveled_spell_same_turn_rejected(self):
+        caster = _caster()
+        state = self._state(caster)
+        # Distinct casting times so the second cast isn't blocked by its own
+        # action/bonus-action slot instead of the one-slot-per-turn rule.
+        first = _spell(casting_time=CastingTime.ACTION, name="First Spell")
+        second = _spell(casting_time=CastingTime.BONUS_ACTION, name="Second Spell")
+        assert cast_spell(caster, first, Ability.INTELLIGENCE, state, []).success
+        result = cast_spell(caster, second, Ability.INTELLIGENCE, state, [])
+        assert not result.success
+        assert result.error == "spell_slot_already_used"
+
+    def test_cantrip_is_exempt_from_one_slot_per_turn(self):
+        caster = _caster()
+        state = self._state(caster)
+        leveled = _spell(casting_time=CastingTime.ACTION, name="Leveled Spell")
+        cantrip = _spell(casting_time=CastingTime.BONUS_ACTION, name="Cantrip", level=0)
+        assert cast_spell(caster, leveled, Ability.INTELLIGENCE, state, []).success
+        result = cast_spell(caster, cantrip, Ability.INTELLIGENCE, state, [])
+        assert result.success
+
+    def test_one_slot_per_turn_flag_clears_on_reset_turn(self):
+        caster = _caster()
+        state = self._state(caster)
+        first = _spell(casting_time=CastingTime.ACTION, name="First Spell")
+        assert cast_spell(caster, first, Ability.INTELLIGENCE, state, []).success
+
+        state.reset_turn(caster.id)
+
+        second = _spell(casting_time=CastingTime.ACTION, name="Second Spell")
+        result = cast_spell(caster, second, Ability.INTELLIGENCE, state, [])
+        assert result.success
+
+    def test_downtime_casting_time_exempt_from_turn_economy(self):
+        """A 1-hour ritual (e.g. Raise Dead) isn't part of the turn economy at
+        all: it doesn't touch TurnState and isn't blocked by a prior cast."""
+        caster = _caster()
+        state = self._state(caster)
+        leveled = _spell(casting_time=CastingTime.ACTION, name="First Spell")
+        assert cast_spell(caster, leveled, Ability.INTELLIGENCE, state, []).success
+
+        downtime = _spell(casting_time=CastingTime.ONE_HOUR, name="Downtime Ritual")
+        result = cast_spell(caster, downtime, Ability.INTELLIGENCE, state, [])
+        assert result.success
+        ts = state.turn_state_for(caster.id)
+        # Untouched by the downtime cast — still reflects only the first cast.
+        assert ts.action_used is True
+        assert ts.spell_slot_expended_this_turn is True
 
 
 class TestDodgeInteraction:

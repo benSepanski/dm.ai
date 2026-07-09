@@ -3,7 +3,10 @@
 Depth-first decomposition mirrors ``combat.py``: load → build-state →
 resolve → persist. The engine's :func:`cast_spell` owns slot consumption,
 upcasting, attack rolls, saving throws, damage/healing, rider conditions,
-and concentration; this module owns the HTTP boundary and persistence.
+concentration, and the casting-time action economy (which action/bonus
+action/reaction a cast spends, and the 2024 one-spell-slot-per-turn rule);
+this module owns the HTTP boundary, persistence, and rejecting casting
+times that don't fit inside an active combat turn at all.
 
 ``heal`` and ``stabilize`` are DM adjudication tools (potions, Healer's Kit,
 narrative fiat) — they do not consume the actor's action economy. A spell
@@ -30,7 +33,6 @@ from game_engine.types import (
     CastingTime,
     CharacterSheet,
     CombatStateData,
-    TurnState,
 )
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,25 +95,24 @@ def _spellcasting_ability(caster: CharacterSheet, override: Ability | None) -> A
     return progression.spellcasting_ability
 
 
-def _consume_casting_economy(spell: SpellData, ts: TurnState) -> None:
-    """Mark the economy slot the spell's casting time uses; 409 if spent."""
+def _reject_uncombat_casting_time(spell: SpellData) -> None:
+    """409 a casting time this endpoint can't represent (rituals, downtime casts).
+
+    Actually spending the right ``TurnState`` slot (action/bonus
+    action/reaction) and enforcing the one-spell-slot-per-turn rule is the
+    engine's job — :func:`~game_engine.rules.dnd_5_5e.cast_spell` does it
+    internally via ``check_casting_economy``/``commit_casting_economy`` so
+    it applies uniformly to every caller, not just this endpoint. This
+    check only rejects casting times (10 minutes, 1 hour, ...) that can't
+    fit inside a single combat turn in the first place — the engine treats
+    those as downtime casts and doesn't gate them at all, since a caller
+    outside of active combat is allowed to make them.
+    """
     if spell.casting_time not in _COMBAT_CASTING_TIMES:
         raise HTTPException(
             status_code=409,
             detail=f"{spell.name} takes {spell.casting_time.value} to cast — not in combat.",
         )
-    if spell.casting_time is CastingTime.ACTION:
-        if ts.action_used:
-            raise HTTPException(status_code=409, detail="Action already used this turn.")
-        ts.action_used = True
-    elif spell.casting_time is CastingTime.BONUS_ACTION:
-        if ts.bonus_action_used:
-            raise HTTPException(status_code=409, detail="Bonus action already used.")
-        ts.bonus_action_used = True
-    else:
-        if ts.reaction_used:
-            raise HTTPException(status_code=409, detail="Reaction already used this round.")
-        ts.reaction_used = True
 
 
 def _cast_log_entry(combat: CombatState, actor_id: str, result: SpellCastResult) -> dict[str, Any]:
@@ -150,11 +151,13 @@ async def cast_combat_spell(
 ) -> CombatStateRead:
     """Cast a spell through the rule engine's spellcasting module.
 
-    Resolves slot consumption (with upcasting), spell attack rolls, saving
+    Resolves the casting-time action economy (which of action/bonus
+    action/reaction the cast spends, and the 2024 one-spell-slot-per-turn
+    rule), slot consumption (with upcasting), spell attack rolls, saving
     throws against the caster's spell save DC, damage/healing (cantrip
     scaling included), rider conditions, and concentration. Rule rejections
-    (no slot, economy spent, incapacitated) are 409s and never touch the
-    combat log.
+    (no slot, economy spent, a second leveled spell this turn, incapacitated)
+    are 409s and never touch the combat log.
     """
     combat = await _load_active_combat(session_id, db)
     sheets = [CharacterSheet.from_dict(c) for c in (combat.combatants or [])]
@@ -170,13 +173,14 @@ async def cast_combat_spell(
     if not caster.can_act:
         raise HTTPException(status_code=409, detail=f"{caster.name} can't act.")
 
+    _reject_uncombat_casting_time(spell)
+
     state = CombatStateData(
         combatants=sheets,
         round_number=combat.round_number,
         current_turn_index=combat.current_turn_index,
         turn_states=load_turn_states(combat),
     )
-    _consume_casting_economy(spell, state.turn_state_for(caster.id))
 
     ability = _spellcasting_ability(caster, payload.spellcasting_ability)
     result = cast_spell(

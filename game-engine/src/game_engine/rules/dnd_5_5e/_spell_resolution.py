@@ -17,6 +17,8 @@ from game_engine.rules.dnd_5_5e.spellcasting import (
     _consume_slot,
     _scale_dice,
     cantrip_dice_multiplier,
+    check_casting_economy,
+    commit_casting_economy,
     duration_rounds,
     spell_attack_bonus,
     spell_save_dc,
@@ -69,19 +71,29 @@ def cast_spell(
 ) -> SpellCastResult:
     """Cast *spell* at the given targets, consuming a slot and resolving effects.
 
-    Validates slot availability (leveled spells), supports upcasting and
-    ritual casting, applies attack rolls or saving throws per target, rolls
-    damage/healing, applies rider conditions on failed saves, and starts
-    concentration (ending any previous concentration).
+    For a spell whose ``casting_time`` is a turn-economy action/bonus
+    action/reaction, validates and enforces that the right ``TurnState``
+    slot is spent (SPL-03) and the 2024 "one spell slot per turn" rule
+    (SPL-06); see :func:`~game_engine.rules.dnd_5_5e.spellcasting.check_casting_economy`
+    for why longer casting times (downtime rituals) are exempt rather than
+    rejected. Then validates slot availability (leveled spells), supports
+    upcasting and ritual casting, applies attack rolls or saving throws per
+    target, rolls damage/healing, applies rider conditions on failed saves,
+    and starts concentration (ending any previous concentration).
+    Rejections at any validation step consume nothing (economy slot, spell
+    slot).
 
-    Whether the spell is known/prepared, and the Magic action's economy,
-    are the caller's responsibility (see :mod:`._actions`).
+    Whether the spell is known/prepared is the caller's responsibility. A
+    ritual cast (``as_ritual=True``) is exempt from the casting-time economy
+    gate entirely — it consumes no slot, so there is nothing for the gate to
+    enforce.
 
     Args:
         caster: The casting character.
         spell: Spell definition.
         spellcasting_ability: The caster's spellcasting ability.
-        combat_state: Combat state containing the targets.
+        combat_state: Combat state containing the targets and the caster's
+            :class:`~game_engine.types.TurnState`.
         target_ids: IDs of targets (may be empty for utility spells).
         slot_level: Slot level to use (defaults to the spell's level).
         as_ritual: Cast as a ritual (no slot; spell must be a ritual).
@@ -89,11 +101,18 @@ def cast_spell(
     Returns:
         :class:`~game_engine.rules.dnd_5_5e.spellcasting.SpellCastResult`.
     """
+    if as_ritual and not spell.ritual:
+        return _fail(spell, "not_a_ritual", f"{spell.name} can't be cast as a ritual.")
+
+    expends_slot = not spell.is_cantrip and not as_ritual
+    ts = combat_state.turn_state_for(caster.id)
+    if not as_ritual:
+        economy_error = check_casting_economy(spell, ts, expends_slot=expends_slot)
+        if economy_error is not None:
+            return _fail(spell, *economy_error)
+
     used_slot: int | None = None
-    if as_ritual:
-        if not spell.ritual:
-            return _fail(spell, "not_a_ritual", f"{spell.name} can't be cast as a ritual.")
-    elif not spell.is_cantrip:
+    if expends_slot:
         used_slot = slot_level if slot_level is not None else spell.level
         if used_slot < spell.level:
             return _fail(
@@ -103,6 +122,9 @@ def cast_spell(
             )
         if not _consume_slot(caster, used_slot):
             return _fail(spell, "no_slot", f"No level {used_slot} spell slots remaining.")
+
+    if not as_ritual:
+        commit_casting_economy(spell, ts, expends_slot=expends_slot)
 
     upcast_levels = (used_slot - spell.level) if used_slot is not None else 0
     dc = spell_save_dc(caster, spellcasting_ability)

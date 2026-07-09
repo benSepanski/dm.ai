@@ -62,6 +62,7 @@ class TurnState:
     movement_used_ft: int = 0
     attacks_made: int = 0
     nick_used: bool = False
+    spell_slot_expended_this_turn: bool = False
     dodging: bool = False
     disengaging: bool = False
     dashing: bool = False
@@ -87,6 +88,7 @@ class TurnState:
             "movement_used_ft": self.movement_used_ft,
             "attacks_made": self.attacks_made,
             "nick_used": self.nick_used,
+            "spell_slot_expended_this_turn": self.spell_slot_expended_this_turn,
             "dodging": self.dodging,
             "disengaging": self.disengaging,
             "dashing": self.dashing,
@@ -115,6 +117,7 @@ class TurnState:
             movement_used_ft=int(d.get("movement_used_ft", 0)),
             attacks_made=int(d.get("attacks_made", 0)),
             nick_used=bool(d.get("nick_used", False)),
+            spell_slot_expended_this_turn=bool(d.get("spell_slot_expended_this_turn", False)),
             dodging=bool(d.get("dodging", False)),
             disengaging=bool(d.get("disengaging", False)),
             dashing=bool(d.get("dashing", False)),
@@ -159,14 +162,15 @@ class CombatStateData:
         """Reset action economy for *char_id* at the start of their turn.
 
         Only the action-economy fields (action/bonus-action/reaction used,
-        movement, attacks made, Nick's once-per-turn attack,
-        dodging/disengaging/dashing) are cleared here, plus an unused Readied
-        action — 2024 PHB: a readied action is lost if its trigger doesn't
-        happen before the start of your next turn. Cross-turn effect flags
-        (Help/Sap/Vex, and Hide's ``hidden``) are left alone — they expire on
-        their own rule-defined trigger, not simply because *some* combatant's
-        turn began. See :meth:`grant_help`, :meth:`grant_sap`,
-        :meth:`grant_vex`, and :meth:`_expire_cross_turn_effects`.
+        movement, attacks made, Nick's once-per-turn attack, the one
+        spell-slot-per-turn flag, dodging/disengaging/dashing) are cleared
+        here, plus an unused Readied action — 2024 PHB: a readied action is
+        lost if its trigger doesn't happen before the start of your next
+        turn. Cross-turn effect flags (Help/Sap/Vex, and Hide's ``hidden``)
+        are left alone — they expire on their own rule-defined trigger, not
+        simply because *some* combatant's turn began. See :meth:`grant_help`,
+        :meth:`grant_sap`, :meth:`grant_vex`, and
+        :meth:`_expire_cross_turn_effects`.
         """
         ts = self.turn_state_for(char_id)
         ts.action_used = False
@@ -175,6 +179,7 @@ class CombatStateData:
         ts.movement_used_ft = 0
         ts.attacks_made = 0
         ts.nick_used = False
+        ts.spell_slot_expended_this_turn = False
         ts.dodging = False
         ts.disengaging = False
         ts.dashing = False

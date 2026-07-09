@@ -188,6 +188,47 @@ async def test_bonus_action_spell_uses_bonus_action(client, world_id):
 
 
 @pytest.mark.asyncio
+async def test_second_leveled_spell_same_turn_rejected(client, world_id):
+    """2024 PHB: only one spell slot can be expended per turn (SPL-06).
+
+    Cure Wounds (action) and Healing Word (bonus action) use different
+    economy slots, so only the slot-per-turn rule — not a spent action or
+    bonus action — can be blocking the second cast here.
+    """
+    cleric_id = await _create_caster(client, world_id, name="Maren", char_class="Cleric")
+    ally_id = await _create_character(client, world_id, name="Dorn", hp=5)
+    session_id, _ = await _start_combat(client, world_id, cleric_id, ally_id)
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/cast-spell",
+        json={"actor_id": cleric_id, "spell_name": "Cure Wounds", "target_ids": [ally_id]},
+    )
+    assert r.status_code == 200
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/cast-spell",
+        json={"actor_id": cleric_id, "spell_name": "Healing Word", "target_ids": [ally_id]},
+    )
+    assert r.status_code == 409
+    assert "one spell" in r.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_downtime_casting_time_rejected_by_combat_endpoint(client, world_id):
+    """Raise Dead takes 1 hour to cast — the combat endpoint can't represent that."""
+    cleric_id = await _create_caster(client, world_id, name="Maren", char_class="Cleric")
+    downed_id = await _create_downed_character(client, world_id, name="Sylvara")
+    session_id, _ = await _start_combat(client, world_id, cleric_id, downed_id)
+
+    r = await client.post(
+        f"/api/sessions/{session_id}/combat/cast-spell",
+        json={"actor_id": cleric_id, "spell_name": "Raise Dead", "target_ids": [downed_id]},
+    )
+    assert r.status_code == 409
+    assert "not in combat" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_cast_by_non_caster_class_requires_explicit_ability(client, world_id):
     fighter_id = await _create_character(client, world_id, name="Dorn")
     target_id = await _create_character(client, world_id, name="Bandit")
