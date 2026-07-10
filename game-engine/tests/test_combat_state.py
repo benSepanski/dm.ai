@@ -204,6 +204,8 @@ class TestTurnStateSerde:
             disengaging=True,
             dashing=True,
             hidden=True,
+            light_attack_used=True,
+            leveled_spell_cast=True,
             helped=True,
             helped_expiry=EffectExpiry("helper-1", 3),
             sapped=True,

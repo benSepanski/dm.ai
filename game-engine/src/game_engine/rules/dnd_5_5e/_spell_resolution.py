@@ -75,7 +75,11 @@ def cast_spell(
     concentration (ending any previous concentration).
 
     Whether the spell is known/prepared, and the Magic action's economy,
-    are the caller's responsibility (see :mod:`._actions`).
+    are the caller's responsibility (see :mod:`._actions`). This function
+    does enforce the 2024 PHB "one leveled spell per turn" rule (SPL-06):
+    a leveled (non-cantrip) spell cast without ``as_ritual`` is rejected if
+    the caster already cast one earlier this turn, tracked via
+    ``TurnState.leveled_spell_cast``; cantrips and ritual casts are exempt.
 
     Args:
         caster: The casting character.
@@ -94,6 +98,13 @@ def cast_spell(
         if not spell.ritual:
             return _fail(spell, "not_a_ritual", f"{spell.name} can't be cast as a ritual.")
     elif not spell.is_cantrip:
+        ts = combat_state.turn_state_for(caster.id)
+        if ts.leveled_spell_cast:
+            return _fail(
+                spell,
+                "leveled_spell_already_cast",
+                "Only one leveled spell can be cast per turn.",
+            )
         used_slot = slot_level if slot_level is not None else spell.level
         if used_slot < spell.level:
             return _fail(
@@ -103,6 +114,7 @@ def cast_spell(
             )
         if not _consume_slot(caster, used_slot):
             return _fail(spell, "no_slot", f"No level {used_slot} spell slots remaining.")
+        ts.leveled_spell_cast = True
 
     upcast_levels = (used_slot - spell.level) if used_slot is not None else 0
     dc = spell_save_dc(caster, spellcasting_ability)

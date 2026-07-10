@@ -169,6 +169,7 @@ class TestCasting:
             cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"], slot_level=3)
             count_base = mock_roll.call_args_list[0][0][0]
         caster.spell_slots = compute_spell_slots([ClassLevelEntry(CharacterClass.WIZARD, 9)])
+        state.reset_turn(caster.id)  # simulate a new turn: SPL-06 allows one leveled spell each
         with patch(f"{RES}.roll_dice") as mock_roll:
             mock_roll.return_value = (40, [])
             cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"], slot_level=5)
@@ -262,6 +263,62 @@ class TestCasting:
         )
         assert not result.success
         assert result.error == "not_a_ritual"
+
+
+class TestOneLeveledSpellPerTurn:
+    """SPL-06: 2024 PHB — at most one leveled spell per turn; cantrips/rituals exempt."""
+
+    def _state(self, caster, target_hp=30) -> CombatStateData:
+        target = CharacterSheet(
+            id="t",
+            name="Target",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            hp_current=target_hp,
+            hp_max=target_hp,
+            ac=10,
+        )
+        return CombatStateData(combatants=[caster, target])
+
+    def test_second_leveled_spell_same_turn_rejected(self):
+        caster = _caster()
+        state = self._state(caster)
+        spell = _spell(level=1)
+        first = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert first.success
+        second = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert not second.success
+        assert second.error == "leveled_spell_already_cast"
+        # No second slot was consumed.
+        assert (
+            sum(s.remaining for s in caster.spell_slots)
+            == sum(s.maximum for s in caster.spell_slots) - 1
+        )
+
+    def test_cantrip_after_leveled_spell_is_allowed(self):
+        caster = _caster()
+        state = self._state(caster)
+        cast_spell(caster, _spell(level=1), Ability.INTELLIGENCE, state, ["t"])
+        cantrip = _spell(level=0, name="Test Cantrip")
+        result = cast_spell(caster, cantrip, Ability.INTELLIGENCE, state, ["t"])
+        assert result.success
+
+    def test_ritual_after_leveled_spell_is_allowed(self):
+        caster = _caster()
+        state = self._state(caster)
+        cast_spell(caster, _spell(level=1), Ability.INTELLIGENCE, state, ["t"])
+        ritual = _spell(ritual=True)
+        result = cast_spell(caster, ritual, Ability.INTELLIGENCE, state, [], as_ritual=True)
+        assert result.success
+
+    def test_leveled_spell_allowed_again_next_turn(self):
+        caster = _caster()
+        state = self._state(caster)
+        spell = _spell(level=1)
+        cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        state.reset_turn(caster.id)
+        result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert result.success
 
 
 class TestDodgeInteraction:
