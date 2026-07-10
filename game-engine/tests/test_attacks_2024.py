@@ -24,6 +24,7 @@ from game_engine.types import (
     Feat,
     UnarmedStrikeOption,
     WeaponMastery,
+    WeaponProperty,
 )
 
 ATTACKS = "game_engine.rules.dnd_5_5e._attacks"
@@ -238,7 +239,10 @@ class TestTwoWeaponFighting:
             patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
             patch(f"{ATTACKS}.dice_roll", return_value=(4, [4])),
         ):
-            result = engine.resolve_action(_attack(is_offhand=True), state)
+            engine.resolve_action(_attack(properties=[WeaponProperty.LIGHT]), state)
+            result = engine.resolve_action(
+                _attack(is_offhand=True, properties=[WeaponProperty.LIGHT]), state
+            )
         assert result.damage == 4
 
     def test_twf_style_adds_ability_mod(self, engine, state):
@@ -249,15 +253,53 @@ class TestTwoWeaponFighting:
             patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
             patch(f"{ATTACKS}.dice_roll", return_value=(4, [4])),
         ):
-            result = engine.resolve_action(_attack(is_offhand=True), state)
+            engine.resolve_action(_attack(properties=[WeaponProperty.LIGHT]), state)
+            result = engine.resolve_action(
+                _attack(is_offhand=True, properties=[WeaponProperty.LIGHT]), state
+            )
         assert result.damage == 7
 
     def test_offhand_consumes_bonus_action(self, engine, state):
         with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
-            engine.resolve_action(_attack(is_offhand=True), state)
-            second = engine.resolve_action(_attack(is_offhand=True), state)
+            engine.resolve_action(_attack(properties=[WeaponProperty.LIGHT]), state)
+            engine.resolve_action(
+                _attack(is_offhand=True, properties=[WeaponProperty.LIGHT]), state
+            )
+            second = engine.resolve_action(
+                _attack(is_offhand=True, properties=[WeaponProperty.LIGHT]), state
+            )
         assert second.success is False
         assert second.log_entry["error"] == "bonus_action_used"
+
+    def test_offhand_attack_without_light_property_rejected(self, engine, state):
+        """ACT-04: the off-hand weapon itself must have the Light property."""
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            engine.resolve_action(_attack(properties=[WeaponProperty.LIGHT]), state)
+            result = engine.resolve_action(_attack(is_offhand=True, properties=[]), state)
+        assert result.success is False
+        assert result.log_entry["error"] == "offhand_not_light"
+        assert state.turn_state_for("a").bonus_action_used is False
+
+    def test_offhand_attack_without_prior_attack_rejected(self, engine, state):
+        """ACT-04: TWF requires a prior Attack-action attack this turn."""
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            result = engine.resolve_action(
+                _attack(is_offhand=True, properties=[WeaponProperty.LIGHT]), state
+            )
+        assert result.success is False
+        assert result.log_entry["error"] == "no_light_attack"
+        assert state.turn_state_for("a").bonus_action_used is False
+
+    def test_offhand_attack_requires_light_main_hand_weapon(self, engine, state):
+        """ACT-04: the *main-hand* weapon must also have been Light — a prior
+        Greatsword attack doesn't unlock a Light off-hand attack."""
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            engine.resolve_action(_attack(weapon_name="Greatsword", properties=[]), state)
+            result = engine.resolve_action(
+                _attack(is_offhand=True, properties=[WeaponProperty.LIGHT]), state
+            )
+        assert result.success is False
+        assert result.log_entry["error"] == "no_light_attack"
 
 
 class TestUnarmedOptions:
@@ -419,12 +461,23 @@ class TestActionEconomyAndConcentration:
     def test_nick_without_mastery_still_consumes_bonus_action(self, engine, state):
         # No Nick mastery unlocked for this weapon: behaves like ordinary TWF.
         with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            engine.resolve_action(_attack(properties=[WeaponProperty.LIGHT]), state)
             engine.resolve_action(
-                _attack(weapon_name="Scimitar", mastery=WeaponMastery.NICK, is_offhand=True),
+                _attack(
+                    weapon_name="Scimitar",
+                    mastery=WeaponMastery.NICK,
+                    is_offhand=True,
+                    properties=[WeaponProperty.LIGHT],
+                ),
                 state,
             )
             second = engine.resolve_action(
-                _attack(weapon_name="Scimitar", mastery=WeaponMastery.NICK, is_offhand=True),
+                _attack(
+                    weapon_name="Scimitar",
+                    mastery=WeaponMastery.NICK,
+                    is_offhand=True,
+                    properties=[WeaponProperty.LIGHT],
+                ),
                 state,
             )
         assert second.success is False

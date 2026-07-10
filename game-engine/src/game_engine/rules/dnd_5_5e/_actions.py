@@ -29,6 +29,7 @@ from game_engine.types import (
     TurnState,
     UnarmedStrikeOption,
     WeaponMastery,
+    WeaponProperty,
 )
 
 # Actions every conscious creature can always take (2024 PHB).
@@ -193,11 +194,17 @@ def _resolve_attack_action(
 
     Validates the attack (actor/target/cover) before spending any slot.
     Off-hand attacks spend the bonus action, unless Nick applies (spends a
-    once-per-turn Nick slot instead). Ordinary main-hand attacks draw from
-    the actor's Extra Attack pool, and the action slot is only marked spent
-    once that pool is exhausted; an unarmed grapple/shove is a single use of
-    the action regardless of Extra Attack (its interaction with multiple
-    attacks is Workstream E, out of scope here).
+    once-per-turn Nick slot instead). A bonus-action off-hand attack also
+    requires the 2024 Two-Weapon Fighting prerequisites (ACT-04): the
+    off-hand weapon must have the Light property, and the actor must already
+    have attacked with a Light weapon in hand this turn via the Attack
+    action (``ts.light_attack_used``) — Nick attacks are exempt since Nick
+    only unlocks on Light weapons and folds into the same Attack action.
+    Ordinary main-hand attacks draw from the actor's Extra Attack pool, and
+    the action slot is only marked spent once that pool is exhausted; an
+    unarmed grapple/shove is a single use of the action regardless of Extra
+    Attack (its interaction with multiple attacks is Workstream E, out of
+    scope here).
     """
     validated = _validate_attack(action, combat_state)
     if isinstance(validated, ActionResult):
@@ -211,6 +218,21 @@ def _resolve_attack_action(
     )
 
     if details.is_offhand and not is_nick_bonus_attack:
+        if WeaponProperty.LIGHT not in details.properties:
+            return _simple_result(
+                action,
+                False,
+                "Two-Weapon Fighting requires a Light off-hand weapon.",
+                {"error": "offhand_not_light"},
+            )
+        if not ts.light_attack_used:
+            return _simple_result(
+                action,
+                False,
+                "Two-Weapon Fighting requires a prior Attack action with a Light weapon "
+                "this turn.",
+                {"error": "no_light_attack"},
+            )
         if ts.bonus_action_used:
             return _simple_result(
                 action, False, "Bonus action already used.", {"error": "bonus_action_used"}
@@ -248,6 +270,8 @@ def _resolve_attack_action(
         return _simple_result(
             action, False, "Action already used this turn.", {"error": "action_used"}
         )
+    if WeaponProperty.LIGHT in details.properties:
+        ts.light_attack_used = True
     result = _resolve_attack(action, combat_state)
     if ts.attacks_made >= max_attacks:
         ts.action_used = True
