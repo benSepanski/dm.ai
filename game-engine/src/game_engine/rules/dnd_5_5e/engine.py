@@ -113,6 +113,7 @@ class DnD55eEngine(RuleEngine):
         dc: int,
         advantage: bool = False,
         disadvantage: bool = False,
+        turn_state: TurnState | None = None,
     ) -> CheckResult:
         """Roll a skill or ability check against *dc*.
 
@@ -122,6 +123,9 @@ class DnD55eEngine(RuleEngine):
             dc: Difficulty class (integer).
             advantage: Roll twice and take the higher result.
             disadvantage: Roll twice and take the lower result.
+            turn_state: The roller's :class:`TurnState`, if this check happens
+                in combat. A pending Help grant (``turn_state.helped``) adds
+                advantage and is consumed by the roll.
 
         Returns:
             :class:`~game_engine.interface.CheckResult`.
@@ -129,7 +133,7 @@ class DnD55eEngine(RuleEngine):
         Raises:
             ValueError: If *skill* is not recognised.
         """
-        return _roll_check_impl(char, skill, dc, advantage, disadvantage)
+        return _roll_check_impl(char, skill, dc, advantage, disadvantage, turn_state)
 
     # ------------------------------------------------------------------
     # Saving throws & death saves

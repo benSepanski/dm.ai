@@ -312,7 +312,7 @@ def _resolve_non_attack(
             action, True, f"{name} helps an ally, granting advantage on their next roll."
         )
     if action.action_type is ActionType.HIDE:
-        check = _roll_check_impl(actor, Skill.STEALTH, _HIDE_DC)
+        check = _roll_check_impl(actor, Skill.STEALTH, _HIDE_DC, turn_state=ts)
         ts.hidden = check.success
         outcome = "hides successfully" if check.success else "fails to hide"
         return _simple_result(

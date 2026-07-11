@@ -19,6 +19,7 @@ from game_engine.types import (
     CharacterSheet,
     Condition,
     Skill,
+    TurnState,
 )
 
 # ---------------------------------------------------------------------------
@@ -277,6 +278,52 @@ class TestAdvantageDisadvantage:
             for _ in range(100)
         ]
         assert sum(dis_totals) <= sum(normal_totals)
+
+
+# ---------------------------------------------------------------------------
+# Help (2024 PHB "advantage on their next roll") — ACT-19
+# ---------------------------------------------------------------------------
+
+
+class TestHelpGrantsAdvantageOnChecks:
+    """A pending Help grant applies to ability checks, not just attack rolls."""
+
+    def test_helped_turn_state_grants_advantage(self, engine: DnD55eEngine):
+        char = make_fighter(strength=10, proficient_skills=[])
+        random.seed(0)
+        normal_totals = [engine.roll_check(char, Skill.ATHLETICS, dc=1).total for _ in range(100)]
+
+        random.seed(0)
+        helped_totals = []
+        for _ in range(100):
+            ts = TurnState(helped=True)
+            helped_totals.append(
+                engine.roll_check(char, Skill.ATHLETICS, dc=1, turn_state=ts).total
+            )
+        assert sum(helped_totals) >= sum(normal_totals)
+
+    def test_helped_flag_is_consumed_by_the_check(self, engine: DnD55eEngine):
+        char = make_fighter(strength=10, proficient_skills=[])
+        ts = TurnState(helped=True)
+        engine.roll_check(char, Skill.ATHLETICS, dc=1, turn_state=ts)
+        assert ts.helped is False
+
+    def test_no_turn_state_does_not_grant_advantage(self, engine: DnD55eEngine):
+        char = make_fighter(strength=10, proficient_skills=[])
+        result = engine.roll_check(char, Skill.ATHLETICS, dc=1, turn_state=None)
+        assert isinstance(result, CheckResult)
+
+    def test_not_helped_turn_state_grants_no_advantage(self, engine: DnD55eEngine):
+        char = make_fighter(strength=10, proficient_skills=[])
+        random.seed(0)
+        normal_totals = [engine.roll_check(char, Skill.ATHLETICS, dc=1).total for _ in range(100)]
+
+        random.seed(0)
+        unhelped_totals = [
+            engine.roll_check(char, Skill.ATHLETICS, dc=1, turn_state=TurnState()).total
+            for _ in range(100)
+        ]
+        assert unhelped_totals == normal_totals
 
 
 # ---------------------------------------------------------------------------

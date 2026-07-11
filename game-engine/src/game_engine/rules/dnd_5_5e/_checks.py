@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import CheckResult
-from game_engine.types import Ability, CharacterSheet, Condition, Skill
+from game_engine.types import Ability, CharacterSheet, Condition, Skill, TurnState
 
 # Conditions that impose disadvantage on ability checks (2024 PHB).
 # Frightened technically requires line of sight to the fear source; the
@@ -93,6 +93,7 @@ def _roll_check_impl(
     dc: int,
     advantage: bool = False,
     disadvantage: bool = False,
+    turn_state: TurnState | None = None,
 ) -> CheckResult:
     """Roll a skill or ability check against *dc*.
 
@@ -102,6 +103,10 @@ def _roll_check_impl(
         dc: Difficulty class (integer).
         advantage: Roll twice and take the higher result.
         disadvantage: Roll twice and take the lower result.
+        turn_state: The roller's :class:`TurnState`, if this check happens in
+            combat. When ``turn_state.helped`` is set (2024 Help action —
+            "advantage on their next roll"), it grants advantage here and is
+            consumed, mirroring the attack-roll path in ``_attacks.py``.
 
     Returns:
         :class:`~game_engine.interface.CheckResult`.
@@ -147,6 +152,12 @@ def _roll_check_impl(
     # Poisoned/frightened impose disadvantage on ability checks.
     if any(c in _CHECK_DISADVANTAGE_CONDITIONS for c in char.conditions):
         disadvantage = True
+
+    # Help (2024 PHB): advantage on the helped character's next roll, of
+    # any kind — consumed here just as the attack path consumes it.
+    if turn_state is not None and turn_state.helped:
+        advantage = True
+        turn_state.helped = False
 
     # Roll d20
     if advantage and not disadvantage:
