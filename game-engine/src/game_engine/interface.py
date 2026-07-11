@@ -21,6 +21,7 @@ from game_engine.types import (
     DamageType,
     DeathSaveOutcome,
     Skill,
+    TurnState,
 )
 
 
@@ -168,6 +169,7 @@ class RuleEngine(ABC):
         dc: int,
         advantage: bool = False,
         disadvantage: bool = False,
+        turn_state: TurnState | None = None,
     ) -> CheckResult:
         """Roll a skill or ability check against a DC.
 
@@ -177,6 +179,8 @@ class RuleEngine(ABC):
             dc: Difficulty class to meet or exceed.
             advantage: Roll two dice and take the higher.
             disadvantage: Roll two dice and take the lower.
+            turn_state: The roller's turn state, if this check happens in
+                combat — consulted for a pending Help grant.
 
         Returns:
             CheckResult with roll details and success flag.

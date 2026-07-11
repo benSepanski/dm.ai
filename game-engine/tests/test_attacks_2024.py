@@ -559,6 +559,19 @@ class TestHelpAndHideSurviveBeginTurn:
         engine.begin_turn(state.get_combatant("a"), state)
         assert state.turn_state_for("c").helped is False
 
+    def test_help_grants_advantage_on_allys_hide_check(self, engine, state):
+        """ACT-19: Help grants advantage on the ally's next roll of any kind,
+        not just an attack roll — here the ally spends it Hiding."""
+        engine.resolve_action(Action(ActionType.HELP, "b", "a"), state)
+        assert state.turn_state_for("a").helped is True
+
+        with patch(
+            "game_engine.rules.dnd_5_5e._checks.roll_with_advantage", return_value=(18, [18, 3])
+        ) as adv:
+            engine.resolve_action(Action(ActionType.HIDE, "a", None), state)
+        adv.assert_called_once()
+        assert state.turn_state_for("a").helped is False
+
     def test_hide_grant_survives_own_begin_turn_until_hider_attacks(self, engine, state):
         actor = state.get_combatant("a")
         with patch("game_engine.rules.dnd_5_5e._checks.roll_dice", return_value=(18, [18])):

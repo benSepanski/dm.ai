@@ -18,7 +18,7 @@ The 12 workstreams below (A–M) group the findings by root cause. This section 
 
 | Work | Findings | Size |
 |------|----------|------|
-| **A** — TurnState lifecycle: split per-turn economy state from cross-turn effect state with per-effect expiry | ACT-03 ✅ done, ACT-19 (check half — still open, needs Workstream H) | M |
+| **A** — TurnState lifecycle: split per-turn economy state from cross-turn effect state with per-effect expiry | ACT-03 ✅ done, ACT-19 ✅ done | M |
 | **C** — Weapon-registry ↔ attack-resolution bridge (`WeaponData` → `AttackDetails`, incl. dm-api) | EQP-01, EQP-08, ACT-18 | L |
 | **F.1** — Make `_apply_damage_impl` return post-mitigation damage; route all damage paths through one concentration check | groundwork for SPL-02, EFF-07 | M |
 
@@ -85,13 +85,13 @@ As each workstream lands, flip the corresponding `docs/phb-parity-spec.md` rows 
 
 ## Workstream A — TurnState cross-turn effect lifecycle (root cause: `reset_turn` wipes persistent flags)
 
-**Status: ACT-03 done.** `EffectExpiry` (`game-engine/src/game_engine/types/combat_state.py`) now tracks, per cross-turn flag, which combatant's turn boundary clears it and at which round; `CombatStateData.reset_turn` only clears action-economy fields and calls `_expire_cross_turn_effects`, and `grant_help`/`grant_sap`/`grant_vex` compute the correct expiry round. `dm-api/src/dm_api/api/combat.py`'s `next_turn` now runs the same `reset_turn` instead of overwriting the entry with a bare `TurnState()`. ACT-19 (Help on ability checks) is still open — it needs Workstream H to thread `CombatStateData` into `_roll_check_impl`.
+**Status: ACT-03 and ACT-19 done.** `EffectExpiry` (`game-engine/src/game_engine/types/combat_state.py`) now tracks, per cross-turn flag, which combatant's turn boundary clears it and at which round; `CombatStateData.reset_turn` only clears action-economy fields and calls `_expire_cross_turn_effects`, and `grant_help`/`grant_sap`/`grant_vex` compute the correct expiry round. `dm-api/src/dm_api/api/combat.py`'s `next_turn` now runs the same `reset_turn` instead of overwriting the entry with a bare `TurnState()`. `_roll_check_impl` (`_checks.py`) now takes an optional `turn_state: TurnState | None` and consumes a pending `helped` flag for advantage, mirroring the attack-roll path in `_attacks.py::_advantage_state`; `DnD55eEngine.roll_check`/`RuleEngine.roll_check` grew the matching optional parameter, and the Hide action (`_actions.py::_resolve_non_attack`) now passes the actor's own `TurnState` so a helped character's Stealth check also benefits, matching Help's "advantage on their next roll" text. See `tests/test_engine_checks.py::TestHelpGrantsAdvantageOnChecks` and `tests/test_attacks_2024.py::TestHelpAndHideSurviveBeginTurn::test_help_grants_advantage_on_allys_hide_check`.
 
 The single highest-leverage bug. `TurnState.reset_turn` (`game-engine/src/game_engine/types/sheets.py:276-279`) installs a fresh `TurnState()` at the start of each combatant's turn, and dm-api mirrors this (`dm-api/src/dm_api/api/combat.py:310-311`). But `helped`, `sapped`, `vexed_target_id`, and `hidden` encode effects that by rule persist across turn boundaries and are consumed on a *later* turn — so they are erased before they can ever fire.
 
 **Findings**
 - Help/Sap/Vex/Hide are no-ops in normal play (`sheets.py:276` [ACT-03], **critical**)
-- Help never grants advantage on ability checks — only attack rolls read `helped` (`_checks.py:141` [ACT-19], **minor**; the check-path half also depends on Workstream H threading combat state into `_roll_check_impl`)
+- Help never grants advantage on ability checks — only attack rolls read `helped` (`_checks.py:141` [ACT-19], **minor**) ✅ done — `_roll_check_impl` takes an optional `turn_state` and consumes a pending `helped` flag for advantage; the Hide action passes its own `TurnState` through
 
 **Fix approach**: Split action-economy state (reset every turn) from cross-turn effect state (expires by its own rule). Introduce a source/expiry model on `TurnState`: each carry-over flag records the round/turn it expires and *which* combatant's turn boundary consumes it. `begin_turn` should reset only the actor's own action-economy fields (`action_used`, `bonus_action_used`, `movement_used_ft`, `attacks_made`, `dodging`, `disengaging`, `dashing`) and refresh `reaction_used`, while leaving `helped`/`sapped`/`vexed_target_id`/`hidden` to expire on their correct triggers (Vex: end of attacker's next turn; Sap: before start of sapper's next turn; Help: start of helper's next turn; Hide: on attack/cast-with-verbal/being-found, never on turn start). Mirror the same split in `dm-api/src/dm_api/api/combat.py:310`.
 
