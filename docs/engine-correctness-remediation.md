@@ -19,7 +19,7 @@ The 12 workstreams below (A–M) group the findings by root cause. This section 
 | Work | Findings | Size |
 |------|----------|------|
 | **A** — TurnState lifecycle: split per-turn economy state from cross-turn effect state with per-effect expiry | ACT-03 ✅ done, ACT-19 ✅ done | M |
-| **C** — Weapon-registry ↔ attack-resolution bridge (`WeaponData` → `AttackDetails`, incl. dm-api) | EQP-01, EQP-08, ACT-18 | L |
+| **C** ✅ done — Weapon-registry ↔ attack-resolution bridge (`WeaponData` → `AttackDetails`, incl. dm-api) | EQP-01 ✅ done, EQP-08 🟡 partial (Heavy wired; Ammunition/Loading deferred to D), ACT-18 ✅ done | L |
 | **F.1** — Make `_apply_damage_impl` return post-mitigation damage; route all damage paths through one concentration check | groundwork for SPL-02, EFF-07 | M |
 
 **Exit criteria:** Help/Sap/Vex/Hide effects survive `begin_turn` and are consumed on the correct later turn; an attack built through dm-api carries mastery/properties/proficiency from the registry; every damage path reports effective (post-immunity/resistance) damage.
@@ -145,7 +145,7 @@ itself) are exempt from this check since Nick only unlocks on Light weapons.
 3. ✅ Thread spell `casting_time` (`CastingTime.BONUS_ACTION`/`REACTION`) into slot selection so MAGIC actions charge the correct slot (`dm_api.api.combat_spells._consume_casting_economy`); a `TurnState.leveled_spell_cast` flag rejects a second leveled-spell cast per turn (cantrips/rituals exempt), enforced in `cast_spell` (`_spell_resolution.py`).
 4. ✅ **Reorder validation before consumption** in `_resolve_action_impl`: run the `actor_not_found`/`target_not_found`/`total_cover` guards first, only setting `action_used`/`bonus_action_used` after the attack is legal; do not create a TurnState for an unknown actor.
 5. ✅ Nick: when the off-hand weapon has the Nick mastery unlocked, resolve the extra Light attack as part of the Attack action (do not set `bonus_action_used`), once per turn — independent of hit.
-5b. ✅ Validate two-weapon fighting: a plain (non-Nick) `is_offhand` attack requires the off-hand weapon to have the Light property and a prior same-turn Attack-action attack with a Light main-hand weapon (`TurnState.light_attack_used`), reject otherwise. Note this only has real-play effect once Workstream C bridges `WeaponData.properties` into `AttackDetails` — until then, callers must pass `properties` explicitly.
+5b. ✅ Validate two-weapon fighting: a plain (non-Nick) `is_offhand` attack requires the off-hand weapon to have the Light property and a prior same-turn Attack-action attack with a Light main-hand weapon (`TurnState.light_attack_used`), reject otherwise. Now that Workstream C bridges `WeaponData.properties` into `AttackDetails` in the real dm-api pipeline, this has real-play effect; engine-level callers can still pass `properties` explicitly.
 6. ✅ Ready: `TurnState.readied: ReadiedAction | None` stores the trigger text, target, and `AttackDetails`; `ActionType.READIED_ACTION` resolves it later via the same reaction path as opportunity attacks, and an unused readied action is cleared by `reset_turn` (lost at the start of the readier's own next turn, per the 2024 rule). Only readying an attack is supported — readying a spell (which would need concentration wiring into a reaction cast) is left as a documented gap, not silently claimed.
 7. Make `get_available_actions` consult `turn_state_for` and surface remaining action/bonus/reaction options.
 
@@ -155,22 +155,18 @@ itself) are exempt from this check since Nick only unlocks on Light weapons.
 
 ---
 
-## Workstream C — Weapon registry ↔ attack-resolution bridge (root cause: `WeaponData`/`get_weapon` never consumed)
+## Workstream C — Weapon registry ↔ attack-resolution bridge (root cause: `WeaponData`/`get_weapon` never consumed) ✅ done
 
-The audit's most consequential equipment finding: nothing constructs an `AttackDetails` from a `WeaponData`. `dm-api`'s `build_attack_details` (`dm-api/src/dm_api/api/combat_utils.py:255-264`) copies only 5 request fields and never calls `get_weapon`, so in the real pipeline `mastery` is always `None`, `properties` always empty, and `proficient` always `True`. The entire mastery/property/proficiency layer is dead code outside hand-crafted unit tests.
+The audit's most consequential equipment finding: nothing constructed an `AttackDetails` from a `WeaponData`. `dm-api`'s `build_attack_details` (`dm-api/src/dm_api/api/combat_utils.py`) copied only 5 request fields and never called `get_weapon`, so in the real pipeline `mastery` was always `None`, `properties` always empty, and `proficient` always `True`. The mastery/property/proficiency layer was dead code outside hand-crafted unit tests.
 
 **Findings**
-- Weapon registry never consumed by attack resolution — masteries/proficiency/stats can't fire in real play (`data/weapons.py:529` [EQP-01], **critical**)
-- `WeaponProperty` enum & `AttackDetails.properties` have zero consumers: Heavy/Loading/Ammunition/Versatile/Finesse/Reach/Thrown unimplemented (`sheets.py:291` [EQP-08], **major**)
-- Off-hand attack drops a *negative* ability modifier (`_attacks.py:313` [ACT-18], **minor**)
+- Weapon registry never consumed by attack resolution — masteries/proficiency/stats can't fire in real play (`data/weapons.py:529` [EQP-01], **critical**) ✅ done
+- `WeaponProperty` enum & `AttackDetails.properties` have zero consumers: Heavy/Loading/Ammunition/Versatile/Finesse/Reach/Thrown unimplemented (`sheets.py:291` [EQP-08], **major**) 🟡 partial — Heavy, Versatile, Finesse now have consumers; Ammunition/Loading (needs an inventory-backed ammo count) deferred to pair with Workstream D's inventory work; Reach/Thrown are positional/targeting concerns out of this engine's theater-of-mind scope
+- Off-hand attack drops a *negative* ability modifier (`_attacks.py:313` [ACT-18], **minor**) ✅ done
 
-**Fix approach**: Add a `to_attack_details(weapon: WeaponData, actor, *, two_handed, is_offhand, ...) -> AttackDetails` bridge in the engine that populates `mastery` (only if the actor has that mastery unlocked), `properties`, `damage_dice`/`damage_type`, `attack_ability` (Finesse → best of STR/DEX), and `proficient` (derived from `actor.weapon_category_training` vs the weapon's `WeaponCategory`). Call it from `dm-api` `build_attack_details` via a widened `AttackDetailsRequest` (add weapon-name → registry lookup; stop trusting `proficient`). Then consume `properties` in `_advantage_state`/`_actions`:
-- **Heavy**: disadvantage when STR (melee) or DEX (ranged) < 13.
-- **Ammunition/Loading**: track/expend ammo and limit to one attack per action for Loading weapons.
-- **Versatile**: honor `versatile_dice` when two-handed.
-- Fix `_attacks.py:312-314` to zero the off-hand modifier only when it is **≥ 0**, preserving negative modifiers.
+**Fix approach**: `game_engine.rules.dnd_5_5e._weapon_bridge.to_attack_details(weapon: WeaponData, actor, *, is_offhand, two_handed, is_ranged) -> AttackDetails` populates `mastery` (checked against actor's unlocked masteries at resolution time, same as before), `properties`, `damage_dice` (swaps to `versatile_dice` when two-handed)/`damage_type`, `attack_ability` (Finesse → best of STR/DEX), and `proficient` (derived from `actor.weapon_category_training` vs the weapon's `WeaponCategory`). `dm-api`'s `build_attack_details` now takes the acting `CharacterSheet` and calls the bridge via `get_weapon(req.weapon_name)`, falling back to the raw (now-widened, with `is_offhand`/`two_handed`) request fields only for weapons outside the registry. `_advantage_state` (`_attacks.py`) now consumes **Heavy**: disadvantage when the ability score used for the attack roll is below 13. `_attacks.py`'s off-hand damage step now zeroes the ability modifier only when it is **> 0**, preserving negative modifiers.
 
-**Tests**: build an `AttackDetails` from a Scimitar via the bridge and confirm `mastery=NICK`; a wizard attacking with a greatsword gets no proficiency bonus; a STR-8 greatsword swing rolls with disadvantage; a Loading crossbow rejects a second shot; a STR-6 off-hand handaxe deals `1d6-2`. Add a pipeline test through dm-api confirming mastery survives.
+**Tests**: `game-engine/tests/test_weapon_bridge.py` — mastery/properties/proficiency/Finesse/Versatile derivation from the registry; `dm-api/tests/test_combat_utils.py::TestBuildAttackDetails` — registry lookup through `build_attack_details`, non-registry fallback; `game-engine/tests/test_attacks_2024.py` — Heavy disadvantage, negative off-hand modifier preserved.
 
 **Size**: L. Foundational for Workstreams D and the mastery half of E to have any real-play effect; do C before E.
 
@@ -207,7 +203,7 @@ The audit's most consequential equipment finding: nothing constructs an `AttackD
 
 ## Workstream E — Weapon mastery mechanics (root cause: masteries write log keys nothing reads; missing TurnState fields & size checks)
 
-Several masteries only emit unread log entries. Note Sap/Vex are undermined by Workstream A's wipe, and *all* masteries are dead in real play until Workstream C bridges the registry.
+Several masteries only emit unread log entries. Note Sap/Vex are undermined by Workstream A's wipe; masteries now reach the real dm-api pipeline via Workstream C's registry bridge, but the mastery *effects* below (Slow/Push/Cleave table effects, Graze floor, grapple/shove size gate) are still unimplemented.
 
 **Findings**
 - Slow, Push, Cleave are log-only with no mechanical effect (`_attacks.py:149` [ACT-07], **major**)
@@ -225,7 +221,7 @@ Several masteries only emit unread log entries. Note Sap/Vex are undermined by W
 
 **Tests**: Slow reduces and later restores speed; Cleave's second attack resolves without burning the action; Push against a Huge creature no-ops; Graze with STR 10/6 deals 0; a Small attacker can't grapple a Gargantuan target; a default unarmed strike with STR 16 deals exactly 4. **Delete/replace** `test_graze_minimum_damage_is_1_with_negative_ability_mod` (it codifies a nonexistent rule).
 
-**Size**: M. Depends on Workstream C (masteries must reach the resolver) and shares the speed-reduction and economy plumbing with A/B.
+**Size**: M. Workstream C ✅ (masteries now reach the resolver); shares the speed-reduction and economy plumbing with A/B.
 
 ---
 
@@ -431,7 +427,7 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 **Critical (fix first — these break ordinary play at its core):**
 1. **Workstream A** (TurnState lifecycle) — unblocks Help/Sap/Vex/Hide *and* is a prerequisite for B, E, I.
 2. **Workstream B** ✅ done — action economy: Extra Attack, reactions, casting-time, one-slot-per-turn, TWF Light validation, validation ordering — depends on A. B1 (Extra Attack + validation ordering), B2 (reactions/opportunity attacks/Ready), and B3 (spell casting-time, one-slot-per-turn, TWF Light) are all done.
-3. **Workstream C** (weapon registry ↔ resolver bridge) — without it, masteries/proficiency are dead in the real dm-api pipeline regardless of any other fix.
+3. **Workstream C** ✅ done (weapon registry ↔ resolver bridge) — masteries/proficiency/Heavy now reach the real dm-api pipeline; Ammunition/Loading tracking remains deferred to Workstream D.
 4. **Workstream F** (concentration lifecycle) — three critical/major concentration gaps; step 1 (effective-damage return) is shared with G.
 5. **Workstream J revival carve-out** (Revivify can't revive) ✅ done — small, self-contained critical.
 6. **Workstream I2** (condition-immunity centralization + concentration-on-incapacitation break) — the two condition *critical* items.
@@ -439,7 +435,7 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 **Majors that affect ordinary play (fix next):**
 7. **Workstream G** (instant death, death-save reset, crit modifier doubling) — depends on F's effective-damage refactor.
 8. **Workstream D** (armor/proficiency/inventory) — D1 worn-armor field first; independent of A/B.
-9. **Workstream E** (mastery mechanics) — depends on C (registry bridge) and shares speed-reduction/economy plumbing with A/B.
+9. **Workstream E** (mastery mechanics) — Workstream C ✅ (registry bridge landed) — shares speed-reduction/economy plumbing with A/B.
 10. **Workstream I1/I3/I4** (stale condition definitions, source-identity, exhaustion/repeat-save) — I1 is independent; I3/I4 share source-identity with I2 and repeat-save with J.
 11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
 12. **Workstream J** (remaining spell-schema gaps) & **Workstream K** (slot/upcast math) — parallelizable; K is largely independent.

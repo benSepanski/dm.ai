@@ -88,8 +88,8 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Feature | Module | Status |
 |---|---|---|
 | Full 2024 weapon table (all simple/martial, melee/ranged) | `data.items` | ✅ |
-| Weapon masteries (Cleave, Graze, Nick, Push, Sap, Slow, Topple, Vex) | `data.items` + `_attacks` | ✅ |
-| Weapon properties (incl. range, ammunition) | `data.items` | ✅ |
+| Weapon masteries (Cleave, Graze, Nick, Push, Sap, Slow, Topple, Vex) | `data.items` + `_attacks` | 🟡 mastery now reaches attack resolution via the registry bridge (Workstream C); Nick/Graze/Sap/Vex/Topple have real effects, Cleave/Push/Slow still log-only (Workstream E) |
+| Weapon properties (incl. range, ammunition) | `data.items` | 🟡 Heavy/Versatile/Finesse consumed via the registry bridge (Workstream C); Ammunition/Loading tracking not yet wired (deferred to Workstream D) |
 | Full armor table + AC computation (dex caps, str minimums) | `data.items` + `character_builder` | ✅ |
 | Adventuring gear, tools, packs | `data.gear` | ✅ |
 | Coinage (cp/sp/ep/gp/pp) | `types.Currency` | ✅ |

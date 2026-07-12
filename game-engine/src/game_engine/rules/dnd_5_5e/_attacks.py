@@ -33,6 +33,7 @@ from game_engine.types import (
     TurnState,
     UnarmedStrikeOption,
     WeaponMastery,
+    WeaponProperty,
 )
 
 _DEFAULT_ATTACK = AttackDetails()
@@ -108,6 +109,11 @@ def _advantage_state(
         advantage = True
         actor_ts.hidden = False  # attacking reveals you
     if details.long_range:
+        disadvantage = True
+    if (
+        WeaponProperty.HEAVY in details.properties
+        and actor.ability_scores.get(details.attack_ability) < 13
+    ):
         disadvantage = True
 
     return advantage, disadvantage
@@ -324,10 +330,10 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
             log_entry=log,
         )
 
-    # Damage: off-hand attacks omit the ability modifier unless the
-    # Two-Weapon Fighting style is known.
+    # Damage: off-hand attacks omit a *positive* ability modifier unless the
+    # Two-Weapon Fighting style is known; a negative modifier still applies.
     damage_mod = ability_mod
-    if details.is_offhand and Feat.TWO_WEAPON_FIGHTING not in actor.feats:
+    if details.is_offhand and Feat.TWO_WEAPON_FIGHTING not in actor.feats and ability_mod > 0:
         damage_mod = 0
     dice_total, _ = dice_roll(details.damage_dice)
     if critical:

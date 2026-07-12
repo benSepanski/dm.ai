@@ -373,8 +373,16 @@ if unused, it's lost at the start of the readier's own next turn.
 event: `"Attack"`, `"Dash"`, `"Dodge"`, `"Disengage"`, `"Help"`, `"Hide"`,
 `"Ready"`, `"Opportunity Attack"`, `"Readied Action"`, …), `target_id`,
 `attack_details` (`weapon_name`, `damage_dice`, `damage_type`,
-`attack_ability`, `is_ranged`), `readied_trigger` (only meaningful for
-`"Ready"`)
+`attack_ability`, `is_ranged`, `is_offhand`, `two_handed`), `readied_trigger`
+(only meaningful for `"Ready"`)
+
+When `weapon_name` matches the game-engine weapon registry (`get_weapon`),
+`damage_dice`/`damage_type`/`attack_ability`/`is_ranged`/mastery/proficiency
+are derived from the registry entry and the actor's training instead of the
+request fields, which then only serve as a fallback for weapons outside the
+registry (Unarmed Strike, monster natural weapons, homebrew). `is_offhand`
+marks a Two-Weapon Fighting off-hand attack; `two_handed` selects a
+Versatile weapon's larger die.
 
 **200** → `CombatStateRead` with updated `combat_log` | **404** unknown
 actor/target | **422** `"Attack"`/`"Opportunity Attack"` with no `target_id`
