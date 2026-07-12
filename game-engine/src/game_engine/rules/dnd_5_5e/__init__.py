@@ -1,6 +1,7 @@
 """D&D 5.5e (2024 Player's Handbook) rule engine."""
 
 from game_engine.rules.dnd_5_5e._spell_resolution import cast_spell
+from game_engine.rules.dnd_5_5e._weapon_bridge import to_attack_details
 from game_engine.rules.dnd_5_5e.character_builder import (
     MANUAL_SCORE_MAX,
     MANUAL_SCORE_MIN,
@@ -63,6 +64,8 @@ __all__ = [
     "compute_spell_slots",
     "spell_attack_bonus",
     "spell_save_dc",
+    # weapons
+    "to_attack_details",
     # resting
     "RestResult",
     "long_rest",

@@ -5,12 +5,12 @@ Tests cover every public function:
 - combat_summary_text    — end-of-combat text generation
 - _normalize_char_class  — case-insensitive class normalisation
 - missing_combat_stats   — pre-combat validation
-- build_attack_details   — Pydantic → engine AttackDetails conversion
 - load_turn_states /     — TurnState serde round-trip
   dump_turn_states
 - character_to_sheet     — DB Character → CharacterSheet bridge
 - sync_combatants_to_db  — combat write-back to DB
 
+build_attack_details is tested in test_build_attack_details.py.
 roll_and_sort_initiatives is tested in test_roll_and_sort_initiatives.py.
 """
 
@@ -21,13 +21,11 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from game_engine.types import Ability, CharacterClass, DamageType, TurnState
-from game_engine.types.values import DiceNotation
+from game_engine.types import CharacterClass, TurnState
 
 from dm_api.api.combat_utils import (
     _normalize_char_class,
     advance_turn_index,
-    build_attack_details,
     character_to_sheet,
     combat_summary_text,
     dump_turn_states,
@@ -35,7 +33,6 @@ from dm_api.api.combat_utils import (
     missing_combat_stats,
     sync_combatants_to_db,
 )
-from dm_api.db.models.combat import AttackDetailsRequest
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -299,49 +296,8 @@ class TestMissingCombatStats:
 
 
 # ---------------------------------------------------------------------------
-# build_attack_details
+# build_attack_details — see test_build_attack_details.py
 # ---------------------------------------------------------------------------
-
-
-class TestBuildAttackDetails:
-    def test_none_returns_none(self):
-        assert build_attack_details(None) is None
-
-    def test_basic_conversion(self):
-        req = AttackDetailsRequest(
-            weapon_name="Longsword",
-            damage_dice="1d8",
-            damage_type=DamageType.SLASHING,
-            attack_ability=Ability.STRENGTH,
-            is_ranged=False,
-        )
-        details = build_attack_details(req)
-        assert details is not None
-        assert details.weapon_name == "Longsword"
-        assert details.damage_dice == DiceNotation("1d8")
-        assert details.damage_type == DamageType.SLASHING
-        assert details.attack_ability == Ability.STRENGTH
-        assert details.is_ranged is False
-
-    def test_ranged_weapon(self):
-        req = AttackDetailsRequest(
-            weapon_name="Shortbow",
-            damage_dice="1d6",
-            damage_type=DamageType.PIERCING,
-            attack_ability=Ability.DEXTERITY,
-            is_ranged=True,
-        )
-        details = build_attack_details(req)
-        assert details is not None
-        assert details.is_ranged is True
-        assert details.attack_ability == Ability.DEXTERITY
-
-    def test_default_values(self):
-        req = AttackDetailsRequest()
-        details = build_attack_details(req)
-        assert details is not None
-        assert details.weapon_name == "Unarmed Strike"
-        assert details.damage_type == DamageType.BLUDGEONING
 
 
 # ---------------------------------------------------------------------------

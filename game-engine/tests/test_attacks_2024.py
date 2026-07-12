@@ -245,6 +245,19 @@ class TestTwoWeaponFighting:
             )
         assert result.damage == 4
 
+    def test_offhand_attack_keeps_negative_ability_mod(self, engine, state):
+        """ACT-18: a negative modifier still reduces off-hand damage."""
+        state.get_combatant("a").ability_scores = AbilityScoreSet(strength=6)  # -2 mod
+        with (
+            patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
+            patch(f"{ATTACKS}.dice_roll", return_value=(4, [4])),
+        ):
+            engine.resolve_action(_attack(properties=[WeaponProperty.LIGHT]), state)
+            result = engine.resolve_action(
+                _attack(is_offhand=True, properties=[WeaponProperty.LIGHT]), state
+            )
+        assert result.damage == 2
+
     def test_twf_style_adds_ability_mod(self, engine, state):
         actor = state.get_combatant("a")
         actor.ability_scores = AbilityScoreSet(strength=16)

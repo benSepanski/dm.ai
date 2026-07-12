@@ -80,13 +80,22 @@ class AttackDetailsRequest(BaseModel):
     Replaces the previous untyped ``extra: dict[str, Any]`` field so that
     no ``dict[str, Any]`` crosses the API boundary (harness-engineering typed
     boundaries principle).
+
+    When ``weapon_name`` matches the game-engine weapon registry,
+    ``build_attack_details`` derives ``damage_dice``/``damage_type``/
+    ``attack_ability``/``is_ranged``/``properties``/``mastery``/``proficient``
+    from the registry and the acting character instead of trusting these
+    request fields — they are the fallback for weapons outside the registry
+    (Unarmed Strike, monster natural weapons, homebrew).
     """
 
     weapon_name: str = "Unarmed Strike"
     damage_dice: str = "1d4"
     damage_type: DamageType = DamageType.BLUDGEONING
     attack_ability: Ability = Ability.STRENGTH
-    is_ranged: bool = False
+    is_ranged: bool | None = None
+    is_offhand: bool = False
+    two_handed: bool = False
 
     @field_validator("damage_dice")
     @classmethod

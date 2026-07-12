@@ -227,7 +227,9 @@ async def submit_combat_action(
         action_type=payload.action_type,
         actor_id=payload.actor_id,
         target_id=payload.target_id,
-        details=build_attack_details(payload.attack_details),
+        details=build_attack_details(
+            payload.attack_details, state.get_combatant(payload.actor_id)
+        ),
         readied_trigger=payload.readied_trigger,
     )
     outcome = _engine.resolve_action(action, state)
