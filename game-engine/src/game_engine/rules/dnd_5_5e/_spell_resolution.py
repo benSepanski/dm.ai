@@ -25,6 +25,7 @@ from game_engine.types import (
     Ability,
     CharacterSheet,
     CombatStateData,
+    Condition,
     DiceNotation,
 )
 
@@ -207,6 +208,11 @@ def cast_spell(
                     outcome.conditions_applied.append(condition)
                 if rider_duration is not None:
                     target.condition_durations[condition] = rider_duration
+                # SRD 5.2 Unconscious: "You have the Incapacitated and Prone
+                # conditions, ... and you fall Prone." A rider that applies
+                # Unconscious directly (e.g. Sleep) must carry Prone too.
+                if condition is Condition.UNCONSCIOUS and Condition.PRONE not in target.conditions:
+                    target.conditions.append(Condition.PRONE)
 
         outcomes.append(outcome)
 

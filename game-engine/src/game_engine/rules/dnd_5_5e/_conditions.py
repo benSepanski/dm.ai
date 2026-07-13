@@ -41,6 +41,13 @@ def _apply_condition_impl(
     if duration_rounds is not None:
         target.condition_durations[condition] = duration_rounds
 
+    # SRD 5.2 Unconscious: "You have the Incapacitated and Prone conditions,
+    # ... and you fall Prone." Mirrors _fall_unconscious's 0-HP path so
+    # Unconscious applied directly (e.g. Sleep) also carries Prone.
+    if condition is Condition.UNCONSCIOUS and not is_immune_to_condition(target, Condition.PRONE):
+        if Condition.PRONE not in target.conditions:
+            target.conditions.append(Condition.PRONE)
+
     return target
 
 

@@ -22,7 +22,6 @@ class ConditionEffect:
 
     Attributes:
         description: Plain-English summary of the condition.
-        can_act: Whether the creature can take actions/reactions.
         attack_modifier: ``"advantage"``, ``"disadvantage"``, or ``None``.
         attack_against_modifier: Modifier on rolls *against* this creature.
             NOTE: ``Condition.PRONE`` is NOT handled via this field — it has
@@ -30,21 +29,30 @@ class ConditionEffect:
             implemented directly in ``_attacks.py`` and is skipped by the
             generic condition-effect loop there.
         auto_fail_saves: Abilities that auto-fail saves while in this condition.
-        speed_zero: Whether the condition sets movement speed to 0.
         immunity_types: Damage types the creature is immune to (condition-based).
         damage_resistances_all: True when the condition grants resistance to all
             damage types (e.g. PETRIFIED).  ``_damage.py`` consults this field
             to extend the effective resistance list before computing damage.
+        grants_condition_immunities: Other conditions the creature is immune to
+            while this condition is active (e.g. PETRIFIED grants immunity to
+            the Poisoned condition per SRD 5.2, distinct from a creature's own
+            declared ``condition_immunities``).
+
+    NOTE: Whether a condition prevents acting or zeroes speed is NOT tracked
+    here — ``Condition.prevents_action``/``Condition.sets_speed_to_zero``
+    (``types/enums/_core.py``) are the single source of truth for those two
+    rules, consumed by ``CharacterSheet.can_act``/``effective_speed``. A
+    second, unread copy of that data here previously caused drift (see
+    EFF-11 in docs/engine-correctness-audit.md).
     """
 
     description: str = ""
-    can_act: bool = True
     attack_modifier: AdvantageType | None = None
     attack_against_modifier: AdvantageType | None = None
     auto_fail_saves: list[Ability] = field(default_factory=list)
-    speed_zero: bool = False
     immunity_types: list[DamageType] = field(default_factory=list)
     damage_resistances_all: bool = False
+    grants_condition_immunities: list[Condition] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -59,7 +67,6 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "check that requires sight. Attack rolls against the creature have "
             "advantage, and the creature's attack rolls have disadvantage."
         ),
-        can_act=True,
         attack_modifier=AdvantageType.DISADVANTAGE,
         attack_against_modifier=AdvantageType.ADVANTAGE,
     ),
@@ -69,21 +76,18 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "with harmful abilities or magical effects. The charmer has advantage "
             "on ability checks to interact socially with the creature."
         ),
-        can_act=True,
     ),
     Condition.DEAFENED: ConditionEffect(
         description=(
             "A deafened creature can't hear and automatically fails any ability "
             "check that requires hearing."
         ),
-        can_act=True,
     ),
     Condition.EXHAUSTION: ConditionEffect(
         description=(
             "Exhaustion is measured in six levels. An exhausted creature suffers "
             "cumulative penalties based on its exhaustion level."
         ),
-        can_act=True,
     ),
     Condition.FRIGHTENED: ConditionEffect(
         description=(
@@ -91,7 +95,6 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "rolls while the source of its fear is within line of sight. The "
             "creature can't willingly move closer to the source of its fear."
         ),
-        can_act=True,
         attack_modifier=AdvantageType.DISADVANTAGE,
     ),
     Condition.GRAPPLED: ConditionEffect(
@@ -101,12 +104,9 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "incapacitated. It also ends if an effect removes the grappled "
             "creature from the reach of the grappler or grappling effect."
         ),
-        can_act=True,
-        speed_zero=True,
     ),
     Condition.INCAPACITATED: ConditionEffect(
         description="An incapacitated creature can't take actions or reactions.",
-        can_act=False,
     ),
     Condition.INVISIBLE: ConditionEffect(
         description=(
@@ -114,7 +114,6 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "or a special sense. The creature's attacks have advantage, and attack "
             "rolls against the creature have disadvantage."
         ),
-        can_act=True,
         attack_modifier=AdvantageType.ADVANTAGE,
         attack_against_modifier=AdvantageType.DISADVANTAGE,
     ),
@@ -125,10 +124,8 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "rolls against the creature have advantage. Any attack that hits the "
             "creature is a critical hit if the attacker is within 5 feet."
         ),
-        can_act=False,
         attack_against_modifier=AdvantageType.ADVANTAGE,
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
-        speed_zero=True,
     ),
     Condition.PETRIFIED: ConditionEffect(
         description=(
@@ -138,18 +135,19 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "It is incapacitated, can't move or speak, and is unaware of its "
             "surroundings. Attack rolls against the creature have advantage. It "
             "automatically fails Strength and Dexterity saving throws. It has "
-            "resistance to all damage."
+            "resistance to all damage and immunity to the poisoned condition."
         ),
-        can_act=False,
         attack_against_modifier=AdvantageType.ADVANTAGE,
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
-        speed_zero=True,
-        immunity_types=[DamageType.POISON, DamageType.PSYCHIC],
         damage_resistances_all=True,
+        # SRD 5.2: "Poison Immunity. You have Immunity to the Poisoned
+        # condition" — not damage immunity to poison or psychic damage (both
+        # are merely resisted, like every other damage type, via
+        # damage_resistances_all above).
+        grants_condition_immunities=[Condition.POISONED],
     ),
     Condition.POISONED: ConditionEffect(
         description=("A poisoned creature has disadvantage on attack rolls and ability checks."),
-        can_act=True,
         attack_modifier=AdvantageType.DISADVANTAGE,
     ),
     Condition.PRONE: ConditionEffect(
@@ -159,7 +157,6 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "otherwise the attack roll has disadvantage. The creature has "
             "disadvantage on attack rolls."
         ),
-        can_act=True,
         attack_modifier=AdvantageType.DISADVANTAGE,
         # attack_against_modifier is intentionally None: _attacks.py short-circuits
         # on PRONE before reaching the generic condition-effect loop, applying
@@ -172,21 +169,18 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "advantage, and its attack rolls have disadvantage. It has disadvantage "
             "on Dexterity saving throws."
         ),
-        can_act=True,
         attack_modifier=AdvantageType.DISADVANTAGE,
         attack_against_modifier=AdvantageType.ADVANTAGE,
-        speed_zero=True,
     ),
     Condition.STUNNED: ConditionEffect(
         description=(
-            "A stunned creature is incapacitated, can't move, and can speak only "
-            "falteringly. It automatically fails Strength and Dexterity saving "
-            "throws. Attack rolls against it have advantage."
+            "A stunned creature is incapacitated and can speak only falteringly. "
+            "It automatically fails Strength and Dexterity saving throws. Attack "
+            "rolls against it have advantage. Unlike Paralyzed/Petrified/"
+            "Unconscious, the 2024 Stunned condition does not reduce speed to 0."
         ),
-        can_act=False,
         attack_against_modifier=AdvantageType.ADVANTAGE,
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
-        speed_zero=True,
     ),
     Condition.UNCONSCIOUS: ConditionEffect(
         description=(
@@ -197,10 +191,8 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
             "that hits the creature is a critical hit if the attacker is within "
             "5 feet of the creature."
         ),
-        can_act=False,
         attack_against_modifier=AdvantageType.ADVANTAGE,
         auto_fail_saves=[Ability.STRENGTH, Ability.DEXTERITY],
-        speed_zero=True,
     ),
 }
 
@@ -213,6 +205,10 @@ CONDITION_EFFECTS: dict[Condition, ConditionEffect] = {
 def is_immune_to_condition(char: CharacterSheet, condition: Condition) -> bool:
     """Return True if *char* is immune to *condition*.
 
+    Checks both the character's own declared ``condition_immunities`` and any
+    immunity temporarily granted by a condition *currently active* on the
+    character (e.g. Petrified grants immunity to the Poisoned condition).
+
     Args:
         char: Character sheet.
         condition: The condition enum.
@@ -220,4 +216,10 @@ def is_immune_to_condition(char: CharacterSheet, condition: Condition) -> bool:
     Returns:
         True if the character is immune to the condition.
     """
-    return condition in char.condition_immunities
+    if condition in char.condition_immunities:
+        return True
+    return any(
+        condition in CONDITION_EFFECTS[active].grants_condition_immunities
+        for active in char.conditions
+        if active in CONDITION_EFFECTS
+    )
