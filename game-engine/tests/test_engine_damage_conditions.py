@@ -203,17 +203,24 @@ class TestApplyDamagePetrified:
         engine.apply_damage(char, 10, DamageType.SLASHING)
         assert char.hp_current == 39  # 10 // 2 = 5 → 44 - 5
 
-    def test_petrified_immune_to_poison_via_condition_effects(self, engine: DnD55eEngine):
-        """PETRIFIED immunity_types from CONDITION_EFFECTS grants poison immunity."""
+    def test_petrified_resists_but_does_not_negate_poison_damage(self, engine: DnD55eEngine):
+        """SRD 5.2: Petrified has Resistance to all damage (not immunity) to
+        poison/psychic — only the Poisoned *condition* is immune (EFF-05)."""
         char = make_fighter(conditions=[Condition.PETRIFIED])
         engine.apply_damage(char, 20, DamageType.POISON)
-        assert char.hp_current == 44  # immune, not just resistant
+        assert char.hp_current == 34  # 20 // 2 = 10 resisted, not negated
 
-    def test_petrified_immune_to_psychic_via_condition_effects(self, engine: DnD55eEngine):
-        """PETRIFIED immunity_types from CONDITION_EFFECTS grants psychic immunity."""
+    def test_petrified_resists_but_does_not_negate_psychic_damage(self, engine: DnD55eEngine):
         char = make_fighter(conditions=[Condition.PETRIFIED])
         engine.apply_damage(char, 20, DamageType.PSYCHIC)
-        assert char.hp_current == 44  # immune, not just resistant
+        assert char.hp_current == 34  # 20 // 2 = 10 resisted, not negated
+
+    def test_petrified_immune_to_poisoned_condition(self, engine: DnD55eEngine):
+        """SRD 5.2: 'Poison Immunity. You have Immunity to the Poisoned
+        condition' while Petrified."""
+        char = make_fighter(conditions=[Condition.PETRIFIED])
+        engine.apply_condition(char, Condition.POISONED)
+        assert Condition.POISONED not in char.conditions
 
     def test_petrified_immune_to_poison_explicit_immunities_still_work(self, engine: DnD55eEngine):
         """Explicit damage_immunities stack correctly with petrified condition."""
@@ -294,6 +301,21 @@ class TestApplyCondition:
         assert fighter.can_act is True
         engine.apply_condition(fighter, Condition.PARALYZED)
         assert fighter.can_act is False
+
+    def test_unconscious_applies_prone_too(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        """SRD 5.2 Unconscious: 'You have the Incapacitated and Prone
+        conditions ... and you fall Prone' (EFF-14)."""
+        engine.apply_condition(fighter, Condition.UNCONSCIOUS)
+        assert Condition.UNCONSCIOUS in fighter.conditions
+        assert Condition.PRONE in fighter.conditions
+
+    def test_stunned_does_not_zero_speed(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        """2024 Stunned omits the Speed-0 clause present in Paralyzed/
+        Petrified/Unconscious (EFF-06)."""
+        assert fighter.effective_speed == 30
+        engine.apply_condition(fighter, Condition.STUNNED)
+        assert fighter.can_act is False
+        assert fighter.effective_speed == 30
 
 
 # ---------------------------------------------------------------------------

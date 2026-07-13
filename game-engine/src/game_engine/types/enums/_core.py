@@ -143,7 +143,6 @@ _SPEED_ZERO_CONDITIONS: frozenset[Condition] = frozenset(
         Condition.PARALYZED,
         Condition.PETRIFIED,
         Condition.RESTRAINED,
-        Condition.STUNNED,
         Condition.UNCONSCIOUS,
     }
 )

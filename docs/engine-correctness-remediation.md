@@ -309,31 +309,54 @@ Roll-modifier bugs where check/initiative paths diverge from the (correct) attac
 
 The 2024 condition set is partly stale and partly unwired. Many require relational (source-identity) or hook (auto-fail, repeat-save) support the engine lacks.
 
+**Status: I1 done.** Stunned no longer sets speed to 0 (`Condition.STUNNED` removed
+from `_SPEED_ZERO_CONDITIONS`, `types/enums/_core.py`); Petrified's
+`ConditionEffect` no longer carries `immunity_types=[POISON, PSYCHIC]` (a
+petrified creature now only *resists* poison/psychic damage like every other
+type, via the pre-existing `damage_resistances_all=True`) and instead grants
+immunity to the Poisoned *condition* through a new
+`ConditionEffect.grants_condition_immunities` field, consulted by
+`is_immune_to_condition` (`core/conditions.py`) alongside the character's own
+declared `condition_immunities`; Unconscious applied directly — via
+`engine.apply_condition` (`_conditions.py::_apply_condition_impl`) or a spell
+rider (`_spell_resolution.py`) — now also applies Prone, mirroring the
+existing `_fall_unconscious` 0-HP path (removing Unconscious does **not**
+strip Prone, matching `_apply_healing_impl`'s existing and rules-correct
+behavior: waking up doesn't stand you up for free); and the dead
+`ConditionEffect.can_act`/`speed_zero` fields (EFF-11's duplicate, unread
+source of truth) have been deleted outright — `Condition.prevents_action`/
+`sets_speed_to_zero` (`types/enums/_core.py`) are the sole source, which
+`core/conditions.py` cannot import without an upward Types→Core layering
+violation, so deleting the dead copy (rather than merging into it) was the
+layering-safe fix. See `tests/test_conditions.py::TestSetsSpeedToZero`,
+`TestIsImmuneToCondition::test_petrified_grants_poisoned_immunity`, and
+`tests/test_engine_damage_conditions.py::TestApplyCondition::test_unconscious_applies_prone_too`/`test_stunned_does_not_zero_speed`.
+
 **Findings**
 - Combat paths bypass condition immunities (spell riders, Topple, unarmed grapple/shove) (`_spell_resolution.py:181` [EFF-10], **major**)
 - No repeat-save/save-to-end: Hold Person paralyzes for a full minute (`_conditions.py:71` [SPL-04], **major**)
-- Stunned sets speed 0 (2014); 2024 Stunned doesn't prevent movement (`core/conditions.py:189` [EFF-06], **major**)
-- Petrified grants poison/psychic *damage* immunity instead of *Poisoned-condition* immunity (`core/conditions.py:147` [EFF-05], **major**)
+- Stunned sets speed 0 (2014); 2024 Stunned doesn't prevent movement (`core/conditions.py:189` [EFF-06], **major**) ✅ done
+- Petrified grants poison/psychic *damage* immunity instead of *Poisoned-condition* immunity (`core/conditions.py:147` [EFF-05], **major**) ✅ done
 - Grappled (2024) missing attack-disadvantage-vs-non-grappler, escape check, end-on-grappler-incapacitated (`core/conditions.py:97` [EFF-04], **major**)
 - Exhaustion can never be gained via the engine; `Condition.EXHAUSTION` is a no-op (`core/conditions.py:81` [EFF-03], **major**)
 - Charmed has zero mechanical effect (`core/conditions.py:66` [EFF-02], **major**)
 - Deafened has zero effect; Blinded/Deafened auto-fail of sight/hearing checks unmodeled (`core/conditions.py:74` [EFF-12], **minor**)
-- Unconscious applied directly doesn't add Prone (`_spell_resolution.py:180` [EFF-14], **minor**)
+- Unconscious applied directly doesn't add Prone (`_spell_resolution.py:180` [EFF-14], **minor**) ✅ done
 - Invisible initiative-advantage clause not implemented (`engine.py:93` [EFF-15], **minor**)
-- `ConditionEffect.can_act`/`speed_zero` never read — duplicate frozensets are the live source (`core/conditions.py:41` [EFF-11], **minor**)
+- `ConditionEffect.can_act`/`speed_zero` never read — duplicate frozensets are the live source (`core/conditions.py:41` [EFF-11], **minor**) ✅ done (fields deleted; frozensets in `types/enums/_core.py` are now the only definition)
 
 **Fix approach**:
 1. **Centralize condition application**: route spell riders, Topple, and unarmed grapple/shove through `_apply_condition_impl` (or a shared helper) so `is_immune_to_condition` is honored everywhere and future centralized handling (concentration break from Workstream F, Prone coupling, exhaustion stacking) runs uniformly.
-2. **Fix stale/incorrect definitions**: remove `speed_zero=True` from Stunned (and drop it from `_SPEED_ZERO_CONDITIONS`); change Petrified from poison/psychic damage immunity to Poisoned-*condition* immunity (keep resistance-to-all); couple Unconscious → Prone (and clean up Prone when Unconscious is removed).
+2. ✅ **Fix stale/incorrect definitions**: remove `speed_zero=True` from Stunned (and drop it from `_SPEED_ZERO_CONDITIONS`); change Petrified from poison/psychic damage immunity to Poisoned-*condition* immunity (keep resistance-to-all); couple Unconscious → Prone. (Removal-side Prone cleanup was deliberately *not* added — `_apply_healing_impl` already leaves Prone in place when Unconscious ends via healing, which is the rules-correct behavior since standing up costs movement; coupling removal would have made waking up stand you up for free.)
 3. **Add source-identity** to conditions so Grappled (disadvantage vs non-grappler, end on grappler incapacitated, escape check as an action) and Charmed (can't attack/target charmer; charmer advantage on social checks) can be honored.
 4. **Add exhaustion stacking**: `apply_condition(EXHAUSTION)` increments `exhaustion_level` (cumulative, death at 6); a `gain_exhaustion` API; keep `Condition.EXHAUSTION` and `exhaustion_level` consistent (long rest should also clear the stale enum entry).
 5. **Add a repeat-save / save-to-end hook**: a `SpellData.repeat_save` field and an end-of-turn re-save step in the condition-tick path for Hold Person/Monster/Confusion/Dominate/Blindness/Sleep's second save.
 6. **Add sight/hearing-requirement plumbing** to `_roll_check_impl` for Blinded/Deafened auto-fail; add Invisible advantage to initiative.
-7. **Eliminate the duplicate source of truth**: make `CharacterSheet.can_act`/`effective_speed` read `ConditionEffect.can_act`/`speed_zero` (or delete the unread fields), so there is one place to edit.
+7. ✅ **Eliminate the duplicate source of truth**: `ConditionEffect.can_act`/`speed_zero` deleted (dead fields, zero consumers); `CharacterSheet.can_act`/`effective_speed` already read the canonical `Condition.prevents_action`/`sets_speed_to_zero` frozensets in `types/enums/_core.py`, unchanged.
 
-**Tests**: a PARALYZED-immune target is not paralyzed by Hold Person; a GRAPPLED-immune target isn't grappled; a stunned creature can still move; a petrified creature takes halved (not zero) poison damage and can't be Poisoned; a grappled creature attacks non-grapplers at disadvantage and can escape; `apply_condition(EXHAUSTION)` twice yields level 2 with −4/−10 ft; a charmed creature can't target its charmer; a slept creature is Prone; an invisible creature rolls initiative with advantage.
+**Tests**: a PARALYZED-immune target is not paralyzed by Hold Person; a GRAPPLED-immune target isn't grappled; ✅ a stunned creature can still move; ✅ a petrified creature takes halved (not zero) poison damage and can't be Poisoned; a grappled creature attacks non-grapplers at disadvantage and can escape; `apply_condition(EXHAUSTION)` twice yields level 2 with −4/−10 ft; a charmed creature can't target its charmer; ✅ a slept creature is Prone; an invisible creature rolls initiative with advantage.
 
-**Size**: L. The centralization (step 1) and source-identity (step 3) are shared with Workstreams A and F. Split into I1 (definition fixes: Stunned/Petrified/Unconscious/duplicate-source), I2 (immunity centralization + concentration coupling — pair with F), I3 (source-identity: Grappled/Charmed), I4 (exhaustion stacking + repeat-save + auto-fail hooks).
+**Size**: L. The centralization (step 1) and source-identity (step 3) are shared with Workstreams A and F. Split into I1 ✅ done (definition fixes: Stunned/Petrified/Unconscious/duplicate-source), I2 (immunity centralization + concentration coupling — pair with F), I3 (source-identity: Grappled/Charmed), I4 (exhaustion stacking + repeat-save + auto-fail hooks).
 
 ---
 
@@ -436,7 +459,7 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 7. **Workstream G** (instant death, death-save reset, crit modifier doubling) — depends on F's effective-damage refactor.
 8. **Workstream D** (armor/proficiency/inventory) — D1 worn-armor field first; independent of A/B.
 9. **Workstream E** (mastery mechanics) — Workstream C ✅ (registry bridge landed) — shares speed-reduction/economy plumbing with A/B.
-10. **Workstream I1/I3/I4** (stale condition definitions, source-identity, exhaustion/repeat-save) — I1 is independent; I3/I4 share source-identity with I2 and repeat-save with J.
+10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
 11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
 12. **Workstream J** (remaining spell-schema gaps) & **Workstream K** (slot/upcast math) — parallelizable; K is largely independent.
 

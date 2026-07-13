@@ -17,7 +17,6 @@ from game_engine.types import (
     CharacterClass,
     CharacterSheet,
     Condition,
-    DamageType,
 )
 
 # ---------------------------------------------------------------------------
@@ -71,34 +70,10 @@ class TestConditionEffectsDict:
         effect = CONDITION_EFFECTS[Condition.BLINDED]
         assert effect.attack_against_modifier == AdvantageType.ADVANTAGE
 
-    def test_incapacitated_cannot_act(self) -> None:
-        effect = CONDITION_EFFECTS[Condition.INCAPACITATED]
-        assert effect.can_act is False
-
-    def test_paralyzed_cannot_act(self) -> None:
-        effect = CONDITION_EFFECTS[Condition.PARALYZED]
-        assert effect.can_act is False
-
     def test_paralyzed_auto_fails_str_dex_saves(self) -> None:
         effect = CONDITION_EFFECTS[Condition.PARALYZED]
         assert Ability.STRENGTH in effect.auto_fail_saves
         assert Ability.DEXTERITY in effect.auto_fail_saves
-
-    def test_stunned_cannot_act(self) -> None:
-        effect = CONDITION_EFFECTS[Condition.STUNNED]
-        assert effect.can_act is False
-
-    def test_unconscious_cannot_act(self) -> None:
-        effect = CONDITION_EFFECTS[Condition.UNCONSCIOUS]
-        assert effect.can_act is False
-
-    def test_petrified_cannot_act(self) -> None:
-        effect = CONDITION_EFFECTS[Condition.PETRIFIED]
-        assert effect.can_act is False
-
-    def test_grappled_speed_zero(self) -> None:
-        effect = CONDITION_EFFECTS[Condition.GRAPPLED]
-        assert effect.speed_zero is True
 
     def test_invisible_attack_advantage(self) -> None:
         effect = CONDITION_EFFECTS[Condition.INVISIBLE]
@@ -112,15 +87,19 @@ class TestConditionEffectsDict:
         effect = CONDITION_EFFECTS[Condition.POISONED]
         assert effect.attack_modifier == AdvantageType.DISADVANTAGE
 
-    def test_charmed_can_act(self) -> None:
-        """Charmed doesn't prevent action, but restricts who you can target."""
-        effect = CONDITION_EFFECTS[Condition.CHARMED]
-        assert effect.can_act is True
-
-    def test_petrified_immunity_types(self) -> None:
+    def test_petrified_no_poison_or_psychic_damage_immunity(self) -> None:
+        """SRD 5.2: Petrified resists (does not negate) poison/psychic damage
+        via damage_resistances_all — it grants no damage-type immunity_types
+        entries at all; the 2014 poison/psychic damage immunity was wrong
+        (EFF-05)."""
         effect = CONDITION_EFFECTS[Condition.PETRIFIED]
-        assert DamageType.POISON in effect.immunity_types
-        assert DamageType.PSYCHIC in effect.immunity_types
+        assert effect.immunity_types == []
+
+    def test_petrified_grants_poisoned_condition_immunity(self) -> None:
+        """SRD 5.2: 'Poison Immunity. You have Immunity to the Poisoned
+        condition' while Petrified (EFF-05)."""
+        effect = CONDITION_EFFECTS[Condition.PETRIFIED]
+        assert effect.grants_condition_immunities == [Condition.POISONED]
 
     def test_petrified_damage_resistances_all(self) -> None:
         """PETRIFIED grants resistance to all damage types via damage_resistances_all."""
@@ -173,6 +152,38 @@ class TestPreventsAction:
 
 
 # ---------------------------------------------------------------------------
+# Condition.sets_speed_to_zero classmethod
+# ---------------------------------------------------------------------------
+
+
+class TestSetsSpeedToZero:
+    @pytest.mark.parametrize(
+        "condition,expected",
+        [
+            (Condition.GRAPPLED, True),
+            (Condition.PARALYZED, True),
+            (Condition.PETRIFIED, True),
+            (Condition.RESTRAINED, True),
+            (Condition.UNCONSCIOUS, True),
+            # 2024 Stunned deliberately omits the Speed-0 clause the 2014
+            # version had — regression coverage for EFF-06.
+            (Condition.STUNNED, False),
+            (Condition.BLINDED, False),
+            (Condition.CHARMED, False),
+            (Condition.DEAFENED, False),
+            (Condition.EXHAUSTION, False),
+            (Condition.FRIGHTENED, False),
+            (Condition.INCAPACITATED, False),
+            (Condition.INVISIBLE, False),
+            (Condition.POISONED, False),
+            (Condition.PRONE, False),
+        ],
+    )
+    def test_sets_speed_to_zero(self, condition: Condition, expected: bool) -> None:
+        assert Condition.sets_speed_to_zero(condition) is expected
+
+
+# ---------------------------------------------------------------------------
 # is_immune_to_condition helper
 # ---------------------------------------------------------------------------
 
@@ -185,6 +196,21 @@ class TestIsImmuneToCondition:
     def test_non_immune_char_returns_false(self) -> None:
         char = make_basic_char()
         assert is_immune_to_condition(char, Condition.BLINDED) is False
+
+    def test_petrified_grants_poisoned_immunity(self) -> None:
+        """A currently-Petrified character is immune to the Poisoned
+        condition even without declaring it in condition_immunities
+        (EFF-05)."""
+        char = make_basic_char(conditions=[Condition.PETRIFIED])
+        assert is_immune_to_condition(char, Condition.POISONED) is True
+
+    def test_petrified_does_not_grant_other_condition_immunity(self) -> None:
+        char = make_basic_char(conditions=[Condition.PETRIFIED])
+        assert is_immune_to_condition(char, Condition.CHARMED) is False
+
+    def test_no_longer_petrified_loses_poisoned_immunity(self) -> None:
+        char = make_basic_char(conditions=[])
+        assert is_immune_to_condition(char, Condition.POISONED) is False
 
 
 # ---------------------------------------------------------------------------
