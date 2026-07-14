@@ -193,6 +193,54 @@ class TestApplyDamageVulnerability:
 
 
 # ---------------------------------------------------------------------------
+# apply_damage — effective (post-mitigation) amount returned, for
+# concentration-check callers (Workstream F.1 / EFF-07)
+# ---------------------------------------------------------------------------
+
+
+class TestApplyDamageEffectiveAmount:
+    """_apply_damage_effective returns the post-immunity/resistance/
+    vulnerability damage, which callers (weapon attacks, spell damage) use
+    to decide whether — and at what DC — a concentration save is rolled."""
+
+    def test_normal_damage_returns_full_amount(self):
+        from game_engine.rules.dnd_5_5e._damage import _apply_damage_effective
+
+        char = make_fighter()
+        effective = _apply_damage_effective(char, 10, DamageType.SLASHING)
+        assert effective == 10
+
+    def test_immune_target_returns_zero(self):
+        """EFF-07: an immune target takes 0 effective damage, so no
+        concentration save should ever be rolled for this hit."""
+        from game_engine.rules.dnd_5_5e._damage import _apply_damage_effective
+
+        char = make_fighter(damage_immunities=[DamageType.FIRE])
+        effective = _apply_damage_effective(char, 40, DamageType.FIRE)
+        assert effective == 0
+        assert char.hp_current == 44  # unchanged
+
+    def test_resistant_target_returns_halved_amount(self):
+        from game_engine.rules.dnd_5_5e._damage import _apply_damage_effective
+
+        char = make_fighter(damage_resistances=[DamageType.FIRE])
+        effective = _apply_damage_effective(char, 11, DamageType.FIRE)
+        assert effective == 5  # floor(11 / 2)
+
+    def test_temp_hp_fully_absorbing_still_reports_effective_damage(self):
+        """Effective damage is the post-immunity/resistance figure, not what
+        was left over after temp HP absorption — concentration DC is based
+        on the damage taken, not the HP actually lost."""
+        from game_engine.rules.dnd_5_5e._damage import _apply_damage_effective
+
+        char = make_fighter()
+        char.temp_hp = 100
+        effective = _apply_damage_effective(char, 12, DamageType.SLASHING)
+        assert effective == 12
+        assert char.hp_current == 44  # fully absorbed by temp HP
+
+
+# ---------------------------------------------------------------------------
 # apply_damage — petrified (resistance to all damage)
 # ---------------------------------------------------------------------------
 
@@ -316,6 +364,22 @@ class TestApplyCondition:
         engine.apply_condition(fighter, Condition.STUNNED)
         assert fighter.can_act is False
         assert fighter.effective_speed == 30
+
+    def test_incapacitating_condition_breaks_concentration(
+        self, engine: DnD55eEngine, fighter: CharacterSheet
+    ):
+        """EFF-01: 'You lose concentration on a spell if you are
+        incapacitated.' Stunning a concentrating caster ends their spell."""
+        fighter.concentrating_on = "Bless"
+        engine.apply_condition(fighter, Condition.STUNNED)
+        assert fighter.concentrating_on is None
+
+    def test_non_incapacitating_condition_does_not_break_concentration(
+        self, engine: DnD55eEngine, fighter: CharacterSheet
+    ):
+        fighter.concentrating_on = "Bless"
+        engine.apply_condition(fighter, Condition.FRIGHTENED)
+        assert fighter.concentrating_on == "Bless"
 
 
 # ---------------------------------------------------------------------------

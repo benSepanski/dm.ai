@@ -8,7 +8,12 @@ Internal module — import :func:`cast_spell` via
 from __future__ import annotations
 
 from game_engine.core.dice import roll_dice, roll_with_disadvantage
-from game_engine.rules.dnd_5_5e._damage import _apply_damage_impl, _apply_healing_impl
+from game_engine.rules.dnd_5_5e._conditions import _break_concentration_on_incapacitation
+from game_engine.rules.dnd_5_5e._damage import (
+    _apply_damage_effective,
+    _apply_healing_impl,
+    _concentration_check,
+)
 from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
 from game_engine.rules.dnd_5_5e.data.spells import SpellData
 from game_engine.rules.dnd_5_5e.spellcasting import (
@@ -172,12 +177,25 @@ def cast_spell(
             damage = 0
             secondary = 0
 
+        effective_damage = 0
         if damage > 0 and spell.damage_type is not None:
-            _apply_damage_impl(target, damage, spell.damage_type)
+            effective_damage += _apply_damage_effective(target, damage, spell.damage_type)
             outcome.damage += damage
         if secondary > 0 and spell.secondary_damage_type is not None:
-            _apply_damage_impl(target, secondary, spell.secondary_damage_type)
+            effective_damage += _apply_damage_effective(
+                target, secondary, spell.secondary_damage_type
+            )
             outcome.damage += secondary
+
+        # SPL-02/EFF-07: one concentration save per spell hit, DC'd off the
+        # combined effective (post-immunity/resistance) damage — an immune
+        # target takes 0 and forces no save.
+        conc_result = _concentration_check(target, effective_damage)
+        if conc_result is not None:
+            outcome.concentration_save_dc = conc_result.dc
+            outcome.concentration_save_total = conc_result.total
+            if not conc_result.success:
+                outcome.concentration_broken = conc_result.spell
 
         # Revival bypasses the "no healing while dead" rule: clearing the
         # death-save state here lets the healing below (or the full-heal
@@ -213,6 +231,7 @@ def cast_spell(
                 # Unconscious directly (e.g. Sleep) must carry Prone too.
                 if condition is Condition.UNCONSCIOUS and Condition.PRONE not in target.conditions:
                     target.conditions.append(Condition.PRONE)
+                _break_concentration_on_incapacitation(target, condition)
 
         outcomes.append(outcome)
 
