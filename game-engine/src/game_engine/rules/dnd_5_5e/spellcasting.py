@@ -204,6 +204,9 @@ class SpellTargetOutcome:
     healing: int = 0
     revived: bool = False
     conditions_applied: list[Condition] = field(default_factory=list)
+    concentration_save_dc: int | None = None
+    concentration_save_total: int | None = None
+    concentration_broken: str | None = None
 
 
 @dataclass

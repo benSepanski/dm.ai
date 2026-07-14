@@ -265,6 +265,84 @@ class TestCasting:
         assert result.error == "not_a_ritual"
 
 
+class TestConcentration:
+    """Workstream F: spell damage forces a concentration save on the target
+    (SPL-02), using the effective post-immunity damage (EFF-07), and an
+    Incapacitating rider condition breaks the target's own concentration
+    outright (EFF-01)."""
+
+    def _state_with_target(self, caster, **target_kwargs) -> CombatStateData:
+        target = CharacterSheet(
+            id="t",
+            name="Target",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            hp_current=30,
+            hp_max=30,
+            ac=10,
+            **target_kwargs,
+        )
+        return CombatStateData(combatants=[caster, target])
+
+    def test_spell_damage_forces_concentration_save_and_can_break_it(self):
+        caster = _caster()
+        state = self._state_with_target(caster)
+        target = state.get_combatant("t")
+        target.concentrating_on = "Haste"
+        spell = _spell(damage_type=DamageType.FIRE, damage_dice=DiceNotation("4d6"))
+        with (
+            patch(f"{RES}.roll_dice", return_value=(20, [20])),
+            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(1, [1])),
+        ):
+            result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        outcome = result.outcomes[0]
+        assert outcome.concentration_save_dc == 10  # max(10, 20 // 2)
+        assert outcome.concentration_broken == "Haste"
+        assert target.concentrating_on is None
+
+    def test_immune_target_forces_no_concentration_save(self):
+        """EFF-07: an immune target takes 0 effective damage and rolls no save."""
+        caster = _caster()
+        state = self._state_with_target(caster, damage_immunities=[DamageType.FIRE])
+        target = state.get_combatant("t")
+        target.concentrating_on = "Haste"
+        spell = _spell(damage_type=DamageType.FIRE, damage_dice=DiceNotation("4d6"))
+        with (
+            patch(f"{RES}.roll_dice", return_value=(20, [20])),
+            patch("game_engine.rules.dnd_5_5e._saves.roll_dice") as mock_save_roll,
+        ):
+            result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_save_roll.assert_not_called()
+        outcome = result.outcomes[0]
+        assert outcome.concentration_save_dc is None
+        assert outcome.concentration_broken is None
+        assert target.concentrating_on == "Haste"
+
+    def test_incapacitating_rider_breaks_targets_own_concentration(self):
+        """EFF-01: 'You lose concentration on a spell if you are
+        incapacitated' — a Stunned rider drops the target's own spell."""
+        caster = _caster()
+        state = self._state_with_target(caster)
+        target = state.get_combatant("t")
+        target.concentrating_on = "Bless"
+        spell = _spell(save=Ability.WISDOM, conditions_applied=[Condition.STUNNED])
+        with patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(1, [1])):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert Condition.STUNNED in target.conditions
+        assert target.concentrating_on is None
+
+    def test_non_incapacitating_rider_does_not_break_concentration(self):
+        caster = _caster()
+        state = self._state_with_target(caster)
+        target = state.get_combatant("t")
+        target.concentrating_on = "Bless"
+        spell = _spell(save=Ability.WISDOM, conditions_applied=[Condition.FRIGHTENED])
+        with patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(1, [1])):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert Condition.FRIGHTENED in target.conditions
+        assert target.concentrating_on == "Bless"
+
+
 class TestOneLeveledSpellPerTurn:
     """SPL-06: 2024 PHB — at most one leveled spell per turn; cantrips/rituals exempt."""
 

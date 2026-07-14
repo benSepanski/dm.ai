@@ -124,6 +124,12 @@ class TestDamageAtZeroAndTempHp:
         assert engine.concentration_save_dc(4) == 10
         assert engine.concentration_save_dc(44) == 22
 
+    def test_concentration_dc_caps_at_30(self, engine):
+        # SPL-16: 2024 PHB caps the concentration save DC at 30, even for a
+        # 62-damage hit that would otherwise demand DC 31.
+        assert engine.concentration_save_dc(62) == 30
+        assert engine.concentration_save_dc(1000) == 30
+
 
 class TestHealing:
     def test_healing_caps_at_max(self, engine):

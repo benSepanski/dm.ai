@@ -1,13 +1,16 @@
 """
-D&D 5.5e damage, healing, and temporary hit point logic.
+D&D 5.5e damage, healing, temporary hit point, and concentration logic.
 
 Internal module — import via :class:`DnD55eEngine`.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from game_engine.core.conditions import CONDITION_EFFECTS
-from game_engine.types import CharacterSheet, CharacterType, Condition, DamageType
+from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
+from game_engine.types import Ability, CharacterSheet, CharacterType, Condition, DamageType, Feat
 
 
 def _apply_damage_impl(
@@ -17,6 +20,31 @@ def _apply_damage_impl(
     critical: bool = False,
 ) -> CharacterSheet:
     """Apply damage to *target*, respecting resistances and immunities.
+
+    Thin wrapper around :func:`_apply_damage_effective` for callers that
+    only need the mutated sheet back, not the effective damage amount.
+
+    Returns:
+        Updated character sheet.
+    """
+    _apply_damage_effective(target, damage, damage_type, critical=critical)
+    return target
+
+
+def _apply_damage_effective(
+    target: CharacterSheet,
+    damage: int,
+    damage_type: DamageType,
+    critical: bool = False,
+) -> int:
+    """Apply damage to *target* and return the effective amount dealt.
+
+    The effective amount is *damage* after character/condition immunities,
+    resistances, and vulnerabilities (0 for an immune target) — the same
+    figure the 2024 PHB's concentration-save DC is based on ("half the
+    damage you take"). Callers that need to trigger a concentration check
+    (see :func:`_concentration_check`) must use this return value, not the
+    raw pre-mitigation roll (EFF-07).
 
     Damage calculations:
     - **Immunity** → damage = 0 (character immunities AND condition-based immunities
@@ -33,14 +61,14 @@ def _apply_damage_impl(
     save failure (two on a critical hit).
 
     Args:
-        target: Character sheet. Modified in-place and returned.
+        target: Character sheet. Modified in-place.
         damage: Raw damage amount.
         damage_type: :class:`~game_engine.types.DamageType` enum.
         critical: Whether the damage came from a critical hit (affects
             death save failures while dying).
 
     Returns:
-        Updated character sheet.
+        The effective (post-immunity/resistance/vulnerability) damage.
     """
     # Condition-based immunities and all-damage resistance.
     # ConditionEffect.immunity_types:      e.g. PETRIFIED → immune to POISON/PSYCHIC
@@ -51,7 +79,7 @@ def _apply_damage_impl(
         if effect is None:
             continue
         if damage_type in effect.immunity_types:
-            return target
+            return 0
         if effect.damage_resistances_all and damage_type not in resistances:
             resistances.append(damage_type)
 
@@ -63,19 +91,20 @@ def _apply_damage_impl(
         damage_type=damage_type,
     )
     if effective_damage <= 0:
-        return target
+        return 0
+    result = effective_damage
 
     # Damage while already at 0 HP → death save failures (no HP change).
     # Monsters don't make death saves: any damage at 0 HP finishes them.
     if target.hp_current <= 0:
         if target.char_type is CharacterType.MONSTER:
             target.death_saves.is_dead = True
-            return target
+            return result
         target.death_saves.is_stable = False
         target.death_saves.failures += 2 if critical else 1
         if target.death_saves.failures >= 3:
             target.death_saves.is_dead = True
-        return target
+        return result
 
     # Temporary hit points absorb damage first.
     if target.temp_hp > 0:
@@ -83,7 +112,7 @@ def _apply_damage_impl(
         target.temp_hp -= absorbed
         effective_damage -= absorbed
         if effective_damage <= 0:
-            return target
+            return result
 
     remaining = effective_damage - target.hp_current
     target.hp_current = max(0, target.hp_current - effective_damage)
@@ -97,7 +126,7 @@ def _apply_damage_impl(
             target.concentrating_on = None
         else:
             _fall_unconscious(target)
-    return target
+    return result
 
 
 def _fall_unconscious(target: CharacterSheet) -> None:
@@ -143,8 +172,49 @@ def _grant_temp_hp_impl(target: CharacterSheet, amount: int) -> CharacterSheet:
 
 
 def concentration_save_dc(damage: int) -> int:
-    """Return the Constitution save DC to maintain concentration after damage."""
-    return max(10, damage // 2)
+    """Return the Constitution save DC to maintain concentration after damage.
+
+    2024 PHB: DC 10 or half the damage taken, whichever is higher, capped
+    at 30 (SPL-16) — a single instance of damage can never demand more than
+    a DC 30 save.
+    """
+    return min(30, max(10, damage // 2))
+
+
+@dataclass
+class ConcentrationSaveResult:
+    """Typed outcome of a concentration-preserving Constitution save."""
+
+    spell: str
+    dc: int
+    total: int
+    success: bool
+
+
+def _concentration_check(target: CharacterSheet, damage: int) -> ConcentrationSaveResult | None:
+    """Roll the CON save to maintain concentration after taking *damage*.
+
+    *damage* must be the effective (post-immunity/resistance) amount from
+    :func:`_apply_damage_effective` — an immune target takes 0 and this
+    correctly rolls no save (EFF-07). The single entry point for every
+    damage-dealing path (weapon attacks, Graze, spell damage) so the DC
+    cap, War Caster advantage, and concentration-loss bookkeeping live in
+    one place (Workstream F.1).
+
+    Returns:
+        ``None`` if no save was necessary (not concentrating, no damage,
+        or already dying); otherwise the rolled outcome. Concentration is
+        cleared on a failed save as a side effect.
+    """
+    if target.concentrating_on is None or damage <= 0 or target.is_dying:
+        return None
+    dc = concentration_save_dc(damage)
+    advantage = Feat.WAR_CASTER in target.feats
+    save = _roll_saving_throw_impl(target, Ability.CONSTITUTION, dc, advantage=advantage)
+    spell = target.concentrating_on
+    if not save.success:
+        target.concentrating_on = None
+    return ConcentrationSaveResult(spell=spell, dc=dc, total=save.total, success=save.success)
 
 
 def _compute_damage(

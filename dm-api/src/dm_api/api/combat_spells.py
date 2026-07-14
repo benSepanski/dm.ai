@@ -135,6 +135,9 @@ def _cast_log_entry(combat: CombatState, actor_id: str, result: SpellCastResult)
                 "damage": o.damage,
                 "healing": o.healing,
                 "conditions_applied": [c.value for c in o.conditions_applied],
+                "concentration_save_dc": o.concentration_save_dc,
+                "concentration_save_total": o.concentration_save_total,
+                "concentration_broken": o.concentration_broken,
             }
             for o in result.outcomes
         ],

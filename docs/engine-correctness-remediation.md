@@ -40,7 +40,7 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 
 | Work | Findings | Size |
 |------|----------|------|
-| **F.2–F.4** — Concentration: save on spell damage, break on incapacitation, end effects on loss, DC cap 30 | SPL-02, EFF-01, SPL-07, EFF-07, SPL-16 | M–L |
+| **F.2–F.4** ✅ save-on-damage/break-on-incapacitation/DC-cap done, end-effects-on-loss (SPL-07) still open — Concentration: save on spell damage, break on incapacitation, end effects on loss, DC cap 30 | SPL-02 ✅, EFF-01 ✅, SPL-07 (open), EFF-07 ✅, SPL-16 ✅ | M–L |
 | **I2** — Centralize condition application so immunities apply on every inflicting path | EFF-10 | M |
 | **J (carve-out)** — Revival effect type: Revivify/Raise Dead/Resurrection/True Resurrection actually revive ✅ done | SPL-01 | S |
 
@@ -227,24 +227,51 @@ Several masteries only emit unread log entries. Note Sap/Vex are undermined by W
 
 ## Workstream F — Concentration lifecycle (root cause: save-on-damage, break-on-incapacitation, and end-on-loss are unwired for spells)
 
+**Status: F.1/F.2/F.4 done (steps 1, 2, 4 below); F.3 (step 3, end-on-loss) remains open.**
+`_apply_damage_impl` (`_damage.py`) is now a thin wrapper around a new
+`_apply_damage_effective`, which mutates the target exactly as before but
+*returns* the effective (post-immunity/resistance/vulnerability) damage
+int. `_concentration_check` (moved from `_attacks.py` into `_damage.py` so
+both the weapon and spell paths can share it) takes that effective amount,
+so an immune target now takes 0 and rolls no save (EFF-07) and a resisted
+hit is DC'd off the halved figure. `_attacks.py`'s weapon-hit and Graze
+paths, and `_spell_resolution.py`'s `cast_spell` (one combined save across
+a spell's primary + secondary damage pools, since they're one hit), all
+route through it. `concentration_save_dc` is now `min(30, max(10, damage
+// 2))` (SPL-16). A new `_break_concentration_on_incapacitation` helper in
+`_conditions.py` — driven by the same `Condition.prevents_action` set
+`CharacterSheet.can_act` already uses, so there's one source of truth for
+"Incapacitated, Stunned, Paralyzed, Petrified, Unconscious" — is called
+from both `_apply_condition_impl` and the spell-rider condition-apply loop
+in `_spell_resolution.py`, so a Stunned/Paralyzed/etc. rider breaks the
+*target's own* concentration (EFF-01) regardless of which of those two
+paths applied it. `SpellTargetOutcome` gained
+`concentration_save_dc`/`concentration_save_total`/`concentration_broken`
+fields, threaded through to the dm-api `cast-spell` combat-log entry so the
+fix is observable at the API boundary, not just in engine unit tests. See
+`game-engine/tests/test_spellcasting.py::TestConcentration`,
+`test_engine_damage_conditions.py::TestApplyDamageEffectiveAmount` /
+`TestApplyCondition::test_incapacitating_condition_breaks_concentration`,
+`test_saves_death.py::test_concentration_dc_caps_at_30`.
+
 Concentration is tracked as a bare string with three independent gaps: damage from spells never forces the save, incapacitating conditions never break it, and losing it never removes its effects.
 
 **Findings**
-- Spell damage never triggers a concentration save on the target (`_spell_resolution.py:163` [SPL-02], **critical**)
-- Gaining Incapacitated/Stunned/Paralyzed/Petrified/Unconscious never breaks concentration (`_conditions.py:38` [EFF-01], **critical**)
-- Breaking/replacing concentration never ends the spell's effects on targets (`_spell_resolution.py:114` [SPL-07], **major**)
-- Concentration save uses pre-mitigation damage; immune targets still roll & can lose it (`_attacks.py:323` [EFF-07], **major**)
-- Concentration save DC missing the 2024 max of 30 (`_damage.py:147` [SPL-16], **minor**)
+- Spell damage never triggers a concentration save on the target (`_spell_resolution.py:163` [SPL-02], **critical**) ✅ done
+- Gaining Incapacitated/Stunned/Paralyzed/Petrified/Unconscious never breaks concentration (`_conditions.py:38` [EFF-01], **critical**) ✅ done
+- Breaking/replacing concentration never ends the spell's effects on targets (`_spell_resolution.py:114` [SPL-07], **major**) — still open
+- Concentration save uses pre-mitigation damage; immune targets still roll & can lose it (`_attacks.py:323` [EFF-07], **major**) ✅ done
+- Concentration save DC missing the 2024 max of 30 (`_damage.py:147` [SPL-16], **minor**) ✅ done
 
 **Fix approach**:
-1. Make **`_apply_damage_impl` return the effective (post-immunity/resistance) damage**, and route *every* damage path — `_spell_resolution.py`, `engine.apply_damage`, and the weapon path — through a single `_concentration_check` call using that effective amount (fixes both the spell-damage gap and the pre-mitigation DC bug; a 0-damage immune hit forces no save).
-2. In `_apply_condition_impl` and the spell-rider apply path, **break concentration when the applied condition includes Incapacitated** (Incapacitated, Stunned, Paralyzed, Petrified, Unconscious).
-3. Track **concentration → applied effects**: record, per concentration spell, which target conditions/durations it created (a caster→effects back-reference), and remove them when `concentrating_on` is cleared or replaced.
-4. Clamp `concentration_save_dc` to `min(30, max(10, damage // 2))`.
+1. ✅ Make **`_apply_damage_impl` return the effective (post-immunity/resistance) damage**, and route *every* damage path — `_spell_resolution.py`, `engine.apply_damage`, and the weapon path — through a single `_concentration_check` call using that effective amount (fixes both the spell-damage gap and the pre-mitigation DC bug; a 0-damage immune hit forces no save).
+2. ✅ In `_apply_condition_impl` and the spell-rider apply path, **break concentration when the applied condition includes Incapacitated** (Incapacitated, Stunned, Paralyzed, Petrified, Unconscious).
+3. **Still open.** Track **concentration → applied effects**: record, per concentration spell, which target conditions/durations it created (a caster→effects back-reference), and remove them when `concentrating_on` is cleared or replaced. This needs an effect-provenance model the engine doesn't have yet (which spell/cast instance created which condition/duration entry) — deferred rather than half-built, and still pairs naturally with Workstream I's save-to-end tracking.
+4. ✅ Clamp `concentration_save_dc` to `min(30, max(10, damage // 2))`.
 
-**Tests**: Fireball on a Haste-concentrating target forces a CON save and can drop Haste; stunning a Bless-concentrating caster ends Bless; losing concentration on Hold Person immediately removes the target's Paralyzed; a fire-immune target takes 0 and rolls no save; a 62-damage hit yields DC 30, not 31.
+**Tests**: ✅ Fireball on a Haste-concentrating target forces a CON save and can drop Haste; ✅ stunning a Bless-concentrating caster ends Bless (via a spell rider); ✅ a fire-immune target takes 0 and rolls no save; ✅ a 62-damage hit yields DC 30, not 31. Still unwritten (blocked on step 3): losing concentration on Hold Person immediately removes the target's Paralyzed.
 
-**Size**: M–L. Step 1 (effective-damage return) is a shared refactor also relied on by Workstream G. Step 3 (effect back-reference) is the largest piece and pairs naturally with Workstream I's save-to-end tracking.
+**Size**: M–L. Step 1 (effective-damage return) is a shared refactor also relied on by Workstream G — G can now reuse `_apply_damage_effective` instead of duplicating the immunity/resistance walk. Step 3 (effect back-reference) is the largest piece and remains the reason this workstream isn't fully closed.
 
 ---
 
@@ -451,12 +478,12 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 1. **Workstream A** (TurnState lifecycle) — unblocks Help/Sap/Vex/Hide *and* is a prerequisite for B, E, I.
 2. **Workstream B** ✅ done — action economy: Extra Attack, reactions, casting-time, one-slot-per-turn, TWF Light validation, validation ordering — depends on A. B1 (Extra Attack + validation ordering), B2 (reactions/opportunity attacks/Ready), and B3 (spell casting-time, one-slot-per-turn, TWF Light) are all done.
 3. **Workstream C** ✅ done (weapon registry ↔ resolver bridge) — masteries/proficiency/Heavy now reach the real dm-api pipeline; Ammunition/Loading tracking remains deferred to Workstream D.
-4. **Workstream F** (concentration lifecycle) — three critical/major concentration gaps; step 1 (effective-damage return) is shared with G.
+4. **Workstream F** ✅ save-on-damage/break-on-incapacitation/DC-cap done (SPL-02, EFF-01, EFF-07, SPL-16) — **F.3 (end-effects-on-concentration-loss, SPL-07) remains open**, needing an effect-provenance model; effective-damage return (step 1) is shared with G.
 5. **Workstream J revival carve-out** (Revivify can't revive) ✅ done — small, self-contained critical.
-6. **Workstream I2** (condition-immunity centralization + concentration-on-incapacitation break) — the two condition *critical* items.
+6. **Workstream I2** (condition-immunity centralization — spell riders/Topple/unarmed grapple-shove still bypass `is_immune_to_condition`, EFF-10) — the concentration-on-incapacitation break itself is now done as part of Workstream F, wired into both `_apply_condition_impl` and the spell-rider path directly (not blocked on I2's broader centralization).
 
 **Majors that affect ordinary play (fix next):**
-7. **Workstream G** (instant death, death-save reset, crit modifier doubling) — depends on F's effective-damage refactor.
+7. **Workstream G** (instant death, death-save reset, crit modifier doubling) — F's effective-damage refactor (`_apply_damage_effective`) already landed and is reusable here.
 8. **Workstream D** (armor/proficiency/inventory) — D1 worn-armor field first; independent of A/B.
 9. **Workstream E** (mastery mechanics) — Workstream C ✅ (registry bridge landed) — shares speed-reduction/economy plumbing with A/B.
 10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
@@ -468,7 +495,7 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 
 **Cross-cutting throughout:** **Workstream M** (spec reconciliation + structural anti-regression tests) — update the relevant spec row and add a consumer-existence test as each workstream merges.
 
-**Key dependency chain:** A → B (shared TurnState) → E (masteries need economy); C → E (masteries need the registry); F.step1 (effective-damage return) → G and F; I2 (centralized apply) ← relied on by F (concentration break) and E (Topple/grapple immunity). Do A, C, and F.step1 early — they are the shared foundations the majority of other workstreams build on.
+**Key dependency chain:** A → B (shared TurnState) → E (masteries need economy); C → E (masteries need the registry); F.step1 (effective-damage return) ✅ done → available to G; I2 (centralized apply) ← still relied on by E (Topple/grapple immunity) — F's own concentration break (EFF-01) no longer needs I2, since it was wired directly into both condition-application paths. Do A and C early — they are the shared foundations the majority of other workstreams build on.
 
 ---
 
