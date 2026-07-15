@@ -121,11 +121,22 @@ class TestCoverAndCrits:
         state.get_combatant("b").conditions.append(Condition.PARALYZED)
         with (
             patch(f"{ATTACKS}.roll_with_advantage", return_value=(15, [15, 3])),
-            patch(f"{ATTACKS}.dice_roll", side_effect=[(3, [3]), (4, [4])]),
+            patch(f"{ATTACKS}.roll_dice", side_effect=[(3, [3]), (4, [4])]),
         ):
             result = engine.resolve_action(_attack(), state)
         assert result.log_entry["critical"] is True
         assert result.damage == 7
+
+    def test_critical_hit_doubles_dice_not_flat_modifier(self, engine, state):
+        """ACT-09: a crit on '1d6+2' rolls the 1d6 twice but applies the +2
+        modifier once, not twice."""
+        with patch(f"{ATTACKS}.roll_dice") as mock_roll:
+            mock_roll.side_effect = [(20, [20]), (5, [5]), (3, [3])]
+            result = engine.resolve_action(_attack(damage_dice=DiceNotation("1d6+2")), state)
+        mock_roll.assert_any_call(1, 6, 2)  # base damage roll includes the modifier
+        mock_roll.assert_any_call(1, 6)  # crit-extra roll does not
+        assert result.log_entry["critical"] is True
+        assert result.damage == 8  # 5 + 3 dice + 2 modifier, added once
 
     def test_exhaustion_penalizes_attack(self, engine, state):
         state.get_combatant("a").exhaustion_level = 2
@@ -235,9 +246,9 @@ class TestTwoWeaponFighting:
     def test_offhand_attack_omits_ability_mod(self, engine, state):
         actor = state.get_combatant("a")
         actor.ability_scores = AbilityScoreSet(strength=16)
-        with (
-            patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
-            patch(f"{ATTACKS}.dice_roll", return_value=(4, [4])),
+        with patch(
+            f"{ATTACKS}.roll_dice",
+            side_effect=[(15, [15]), (4, [4]), (15, [15]), (4, [4])],
         ):
             engine.resolve_action(_attack(properties=[WeaponProperty.LIGHT]), state)
             result = engine.resolve_action(
@@ -248,9 +259,9 @@ class TestTwoWeaponFighting:
     def test_offhand_attack_keeps_negative_ability_mod(self, engine, state):
         """ACT-18: a negative modifier still reduces off-hand damage."""
         state.get_combatant("a").ability_scores = AbilityScoreSet(strength=6)  # -2 mod
-        with (
-            patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
-            patch(f"{ATTACKS}.dice_roll", return_value=(4, [4])),
+        with patch(
+            f"{ATTACKS}.roll_dice",
+            side_effect=[(15, [15]), (4, [4]), (15, [15]), (4, [4])],
         ):
             engine.resolve_action(_attack(properties=[WeaponProperty.LIGHT]), state)
             result = engine.resolve_action(
@@ -262,9 +273,9 @@ class TestTwoWeaponFighting:
         actor = state.get_combatant("a")
         actor.ability_scores = AbilityScoreSet(strength=16)
         actor.feats.append(Feat.TWO_WEAPON_FIGHTING)
-        with (
-            patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
-            patch(f"{ATTACKS}.dice_roll", return_value=(4, [4])),
+        with patch(
+            f"{ATTACKS}.roll_dice",
+            side_effect=[(15, [15]), (4, [4]), (15, [15]), (4, [4])],
         ):
             engine.resolve_action(_attack(properties=[WeaponProperty.LIGHT]), state)
             result = engine.resolve_action(
@@ -383,11 +394,17 @@ class TestExtraAttack:
 
     def test_extra_attack_survives_begin_turn_reset(self, engine):
         state = CombatStateData(combatants=[_char("a", level=5), _char("b")])
-        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+        # roll_dice now also serves damage rolls (ACT-09) — alternate a
+        # comfortable-hit attack roll with a small damage roll so 4 hits
+        # don't accidentally drop "b" to 0 HP and grant Prone advantage on
+        # the later attacks (which would fall through to the real,
+        # unmocked roll_with_advantage and make this test flaky).
+        hits = [(15, [15]), (1, [1]), (15, [15]), (1, [1])]
+        with patch(f"{ATTACKS}.roll_dice", side_effect=hits):
             engine.resolve_action(_attack(), state)
             engine.resolve_action(_attack(), state)
         engine.begin_turn(state.get_combatant("a"), state)
-        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+        with patch(f"{ATTACKS}.roll_dice", side_effect=list(hits)):
             first = engine.resolve_action(_attack(), state)
             second = engine.resolve_action(_attack(), state)
         assert first.success and second.success
@@ -517,7 +534,6 @@ class TestActionEconomyAndConcentration:
         target.concentrating_on = "Bless"
         with (
             patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])),
-            patch(f"{ATTACKS}.dice_roll", return_value=(6, [6])),
             patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])),
         ):
             result = engine.resolve_action(_attack(), state)

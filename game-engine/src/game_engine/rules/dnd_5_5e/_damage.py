@@ -54,11 +54,13 @@ def _apply_damage_effective(
     - **Vulnerability** → damage = damage * 2
     - Resistance and vulnerability cancel each other out; immunity always wins.
 
-    Temporary hit points absorb damage first. Dropping to 0 HP knocks the
-    character unconscious and prone (2024 PHB "Dropping to 0 Hit Points");
-    if the remaining damage meets or exceeds the HP maximum, the character
-    dies instantly. Damage taken while already at 0 HP causes one death
-    save failure (two on a critical hit).
+    Temporary hit points absorb damage first, regardless of the target's
+    current HP. Dropping to 0 HP knocks the character unconscious and prone
+    (2024 PHB "Dropping to 0 Hit Points"); if the remaining damage meets or
+    exceeds the HP maximum, the character dies instantly. Damage taken while
+    already at 0 HP causes one death save failure (two on a critical hit) —
+    unless that leftover damage alone meets or exceeds the HP maximum, which
+    is instant (massive-damage) death either way.
 
     Args:
         target: Character sheet. Modified in-place.
@@ -94,10 +96,26 @@ def _apply_damage_effective(
         return 0
     result = effective_damage
 
-    # Damage while already at 0 HP → death save failures (no HP change).
-    # Monsters don't make death saves: any damage at 0 HP finishes them.
+    # Temporary hit points absorb damage first, at any HP total — a dying
+    # character who still has temp HP from an earlier effect is buffered by
+    # it exactly like a conscious one (EFF-13).
+    if target.temp_hp > 0:
+        absorbed = min(target.temp_hp, effective_damage)
+        target.temp_hp -= absorbed
+        effective_damage -= absorbed
+        if effective_damage <= 0:
+            return result
+
+    # Damage while already at 0 HP → death save failures (no HP change),
+    # unless the leftover damage alone meets/exceeds hp_max, which is
+    # instant (massive-damage) death regardless of the failure count
+    # (EFF-08). Monsters don't make death saves: any damage at 0 HP
+    # finishes them.
     if target.hp_current <= 0:
         if target.char_type is CharacterType.MONSTER:
+            target.death_saves.is_dead = True
+            return result
+        if effective_damage >= target.hp_max:
             target.death_saves.is_dead = True
             return result
         target.death_saves.is_stable = False
@@ -105,14 +123,6 @@ def _apply_damage_effective(
         if target.death_saves.failures >= 3:
             target.death_saves.is_dead = True
         return result
-
-    # Temporary hit points absorb damage first.
-    if target.temp_hp > 0:
-        absorbed = min(target.temp_hp, effective_damage)
-        target.temp_hp -= absorbed
-        effective_damage -= absorbed
-        if effective_damage <= 0:
-            return result
 
     remaining = effective_damage - target.hp_current
     target.hp_current = max(0, target.hp_current - effective_damage)

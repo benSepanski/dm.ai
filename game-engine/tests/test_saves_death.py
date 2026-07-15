@@ -105,6 +105,28 @@ class TestDamageAtZeroAndTempHp:
         engine.apply_damage(char, 3, DamageType.SLASHING)
         assert char.death_saves.failures == 1
 
+    def test_massive_damage_while_already_dying_is_instant_death(self, engine):
+        """EFF-08: damage taken while already at 0 HP is also instant
+        (massive-damage) death if it alone meets/exceeds hp_max — not just
+        damage that drops a positive-HP character to 0."""
+        char = _char(hp_current=1, hp_max=20)
+        engine.apply_damage(char, 1, DamageType.SLASHING)
+        assert char.is_dying
+        engine.apply_damage(char, 20, DamageType.SLASHING)
+        assert char.is_dead
+
+    def test_temp_hp_absorbs_damage_while_already_dying(self, engine):
+        """EFF-13: temp HP buffers damage even while already at 0 HP —
+        a hit fully absorbed by temp HP adds no death save failure."""
+        char = _char(hp_current=1)
+        engine.apply_damage(char, 1, DamageType.SLASHING)  # drops to 0, dying
+        assert char.hp_current == 0
+        assert char.is_dying
+        engine.grant_temp_hp(char, 10)  # e.g. an ally's temp-HP spell
+        engine.apply_damage(char, 5, DamageType.SLASHING)
+        assert char.temp_hp == 5
+        assert char.death_saves.failures == 0
+
     def test_temp_hp_absorbs_first_and_does_not_stack(self, engine):
         char = _char(temp_hp=0)
         engine.grant_temp_hp(char, 8)
@@ -209,6 +231,24 @@ class TestDeathSaves:
             result = engine.roll_death_save(char)
         assert result.is_stable
         assert not char.is_dying
+
+    def test_three_successes_resets_counters(self, engine):
+        """EFF-09: stabilizing via 3 successes clears both counters (matching
+        engine.stabilize()) so a later hit while stable starts a fresh set
+        of failures instead of resuming from a stale count."""
+        char = self._dying(engine)
+        char.death_saves.successes = 2
+        char.death_saves.failures = 2
+        with patch("game_engine.rules.dnd_5_5e._death.roll_dice", return_value=(15, [15])):
+            engine.roll_death_save(char)
+        assert char.death_saves.is_stable
+        assert char.death_saves.successes == 0
+        assert char.death_saves.failures == 0
+        # A subsequent hit while at 0 HP must not immediately kill them from
+        # the pre-stabilization failure count.
+        engine.apply_damage(char, 3, DamageType.SLASHING)
+        assert char.death_saves.failures == 1
+        assert not char.is_dead
 
     def test_stabilize(self, engine):
         char = self._dying(engine)

@@ -275,26 +275,59 @@ Concentration is tracked as a bare string with three independent gaps: damage fr
 
 ---
 
-## Workstream G — Damage, death saves & instant-death ordering (root cause: 0-HP branch ordering and missing HP-max checks)
+## Workstream G — Damage, death saves & instant-death ordering (root cause: 0-HP branch ordering and missing HP-max checks) ✅ done (EFF-08, EFF-09, EFF-13, ACT-09); EFF-16 deliberately not implemented
 
 Discrete correctness bugs in `_damage.py`/`_death.py` around the 0-HP state.
 
+**Status.** `_apply_damage_effective` (`_damage.py`) now absorbs temp HP
+*before* branching on whether the target is already at 0 HP, and the
+already-at-0-HP branch itself now checks the post-temp-HP leftover damage
+against `hp_max` for instant (massive-damage) death before falling back to
+the ordinary 1-failure/2-on-crit accumulation — matching the "drop to 0
+with leftover ≥ hp_max" branch that already existed for the positive-HP
+case. `_roll_death_save_impl` (`_death.py`) now resets both counters to 0
+on the third success, matching `_stabilize_impl`, so a later hit while
+stable starts a fresh set of failures instead of resuming from whatever
+count was on the board pre-stabilization. `_resolve_attack` (`_attacks.py`)
+now reads `AttackDetails.damage_dice`'s cached `num_dice`/`sides`/`modifier`
+directly and rolls the crit-extra dice with no modifier, so a crit on
+`1d6+2` deals `(1d6 + 1d6) + 2`, not `(1d6+2) + (1d6+2)`. See
+`tests/test_saves_death.py::test_massive_damage_while_already_dying_is_instant_death`
+/ `test_temp_hp_absorbs_damage_while_already_dying` /
+`test_three_successes_resets_counters`,
+`tests/test_attacks_2024.py::TestCoverAndCrits::test_critical_hit_doubles_dice_not_flat_modifier`.
+
+**EFF-16 ("long rest grants full benefits to a character at 0 HP") was
+investigated and deliberately left as-is, not fixed.** Strict 2024 RAW
+requires at least 1 HP at the start of a rest to gain its benefits, but
+gating `long_rest` on `hp_current >= 1` would strand a stabilized 0-HP
+character forever, since this engine has no natural-recovery rule (regain
+1 HP after 1d4 hours) to fall back on. The existing regression tests
+`test_long_rest_clears_death_saves_and_unconscious_for_stable_character`
+and `test_long_rest_clears_prone_from_unconscious_fall`
+(`game-engine/tests/test_resting_exploration.py`) were added specifically
+to guard the current "a long rest wakes a stable character" behavior — this
+is a maintainer-facing design decision (playability over strict RAW), not
+a silent oversight, so it's called out here rather than "fixed" against
+the grain of an existing anti-regression test. See the docstring on
+`resting.long_rest` for the same note in code.
+
 **Findings**
-- Damage at 0 HP ≥ HP max does not kill instantly (`_damage.py:70` [EFF-08], **major**)
-- Death save counters not reset when a character becomes stable via 3 successes (`_death.py:63` [EFF-09], **major**)
-- Temp HP ignored for a creature already at 0 HP (`_damage.py:81` [EFF-13], **minor**)
-- Critical hits double the flat modifier baked into damage-dice notation (`_attacks.py:317` [ACT-09], **major**) — reachable via monster data (`data/monsters.py:78,86,122,130`) carrying `1d4+2`/`2d8+4` and dm-api's free-string `damage_dice`
-- Long rest grants full benefits to a character at 0 HP (`resting.py:106` [EFF-16], **minor**) — 2024 requires at least 1 HP to gain a long rest's benefits
+- Damage at 0 HP ≥ HP max does not kill instantly (`_damage.py:70` [EFF-08], **major**) ✅ done
+- Death save counters not reset when a character becomes stable via 3 successes (`_death.py:63` [EFF-09], **major**) ✅ done
+- Temp HP ignored for a creature already at 0 HP (`_damage.py:81` [EFF-13], **minor**) ✅ done
+- Critical hits double the flat modifier baked into damage-dice notation (`_attacks.py:317` [ACT-09], **major**) ✅ done — reachable via monster data (`data/monsters.py:78,86,122,130`) carrying `1d4+2`/`2d8+4` and dm-api's free-string `damage_dice`
+- Long rest grants full benefits to a character at 0 HP (`resting.py:106` [EFF-16], **minor**) — investigated, deliberately not changed (see above); conflicts with an existing intentional/tested behavior
 
 **Fix approach**:
-- Reorder `_apply_damage_impl`: apply **temp-HP absorption first** (at any HP total), then in the 0-HP branch compare *effective* damage against `hp_max` for instant death (two failures on a crit that reaches 3+ still applies), then convert to death-save failures only for leftover damage.
-- On the third death-save success in `_roll_death_save_impl`, **reset successes and failures** (match `_stabilize_impl`).
-- Fix critical hits to double **only the dice**, not the notation's flat modifier: on a crit roll the dice count twice but add the flat modifier once (and add the ability modifier once). Consider splitting dice from flat modifier at the `AttackDetails` boundary so monster notations like `1d6+2` don't double the `+2` and don't double-count the ability mod.
-- Gate `long_rest` on `hp_current >= 1` (return a no-benefit result for a character at 0 HP, per the 2024 rule).
+- ✅ Reorder `_apply_damage_impl`: apply **temp-HP absorption first** (at any HP total), then in the 0-HP branch compare *effective* damage against `hp_max` for instant death (two failures on a crit that reaches 3+ still applies), then convert to death-save failures only for leftover damage.
+- ✅ On the third death-save success in `_roll_death_save_impl`, **reset successes and failures** (match `_stabilize_impl`).
+- ✅ Fix critical hits to double **only the dice**, not the notation's flat modifier: on a crit roll the dice count twice but add the flat modifier once (and add the ability modifier once). `AttackDetails.damage_dice` is a `DiceNotation` with cached `num_dice`/`sides`/`modifier`, so no schema change was needed — `_resolve_attack` just reads those instead of re-rolling the full notation string twice.
+- ~~Gate `long_rest` on `hp_current >= 1`~~ — not done; see status note above.
 
-**Tests**: dying PC (hp_max 20) hit for 25 dies instantly; dying PC with temp HP 10 hit for 5 loses temp HP and takes no death-save failure; 2-failures-then-3-successes leaves a stable character at 0/0 counters who survives 1 subsequent damage; a `1d6+2` crit deals dice-doubled-plus-single-modifier damage; a long rest at 0 HP confers no benefits.
+**Tests**: ✅ dying PC (hp_max 20) hit for 25 dies instantly; ✅ dying PC with temp HP 10 hit for 5 loses temp HP and takes no death-save failure; ✅ 2-successes-2-failures-then-1-more-success leaves a stable character at 0/0 counters who survives 1 subsequent damage without dying from the stale failure count; ✅ a `1d6+2` crit deals dice-doubled-plus-single-modifier damage. Long rest at 0 HP intentionally still confers full benefits — no test added for the audit's proposed (and rejected) behavior.
 
-**Size**: M. Shares the effective-damage-return refactor with Workstream F.
+**Size**: M. Shared the effective-damage-return refactor with Workstream F.
 
 ---
 
@@ -483,7 +516,7 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 6. **Workstream I2** (condition-immunity centralization — spell riders/Topple/unarmed grapple-shove still bypass `is_immune_to_condition`, EFF-10) — the concentration-on-incapacitation break itself is now done as part of Workstream F, wired into both `_apply_condition_impl` and the spell-rider path directly (not blocked on I2's broader centralization).
 
 **Majors that affect ordinary play (fix next):**
-7. **Workstream G** (instant death, death-save reset, crit modifier doubling) — F's effective-damage refactor (`_apply_damage_effective`) already landed and is reusable here.
+7. **Workstream G** ✅ done (instant death, death-save reset, crit modifier doubling — EFF-08/EFF-09/EFF-13/ACT-09) — F's effective-damage refactor (`_apply_damage_effective`) was reused here. EFF-16 (long-rest-at-0-HP) investigated and deliberately not changed; see the workstream section.
 8. **Workstream D** (armor/proficiency/inventory) — D1 worn-armor field first; independent of A/B.
 9. **Workstream E** (mastery mechanics) — Workstream C ✅ (registry bridge landed) — shares speed-reduction/economy plumbing with A/B.
 10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
