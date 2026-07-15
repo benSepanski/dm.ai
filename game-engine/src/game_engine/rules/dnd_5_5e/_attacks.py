@@ -16,7 +16,6 @@ from __future__ import annotations
 from typing import Any
 
 from game_engine.core.conditions import CONDITION_EFFECTS
-from game_engine.core.dice import roll as dice_roll
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import Action, ActionResult
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
@@ -335,9 +334,14 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
     damage_mod = ability_mod
     if details.is_offhand and Feat.TWO_WEAPON_FIGHTING not in actor.feats and ability_mod > 0:
         damage_mod = 0
-    dice_total, _ = dice_roll(details.damage_dice)
+    # A critical hit doubles the dice, not the flat modifier baked into the
+    # notation (ACT-09) — rolling the full notation twice would double a
+    # "1d6+2"'s +2 as well as the 1d6.
+    dice_total, _ = roll_dice(
+        details.damage_dice.num_dice, details.damage_dice.sides, details.damage_dice.modifier
+    )
     if critical:
-        crit_dice, _ = dice_roll(details.damage_dice)
+        crit_dice, _ = roll_dice(details.damage_dice.num_dice, details.damage_dice.sides)
         dice_total += crit_dice
     total_damage = max(0, dice_total + damage_mod)
 

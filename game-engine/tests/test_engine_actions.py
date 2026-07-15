@@ -75,13 +75,13 @@ class TestNatural20CriticalHit:
         self, engine: DnD55eEngine, combat_state: CombatStateData
     ):
         action = _attack_action("attacker", "defender")
-        with patch("game_engine.rules.dnd_5_5e._attacks.roll_dice", return_value=(20, [20])):
-            # dice() is called twice on critical — mock it to return fixed values
-            with patch(
-                "game_engine.rules.dnd_5_5e._attacks.dice_roll",
-                side_effect=[(3, [3]), (4, [4])],
-            ):
-                result = engine.resolve_action(action, combat_state)
+        # roll_dice is called for the d20 attack roll, then twice more for
+        # damage (base dice + crit dice) — mock all three in sequence.
+        with patch(
+            "game_engine.rules.dnd_5_5e._attacks.roll_dice",
+            side_effect=[(20, [20]), (3, [3]), (4, [4])],
+        ):
+            result = engine.resolve_action(action, combat_state)
         # 3 + 4 + STR mod (0) = 7
         assert result.damage == 7
 

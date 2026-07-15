@@ -60,7 +60,13 @@ def _roll_death_save_impl(char: CharacterSheet) -> DeathSaveResult:
     if saves.failures >= 3:
         saves.is_dead = True
     elif saves.successes >= 3:
+        # 2024 PHB: three successes stabilizes the character and clears the
+        # counters (matching _stabilize_impl) — a later hit while stable
+        # starts a fresh set of failures rather than resuming from whatever
+        # count was on the board when they stabilized (EFF-09).
         saves.is_stable = True
+        saves.successes = 0
+        saves.failures = 0
 
     return DeathSaveResult(
         outcome=outcome,

@@ -92,6 +92,20 @@ def long_rest(char: CharacterSheet) -> RestResult:
     change from 2014's half), all spell slots, lose remaining temporary
     hit points, and reduce exhaustion by 1.
 
+    Note on EFF-08's sibling finding (EFF-16, "long rest grants full
+    benefits to a character at 0 HP"): strict 2024 RAW requires at least 1
+    HP *at the start* of a rest to gain its benefits, but this engine
+    deliberately keeps the "stable character wakes up on a long rest"
+    behavior — see the regression tests
+    ``test_long_rest_clears_death_saves_and_unconscious_for_stable_character``
+    / ``test_long_rest_clears_prone_from_unconscious_fall`` in
+    ``tests/test_resting_exploration.py``, which exist specifically to guard
+    it. Gating this on ``hp_current >= 1`` would strand a stabilized
+    0-HP character forever absent the natural-recovery rule (1 HP after
+    1d4 hours), which this engine doesn't model. Left as-is; flagged in
+    ``docs/engine-correctness-remediation.md`` as a design decision rather
+    than silently "fixed".
+
     Args:
         char: Character sheet. Modified in-place.
 
