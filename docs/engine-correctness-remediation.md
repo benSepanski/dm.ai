@@ -41,10 +41,10 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 | Work | Findings | Size |
 |------|----------|------|
 | **F.2–F.4** ✅ save-on-damage/break-on-incapacitation/DC-cap done, end-effects-on-loss (SPL-07) still open — Concentration: save on spell damage, break on incapacitation, end effects on loss, DC cap 30 | SPL-02 ✅, EFF-01 ✅, SPL-07 (open), EFF-07 ✅, SPL-16 ✅ | M–L |
-| **I2** — Centralize condition application so immunities apply on every inflicting path | EFF-10 | M |
+| **I2** ✅ done — Centralize condition application so immunities apply on every inflicting path | EFF-10 ✅ done | M |
 | **J (carve-out)** — Revival effect type: Revivify/Raise Dead/Resurrection/True Resurrection actually revive ✅ done | SPL-01 | S |
 
-**Exit criteria:** Fireball forces a concentration save; stunning a caster drops their spell; losing Hold Person un-paralyzes the target; condition-immune creatures cannot receive the condition from any path; Revivify returns a dead target to 1 HP.
+**Exit criteria:** Fireball forces a concentration save; stunning a caster drops their spell; losing Hold Person un-paralyzes the target (still open, blocked on SPL-07); condition-immune creatures cannot receive the condition from any path ✅; Revivify returns a dead target to 1 HP.
 
 ### Phase 4 — Combat-affecting majors
 
@@ -369,7 +369,7 @@ Roll-modifier bugs where check/initiative paths diverge from the (correct) attac
 
 The 2024 condition set is partly stale and partly unwired. Many require relational (source-identity) or hook (auto-fail, repeat-save) support the engine lacks.
 
-**Status: I1 done.** Stunned no longer sets speed to 0 (`Condition.STUNNED` removed
+**Status: I1 and I2 done.** Stunned no longer sets speed to 0 (`Condition.STUNNED` removed
 from `_SPEED_ZERO_CONDITIONS`, `types/enums/_core.py`); Petrified's
 `ConditionEffect` no longer carries `immunity_types=[POISON, PSYCHIC]` (a
 petrified creature now only *resists* poison/psychic damage like every other
@@ -392,8 +392,29 @@ layering-safe fix. See `tests/test_conditions.py::TestSetsSpeedToZero`,
 `TestIsImmuneToCondition::test_petrified_grants_poisoned_immunity`, and
 `tests/test_engine_damage_conditions.py::TestApplyCondition::test_unconscious_applies_prone_too`/`test_stunned_does_not_zero_speed`.
 
+**I2**: the three combat paths that inflicted conditions by appending directly
+to `target.conditions` — spell riders (`_spell_resolution.py`'s
+`conditions_applied` loop, including the Unconscious→Prone carry-over), the
+Topple weapon mastery, and unarmed Grapple/Shove (both in `_attacks.py`) —
+now route through `_apply_condition_impl` (`_conditions.py`) instead of
+mutating the list themselves, so `is_immune_to_condition` is honored on
+every path, not just the explicit `engine.apply_condition` API. Each site
+now records "was the condition already present" before the call and compares
+after, to know whether to report it as newly applied (`outcome.conditions_applied`
+/ mastery `applied` list) without needing `_apply_condition_impl` to change
+its return type. This also tightens EFF-14's Unconscious→Prone coupling: it
+now checks Prone immunity too, which the old duplicated per-path logic did
+not. `_damage.py`'s 0-HP `_fall_unconscious` knockout path was investigated
+but left as a direct append — it isn't cited by the audit's EFF-10 evidence
+and centralizing it would additionally need to special-case the death-save
+mutations `_apply_condition_impl` doesn't perform; flagged here rather than
+folded in silently. See `tests/test_attacks_2024.py::test_topple_does_not_affect_prone_immune_target`
+/ `test_grapple_does_not_affect_grappled_immune_target` / `test_shove_does_not_affect_prone_immune_target`,
+`tests/test_spellcasting.py::test_condition_immune_target_is_unaffected_by_rider`
+/ `test_unconscious_rider_still_respects_prone_immunity`.
+
 **Findings**
-- Combat paths bypass condition immunities (spell riders, Topple, unarmed grapple/shove) (`_spell_resolution.py:181` [EFF-10], **major**)
+- Combat paths bypass condition immunities (spell riders, Topple, unarmed grapple/shove) (`_spell_resolution.py:181` [EFF-10], **major**) ✅ done
 - No repeat-save/save-to-end: Hold Person paralyzes for a full minute (`_conditions.py:71` [SPL-04], **major**)
 - Stunned sets speed 0 (2014); 2024 Stunned doesn't prevent movement (`core/conditions.py:189` [EFF-06], **major**) ✅ done
 - Petrified grants poison/psychic *damage* immunity instead of *Poisoned-condition* immunity (`core/conditions.py:147` [EFF-05], **major**) ✅ done
@@ -406,7 +427,7 @@ layering-safe fix. See `tests/test_conditions.py::TestSetsSpeedToZero`,
 - `ConditionEffect.can_act`/`speed_zero` never read — duplicate frozensets are the live source (`core/conditions.py:41` [EFF-11], **minor**) ✅ done (fields deleted; frozensets in `types/enums/_core.py` are now the only definition)
 
 **Fix approach**:
-1. **Centralize condition application**: route spell riders, Topple, and unarmed grapple/shove through `_apply_condition_impl` (or a shared helper) so `is_immune_to_condition` is honored everywhere and future centralized handling (concentration break from Workstream F, Prone coupling, exhaustion stacking) runs uniformly.
+1. ✅ **Centralize condition application**: route spell riders, Topple, and unarmed grapple/shove through `_apply_condition_impl` (or a shared helper) so `is_immune_to_condition` is honored everywhere and future centralized handling (concentration break from Workstream F, Prone coupling, exhaustion stacking) runs uniformly.
 2. ✅ **Fix stale/incorrect definitions**: remove `speed_zero=True` from Stunned (and drop it from `_SPEED_ZERO_CONDITIONS`); change Petrified from poison/psychic damage immunity to Poisoned-*condition* immunity (keep resistance-to-all); couple Unconscious → Prone. (Removal-side Prone cleanup was deliberately *not* added — `_apply_healing_impl` already leaves Prone in place when Unconscious ends via healing, which is the rules-correct behavior since standing up costs movement; coupling removal would have made waking up stand you up for free.)
 3. **Add source-identity** to conditions so Grappled (disadvantage vs non-grappler, end on grappler incapacitated, escape check as an action) and Charmed (can't attack/target charmer; charmer advantage on social checks) can be honored.
 4. **Add exhaustion stacking**: `apply_condition(EXHAUSTION)` increments `exhaustion_level` (cumulative, death at 6); a `gain_exhaustion` API; keep `Condition.EXHAUSTION` and `exhaustion_level` consistent (long rest should also clear the stale enum entry).
@@ -414,9 +435,9 @@ layering-safe fix. See `tests/test_conditions.py::TestSetsSpeedToZero`,
 6. **Add sight/hearing-requirement plumbing** to `_roll_check_impl` for Blinded/Deafened auto-fail; add Invisible advantage to initiative.
 7. ✅ **Eliminate the duplicate source of truth**: `ConditionEffect.can_act`/`speed_zero` deleted (dead fields, zero consumers); `CharacterSheet.can_act`/`effective_speed` already read the canonical `Condition.prevents_action`/`sets_speed_to_zero` frozensets in `types/enums/_core.py`, unchanged.
 
-**Tests**: a PARALYZED-immune target is not paralyzed by Hold Person; a GRAPPLED-immune target isn't grappled; ✅ a stunned creature can still move; ✅ a petrified creature takes halved (not zero) poison damage and can't be Poisoned; a grappled creature attacks non-grapplers at disadvantage and can escape; `apply_condition(EXHAUSTION)` twice yields level 2 with −4/−10 ft; a charmed creature can't target its charmer; ✅ a slept creature is Prone; an invisible creature rolls initiative with advantage.
+**Tests**: ✅ a PARALYZED-immune target is not paralyzed by Hold Person; ✅ a GRAPPLED-immune target isn't grappled, and a PRONE-immune target isn't Toppled or Shoved; ✅ a stunned creature can still move; ✅ a petrified creature takes halved (not zero) poison damage and can't be Poisoned; a grappled creature attacks non-grapplers at disadvantage and can escape; `apply_condition(EXHAUSTION)` twice yields level 2 with −4/−10 ft; a charmed creature can't target its charmer; ✅ a slept creature is Prone (and a Prone-immune target sleeps without falling Prone); an invisible creature rolls initiative with advantage.
 
-**Size**: L. The centralization (step 1) and source-identity (step 3) are shared with Workstreams A and F. Split into I1 ✅ done (definition fixes: Stunned/Petrified/Unconscious/duplicate-source), I2 (immunity centralization + concentration coupling — pair with F), I3 (source-identity: Grappled/Charmed), I4 (exhaustion stacking + repeat-save + auto-fail hooks).
+**Size**: L. The centralization (step 1) and source-identity (step 3) are shared with Workstreams A and F. Split into I1 ✅ done (definition fixes: Stunned/Petrified/Unconscious/duplicate-source), I2 ✅ done (immunity centralization for spell riders/Topple/grapple-shove — concentration coupling itself was already wired directly in Workstream F, independent of this centralization), I3 (source-identity: Grappled/Charmed), I4 (exhaustion stacking + repeat-save + auto-fail hooks).
 
 ---
 
@@ -513,13 +534,13 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 3. **Workstream C** ✅ done (weapon registry ↔ resolver bridge) — masteries/proficiency/Heavy now reach the real dm-api pipeline; Ammunition/Loading tracking remains deferred to Workstream D.
 4. **Workstream F** ✅ save-on-damage/break-on-incapacitation/DC-cap done (SPL-02, EFF-01, EFF-07, SPL-16) — **F.3 (end-effects-on-concentration-loss, SPL-07) remains open**, needing an effect-provenance model; effective-damage return (step 1) is shared with G.
 5. **Workstream J revival carve-out** (Revivify can't revive) ✅ done — small, self-contained critical.
-6. **Workstream I2** (condition-immunity centralization — spell riders/Topple/unarmed grapple-shove still bypass `is_immune_to_condition`, EFF-10) — the concentration-on-incapacitation break itself is now done as part of Workstream F, wired into both `_apply_condition_impl` and the spell-rider path directly (not blocked on I2's broader centralization).
+6. **Workstream I2** ✅ done (condition-immunity centralization — spell riders/Topple/unarmed grapple-shove now route through `_apply_condition_impl`, honoring `is_immune_to_condition` on every path, EFF-10) — the concentration-on-incapacitation break itself was already done as part of Workstream F, wired into both `_apply_condition_impl` and the spell-rider path directly (not blocked on I2's broader centralization).
 
 **Majors that affect ordinary play (fix next):**
 7. **Workstream G** ✅ done (instant death, death-save reset, crit modifier doubling — EFF-08/EFF-09/EFF-13/ACT-09) — F's effective-damage refactor (`_apply_damage_effective`) was reused here. EFF-16 (long-rest-at-0-HP) investigated and deliberately not changed; see the workstream section.
 8. **Workstream D** (armor/proficiency/inventory) — D1 worn-armor field first; independent of A/B.
 9. **Workstream E** (mastery mechanics) — Workstream C ✅ (registry bridge landed) — shares speed-reduction/economy plumbing with A/B.
-10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
+10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) and **I2** ✅ done (condition-immunity centralization) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
 11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
 12. **Workstream J** (remaining spell-schema gaps) & **Workstream K** (slot/upcast math) — parallelizable; K is largely independent.
 
@@ -528,7 +549,7 @@ Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Gro
 
 **Cross-cutting throughout:** **Workstream M** (spec reconciliation + structural anti-regression tests) — update the relevant spec row and add a consumer-existence test as each workstream merges.
 
-**Key dependency chain:** A → B (shared TurnState) → E (masteries need economy); C → E (masteries need the registry); F.step1 (effective-damage return) ✅ done → available to G; I2 (centralized apply) ← still relied on by E (Topple/grapple immunity) — F's own concentration break (EFF-01) no longer needs I2, since it was wired directly into both condition-application paths. Do A and C early — they are the shared foundations the majority of other workstreams build on.
+**Key dependency chain:** A → B (shared TurnState) → E (masteries need economy); C → E (masteries need the registry); F.step1 (effective-damage return) ✅ done → available to G; I2 ✅ done (centralized apply) — Topple/grapple immunity now honored, available to E once its mastery-effects land; F's own concentration break (EFF-01) never needed I2, since it was wired directly into both condition-application paths. Do A and C early — they are the shared foundations the majority of other workstreams build on.
 
 ---
 

@@ -19,6 +19,7 @@ from game_engine.core.conditions import CONDITION_EFFECTS
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import Action, ActionResult
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
+from game_engine.rules.dnd_5_5e._conditions import _apply_condition_impl
 from game_engine.rules.dnd_5_5e._damage import (
     ConcentrationSaveResult,
     _apply_damage_effective,
@@ -147,9 +148,13 @@ def _apply_mastery_effects(
         )
         save = _roll_saving_throw_impl(target, Ability.CONSTITUTION, dc)
         log["topple_save"] = {"dc": dc, "total": save.total, "success": save.success}
-        if not save.success and Condition.PRONE not in target.conditions:
-            target.conditions.append(Condition.PRONE)
-            applied.append(Condition.PRONE)
+        if not save.success:
+            # EFF-10: route through the centralized helper so a Prone-immune
+            # target can't be toppled.
+            was_present = Condition.PRONE in target.conditions
+            _apply_condition_impl(target, Condition.PRONE)
+            if not was_present and Condition.PRONE in target.conditions:
+                applied.append(Condition.PRONE)
     elif mastery is WeaponMastery.SAP:
         combat_state.grant_sap(actor.id, target.id)
         log["sapped"] = True
@@ -205,9 +210,13 @@ def _resolve_unarmed_special(
 
     condition = Condition.GRAPPLED if option is UnarmedStrikeOption.GRAPPLE else Condition.PRONE
     applied: list[Condition] = []
-    if not save.success and condition not in target.conditions:
-        target.conditions.append(condition)
-        applied.append(condition)
+    if not save.success:
+        # EFF-10: route through the centralized helper so a Grappled/Prone-
+        # immune target can't be grappled or shoved.
+        was_present = condition in target.conditions
+        _apply_condition_impl(target, condition)
+        if not was_present and condition in target.conditions:
+            applied.append(condition)
 
     verb = "grapples" if option is UnarmedStrikeOption.GRAPPLE else "shoves"
     flavor = (

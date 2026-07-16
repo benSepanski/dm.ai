@@ -240,6 +240,22 @@ class TestWeaponMasteries:
             engine.resolve_action(_attack(weapon_name="Maul", mastery=WeaponMastery.TOPPLE), state)
         assert Condition.PRONE not in state.get_combatant("b").conditions
 
+    def test_topple_does_not_affect_prone_immune_target(self, engine, state):
+        """EFF-10: Topple must honor is_immune_to_condition like every other
+        condition-application path, not append Prone unconditionally."""
+        actor = state.get_combatant("a")
+        actor.weapon_masteries = ["Maul"]
+        state.get_combatant("b").condition_immunities = [Condition.PRONE]
+        with (
+            patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])),
+            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])),
+        ):
+            result = engine.resolve_action(
+                _attack(weapon_name="Maul", mastery=WeaponMastery.TOPPLE), state
+            )
+        assert Condition.PRONE not in state.get_combatant("b").conditions
+        assert Condition.PRONE not in result.conditions_applied
+
 
 class TestTwoWeaponFighting:
     def test_offhand_attack_omits_ability_mod(self, engine, state):
@@ -338,6 +354,26 @@ class TestUnarmedOptions:
         with patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])):
             engine.resolve_action(_attack(unarmed_option=UnarmedStrikeOption.SHOVE), state)
         assert Condition.PRONE in state.get_combatant("b").conditions
+
+    def test_grapple_does_not_affect_grappled_immune_target(self, engine, state):
+        """EFF-10: unarmed Grapple must honor is_immune_to_condition."""
+        state.get_combatant("b").condition_immunities = [Condition.GRAPPLED]
+        with patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])):
+            result = engine.resolve_action(
+                _attack(unarmed_option=UnarmedStrikeOption.GRAPPLE), state
+            )
+        assert Condition.GRAPPLED not in state.get_combatant("b").conditions
+        assert Condition.GRAPPLED not in result.conditions_applied
+
+    def test_shove_does_not_affect_prone_immune_target(self, engine, state):
+        """EFF-10: unarmed Shove must honor is_immune_to_condition."""
+        state.get_combatant("b").condition_immunities = [Condition.PRONE]
+        with patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])):
+            result = engine.resolve_action(
+                _attack(unarmed_option=UnarmedStrikeOption.SHOVE), state
+            )
+        assert Condition.PRONE not in state.get_combatant("b").conditions
+        assert Condition.PRONE not in result.conditions_applied
 
     def test_target_uses_better_save(self, engine, state):
         target = state.get_combatant("b")
