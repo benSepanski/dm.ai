@@ -8,7 +8,7 @@ Internal module — import :func:`cast_spell` via
 from __future__ import annotations
 
 from game_engine.core.dice import roll_dice, roll_with_disadvantage
-from game_engine.rules.dnd_5_5e._conditions import _break_concentration_on_incapacitation
+from game_engine.rules.dnd_5_5e._conditions import _apply_condition_impl
 from game_engine.rules.dnd_5_5e._damage import (
     _apply_damage_effective,
     _apply_healing_impl,
@@ -30,7 +30,6 @@ from game_engine.types import (
     Ability,
     CharacterSheet,
     CombatStateData,
-    Condition,
     DiceNotation,
 )
 
@@ -221,17 +220,14 @@ def cast_spell(
 
         if not saved and spell.conditions_applied:
             for condition in spell.conditions_applied:
-                if condition not in target.conditions:
-                    target.conditions.append(condition)
+                # EFF-10: route through the centralized helper so a
+                # condition-immune target (and, for Unconscious riders, a
+                # Prone-immune one) isn't affected by a spell just because
+                # this path bypassed is_immune_to_condition.
+                was_present = condition in target.conditions
+                _apply_condition_impl(target, condition, rider_duration)
+                if not was_present and condition in target.conditions:
                     outcome.conditions_applied.append(condition)
-                if rider_duration is not None:
-                    target.condition_durations[condition] = rider_duration
-                # SRD 5.2 Unconscious: "You have the Incapacitated and Prone
-                # conditions, ... and you fall Prone." A rider that applies
-                # Unconscious directly (e.g. Sleep) must carry Prone too.
-                if condition is Condition.UNCONSCIOUS and Condition.PRONE not in target.conditions:
-                    target.conditions.append(Condition.PRONE)
-                _break_concentration_on_incapacitation(target, condition)
 
         outcomes.append(outcome)
 

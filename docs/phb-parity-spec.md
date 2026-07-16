@@ -36,7 +36,7 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Temporary hit points | `rules.dnd_5_5e._damage` | ✅ |
 | Healing | `rules.dnd_5_5e._damage` | ✅ |
 | Dropping to 0 HP, instant death, death saves (incl. exhaustion on 10+ threshold; nat 1/20 unmodified) | `rules.dnd_5_5e._death` | ✅ |
-| Conditions (all 15) + mechanical effects | `core.conditions` | 🟡 (Stunned speed, Petrified immunity, Unconscious→Prone, duplicate can_act/speed_zero source fixed — see [engine-correctness-remediation.md](engine-correctness-remediation.md) Workstream I1 ✅; Charmed/Deafened/Grappled source-identity/Exhaustion-via-condition/Invisible-initiative gaps remain in I2–I4) |
+| Conditions (all 15) + mechanical effects | `core.conditions` | 🟡 (Stunned speed, Petrified immunity, Unconscious→Prone, duplicate can_act/speed_zero source fixed in Workstream I1 ✅; condition-immunity is now honored on every inflicting path — spell riders, Topple, unarmed grapple/shove — not just `engine.apply_condition`, Workstream I2 ✅; see [engine-correctness-remediation.md](engine-correctness-remediation.md); Charmed/Deafened/Grappled source-identity/Exhaustion-via-condition/Invisible-initiative gaps remain in I3–I4) |
 | Exhaustion (2024: −2×level on d20 tests, −5 ft speed) | `core.conditions`, `_saves`, `_attacks`, `_death` | ✅ |
 | Short/long rests, hit dice spending | `rules.dnd_5_5e.resting` | ✅ |
 
