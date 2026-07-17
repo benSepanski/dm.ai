@@ -78,6 +78,16 @@ class TurnState:
     sapped_expiry: EffectExpiry | None = None
     vexed_target_id: str | None = None
     vexed_expiry: EffectExpiry | None = None
+    # ACT-07: Slow mastery reduces the target's speed by 10 ft until the
+    # start of the attacker's next turn.
+    slowed: bool = False
+    slowed_expiry: EffectExpiry | None = None
+    # ACT-07: Cleave mastery grants one free follow-up attack against a
+    # different creature, once per turn — action-economy state (like
+    # nick_used), not a cross-turn effect, so it resets every turn.
+    cleave_available: bool = False
+    cleave_used: bool = False
+    cleave_original_target_id: str | None = None
     # Ready action (2024 PHB): the stored attack to trigger via a reaction.
     # Lost if unused at the start of the readier's own next turn — see
     # CombatStateData.reset_turn.
@@ -104,6 +114,11 @@ class TurnState:
             "sapped_expiry": self.sapped_expiry.to_dict() if self.sapped_expiry else None,
             "vexed_target_id": self.vexed_target_id,
             "vexed_expiry": self.vexed_expiry.to_dict() if self.vexed_expiry else None,
+            "slowed": self.slowed,
+            "slowed_expiry": self.slowed_expiry.to_dict() if self.slowed_expiry else None,
+            "cleave_available": self.cleave_available,
+            "cleave_used": self.cleave_used,
+            "cleave_original_target_id": self.cleave_original_target_id,
             "readied": self.readied.to_dict() if self.readied else None,
         }
 
@@ -114,6 +129,8 @@ class TurnState:
         helped_expiry = d.get("helped_expiry")
         sapped_expiry = d.get("sapped_expiry")
         vexed_expiry = d.get("vexed_expiry")
+        slowed_expiry = d.get("slowed_expiry")
+        cleave_original_target_id = d.get("cleave_original_target_id")
         readied = d.get("readied")
         return cls(
             action_used=bool(d.get("action_used", False)),
@@ -135,6 +152,13 @@ class TurnState:
             sapped_expiry=EffectExpiry.from_dict(sapped_expiry) if sapped_expiry else None,
             vexed_target_id=str(vexed) if vexed is not None else None,
             vexed_expiry=EffectExpiry.from_dict(vexed_expiry) if vexed_expiry else None,
+            slowed=bool(d.get("slowed", False)),
+            slowed_expiry=EffectExpiry.from_dict(slowed_expiry) if slowed_expiry else None,
+            cleave_available=bool(d.get("cleave_available", False)),
+            cleave_used=bool(d.get("cleave_used", False)),
+            cleave_original_target_id=(
+                str(cleave_original_target_id) if cleave_original_target_id is not None else None
+            ),
         )
 
 
@@ -168,15 +192,16 @@ class CombatStateData:
         """Reset action economy for *char_id* at the start of their turn.
 
         Only the action-economy fields (action/bonus-action/reaction used,
-        movement, attacks made, Nick's once-per-turn attack, the Light
-        main-hand attack and one-leveled-spell-per-turn flags,
-        dodging/disengaging/dashing) are cleared here, plus an unused Readied
-        action — 2024 PHB: a readied action is lost if its trigger doesn't
-        happen before the start of your next turn. Cross-turn effect flags
-        (Help/Sap/Vex, and Hide's ``hidden``) are left alone — they expire on
-        their own rule-defined trigger, not simply because *some* combatant's
-        turn began. See :meth:`grant_help`, :meth:`grant_sap`,
-        :meth:`grant_vex`, and :meth:`_expire_cross_turn_effects`.
+        movement, attacks made, Nick's once-per-turn attack, Cleave's
+        once-per-turn follow-up, the Light main-hand attack and
+        one-leveled-spell-per-turn flags, dodging/disengaging/dashing) are
+        cleared here, plus an unused Readied action — 2024 PHB: a readied
+        action is lost if its trigger doesn't happen before the start of your
+        next turn. Cross-turn effect flags (Help/Sap/Vex/Slow, and Hide's
+        ``hidden``) are left alone — they expire on their own rule-defined
+        trigger, not simply because *some* combatant's turn began. See
+        :meth:`grant_help`, :meth:`grant_sap`, :meth:`grant_vex`,
+        :meth:`grant_slow`, and :meth:`_expire_cross_turn_effects`.
         """
         ts = self.turn_state_for(char_id)
         ts.action_used = False
@@ -190,12 +215,15 @@ class CombatStateData:
         ts.dashing = False
         ts.light_attack_used = False
         ts.leveled_spell_cast = False
+        ts.cleave_available = False
+        ts.cleave_used = False
+        ts.cleave_original_target_id = None
         ts.readied = None
         self._expire_cross_turn_effects(char_id)
         return ts
 
     def _expire_cross_turn_effects(self, trigger_char_id: str) -> None:
-        """Clear Help/Sap/Vex flags whose expiry trigger is *trigger_char_id*'s turn."""
+        """Clear Help/Sap/Vex/Slow flags whose expiry trigger is *trigger_char_id*'s turn."""
         for ts in self.turn_states.values():
             if _expiry_reached(ts.helped_expiry, trigger_char_id, self.round_number):
                 ts.helped = False
@@ -206,6 +234,9 @@ class CombatStateData:
             if _expiry_reached(ts.vexed_expiry, trigger_char_id, self.round_number):
                 ts.vexed_target_id = None
                 ts.vexed_expiry = None
+            if _expiry_reached(ts.slowed_expiry, trigger_char_id, self.round_number):
+                ts.slowed = False
+                ts.slowed_expiry = None
 
     def grant_help(self, helper_id: str, ally_id: str) -> None:
         """Grant *ally_id* advantage on their next roll (2024 Help action).
@@ -234,13 +265,27 @@ class CombatStateData:
         ts.vexed_target_id = target_id
         ts.vexed_expiry = EffectExpiry(attacker_id, self.round_number + 2)
 
+    def grant_slow(self, attacker_id: str, target_id: str) -> None:
+        """Reduce *target_id*'s speed by 10 ft (Slow mastery).
+
+        Lasts until the start of *attacker_id*'s next turn.
+        """
+        ts = self.turn_state_for(target_id)
+        ts.slowed = True
+        ts.slowed_expiry = EffectExpiry(attacker_id, self.round_number + 1)
+
 
 @dataclass
 class AttackDetails:
     """Details for an Attack action."""
 
     weapon_name: str = "Unarmed Strike"
-    damage_dice: DiceNotation = DiceNotation("1d4")
+    # ACT-11: the 2024 PHB unarmed strike deals a fixed 1 + Strength modifier,
+    # not a rolled die — "1d1" always rolls 1, giving the correct flat total
+    # via the same dice-notation plumbing every other weapon uses. Classes
+    # with scaling unarmed damage (e.g. Monk martial arts) pass their own
+    # damage_dice and never fall through to this default.
+    damage_dice: DiceNotation = DiceNotation("1d1")
     damage_type: DamageType = DamageType.BLUDGEONING
     attack_ability: Ability = Ability.STRENGTH
     is_ranged: bool = False
@@ -251,6 +296,10 @@ class AttackDetails:
     long_range: bool = False
     target_cover: CoverType | None = None
     unarmed_option: UnarmedStrikeOption | None = None
+    # ACT-07: Cleave's free follow-up attack deals damage without the
+    # ability modifier (2024 PHB) — mirrors how is_offhand zeroes a
+    # *positive* modifier, except Cleave always zeroes it.
+    is_cleave_followup: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serialisable dict (needed to persist a Readied attack)."""
@@ -267,6 +316,7 @@ class AttackDetails:
             "long_range": self.long_range,
             "target_cover": self.target_cover.value if self.target_cover else None,
             "unarmed_option": self.unarmed_option.value if self.unarmed_option else None,
+            "is_cleave_followup": self.is_cleave_followup,
         }
 
     @classmethod
@@ -277,7 +327,7 @@ class AttackDetails:
         mastery = d.get("mastery")
         return cls(
             weapon_name=str(d.get("weapon_name", "Unarmed Strike")),
-            damage_dice=DiceNotation(d.get("damage_dice", "1d4")),
+            damage_dice=DiceNotation(d.get("damage_dice", "1d1")),
             damage_type=DamageType(d.get("damage_type", DamageType.BLUDGEONING.value)),
             attack_ability=Ability(d.get("attack_ability", Ability.STRENGTH.value)),
             is_ranged=bool(d.get("is_ranged", False)),
@@ -288,6 +338,7 @@ class AttackDetails:
             long_range=bool(d.get("long_range", False)),
             target_cover=CoverType(target_cover) if target_cover else None,
             unarmed_option=UnarmedStrikeOption(unarmed_option) if unarmed_option else None,
+            is_cleave_followup=bool(d.get("is_cleave_followup", False)),
         )
 
 

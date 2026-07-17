@@ -90,7 +90,9 @@ class AttackDetailsRequest(BaseModel):
     """
 
     weapon_name: str = "Unarmed Strike"
-    damage_dice: str = "1d4"
+    # ACT-11: 2024 unarmed strike is a fixed 1 + Strength modifier; "1d1"
+    # always rolls 1, matching game_engine.types.AttackDetails's default.
+    damage_dice: str = "1d1"
     damage_type: DamageType = DamageType.BLUDGEONING
     attack_ability: Ability = Ability.STRENGTH
     is_ranged: bool | None = None

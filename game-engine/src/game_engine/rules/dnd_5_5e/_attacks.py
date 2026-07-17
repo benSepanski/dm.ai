@@ -3,10 +3,11 @@ D&D 5.5e attack resolution (2024 rules).
 
 Handles to-hit advantage/disadvantage from conditions and turn flags,
 cover, critical hits (including melee auto-crits vs paralyzed/unconscious),
-weapon masteries, off-hand attacks, unarmed grapple/shove, and
-concentration checks on damage. Reaction resolution (opportunity attacks,
-readied actions) lives in :mod:`._reactions`, which reuses ``_validate_attack``/
-``_resolve_attack``/``_failure`` from here.
+off-hand attacks, unarmed grapple/shove, and concentration checks on
+damage. On-hit weapon mastery effects live in :mod:`._masteries`; reaction
+resolution (opportunity attacks, readied actions) lives in
+:mod:`._reactions` — both reuse ``_validate_attack``/``_resolve_attack``/
+``_failure`` from here.
 
 Internal module — import via :class:`DnD55eEngine`.
 """
@@ -25,6 +26,7 @@ from game_engine.rules.dnd_5_5e._damage import (
     _apply_damage_effective,
     _concentration_check,
 )
+from game_engine.rules.dnd_5_5e._masteries import _apply_mastery_effects, _has_mastery
 from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
 from game_engine.types import (
     Ability,
@@ -121,55 +123,6 @@ def _advantage_state(
         disadvantage = True
 
     return advantage, disadvantage
-
-
-def _has_mastery(actor: CharacterSheet, details: AttackDetails) -> bool:
-    """True when the actor has unlocked this weapon's mastery property."""
-    if details.mastery is None:
-        return False
-    return details.weapon_name.lower() in (w.lower() for w in actor.weapon_masteries)
-
-
-def _apply_mastery_effects(
-    actor: CharacterSheet,
-    target: CharacterSheet,
-    details: AttackDetails,
-    combat_state: CombatStateData,
-    log: dict[str, Any],
-) -> list[Condition]:
-    """Apply on-hit weapon mastery effects. Returns conditions applied."""
-    applied: list[Condition] = []
-    mastery = details.mastery
-    if mastery is WeaponMastery.TOPPLE:
-        dc = (
-            8
-            + actor.ability_scores.modifier(details.attack_ability)
-            + _calc_prof_bonus(actor.level)
-        )
-        save = _roll_saving_throw_impl(target, Ability.CONSTITUTION, dc)
-        log["topple_save"] = {"dc": dc, "total": save.total, "success": save.success}
-        if not save.success:
-            # EFF-10: route through the centralized helper so a Prone-immune
-            # target can't be toppled.
-            was_present = Condition.PRONE in target.conditions
-            _apply_condition_impl(target, Condition.PRONE)
-            if not was_present and Condition.PRONE in target.conditions:
-                applied.append(Condition.PRONE)
-    elif mastery is WeaponMastery.SAP:
-        combat_state.grant_sap(actor.id, target.id)
-        log["sapped"] = True
-    elif mastery is WeaponMastery.VEX:
-        combat_state.grant_vex(actor.id, target.id)
-        log["vexed"] = True
-    elif mastery is WeaponMastery.SLOW:
-        log["slowed_ft"] = 10
-    elif mastery is WeaponMastery.PUSH:
-        log["pushed_ft"] = 10
-    elif mastery is WeaponMastery.CLEAVE:
-        log["cleave_available"] = True
-    elif mastery is WeaponMastery.NICK:
-        log["nick_extra_attack"] = True
-    return applied
 
 
 def _log_concentration_result(log: dict[str, Any], result: ConcentrationSaveResult | None) -> None:
@@ -318,7 +271,9 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
     if not hit:
         graze_damage = 0
         if details.mastery is WeaponMastery.GRAZE and _has_mastery(actor, details):
-            graze_damage = max(1, ability_mod)
+            # ACT-17: Graze deals damage equal to the ability modifier, not a
+            # minimum of 1 — a negative modifier means Graze deals nothing.
+            graze_damage = max(0, ability_mod)
             if graze_damage:
                 effective = _apply_damage_effective(target, graze_damage, details.damage_type)
                 _log_concentration_result(log, _concentration_check(target, effective))
@@ -342,6 +297,10 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
     # Two-Weapon Fighting style is known; a negative modifier still applies.
     damage_mod = ability_mod
     if details.is_offhand and Feat.TWO_WEAPON_FIGHTING not in actor.feats and ability_mod > 0:
+        damage_mod = 0
+    # ACT-07: Cleave's free follow-up always omits the ability modifier
+    # (2024 PHB), positive or negative — unlike the off-hand case above.
+    if details.is_cleave_followup:
         damage_mod = 0
     # A critical hit doubles the dice, not the flat modifier baked into the
     # notation (ACT-09) — rolling the full notation twice would double a

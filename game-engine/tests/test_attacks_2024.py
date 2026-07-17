@@ -22,7 +22,6 @@ from game_engine.types import (
     DiceNotation,
     Feat,
     UnarmedStrikeOption,
-    WeaponMastery,
     WeaponProperty,
 )
 
@@ -143,118 +142,6 @@ class TestCoverAndCrits:
         with patch(f"{ATTACKS}.roll_dice", return_value=(13, [13])):
             result = engine.resolve_action(_attack(), state)
         assert result.success is False
-
-
-class TestWeaponMasteries:
-    def test_graze_deals_ability_mod_on_miss(self, engine, state):
-        actor = state.get_combatant("a")
-        actor.ability_scores = AbilityScoreSet(strength=16)
-        actor.weapon_masteries = ["Greatsword"]
-        with patch(f"{ATTACKS}.roll_dice", return_value=(2, [2])):
-            result = engine.resolve_action(
-                _attack(weapon_name="Greatsword", mastery=WeaponMastery.GRAZE), state
-            )
-        assert result.success is False
-        assert result.damage == 3
-        assert state.get_combatant("b").hp_current == 27
-
-    def test_graze_minimum_damage_is_1_with_negative_ability_mod(self, engine, state):
-        actor = state.get_combatant("a")
-        actor.ability_scores = AbilityScoreSet(strength=6)  # STR −2
-        actor.weapon_masteries = ["Greatsword"]
-        with patch(f"{ATTACKS}.roll_dice", return_value=(2, [2])):
-            result = engine.resolve_action(
-                _attack(weapon_name="Greatsword", mastery=WeaponMastery.GRAZE), state
-            )
-        # 2024 PHB GRAZE: minimum 1 damage even when ability mod is negative.
-        assert result.success is False
-        assert result.damage == 1
-        assert state.get_combatant("b").hp_current == 29
-
-    def test_topple_forces_save_or_prone(self, engine, state):
-        actor = state.get_combatant("a")
-        actor.weapon_masteries = ["Maul"]
-        with (
-            patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])),
-            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])),
-        ):
-            result = engine.resolve_action(
-                _attack(weapon_name="Maul", mastery=WeaponMastery.TOPPLE), state
-            )
-        assert Condition.PRONE in state.get_combatant("b").conditions
-        assert Condition.PRONE in result.conditions_applied
-
-    def test_vex_grants_advantage_on_next_attack(self, engine, state):
-        actor = state.get_combatant("a")
-        actor.weapon_masteries = ["Rapier"]
-        with patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])):
-            engine.resolve_action(_attack(weapon_name="Rapier", mastery=WeaponMastery.VEX), state)
-        assert state.turn_state_for("a").vexed_target_id == "b"
-
-        # 2024 PHB: Vex lasts "before the end of your next turn" — it must
-        # survive the attacker's own begin_turn one round later...
-        state.round_number = 2
-        engine.begin_turn(actor, state)
-        assert state.turn_state_for("a").vexed_target_id == "b"
-
-        # ...and actually grant advantage on the follow-up attack.
-        with patch(f"{ATTACKS}.roll_with_advantage", return_value=(15, [15, 3])) as adv:
-            engine.resolve_action(_attack(), state)
-        adv.assert_called_once()
-        assert state.turn_state_for("a").vexed_target_id is None
-
-    def test_vex_expires_after_attackers_turn_after_next(self, engine, state):
-        actor = state.get_combatant("a")
-        actor.weapon_masteries = ["Rapier"]
-        with patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])):
-            engine.resolve_action(_attack(weapon_name="Rapier", mastery=WeaponMastery.VEX), state)
-        state.round_number = 3
-        engine.begin_turn(actor, state)
-        assert state.turn_state_for("a").vexed_target_id is None
-
-    def test_sap_disadvantages_target_after_targets_own_begin_turn(self, engine, state):
-        actor = state.get_combatant("a")
-        target = state.get_combatant("b")
-        actor.weapon_masteries = ["Scimitar"]
-        with patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])):
-            engine.resolve_action(
-                _attack(weapon_name="Scimitar", mastery=WeaponMastery.SAP), state
-            )
-        assert state.turn_state_for("b").sapped is True
-
-        # Sap expires on the sapper's next turn, not the target's — the
-        # target's own begin_turn must not clear it.
-        engine.begin_turn(target, state)
-        assert state.turn_state_for("b").sapped is True
-
-        with patch(f"{ATTACKS}.roll_with_disadvantage", return_value=(3, [3, 15])) as dis:
-            engine.resolve_action(_attack(actor="b", target="a"), state)
-        dis.assert_called_once()
-
-    def test_mastery_requires_training(self, engine, state):
-        # No entry in weapon_masteries → no Topple effect.
-        with (
-            patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])),
-            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])),
-        ):
-            engine.resolve_action(_attack(weapon_name="Maul", mastery=WeaponMastery.TOPPLE), state)
-        assert Condition.PRONE not in state.get_combatant("b").conditions
-
-    def test_topple_does_not_affect_prone_immune_target(self, engine, state):
-        """EFF-10: Topple must honor is_immune_to_condition like every other
-        condition-application path, not append Prone unconditionally."""
-        actor = state.get_combatant("a")
-        actor.weapon_masteries = ["Maul"]
-        state.get_combatant("b").condition_immunities = [Condition.PRONE]
-        with (
-            patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])),
-            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])),
-        ):
-            result = engine.resolve_action(
-                _attack(weapon_name="Maul", mastery=WeaponMastery.TOPPLE), state
-            )
-        assert Condition.PRONE not in state.get_combatant("b").conditions
-        assert Condition.PRONE not in result.conditions_applied
 
 
 class TestTwoWeaponFighting:
@@ -459,7 +346,14 @@ class TestExtraAttack:
             ],
         )
         state = CombatStateData(combatants=[actor, _char("b")])
-        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+        # roll_dice serves both the attack roll and the damage roll (ACT-09)
+        # — alternate a comfortable-hit attack roll with a small damage roll
+        # so 3 hits don't accidentally drop "b" to 0 HP and grant Prone
+        # advantage on a later attack (which would fall through to the real,
+        # unmocked roll_with_advantage and make this test flaky), matching
+        # test_extra_attack_survives_begin_turn_reset above.
+        hits = [(15, [15]), (1, [1])] * 3
+        with patch(f"{ATTACKS}.roll_dice", side_effect=hits):
             for _ in range(3):
                 result = engine.resolve_action(_attack(), state)
                 assert result.success is True
