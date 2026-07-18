@@ -52,7 +52,7 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 |------|----------|------|
 | **G** — Death & damage ordering: instant death at 0 HP, death-save reset on 3 successes, temp HP at 0 HP, crit doubles dice only | EFF-08, EFF-09, EFF-13, ACT-09 | M |
 | **D1+D2** — Worn-armor identity, equip/unequip AC recompute, shield-as-armor guard, Str-min speed, stealth disadvantage, armor-training penalties | EQP-04, EQP-02, EQP-03, EQP-06, EQP-07 | L |
-| **E** — Mastery mechanics: Slow/Push/Cleave wired, Graze floor removed, grapple/shove size gate | ACT-07, ACT-17, ACT-16 | M |
+| **E** ✅ Slow/Cleave/Graze/unarmed-strike done (ACT-07 partial, ACT-17, ACT-11); Push size gate and ACT-16 grapple/shove size gate deferred (need a `CharacterSheet.size` field — bundle with Workstream D) — Mastery mechanics | ACT-07, ACT-17, ACT-16, ACT-11 | M |
 | **I1** — Stale 2024 condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, single source of truth | EFF-06, EFF-05, EFF-14, EFF-11 | S–M |
 | **H** — Check/initiative correctness ✅ done (independent quick win; can land in any phase) | ACT-10, ACT-20, ACT-12 | S |
 
@@ -203,25 +203,55 @@ The audit's most consequential equipment finding: nothing constructed an `Attack
 
 ## Workstream E — Weapon mastery mechanics (root cause: masteries write log keys nothing reads; missing TurnState fields & size checks)
 
-Several masteries only emit unread log entries. Note Sap/Vex are undermined by Workstream A's wipe; masteries now reach the real dm-api pipeline via Workstream C's registry bridge, but the mastery *effects* below (Slow/Push/Cleave table effects, Graze floor, grapple/shove size gate) are still unimplemented.
+**Status: Slow, Cleave, Graze, and the unarmed-strike default are done. Push's
+size gate and the grapple/shove size gate (ACT-16) remain open** — both need
+a `CharacterSheet.size: CreatureSize` field that doesn't exist yet (no PC or
+monster combatant carries its size today), which is shared infrastructure
+with Workstream D's armor/inventory schema work rather than something to
+bolt on ad hoc here.
+
+`CombatStateData.grant_slow` (mirroring `grant_sap`) now sets
+`TurnState.slowed`/`slowed_expiry` on the *target* on a Slow-mastery hit,
+expiring at the start of the *attacker's* next turn exactly like Sap. Since
+`CharacterSheet.effective_speed` is a pure sheet property with no combat-state
+visibility, a new `_actions._effective_speed(actor, ts)` helper layers the
+Slow penalty on top of it; Dash's flavor text now calls this instead of the
+bare property (the only other consumer of speed in the engine — see the
+"Verified Correct" section: this engine doesn't validate movement against
+position, so Slow's effect is real but, like Dash, decorative beyond the
+`TurnState`/log layer). Cleave now grants a genuine once-per-turn free
+follow-up: a Cleave-mastery hit sets `TurnState.cleave_available` and records
+the original target (`cleave_original_target_id`) in `_masteries.py`; a new
+`ActionType.CLEAVE_ATTACK`, dispatched in `_actions.py` and resolved by
+`_reactions.resolve_cleave_attack`, validates the follow-up targets a
+*different* creature, forces `AttackDetails.is_cleave_followup=True` (so the
+ability modifier can't be included even if the caller tries), and — because
+`_resolve_attack` unconditionally increments `TurnState.attacks_made` for
+every call regardless of caller — undoes that increment afterward so a Cleave
+fired between two Extra Attack swings doesn't prematurely exhaust the pool
+(see `tests/test_weapon_masteries_2024.py::test_cleave_followup_between_extra_attack_swings_does_not_exhaust_pool`,
+which reproduces exactly that interaction). `_masteries.py` is a new module
+(on-hit mastery effects split out of `_attacks.py`, which was already at the
+400-line file-length guideline before this workstream — the same rationale
+`_reactions.py` used).
 
 **Findings**
-- Slow, Push, Cleave are log-only with no mechanical effect (`_attacks.py:149` [ACT-07], **major**)
-- Default unarmed strike deals 1d4 + STR instead of the 2024 fixed 1 + STR (`sheets.py:287` [ACT-11], **major**)
-- Graze invents a minimum-1 damage floor (`_attacks.py:290` [ACT-17], **minor**)
-- Unarmed grapple/shove ignores the size restriction (`_attacks.py:186` [ACT-16], **minor**)
+- Slow, Push, Cleave are log-only with no mechanical effect (`_attacks.py:149` [ACT-07], **major**) 🟡 Slow ✅ done, Cleave ✅ done, Push still log-only (needs `CharacterSheet.size`)
+- Default unarmed strike deals 1d4 + STR instead of the 2024 fixed 1 + STR (`combat_state.py:243` [ACT-11], **major**) ✅ done — `AttackDetails.damage_dice` default changed to `DiceNotation("1d1")` (always rolls 1), reusing the existing dice-notation plumbing rather than adding a flat-damage field; a scaling override (e.g. Monk martial arts) still just passes its own `damage_dice`
+- Graze invents a minimum-1 damage floor (`_attacks.py:290` [ACT-17], **minor**) ✅ done
+- Unarmed grapple/shove ignores the size restriction (`_attacks.py:186` [ACT-16], **minor**) — still open, needs `CharacterSheet.size`
 
 **Fix approach**:
-- **Slow**: reduce target speed by 10 ft until the start of the attacker's next turn (needs a per-target speed-reduction input into `effective_speed`, and a `TurnState` field/expiry).
-- **Cleave**: allow the follow-up attack roll against a second creature within reach (damage without ability modifier), once per turn — reuse the Extra-Attack-style economy carve-out from Workstream B so it isn't rejected as `action_used`.
-- **Push**: gate on target `CreatureSize` (Large or smaller) using the sheet's `CreatureSize`.
-- **Graze**: deal damage exactly equal to the ability modifier (`max(0, ...)`); remove the invented `max(1, ...)` floor so the `if graze_damage:` guard and its spurious concentration check no longer always fire.
-- **Grapple/Shove**: reject when the target is more than one size larger than the attacker.
-- **Unarmed strike damage**: change the default unarmed damage to the 2024 fixed `1 + STR` (no d4), keeping a hook for Monk martial-arts dice and the Tavern Brawler-style overrides that legitimately change it.
+- ✅ **Slow**: reduce target speed by 10 ft until the start of the attacker's next turn (`CombatStateData.grant_slow` + `TurnState.slowed`/`slowed_expiry`, consumed by `_actions._effective_speed`).
+- ✅ **Cleave**: allow the follow-up attack roll against a second creature (damage without ability modifier), once per turn, without touching the Extra Attack pool (`ActionType.CLEAVE_ATTACK` / `_reactions.resolve_cleave_attack`). This engine has no positional/reach model, so "within reach" isn't validated — only "a different creature than the original target" is.
+- **Push**: gate on target `CreatureSize` (Large or smaller) — blocked on adding `CharacterSheet.size`.
+- ✅ **Graze**: deal damage exactly equal to the ability modifier (`max(0, ...)`); the invented `max(1, ...)` floor is gone, so `if graze_damage:` and its concentration check correctly no-op at 0.
+- **Grapple/Shove**: reject when the target is more than one size larger than the attacker — blocked on adding `CharacterSheet.size`.
+- ✅ **Unarmed strike damage**: default `AttackDetails.damage_dice` is now `DiceNotation("1d1")` (1 + ability modifier, no d4).
 
-**Tests**: Slow reduces and later restores speed; Cleave's second attack resolves without burning the action; Push against a Huge creature no-ops; Graze with STR 10/6 deals 0; a Small attacker can't grapple a Gargantuan target; a default unarmed strike with STR 16 deals exactly 4. **Delete/replace** `test_graze_minimum_damage_is_1_with_negative_ability_mod` (it codifies a nonexistent rule).
+**Tests**: ✅ Slow reduces and later restores speed (`test_weapon_masteries_2024.py::test_slow_reduces_speed_until_attackers_next_turn`); ✅ Cleave's second attack resolves without consuming the action or the Extra Attack pool, rejects the same target, and rejects a second use (`test_weapon_masteries_2024.py`, `TestWeaponMasteries` Cleave tests); ✅ Graze with STR 10/6 deals 0 (`test_graze_deals_zero_with_negative_ability_mod`, replacing the deleted `test_graze_minimum_damage_is_1_with_negative_ability_mod`, which codified a nonexistent rule); ✅ the `AttackDetails()` default is `"1d1"` (`test_combat_state.py::TestAttackDetails::test_defaults`). Push-against-a-Huge-creature and grapple/shove-size-gate tests remain unwritten, pending `CharacterSheet.size`.
 
-**Size**: M. Workstream C ✅ (masteries now reach the resolver); shares the speed-reduction and economy plumbing with A/B.
+**Size**: M. Workstream C ✅ (masteries now reach the resolver) enabled the effects landed here; the size-gated remainder is smaller than a fresh Workstream D slice but was deliberately not bundled into this PR to keep the schema change (`CharacterSheet.size`) and its build-time wiring (species/monster data → sheet) as its own reviewable unit rather than folding it in silently.
 
 ---
 
@@ -555,7 +585,7 @@ casting time, range, areas of effect" row is corrected from a blanket ✅ to
 **Majors that affect ordinary play (fix next):**
 7. **Workstream G** ✅ done (instant death, death-save reset, crit modifier doubling — EFF-08/EFF-09/EFF-13/ACT-09) — F's effective-damage refactor (`_apply_damage_effective`) was reused here. EFF-16 (long-rest-at-0-HP) investigated and deliberately not changed; see the workstream section.
 8. **Workstream D** (armor/proficiency/inventory) — D1 worn-armor field first; independent of A/B.
-9. **Workstream E** (mastery mechanics) — Workstream C ✅ (registry bridge landed) — shares speed-reduction/economy plumbing with A/B.
+9. **Workstream E** ✅ Slow/Cleave/Graze/unarmed-strike done — Workstream C ✅ (registry bridge landed) enabled the mastery-effects half; the size-gated half (Push, grapple/shove) remains, deferred to pair with Workstream D's `CharacterSheet.size` field.
 10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) and **I2** ✅ done (condition-immunity centralization) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
 11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
 12. **Workstream J** (remaining spell-schema gaps) & **Workstream K** (slot/upcast math) — parallelizable; K is largely independent.

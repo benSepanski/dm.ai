@@ -10,13 +10,15 @@ from enum import Enum
 
 
 class ActionType(str, Enum):
-    """The 2024 PHB action list, plus two reaction-resolution events.
+    """The 2024 PHB action list, plus three follow-up-resolution events.
 
-    ``OPPORTUNITY_ATTACK`` and ``READIED_ACTION`` are not on-turn actions —
-    a character never has them available at the start of its own turn — but
+    ``OPPORTUNITY_ATTACK`` and ``READIED_ACTION`` are reactions;
+    ``CLEAVE_ATTACK`` (ACT-07) is a same-turn free follow-up granted by the
+    Cleave weapon mastery. None of the three are on-turn actions — a
+    character never has them available at the start of its own turn — but
     routing them through the same discriminated ``Action``/``resolve_action``
-    entry point the on-turn actions use lets a reaction be submitted through
-    the same API without a parallel dispatch mechanism.
+    entry point the on-turn actions use lets each be submitted through the
+    same API without a parallel dispatch mechanism.
     """
 
     ATTACK = "Attack"
@@ -33,6 +35,7 @@ class ActionType(str, Enum):
     UTILIZE = "Utilize"
     OPPORTUNITY_ATTACK = "Opportunity Attack"
     READIED_ACTION = "Readied Action"
+    CLEAVE_ATTACK = "Cleave Attack"
 
 
 class CoverType(str, Enum):

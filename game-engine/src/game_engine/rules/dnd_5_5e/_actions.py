@@ -15,6 +15,7 @@ from game_engine.interface import Action, ActionResult
 from game_engine.rules.dnd_5_5e._attacks import _has_mastery, _resolve_attack, _validate_attack
 from game_engine.rules.dnd_5_5e._checks import _roll_check_impl
 from game_engine.rules.dnd_5_5e._reactions import (
+    resolve_cleave_attack,
     resolve_opportunity_attack,
     resolve_readied_action,
 )
@@ -133,6 +134,20 @@ def _attacks_per_action(actor: CharacterSheet) -> int:
     return best
 
 
+def _effective_speed(actor: CharacterSheet, ts: TurnState) -> int:
+    """*actor*'s speed after exhaustion/speed-zero conditions and Slow mastery.
+
+    ``CharacterSheet.effective_speed`` is a pure sheet property with no
+    visibility into combat state, so the Slow mastery's -10 ft (ACT-07,
+    granted on the *target's* :class:`TurnState` via
+    :meth:`CombatStateData.grant_slow`) is applied here instead.
+    """
+    speed = actor.effective_speed
+    if ts.slowed:
+        speed = max(0, speed - 10)
+    return speed
+
+
 def _resolve_action_impl(
     action: Action,
     combat_state: CombatStateData,
@@ -151,8 +166,10 @@ def _resolve_action_impl(
     resolved by the spellcasting module — here it only consumes the action
     slot. ``ActionType.OPPORTUNITY_ATTACK`` and ``ActionType.READIED_ACTION``
     are reactions (ACT-02, ACT-06): they consume the reactor's reaction
-    instead of the action/bonus-action slot, so they're dispatched before the
-    on-turn ``action_used`` gate below.
+    instead of the action/bonus-action slot. ``ActionType.CLEAVE_ATTACK``
+    (ACT-07) consumes neither — it's a free follow-up gated on
+    ``ts.cleave_available``/``cleave_used`` instead. All three are
+    dispatched before the on-turn ``action_used`` gate below.
 
     Args:
         action: The action to resolve.
@@ -175,6 +192,8 @@ def _resolve_action_impl(
         return resolve_opportunity_attack(action, combat_state)
     if action.action_type is ActionType.READIED_ACTION:
         return resolve_readied_action(action, actor, ts, combat_state)
+    if action.action_type is ActionType.CLEAVE_ATTACK:
+        return resolve_cleave_attack(action, actor, ts, combat_state)
 
     if ts.action_used:
         return _simple_result(
@@ -289,7 +308,7 @@ def _resolve_non_attack(
 
     if action.action_type is ActionType.DASH:
         ts.dashing = True
-        speed = actor.effective_speed
+        speed = _effective_speed(actor, ts)
         return _simple_result(
             action, True, f"{name} dashes (+{speed} ft of movement).", {"extra_movement": speed}
         )

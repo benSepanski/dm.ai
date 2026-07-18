@@ -125,7 +125,9 @@ class TestAttackDetails:
     def test_defaults(self):
         details = AttackDetails()
         assert details.weapon_name == "Unarmed Strike"
-        assert details.damage_dice == "1d4"
+        # ACT-11: 2024 unarmed strike is a fixed 1 + ability modifier; "1d1"
+        # always rolls 1.
+        assert details.damage_dice == "1d1"
         assert details.damage_type == DamageType.BLUDGEONING
         assert details.attack_ability == Ability.STRENGTH
         assert details.is_ranged is False
