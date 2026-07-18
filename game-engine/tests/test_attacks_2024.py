@@ -98,6 +98,15 @@ class TestAdvantageSources:
             engine.resolve_action(_attack(), state)
         dis.assert_called_once()
 
+    def test_grappled_dodging_target_imposes_no_disadvantage(self, engine, state):
+        """ACT-15: a dodging target with speed 0 (e.g. Grappled) can't take
+        Dodge's evasive-movement benefit — attacks against it roll flat."""
+        state.get_combatant("b").conditions.append(Condition.GRAPPLED)
+        engine.resolve_action(Action(ActionType.DODGE, "b", None), state)
+        with patch(f"{ATTACKS}.roll_with_disadvantage") as dis:
+            engine.resolve_action(_attack(), state)
+        dis.assert_not_called()
+
 
 class TestCoverAndCrits:
     def test_half_cover_adds_2_ac(self, engine, state):
@@ -287,6 +296,19 @@ class TestUnarmedOptions:
         ) as mock_adv:
             engine.resolve_action(_attack(unarmed_option=UnarmedStrikeOption.SHOVE), state)
         mock_adv.assert_called_once()
+
+    def test_grappled_dodging_target_gets_no_dex_save_advantage_vs_shove(self, engine, state):
+        """ACT-15: same speed-0 gate applies to the unarmed-strike DEX-save path."""
+        target = state.get_combatant("b")
+        target.ability_scores = AbilityScoreSet(strength=8, dexterity=18)
+        target.conditions.append(Condition.GRAPPLED)
+        engine.resolve_action(Action(ActionType.DODGE, "b", None), state)
+        state.reset_turn("a")
+        with patch(
+            "game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(10, [10])
+        ) as mock_flat:
+            engine.resolve_action(_attack(unarmed_option=UnarmedStrikeOption.SHOVE), state)
+        mock_flat.assert_called_once()
 
     def test_non_dodging_target_uses_flat_roll_vs_shove(self, engine, state):
         """Without Dodge the target rolls a plain d20, not with advantage."""

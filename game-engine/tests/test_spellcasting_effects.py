@@ -136,6 +136,50 @@ class TestDodgeInteraction:
             cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
         mock_adv.assert_called_once()
 
+    def test_grappled_dodging_target_gives_no_spell_attack_disadvantage(self):
+        """ACT-15: a dodging target whose speed is 0 (e.g. Grappled) can't
+        take Dodge's evasive-movement benefit, so spell attacks against it
+        roll flat, not with disadvantage."""
+        caster = _caster()
+        state = _state(caster)
+        state.turn_state_for("t").dodging = True
+        state.get_combatant("t").conditions.append(Condition.GRAPPLED)
+        spell = _spell(
+            level=0,
+            attack_roll=True,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("1d6"),
+        )
+        with (
+            patch(f"{RES}.roll_with_disadvantage") as mock_dis,
+            patch(f"{RES}.roll_dice", return_value=(15, [15])),
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_dis.assert_not_called()
+
+    def test_grappled_dodging_target_gets_no_dex_save_advantage(self):
+        """ACT-15: same speed-0 gate applies to the DEX-save-advantage side
+        of Dodge."""
+        caster = _caster()
+        state = _state(caster)
+        state.turn_state_for("t").dodging = True
+        state.get_combatant("t").conditions.append(Condition.GRAPPLED)
+        spell = _spell(
+            save=Ability.DEXTERITY,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("3d6"),
+            half_damage_on_save=True,
+        )
+        with (
+            patch(f"{RES}.roll_dice", return_value=(18, [])),
+            patch(
+                "game_engine.rules.dnd_5_5e._saves.roll_with_advantage",
+            ) as mock_adv,
+            patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(10, [10])),
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_adv.assert_not_called()
+
     def test_dodging_target_gets_no_advantage_on_non_dex_save(self):
         """Dodge only grants advantage on DEX saves; other saves remain unaffected."""
         caster = _caster()

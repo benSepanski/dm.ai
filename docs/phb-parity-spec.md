@@ -104,7 +104,7 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Concentration (single effect, CON save on damage) | `spellcasting` + `_damage` | 🟡 CON save now fires on weapon *and* spell damage, DC'd off effective post-immunity/resistance damage and capped at 30, breaks on gaining an Incapacitating condition (Workstream F); breaking/replacing concentration still does not remove the spell's effects from its targets (SPL-07, tracked open) |
 | Ritual casting | `spellcasting` | ✅ |
 | Spell attack rolls & save DCs | `spellcasting` | ✅ |
-| Components (V/S/M), casting time, range, areas of effect | `data.spells` | ✅ |
+| Components (V/S/M), casting time, range, areas of effect | `data.spells` | 🟡 casting time gates action economy (`dm_api.api.combat_spells`, Workstream B3); components, range, and area-of-effect shape/size are stored on `SpellData` but have zero rule-code consumers — no somatic/verbal gating, no range check, no AoE-shaped targeting (theater-of-mind scope, SPL-24, Workstream L) |
 | Spell data registry | `data.spells` | 🟡 ~100 SRD spells, levels 0–9 (registry extensible to full SRD list) |
 
 ### Chapters 1 & 8 — Combat & Adventuring (action economy, movement, environment)
@@ -118,7 +118,7 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Ready action | `_reactions.resolve_readied_action` + `types.ReadiedAction` | 🟡 readying an attack (target + weapon + free-text trigger) is wired end-to-end, resolved later via `ActionType.READIED_ACTION` through the reaction slot; readying a spell or other action is out of scope (Workstream B2, ACT-06) |
 | Two-weapon fighting (Light property, Nick) | `_actions` + `_attacks` | ✅ Nick's once-per-turn free attack is wired (B1); an ordinary bonus-action off-hand attack requires the off-hand weapon to have the Light property and a prior same-turn Attack-action attack with a Light main-hand weapon (`TurnState.light_attack_used`, ACT-04, Workstream B3) |
 | Unarmed strike (damage / grapple / shove) | `_attacks` | 🟡 damage is the 2024 fixed 1 + ability modifier (ACT-11, Workstream E); grapple/shove has no size restriction yet (ACT-16, needs `CharacterSheet.size`) |
-| Dodge / Disengage / Dash effects | `_actions` + `_attacks` + `_spell_resolution` | ✅ attack-disadvantage (melee + spell); DEX save advantage (grapple/shove + spell saves) |
+| Dodge / Disengage / Dash effects | `_actions` + `_attacks` + `_spell_resolution` | ✅ attack-disadvantage (melee + spell); DEX save advantage (grapple/shove + spell saves); gated on the dodger's speed being above 0, so Grappled/Restrained/exhaustion-5+ dodgers get no benefit (ACT-15, Workstream L) |
 | Mounted/underwater combat | — | ⬜ (needs positional model; out of theater-of-mind scope) |
 | Jumping, falling, suffocation | `rules.dnd_5_5e.exploration` | ✅ |
 | Travel pace, light & vision | `exploration` | ✅ |

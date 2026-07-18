@@ -100,7 +100,7 @@ def _advantage_state(
         else:
             disadvantage = True
 
-    if target_ts.dodging and target.can_act:
+    if target_ts.dodging and target.can_act and target.effective_speed > 0:
         disadvantage = True
     if actor_ts.helped:
         advantage = True
@@ -152,12 +152,15 @@ def _resolve_unarmed_special(
     str_mod = target.ability_scores.modifier(Ability.STRENGTH)
     dex_mod = target.ability_scores.modifier(Ability.DEXTERITY)
     save_ability = Ability.STRENGTH if str_mod >= dex_mod else Ability.DEXTERITY
-    # 2024 PHB: Dodge grants advantage on DEX saves while active.
+    # 2024 PHB: Dodge grants advantage on DEX saves while active. A dodger
+    # with speed 0 (e.g. Grappled, Restrained, exhaustion 5+) can't take the
+    # Dodge action's evasive-movement benefit.
     dodging_advantage = (
         save_ability is Ability.DEXTERITY
         and target_ts is not None
         and target_ts.dodging
         and target.can_act
+        and target.effective_speed > 0
     )
     save = _roll_saving_throw_impl(target, save_ability, dc, advantage=dodging_advantage)
 
