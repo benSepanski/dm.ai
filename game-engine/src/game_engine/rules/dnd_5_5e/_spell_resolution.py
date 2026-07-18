@@ -139,9 +139,11 @@ def cast_spell(
         outcome = SpellTargetOutcome(target_id=target_id)
 
         # 2024 PHB Dodge: attacks against a dodging creature have disadvantage;
-        # DEX saves made by a dodging creature have advantage.
+        # DEX saves made by a dodging creature have advantage. A dodger with
+        # speed 0 (e.g. Grappled, Restrained, exhaustion 5+) can't take the
+        # Dodge action's evasive-movement benefit.
         target_ts = combat_state.turn_state_for(target_id)
-        target_dodging = target_ts.dodging and target.can_act
+        target_dodging = target_ts.dodging and target.can_act and target.effective_speed > 0
 
         if spell.attack_roll:
             if target_dodging:
