@@ -21,6 +21,7 @@ from game_engine.types import (
     CharacterSheet,
     CombatStateData,
     Condition,
+    CreatureSize,
     WeaponMastery,
 )
 
@@ -69,7 +70,13 @@ def _apply_mastery_effects(
         combat_state.grant_slow(actor.id, target.id)
         log["slowed_ft"] = 10
     elif mastery is WeaponMastery.PUSH:
-        log["pushed_ft"] = 10
+        # ACT-07: Push moves the target 10 ft only if it is Large or smaller
+        # (2024 PHB). Huge/Gargantuan targets are unaffected.
+        if target.size.rank <= CreatureSize.LARGE.rank:
+            log["pushed_ft"] = 10
+        else:
+            log["pushed_ft"] = 0
+            log["push_too_large"] = True
     elif mastery is WeaponMastery.CLEAVE:
         # ACT-07: grants one free follow-up attack against a different
         # creature this turn — see ActionType.CLEAVE_ATTACK in _actions.py.

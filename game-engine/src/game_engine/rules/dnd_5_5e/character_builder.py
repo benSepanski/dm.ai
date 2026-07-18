@@ -14,8 +14,8 @@ from game_engine.rules.dnd_5_5e._character_builder_choices import (
     resolve_species_trait_choices,
     resolve_starting_spells,
 )
+from game_engine.rules.dnd_5_5e._equipment import equip_armor
 from game_engine.rules.dnd_5_5e.classes import CLASSES
-from game_engine.rules.dnd_5_5e.data.armor import compute_armor_class, get_armor
 from game_engine.rules.dnd_5_5e.data.backgrounds import get_background
 from game_engine.rules.dnd_5_5e.data.species import get_species
 from game_engine.types import (
@@ -28,6 +28,7 @@ from game_engine.types import (
     CharacterType,
     ClassLevelEntry,
     ClassResource,
+    CreatureSize,
     Feat,
     HitDicePool,
     Language,
@@ -140,6 +141,7 @@ def build_character(
     shield: bool = False,
     alignment: Alignment | None = None,
     char_type: CharacterType = CharacterType.PC,
+    size: CreatureSize | None = None,
     weapon_masteries: list[str] | None = None,
     species_trait_choices: dict[str, str] | None = None,
     starting_cantrips: list[str] | None = None,
@@ -164,6 +166,8 @@ def build_character(
         shield: Whether a shield is equipped.
         alignment: Optional alignment.
         char_type: PC/NPC/MONSTER classification.
+        size: Optional creature size; must be one of the species' allowed
+            sizes (defaults to the species' first/primary size).
         weapon_masteries: Weapon names to register as mastery weapons (must
             equal the class's mastery count at level 1).  Pass ``None`` to
             skip selection; a warning is emitted reminding the player to
@@ -248,19 +252,19 @@ def build_character(
         hp_max += 2
     hp_max = max(1, hp_max)
 
-    dex_mod = scores.modifier(Ability.DEXTERITY)
-    armor = get_armor(armor_name) if armor_name else None
-    if armor_name and armor is None:
-        warnings.append(f"Unknown armor {armor_name!r}; using unarmored AC.")
-    if armor is not None and armor.armor_type not in class_data.armor_training:
-        warnings.append(f"{character_class.value} lacks {armor.armor_type.value} armor training.")
-    ac = compute_armor_class(armor, dex_mod, shield=shield)
-    if armor is None:
-        # Unarmored Defense (2024): barbarian 10+DEX+CON, monk 10+DEX+WIS.
-        if character_class is CharacterClass.BARBARIAN:
-            ac = max(ac, 10 + dex_mod + con_mod + (2 if shield else 0))
-        elif character_class is CharacterClass.MONK and not shield:
-            ac = max(ac, 10 + dex_mod + scores.modifier(Ability.WISDOM))
+    # Creature size (2024): species declare their legal size(s); an explicit
+    # *size* must be one the species allows, else it's ignored with a warning.
+    if size is not None and size not in species_data.size_options:
+        allowed = (
+            species_data.size_options[0] if species_data.size_options else CreatureSize.MEDIUM
+        )
+        warnings.append(f"{species.value} can't be {size.value}; using {allowed.value}.")
+        size = None
+    char_size = (
+        size
+        if size is not None
+        else (species_data.size_options[0] if species_data.size_options else CreatureSize.MEDIUM)
+    )
 
     class_levels = [ClassLevelEntry(character_class=character_class, level=1, subclass=None)]
     progression = CLASS_PROGRESSIONS.get(character_class)
@@ -309,11 +313,12 @@ def build_character(
         ability_scores=scores,
         hp_current=hp_max,
         hp_max=hp_max,
-        ac=ac,
+        ac=10,  # placeholder; recomputed by equip_armor below (incl. shield)
         speed=species_data.speed,
         proficient_skills=chosen,
         proficient_abilities=list(class_data.saving_throw_proficiencies),
         char_type=char_type,
+        size=char_size,
         species=species,
         species_lineage=species_lineage,
         background=background,
@@ -332,5 +337,10 @@ def build_character(
         weapon_masteries=masteries,
         darkvision_ft=species_data.darkvision_ft,
         damage_resistances=list(species_data.damage_resistances),
+        worn_shield=shield,
     )
+    # Store worn-armor identity and compute AC once through the shared equip
+    # path (handles unknown-armor / shield-as-body / armor-training warnings
+    # and Unarmored Defense) — EQP-04/EQP-06/EQP-07.
+    warnings.extend(equip_armor(sheet, armor_name))
     return BuildResult(sheet=sheet, warnings=warnings)

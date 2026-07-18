@@ -18,6 +18,7 @@ from game_engine.types import (
     CharacterSheet,
     CombatStateData,
     Condition,
+    CreatureSize,
     DamageType,
     DiceNotation,
     WeaponMastery,
@@ -198,6 +199,30 @@ class TestWeaponMasteries:
         engine.begin_turn(actor, state)
         assert state.turn_state_for("b").slowed is False
         assert _effective_speed(target, state.turn_state_for("b")) == 30
+
+    def test_push_moves_large_or_smaller_target(self, engine, state):
+        """ACT-07: Push moves a Large-or-smaller target 10 ft on a hit."""
+        actor = state.get_combatant("a")
+        actor.weapon_masteries = ["Greatclub"]
+        state.get_combatant("b").size = CreatureSize.LARGE
+        with patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])):
+            result = engine.resolve_action(
+                _attack(weapon_name="Greatclub", mastery=WeaponMastery.PUSH), state
+            )
+        assert result.log_entry["pushed_ft"] == 10
+        assert "push_too_large" not in result.log_entry
+
+    def test_push_does_not_move_huge_target(self, engine, state):
+        """ACT-07: a Huge (larger than Large) target is unaffected by Push."""
+        actor = state.get_combatant("a")
+        actor.weapon_masteries = ["Greatclub"]
+        state.get_combatant("b").size = CreatureSize.HUGE
+        with patch(f"{ATTACKS}.roll_dice", return_value=(18, [18])):
+            result = engine.resolve_action(
+                _attack(weapon_name="Greatclub", mastery=WeaponMastery.PUSH), state
+            )
+        assert result.log_entry["pushed_ft"] == 0
+        assert result.log_entry["push_too_large"] is True
 
     def test_cleave_grants_free_followup_against_a_different_creature(self, engine):
         state = CombatStateData(combatants=[_char("a"), _char("b"), _char("c", ac=5)])

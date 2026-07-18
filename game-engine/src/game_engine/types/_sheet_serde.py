@@ -30,6 +30,7 @@ from game_engine.types.enums import (
     CharacterClass,
     CharacterType,
     Condition,
+    CreatureSize,
     DamageType,
     Feat,
     Language,
@@ -84,6 +85,7 @@ def sheet_to_dict(sheet: "CharacterSheet") -> dict[str, Any]:
         "damage_vulnerabilities": [d.value for d in sheet.damage_vulnerabilities],
         "condition_immunities": [c.value for c in sheet.condition_immunities],
         "type": sheet.char_type.value,
+        "size": sheet.size.value,
         "species": sheet.species.value if sheet.species else None,
         "species_lineage": sheet.species_lineage.value if sheet.species_lineage else None,
         "background": sheet.background.value if sheet.background else None,
@@ -110,6 +112,8 @@ def sheet_to_dict(sheet: "CharacterSheet") -> dict[str, Any]:
         "inventory": [i.to_dict() for i in sheet.inventory],
         "currency": sheet.currency.to_dict(),
         "darkvision_ft": sheet.darkvision_ft,
+        "worn_armor": sheet.worn_armor,
+        "worn_shield": sheet.worn_shield,
     }
 
 
@@ -156,6 +160,7 @@ def sheet_from_dict(d: dict[str, Any]) -> "CharacterSheet":
             Condition, d.get("condition_immunities", []), lowercase=True
         ),
         char_type=char_type,
+        size=_enum_or_none(CreatureSize, d.get("size")) or CreatureSize.MEDIUM,
         species=_enum_or_none(Species, d.get("species")),
         species_lineage=_enum_or_none(SpeciesLineage, d.get("species_lineage")),
         background=_enum_or_none(Background, d.get("background")),
@@ -184,4 +189,6 @@ def sheet_from_dict(d: dict[str, Any]) -> "CharacterSheet":
         inventory=[InventoryItem.from_dict(i) for i in d.get("inventory", [])],
         currency=Currency.from_dict(d.get("currency", {})),
         darkvision_ft=int(d.get("darkvision_ft", 0)),
+        worn_armor=d.get("worn_armor"),
+        worn_shield=bool(d.get("worn_shield", False)),
     )
