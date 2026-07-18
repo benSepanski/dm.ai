@@ -74,7 +74,7 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 | Work | Findings | Size |
 |------|----------|------|
 | **D3** — Starting equipment/gold into inventory, encumbrance consumer, tool-check abilities, currency spend | EQP-05, EQP-10, EQP-09, EQP-11 | M |
-| **L** — Dodge speed-0 gate; dead spell metadata (implement or de-claim in spec) | ACT-15, SPL-24 | S |
+| **L** ✅ done — Dodge speed-0 gate; dead spell metadata de-claimed in spec | ACT-15 ✅ done, SPL-24 ✅ de-claimed | S |
 | Remaining minors folded into their workstreams | ACT-11, ACT-13, ACT-14, EFF-12, EFF-15, EFF-16 | S |
 
 ### Cross-cutting (every phase) — Workstream M: parity-spec truth
@@ -502,17 +502,33 @@ Slot bookkeeping and upcast-scaling arithmetic bugs in `spellcasting.py`/`_spell
 
 ---
 
-## Workstream L — Dead spell metadata & Dodge speed-zero (root cause: declared-scope data with no consumer; a small Dodge gating gap)
+## Workstream L — Dead spell metadata & Dodge speed-zero (root cause: declared-scope data with no consumer; a small Dodge gating gap) ✅ done
 
 Lowest-impact cleanup, partly excused by the engine's theater-of-mind scope. Grouped so the spec can be corrected honestly.
 
+**Status.** ACT-15 fixed: all three Dodge-benefit sites — `_attacks.py`'s
+attacker-disadvantage check, `_attacks.py`'s unarmed-strike (grapple/shove)
+DEX-save-advantage check, and `_spell_resolution.py`'s combined
+attack-disadvantage/DEX-save-advantage check — now additionally require
+`target.effective_speed > 0`, so a Grappled or Restrained dodger (or one at
+exhaustion level 5+ with a low enough base speed) gets neither benefit. SPL-24
+was **not implemented** — per the fix approach's stated alternative, spell
+component/range/area-of-effect fields remain theater-of-mind data with no
+rule-code consumer, and `docs/phb-parity-spec.md`'s "Components (V/S/M),
+casting time, range, areas of effect" row is corrected from a blanket ✅ to
+🟡 (casting time is genuinely consumed; components/range/area are not). See
+`game-engine/tests/test_attacks_2024.py::test_grappled_dodging_target_imposes_no_disadvantage`
+/ `test_grappled_dodging_target_gets_no_dex_save_advantage_vs_shove`,
+`game-engine/tests/test_spellcasting_effects.py::test_grappled_dodging_target_gives_no_spell_attack_disadvantage`
+/ `test_grappled_dodging_target_gets_no_dex_save_advantage`.
+
 **Findings**
-- `SpellComponent`/`SpellRangeType`/`AreaShape`/`SpellSchool` and range/area/material fields never consumed (`types/enums/_core.py:202` [SPL-24], **minor**)
-- Dodge benefit not cancelled when the dodger's speed is 0 (`_attacks.py:94` [ACT-15], **minor**)
+- `SpellComponent`/`SpellRangeType`/`AreaShape`/`SpellSchool` and range/area/material fields never consumed (`types/enums/_core.py:202` [SPL-24], **minor**) — investigated, deliberately not implemented; parity spec corrected instead (see Status above)
+- Dodge benefit not cancelled when the dodger's speed is 0 (`_attacks.py:94` [ACT-15], **minor**) ✅ done
 
 **Fix approach**: For Dodge, gate the attacker-disadvantage (`_attacks.py:94`), DEX-save advantage (`_attacks.py:192-197`), and the spell-save-advantage path (`_spell_resolution.py:127`) on `target.effective_speed > 0` in addition to `can_act`. For spell metadata, either implement component-gating/school-keyed rules where they matter, or (given theater-of-mind scope) leave range/area unconsumed but **correct the parity spec** to stop claiming these rows are ✅.
 
-**Tests**: a grappled dodging target no longer imposes disadvantage.
+**Tests**: ✅ a grappled dodging target no longer imposes disadvantage, nor gets DEX-save advantage, across all three Dodge-benefit sites (melee attack, unarmed grapple/shove save, spell attack/save).
 
 **Size**: S.
 
