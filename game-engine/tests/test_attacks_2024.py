@@ -18,6 +18,7 @@ from game_engine.types import (
     CombatStateData,
     Condition,
     CoverType,
+    CreatureSize,
     DamageType,
     DiceNotation,
     Feat,
@@ -270,6 +271,29 @@ class TestUnarmedOptions:
             )
         assert Condition.PRONE not in state.get_combatant("b").conditions
         assert Condition.PRONE not in result.conditions_applied
+
+    def test_grapple_rejected_when_target_more_than_one_size_larger(self, engine, state):
+        """ACT-16: a Medium creature can't Grapple a Huge one (2+ sizes up)."""
+        state.get_combatant("a").size = CreatureSize.MEDIUM
+        state.get_combatant("b").size = CreatureSize.HUGE
+        with patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])):
+            result = engine.resolve_action(
+                _attack(unarmed_option=UnarmedStrikeOption.GRAPPLE), state
+            )
+        assert result.success is False
+        assert result.log_entry["error"] == "target_too_large"
+        assert Condition.GRAPPLED not in state.get_combatant("b").conditions
+
+    def test_shove_allowed_when_target_exactly_one_size_larger(self, engine, state):
+        """ACT-16: one size larger (Medium → Large) is still a legal Shove."""
+        state.get_combatant("a").size = CreatureSize.MEDIUM
+        state.get_combatant("b").size = CreatureSize.LARGE
+        with patch("game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(2, [2])):
+            result = engine.resolve_action(
+                _attack(unarmed_option=UnarmedStrikeOption.SHOVE), state
+            )
+        assert result.success is True
+        assert Condition.PRONE in state.get_combatant("b").conditions
 
     def test_target_uses_better_save(self, engine, state):
         target = state.get_combatant("b")

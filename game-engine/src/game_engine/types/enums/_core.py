@@ -165,6 +165,26 @@ class CreatureSize(str, Enum):
     HUGE = "Huge"
     GARGANTUAN = "Gargantuan"
 
+    @property
+    def rank(self) -> int:
+        """Ordinal size rank (Tiny=0 … Gargantuan=5) for size comparisons.
+
+        Used by rules that gate on relative size, e.g. the Push mastery
+        (target must be Large or smaller) and unarmed Grapple/Shove (target
+        no more than one size larger than the attacker).
+        """
+        return _SIZE_ORDER.index(self)
+
+
+_SIZE_ORDER: tuple[CreatureSize, ...] = (
+    CreatureSize.TINY,
+    CreatureSize.SMALL,
+    CreatureSize.MEDIUM,
+    CreatureSize.LARGE,
+    CreatureSize.HUGE,
+    CreatureSize.GARGANTUAN,
+)
+
 
 class CreatureType(str, Enum):
     """Standard D&D creature types."""

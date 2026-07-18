@@ -184,7 +184,18 @@ def compute_armor_class(armor: ArmorData | None, dex_modifier: int, shield: bool
     """Return AC for *armor* worn with *dex_modifier* (no class features).
 
     Unarmored AC is ``10 + dex``. Shields add +2.
+
+    Raises:
+        ValueError: If *armor* is a shield (``ArmorCategory.SHIELD``). A shield
+            is worn *in addition to* body armor via the ``shield`` flag, not
+            passed as the body armor itself (EQP-06) — doing so previously
+            yielded a nonsensical AC of 2.
     """
+    if armor is not None and armor.armor_type is ArmorCategory.SHIELD:
+        raise ValueError(
+            f"{armor.name!r} is a shield, not body armor; pass shield=True instead "
+            "of supplying it as the worn armor."
+        )
     if armor is None:
         ac = 10 + dex_modifier
     elif armor.dex_bonus:

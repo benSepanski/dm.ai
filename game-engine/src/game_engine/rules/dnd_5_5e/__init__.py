@@ -1,5 +1,12 @@
 """D&D 5.5e (2024 Player's Handbook) rule engine."""
 
+from game_engine.rules.dnd_5_5e._equipment import (
+    compute_sheet_ac,
+    equip_armor,
+    equip_shield,
+    unequip_armor,
+    unequip_shield,
+)
 from game_engine.rules.dnd_5_5e._spell_resolution import cast_spell
 from game_engine.rules.dnd_5_5e._weapon_bridge import to_attack_details
 from game_engine.rules.dnd_5_5e.character_builder import (
@@ -66,6 +73,12 @@ __all__ = [
     "spell_save_dc",
     # weapons
     "to_attack_details",
+    # worn equipment
+    "compute_sheet_ac",
+    "equip_armor",
+    "equip_shield",
+    "unequip_armor",
+    "unequip_shield",
     # resting
     "RestResult",
     "long_rest",

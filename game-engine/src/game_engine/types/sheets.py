@@ -29,6 +29,7 @@ from game_engine.types.enums import (
     CharacterClass,
     CharacterType,
     Condition,
+    CreatureSize,
     DamageType,
     Feat,
     Language,
@@ -102,6 +103,7 @@ class CharacterSheet:
     damage_vulnerabilities: list[DamageType] = field(default_factory=list)
     condition_immunities: list[Condition] = field(default_factory=list)
     char_type: CharacterType = CharacterType.PC
+    size: CreatureSize = CreatureSize.MEDIUM
     # Origin & build (2024 PHB chapters 2-5)
     species: Species | None = None
     species_lineage: SpeciesLineage | None = None
@@ -132,6 +134,12 @@ class CharacterSheet:
     inventory: list[InventoryItem] = field(default_factory=list)
     currency: Currency = field(default_factory=Currency)
     darkvision_ft: int = 0
+    # Worn equipment identity (EQP-04/EQP-07). ``worn_armor`` is the body
+    # armor's registry name (None = unarmored); ``worn_shield`` whether a
+    # shield is equipped. Kept distinct from the derived ``ac`` so equip /
+    # unequip can recompute AC — see ``rules.dnd_5_5e.equip_armor``.
+    worn_armor: str | None = None
+    worn_shield: bool = False
 
     @property
     def is_dead(self) -> bool:

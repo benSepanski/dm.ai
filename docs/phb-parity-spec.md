@@ -88,9 +88,9 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Feature | Module | Status |
 |---|---|---|
 | Full 2024 weapon table (all simple/martial, melee/ranged) | `data.items` | ✅ |
-| Weapon masteries (Cleave, Graze, Nick, Push, Sap, Slow, Topple, Vex) | `data.items` + `_attacks` + `_masteries` | 🟡 mastery reaches attack resolution via the registry bridge (Workstream C); Nick/Graze/Sap/Vex/Topple/Cleave/Slow have real effects (Workstream E), Push is still log-only pending a `CharacterSheet.size` field |
+| Weapon masteries (Cleave, Graze, Nick, Push, Sap, Slow, Topple, Vex) | `data.items` + `_attacks` + `_masteries` | 🟡 mastery reaches attack resolution via the registry bridge (Workstream C); Nick/Graze/Sap/Vex/Topple/Cleave/Slow have state-mutating effects that downstream rules consume (Workstream E). Push now honors its 2024 size gate (only a Large-or-smaller target is affected, via `CharacterSheet.size`), but the 10 ft displacement itself is log-only (`pushed_ft`) — the engine has no positional model, so nothing consumes it, the same theater-of-mind caveat that applies to Cleave's "within reach" |
 | Weapon properties (incl. range, ammunition) | `data.items` | 🟡 Heavy/Versatile/Finesse consumed via the registry bridge (Workstream C); Ammunition/Loading tracking not yet wired (deferred to Workstream D) |
-| Full armor table + AC computation (dex caps, str minimums) | `data.items` + `character_builder` | ✅ |
+| Full armor table + AC computation (dex caps, str minimums) | `data.items` + `character_builder` + `_equipment` | 🟡 armor table + AC (dex caps) ✅; worn-armor identity stored with equip/unequip AC recompute and a shield-as-body guard (Workstream D1 ✅); Str-minimum speed penalty consumer still open (EQP-04, Workstream D2) |
 | Adventuring gear, tools, packs | `data.gear` | ✅ |
 | Coinage (cp/sp/ep/gp/pp) | `types.Currency` | ✅ |
 | Carrying capacity / drag-lift-push | `rules.dnd_5_5e.exploration` | ✅ |
@@ -117,7 +117,7 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Opportunity attacks | `_reactions.resolve_opportunity_attack` | ✅ validates the attack, checks the mover didn't disengage, and consumes the reactor's reaction (one per round, refreshed at the start of the reactor's own next turn) — Workstream B2, ACT-02 |
 | Ready action | `_reactions.resolve_readied_action` + `types.ReadiedAction` | 🟡 readying an attack (target + weapon + free-text trigger) is wired end-to-end, resolved later via `ActionType.READIED_ACTION` through the reaction slot; readying a spell or other action is out of scope (Workstream B2, ACT-06) |
 | Two-weapon fighting (Light property, Nick) | `_actions` + `_attacks` | ✅ Nick's once-per-turn free attack is wired (B1); an ordinary bonus-action off-hand attack requires the off-hand weapon to have the Light property and a prior same-turn Attack-action attack with a Light main-hand weapon (`TurnState.light_attack_used`, ACT-04, Workstream B3) |
-| Unarmed strike (damage / grapple / shove) | `_attacks` | 🟡 damage is the 2024 fixed 1 + ability modifier (ACT-11, Workstream E); grapple/shove has no size restriction yet (ACT-16, needs `CharacterSheet.size`) |
+| Unarmed strike (damage / grapple / shove) | `_attacks` | ✅ damage is the 2024 fixed 1 + ability modifier (ACT-11, Workstream E); grapple/shove rejects a target more than one size larger than the attacker (ACT-16, `CharacterSheet.size` / `CreatureSize.rank`) |
 | Dodge / Disengage / Dash effects | `_actions` + `_attacks` + `_spell_resolution` | ✅ attack-disadvantage (melee + spell); DEX save advantage (grapple/shove + spell saves); gated on the dodger's speed being above 0, so Grappled/Restrained/exhaustion-5+ dodgers get no benefit (ACT-15, Workstream L) |
 | Mounted/underwater combat | — | ⬜ (needs positional model; out of theater-of-mind scope) |
 | Jumping, falling, suffocation | `rules.dnd_5_5e.exploration` | ✅ |

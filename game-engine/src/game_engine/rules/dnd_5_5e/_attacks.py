@@ -147,6 +147,17 @@ def _resolve_unarmed_special(
     target_ts: TurnState | None = None,
 ) -> ActionResult:
     """Resolve an unarmed strike used to Grapple or Shove (2024 rules)."""
+    # ACT-16: you can Grapple or Shove only a creature no more than one size
+    # larger than you.
+    if target.size.rank - actor.size.rank > 1:
+        verb = "grapple" if option is UnarmedStrikeOption.GRAPPLE else "shove"
+        return _failure(
+            action,
+            "target_too_large",
+            f"{actor.name} can't {verb} {target.name}: it is more than one size "
+            f"larger ({target.size.value} vs {actor.size.value}).",
+        )
+
     dc = 8 + actor.ability_scores.modifier(Ability.STRENGTH) + _calc_prof_bonus(actor.level)
     # The target chooses STR or DEX; assume it picks its better save.
     str_mod = target.ability_scores.modifier(Ability.STRENGTH)

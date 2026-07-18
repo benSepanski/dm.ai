@@ -20,6 +20,7 @@ The 12 workstreams below (A–M) group the findings by root cause. This section 
 |------|----------|------|
 | **A** — TurnState lifecycle: split per-turn economy state from cross-turn effect state with per-effect expiry | ACT-03 ✅ done, ACT-19 ✅ done | M |
 | **C** ✅ done — Weapon-registry ↔ attack-resolution bridge (`WeaponData` → `AttackDetails`, incl. dm-api) | EQP-01 ✅ done, EQP-08 🟡 partial (Heavy wired; Ammunition/Loading deferred to D), ACT-18 ✅ done | L |
+| **D1** ✅ done — Worn-armor identity + equip/unequip AC recompute + shield-as-body guard + `CharacterSheet.size` | EQP-04 🟡 (worn-armor stored; Str-min speed in D2), EQP-06 ✅, EQP-07 🟡 (AC recompute done via `worn_armor`/`worn_shield`; `InventoryItem.equipped`-driven weapon selection deferred to D2/D3) | L |
 | **F.1** — Make `_apply_damage_impl` return post-mitigation damage; route all damage paths through one concentration check | groundwork for SPL-02, EFF-07 | M |
 
 **Exit criteria:** Help/Sap/Vex/Hide effects survive `begin_turn` and are consumed on the correct later turn; an attack built through dm-api carries mastery/properties/proficiency from the registry; every damage path reports effective (post-immunity/resistance) damage.
@@ -51,8 +52,8 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 | Work | Findings | Size |
 |------|----------|------|
 | **G** — Death & damage ordering: instant death at 0 HP, death-save reset on 3 successes, temp HP at 0 HP, crit doubles dice only | EFF-08, EFF-09, EFF-13, ACT-09 | M |
-| **D1+D2** — Worn-armor identity, equip/unequip AC recompute, shield-as-armor guard, Str-min speed, stealth disadvantage, armor-training penalties | EQP-04, EQP-02, EQP-03, EQP-06, EQP-07 | L |
-| **E** ✅ Slow/Cleave/Graze/unarmed-strike done (ACT-07 partial, ACT-17, ACT-11); Push size gate and ACT-16 grapple/shove size gate deferred (need a `CharacterSheet.size` field — bundle with Workstream D) — Mastery mechanics | ACT-07, ACT-17, ACT-16, ACT-11 | M |
+| **D1** ✅ done / **D2** — Worn-armor identity ✅, equip/unequip AC recompute ✅, shield-as-armor guard ✅; Str-min speed, stealth disadvantage, armor-training penalties (D2, open) | EQP-06 ✅, EQP-07 🟡 (AC recompute done; `InventoryItem.equipped` weapon selection in D2/D3), EQP-04 🟡 (D2), EQP-02, EQP-03 | L |
+| **E** ✅ done — Mastery mechanics (Slow/Cleave/Graze/unarmed-strike + Push & grapple/shove size gates, now that `CharacterSheet.size` exists) | ACT-07 ✅, ACT-17 ✅, ACT-16 ✅, ACT-11 ✅ | M |
 | **I1** — Stale 2024 condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, single source of truth | EFF-06, EFF-05, EFF-14, EFF-11 | S–M |
 | **H** — Check/initiative correctness ✅ done (independent quick win; can land in any phase) | ACT-10, ACT-20, ACT-12 | S |
 
@@ -174,13 +175,24 @@ The audit's most consequential equipment finding: nothing constructed an `Attack
 
 ## Workstream D — Armor, proficiency & inventory effects (root cause: armor/inventory data stored but never applied; no worn-armor identity)
 
-`build_character` applies AC once at creation and discards the armor — `CharacterSheet` has no worn-armor field — so Str-minimum speed penalties, stealth disadvantage, and armor-training penalties are structurally unreachable, and AC never recomputes.
+**D1 status: ✅ done.** `CharacterSheet` now stores worn-armor identity
+(`worn_armor: str | None`, `worn_shield: bool`) and a `size: CreatureSize`
+field; `rules.dnd_5_5e` exposes `equip_armor`/`unequip_armor`/`equip_shield`/
+`unequip_shield` (+ the shared `compute_sheet_ac` helper, which layers
+barbarian/monk Unarmored Defense on the armor table) so AC recomputes on
+every equip change. `compute_armor_class` now raises on a shield passed as
+body armor, and `build_character` warns and treats `armor_name='Shield'` as
+unarmored+shield rather than yielding AC 2. **D2/D3 remain** (Str-min speed,
+stealth disadvantage, armor-training penalties; starting equipment/currency/
+encumbrance/tools).
+
+Originally, `build_character` applied AC once at creation and discarded the armor — `CharacterSheet` had no worn-armor field — so Str-minimum speed penalties, stealth disadvantage, and armor-training penalties were structurally unreachable, and AC never recomputed.
 
 **Findings**
-- Heavy-armor Str minimum never reduces speed; worn-armor identity never stored (`character_builder.py:269` [EQP-04], **major**)
+- Heavy-armor Str minimum never reduces speed; worn-armor identity never stored (`character_builder.py:269` [EQP-04], **major**) 🟡 worn-armor identity now stored (D1 ✅); Str-min speed penalty still open (D2)
 - Armor `stealth_disadvantage` never consumed — Hide ignores noisy armor (`_actions.py:179` [EQP-02], **major**)
 - Armor training & weapon proficiency have no in-play effect (`character_builder.py:228` [EQP-03], **major**)
-- `InventoryItem.equipped` never read — no equip/unequip recomputes AC or selects weapons (`character_state.py:163` [EQP-07], **major**)
+- `InventoryItem.equipped` never read — no equip/unequip recomputes AC or selects weapons (`character_state.py:163` [EQP-07], **major**) 🟡 equip/unequip now recompute AC (D1 ✅, via `worn_armor`/`worn_shield` + `_equipment.equip_armor`); the `InventoryItem.equipped` flag itself is still inert and weapon selection is deferred to D2/D3
 - Passing `'Shield'` as body armor yields AC 2 (`data/armor.py:194` [EQP-06], **major**)
 - Starting equipment & gold never applied to inventory/currency (`character_builder.py:284` [EQP-05], **major**)
 - `is_encumbered` has no rule consumers (`exploration.py:44` [EQP-10], **minor**)
@@ -188,8 +200,8 @@ The audit's most consequential equipment finding: nothing constructed an `Attack
 - `ToolData.ability` dead — tool checks ignore governing ability & proficiency (`data/gear.py:28` [EQP-09], **minor**)
 
 **Fix approach**:
-1. Add a **worn-armor / equipped-weapon** concept to `CharacterSheet` (store the equipped armor and shield identity, not just the derived AC) plus an equip/unequip API that recomputes AC via `compute_armor_class`.
-2. Guard `compute_armor_class` against `ArmorCategory.SHIELD` passed as body armor (raise/warn, don't return base_ac 2); reject or warn on `armor_name='Shield'` in `build_character`.
+1. ✅ Add a **worn-armor / equipped-weapon** concept to `CharacterSheet` (store the equipped armor and shield identity, not just the derived AC) plus an equip/unequip API that recomputes AC via `compute_sheet_ac`. *(equipped-weapon selection itself is deferred to D2/D3.)*
+2. ✅ Guard `compute_armor_class` against `ArmorCategory.SHIELD` passed as body armor (raises `ValueError`, no longer returns base_ac 2); `build_character` warns and treats `armor_name='Shield'` as unarmored+shield.
 3. Feed worn armor into `effective_speed` (−10 ft while STR < `min_strength`) and into the Hide check (`disadvantage=True` when the worn armor has `stealth_disadvantage`).
 4. Apply the 2024 **armor-training** penalty: disadvantage on STR/DEX D20 tests and can't-cast while wearing untrained armor — wire through `_advantage_state`, `_checks`, `_saves`, and a spellcasting gate.
 5. Expand `BackgroundData.equipment` (including gold and PACK contents) into `inventory`/`currency` at build time; persist inventory in dm-api (`stats=sheet.to_dict()`), not just as a string column.
@@ -203,12 +215,15 @@ The audit's most consequential equipment finding: nothing constructed an `Attack
 
 ## Workstream E — Weapon mastery mechanics (root cause: masteries write log keys nothing reads; missing TurnState fields & size checks)
 
-**Status: Slow, Cleave, Graze, and the unarmed-strike default are done. Push's
-size gate and the grapple/shove size gate (ACT-16) remain open** — both need
-a `CharacterSheet.size: CreatureSize` field that doesn't exist yet (no PC or
-monster combatant carries its size today), which is shared infrastructure
-with Workstream D's armor/inventory schema work rather than something to
-bolt on ad hoc here.
+**Status: ✅ done.** Slow, Cleave, Graze, and the unarmed-strike default
+landed earlier; Push's size gate and the grapple/shove size gate (ACT-16) are
+now closed, unblocked by the `CharacterSheet.size: CreatureSize` field added
+in Workstream D1. `CreatureSize.rank` gives an ordinal for the two size
+comparisons: Push moves a target only if it is Large or smaller
+(`_masteries.py`), and unarmed Grapple/Shove rejects a target more than one
+size larger than the attacker (`_attacks._resolve_unarmed_special`). PC
+combatants get their size from their species' primary `size_options` entry at
+build time; any sheet defaults to `CreatureSize.MEDIUM`.
 
 `CombatStateData.grant_slow` (mirroring `grant_sap`) now sets
 `TurnState.slowed`/`slowed_expiry` on the *target* on a Slow-mastery hit,
@@ -236,22 +251,26 @@ which reproduces exactly that interaction). `_masteries.py` is a new module
 `_reactions.py` used).
 
 **Findings**
-- Slow, Push, Cleave are log-only with no mechanical effect (`_attacks.py:149` [ACT-07], **major**) 🟡 Slow ✅ done, Cleave ✅ done, Push still log-only (needs `CharacterSheet.size`)
+- Slow, Push, Cleave are log-only with no mechanical effect (`_attacks.py:149` [ACT-07], **major**) ✅ Slow, Cleave, and Push all done — Push now gates on target size (Large or smaller) via `CharacterSheet.size`/`CreatureSize.rank`
 - Default unarmed strike deals 1d4 + STR instead of the 2024 fixed 1 + STR (`combat_state.py:243` [ACT-11], **major**) ✅ done — `AttackDetails.damage_dice` default changed to `DiceNotation("1d1")` (always rolls 1), reusing the existing dice-notation plumbing rather than adding a flat-damage field; a scaling override (e.g. Monk martial arts) still just passes its own `damage_dice`
 - Graze invents a minimum-1 damage floor (`_attacks.py:290` [ACT-17], **minor**) ✅ done
-- Unarmed grapple/shove ignores the size restriction (`_attacks.py:186` [ACT-16], **minor**) — still open, needs `CharacterSheet.size`
+- Unarmed grapple/shove ignores the size restriction (`_attacks.py:186` [ACT-16], **minor**) ✅ done — `_resolve_unarmed_special` rejects a target more than one size larger than the attacker (`CharacterSheet.size`/`CreatureSize.rank`)
 
 **Fix approach**:
 - ✅ **Slow**: reduce target speed by 10 ft until the start of the attacker's next turn (`CombatStateData.grant_slow` + `TurnState.slowed`/`slowed_expiry`, consumed by `_actions._effective_speed`).
 - ✅ **Cleave**: allow the follow-up attack roll against a second creature (damage without ability modifier), once per turn, without touching the Extra Attack pool (`ActionType.CLEAVE_ATTACK` / `_reactions.resolve_cleave_attack`). This engine has no positional/reach model, so "within reach" isn't validated — only "a different creature than the original target" is.
-- **Push**: gate on target `CreatureSize` (Large or smaller) — blocked on adding `CharacterSheet.size`.
+- ✅ **Push**: gate on target `CreatureSize` (Large or smaller), via `CharacterSheet.size` / `CreatureSize.rank`; Huge/Gargantuan targets log `pushed_ft: 0`, `push_too_large: True`.
 - ✅ **Graze**: deal damage exactly equal to the ability modifier (`max(0, ...)`); the invented `max(1, ...)` floor is gone, so `if graze_damage:` and its concentration check correctly no-op at 0.
-- **Grapple/Shove**: reject when the target is more than one size larger than the attacker — blocked on adding `CharacterSheet.size`.
+- ✅ **Grapple/Shove**: reject when the target is more than one size larger than the attacker (`_resolve_unarmed_special` returns a `target_too_large` failure).
 - ✅ **Unarmed strike damage**: default `AttackDetails.damage_dice` is now `DiceNotation("1d1")` (1 + ability modifier, no d4).
 
-**Tests**: ✅ Slow reduces and later restores speed (`test_weapon_masteries_2024.py::test_slow_reduces_speed_until_attackers_next_turn`); ✅ Cleave's second attack resolves without consuming the action or the Extra Attack pool, rejects the same target, and rejects a second use (`test_weapon_masteries_2024.py`, `TestWeaponMasteries` Cleave tests); ✅ Graze with STR 10/6 deals 0 (`test_graze_deals_zero_with_negative_ability_mod`, replacing the deleted `test_graze_minimum_damage_is_1_with_negative_ability_mod`, which codified a nonexistent rule); ✅ the `AttackDetails()` default is `"1d1"` (`test_combat_state.py::TestAttackDetails::test_defaults`). Push-against-a-Huge-creature and grapple/shove-size-gate tests remain unwritten, pending `CharacterSheet.size`.
+**Tests**: ✅ Slow reduces and later restores speed (`test_weapon_masteries_2024.py::test_slow_reduces_speed_until_attackers_next_turn`); ✅ Cleave's second attack resolves without consuming the action or the Extra Attack pool, rejects the same target, and rejects a second use (`test_weapon_masteries_2024.py`, `TestWeaponMasteries` Cleave tests); ✅ Graze with STR 10/6 deals 0 (`test_graze_deals_zero_with_negative_ability_mod`, replacing the deleted `test_graze_minimum_damage_is_1_with_negative_ability_mod`, which codified a nonexistent rule); ✅ the `AttackDetails()` default is `"1d1"` (`test_combat_state.py::TestAttackDetails::test_defaults`). ✅ Push moves a Large target but not a Huge one, and Grapple/Shove is rejected against a target 2+ sizes larger but allowed one size larger (`test_weapon_masteries_2024.py::test_push_*`, `test_attacks_2024.py::test_grapple_rejected_when_target_more_than_one_size_larger` / `test_shove_allowed_when_target_exactly_one_size_larger`).
 
-**Size**: M. Workstream C ✅ (masteries now reach the resolver) enabled the effects landed here; the size-gated remainder is smaller than a fresh Workstream D slice but was deliberately not bundled into this PR to keep the schema change (`CharacterSheet.size`) and its build-time wiring (species/monster data → sheet) as its own reviewable unit rather than folding it in silently.
+**Size**: M — ✅ fully done. Workstream C (masteries reach the resolver)
+enabled the earlier effects; the size-gated remainder (Push, grapple/shove)
+landed once Workstream D1 added `CharacterSheet.size`. PC size is wired from
+species `size_options` at build time; monster→sheet size wiring lives in
+dm-api (any sheet defaults to `CreatureSize.MEDIUM`).
 
 ---
 
@@ -584,8 +603,8 @@ casting time, range, areas of effect" row is corrected from a blanket ✅ to
 
 **Majors that affect ordinary play (fix next):**
 7. **Workstream G** ✅ done (instant death, death-save reset, crit modifier doubling — EFF-08/EFF-09/EFF-13/ACT-09) — F's effective-damage refactor (`_apply_damage_effective`) was reused here. EFF-16 (long-rest-at-0-HP) investigated and deliberately not changed; see the workstream section.
-8. **Workstream D** (armor/proficiency/inventory) — D1 worn-armor field first; independent of A/B.
-9. **Workstream E** ✅ Slow/Cleave/Graze/unarmed-strike done — Workstream C ✅ (registry bridge landed) enabled the mastery-effects half; the size-gated half (Push, grapple/shove) remains, deferred to pair with Workstream D's `CharacterSheet.size` field.
+8. **Workstream D** (armor/proficiency/inventory) — **D1 ✅ done** (worn-armor identity + equip/unequip AC recompute + shield guard + `CharacterSheet.size`); **D2** (Str-min speed / stealth / armor-training penalties) and **D3** (starting equipment/currency/encumbrance/tools) remain.
+9. **Workstream E** ✅ done — Slow/Cleave/Graze/unarmed-strike plus the Push and grapple/shove size gates, the latter unblocked by D1's `CharacterSheet.size` field.
 10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) and **I2** ✅ done (condition-immunity centralization) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
 11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
 12. **Workstream J** (remaining spell-schema gaps) & **Workstream K** (slot/upcast math) — parallelizable; K is largely independent.
