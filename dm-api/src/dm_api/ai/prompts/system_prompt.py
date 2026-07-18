@@ -11,8 +11,6 @@ https://openai.com/index/harness-engineering/):
 - **Citation anchors.** The model is instructed to cite ``msg:<uuid>@<ts>``
   anchors from any ``[CONDENSED SYNOPSIS]`` / ``[ESTABLISHED FACTS]`` blocks
   injected upstream by the condenser.
-- **Concise, role-neutral system text.** Kept short per the harness guidance
-  that ``AGENTS.md``-style instructions perform best at < ~60 lines.
 - **No raw-string enum drift.** Proposal types, location types, and character
   types are generated from their respective enum classes so the prompt
   automatically stays in sync with ``game_engine.types.enums``.
