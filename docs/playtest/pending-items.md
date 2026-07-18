@@ -28,11 +28,92 @@ broken but routable around; **minor** = cosmetic or small friction.
 `type`: **bug** = behaves incorrectly; **usability** = behaves as built but is
 hard/confusing/missing an affordance a real player or DM would expect.
 
-`PT-<n>` is a simple incrementing id — next id is **PT-27**.
+`PT-<n>` is a simple incrementing id — next id is **PT-31**.
 
 ---
 
 ## Open
+
+### PT-27 — Shield selection in Create Character is not applied to AC
+- **Status:** open
+- **Severity:** major
+- **Type:** bug
+- **Phase:** 1 — Character creation
+- **Found:** runs/2026-07-18-trial-run.md
+- **Steps:** Create Character wizard → Skills & Equipment step → selected
+  **Chain Mail (AC 16)** from the armor dropdown and ticked the **"Shield
+  (+2 AC)"** checkbox → Review → Create.
+- **Observed:** The Review "Armor" line read only "Chain Mail" (no shield), and
+  the created character landed with **AC 16**. Sidebar card shows `HP 12/12 ·
+  AC 16`.
+- **Expected:** AC **18** (Chain Mail 16 + Shield 2), and the shield should be
+  reflected in the Review summary / equipment.
+- **Evidence:** "Dorn Blackfen joins the party! Level 1 Human Fighter — HP 12,
+  AC 16".
+- **Notes:** The shield checkbox state appears not to be factored into the AC
+  computation (or not sent to the wizard build endpoint). Suspect the dm-ui
+  character-wizard build payload or the AC calc that consumes it.
+
+### PT-28 — No way to cast a spell in combat; only Attack / Dash / Dodge
+- **Status:** open
+- **Severity:** major
+- **Type:** usability
+- **Phase:** 6 — Combat
+- **Found:** runs/2026-07-18-trial-run.md
+- **Steps:** Started combat with a Wizard (Kira Vael, cantrips Fire Bolt / Ray
+  of Frost / Light and spells Burning Hands / Magic Missile / Mage Armor /
+  Shield). On her turn, inspected the combat action controls.
+- **Observed:** The only structured combat actions are **Attack**, **Dash**,
+  and **Dodge**, plus a target picker. There is no cast-spell control, no
+  cantrip/spell list, and no spell-slot UI — a spellcaster cannot cast anything
+  through the combat tracker.
+- **Expected:** A way to cast known/prepared spells in combat (attack-roll and
+  saving-throw spells), consuming slots, per the Phase 6 acceptance check
+  ("one spell (attack-roll and/or save)").
+- **Notes:** Also no bonus action / reaction / other 2024 action-economy
+  controls. The engine supports spellcasting (`cast_spell`), so this is a
+  combat-UI gap rather than a rules gap.
+
+### PT-29 — Combat "Attack" uses an unarmed strike, ignoring equipped weapons and weapon masteries
+- **Status:** open
+- **Severity:** major
+- **Type:** bug
+- **Phase:** 6 — Combat
+- **Found:** runs/2026-07-18-trial-run.md
+- **Steps:** In combat, had Dorn Blackfen (Fighter; starting equipment Spear +
+  Shortbow; weapon masteries Longsword / Handaxe / Warhammer) use **Attack** on
+  the Drowned Acolyte.
+- **Observed:** System log: *"Dorn Blackfen hits Drowned Acolyte for 4
+  bludgeoning damage! (roll 12 + 5 = 17 vs AC 12)"*. 4 bludgeoning = **1 + STR
+  mod (3)** — an unarmed strike, not the Spear (1d6 piercing) or any mastery
+  weapon. Kira likewise attacked at +1 (STR −1 + prof +2) for bludgeoning. No
+  weapon die, weapon damage type, or weapon mastery was ever applied for either
+  PC.
+- **Expected:** The Attack action should use the character's equipped weapon
+  (weapon damage die + damage type) and enable weapon mastery — or let the DM
+  pick which weapon to attack with.
+- **Notes:** To-hit (+5 for Dorn, +1 for Kira) and unarmed-strike damage
+  (1 + STR) are individually correct; the defect is that the action never
+  reaches for the equipped weapon.
+
+### PT-30 — Human "Versatile" origin feat (feat of choice) is never offered in the wizard
+- **Status:** open
+- **Severity:** minor
+- **Type:** bug
+- **Phase:** 1 — Character creation
+- **Found:** runs/2026-07-18-trial-run.md
+- **Steps:** Built a **Human** Fighter. The Origin step shows the species trait
+  text "Versatile: You gain an Origin feat of your choice," but the wizard never
+  presented a feat picker anywhere in the flow.
+- **Observed:** The Review and the created sheet show only the **background's**
+  origin feat (Soldier → Savage Attacker). The Human species' extra "Versatile"
+  origin feat is silently dropped — the player loses a feat.
+- **Expected:** Human characters should be able to choose their Versatile origin
+  feat, and it should appear on the sheet alongside the background feat.
+- **Notes:** Background origin feats are correctly applied (Soldier → Savage
+  Attacker, Sage → Magic Initiate); the gap is specifically the Human species
+  bonus feat. Low-confidence on exact 2024 wording but the trait text is shown
+  to the user with no way to satisfy it.
 
 ## Resolved
 
