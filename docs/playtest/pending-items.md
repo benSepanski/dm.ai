@@ -34,26 +34,6 @@ hard/confusing/missing an affordance a real player or DM would expect.
 
 ## Open
 
-### PT-27 — Shield selection in Create Character is not applied to AC
-- **Status:** open
-- **Severity:** major
-- **Type:** bug
-- **Phase:** 1 — Character creation
-- **Found:** runs/2026-07-18-trial-run.md
-- **Steps:** Create Character wizard → Skills & Equipment step → selected
-  **Chain Mail (AC 16)** from the armor dropdown and ticked the **"Shield
-  (+2 AC)"** checkbox → Review → Create.
-- **Observed:** The Review "Armor" line read only "Chain Mail" (no shield), and
-  the created character landed with **AC 16**. Sidebar card shows `HP 12/12 ·
-  AC 16`.
-- **Expected:** AC **18** (Chain Mail 16 + Shield 2), and the shield should be
-  reflected in the Review summary / equipment.
-- **Evidence:** "Dorn Blackfen joins the party! Level 1 Human Fighter — HP 12,
-  AC 16".
-- **Notes:** The shield checkbox state appears not to be factored into the AC
-  computation (or not sent to the wizard build endpoint). Suspect the dm-ui
-  character-wizard build payload or the AC calc that consumes it.
-
 ### PT-28 — No way to cast a spell in combat; only Attack / Dash / Dodge
 - **Status:** open
 - **Severity:** major
@@ -73,28 +53,6 @@ hard/confusing/missing an affordance a real player or DM would expect.
 - **Notes:** Also no bonus action / reaction / other 2024 action-economy
   controls. The engine supports spellcasting (`cast_spell`), so this is a
   combat-UI gap rather than a rules gap.
-
-### PT-29 — Combat "Attack" uses an unarmed strike, ignoring equipped weapons and weapon masteries
-- **Status:** open
-- **Severity:** major
-- **Type:** bug
-- **Phase:** 6 — Combat
-- **Found:** runs/2026-07-18-trial-run.md
-- **Steps:** In combat, had Dorn Blackfen (Fighter; starting equipment Spear +
-  Shortbow; weapon masteries Longsword / Handaxe / Warhammer) use **Attack** on
-  the Drowned Acolyte.
-- **Observed:** System log: *"Dorn Blackfen hits Drowned Acolyte for 4
-  bludgeoning damage! (roll 12 + 5 = 17 vs AC 12)"*. 4 bludgeoning = **1 + STR
-  mod (3)** — an unarmed strike, not the Spear (1d6 piercing) or any mastery
-  weapon. Kira likewise attacked at +1 (STR −1 + prof +2) for bludgeoning. No
-  weapon die, weapon damage type, or weapon mastery was ever applied for either
-  PC.
-- **Expected:** The Attack action should use the character's equipped weapon
-  (weapon damage die + damage type) and enable weapon mastery — or let the DM
-  pick which weapon to attack with.
-- **Notes:** To-hit (+5 for Dorn, +1 for Kira) and unarmed-strike damage
-  (1 + STR) are individually correct; the defect is that the action never
-  reaches for the equipped weapon.
 
 ### PT-30 — Human "Versatile" origin feat (feat of choice) is never offered in the wizard
 - **Status:** open
@@ -116,6 +74,69 @@ hard/confusing/missing an affordance a real player or DM would expect.
   to the user with no way to satisfy it.
 
 ## Resolved
+
+### PT-29 — Combat "Attack" uses an unarmed strike, ignoring equipped weapons and weapon masteries
+- **Status:** resolved
+- **Severity:** major
+- **Type:** bug
+- **Phase:** 6 — Combat
+- **Found:** runs/2026-07-18-trial-run.md
+- **Steps:** In combat, had Dorn Blackfen (Fighter; starting equipment Spear +
+  Shortbow; weapon masteries Longsword / Handaxe / Warhammer) use **Attack** on
+  the Drowned Acolyte.
+- **Observed:** System log: *"Dorn Blackfen hits Drowned Acolyte for 4
+  bludgeoning damage! (roll 12 + 5 = 17 vs AC 12)"*. 4 bludgeoning = **1 + STR
+  mod (3)** — an unarmed strike, not the Spear (1d6 piercing) or any mastery
+  weapon. Kira likewise attacked at +1 (STR −1 + prof +2) for bludgeoning. No
+  weapon die, weapon damage type, or weapon mastery was ever applied for either
+  PC.
+- **Expected:** The Attack action should use the character's equipped weapon
+  (weapon damage die + damage type) and enable weapon mastery — or let the DM
+  pick which weapon to attack with.
+- **Notes:** To-hit (+5 for Dorn, +1 for Kira) and unarmed-strike damage
+  (1 + STR) are individually correct; the defect was that the action never
+  reached for the equipped weapon.
+- **Resolution:** The engine/API side was already correct and tested
+  (`game_engine.rules.dnd_5_5e._weapon_bridge.to_attack_details`,
+  `dm_api.api.combat_utils.build_attack_details`) — `CombatActionRequest`
+  already accepted a typed `attack_details.weapon_name`, but nothing in the
+  UI ever populated it, so every Attack fell back to the engine's default
+  Unarmed Strike. Fixed purely in `dm-ui`: `CharacterResponse.equipment` and
+  `CombatActionRequest.attack_details` are now typed in `api/client.ts`;
+  `CombatTracker.tsx` fetches the weapon registry once via
+  `getCreationOptions()`, cross-references the current actor's `equipment`
+  strings against it, and renders a "Weapon (for Attack)" picker (defaulting
+  to Unarmed Strike) whenever the actor owns a registry weapon. The chosen
+  weapon name rides on `attack_details` in the Attack POST body.
+
+### PT-27 — Shield selection in Create Character is not applied to AC
+- **Status:** resolved
+- **Severity:** major
+- **Type:** bug
+- **Phase:** 1 — Character creation
+- **Found:** runs/2026-07-18-trial-run.md
+- **Steps:** Create Character wizard → Skills & Equipment step → selected
+  **Chain Mail (AC 16)** from the armor dropdown and ticked the **"Shield
+  (+2 AC)"** checkbox → Review → Create.
+- **Observed:** The Review "Armor" line read only "Chain Mail" (no shield), and
+  the created character landed with **AC 16**. Sidebar card shows `HP 12/12 ·
+  AC 16`.
+- **Expected:** AC **18** (Chain Mail 16 + Shield 2), and the shield should be
+  reflected in the Review summary / equipment.
+- **Evidence:** "Dorn Blackfen joins the party! Level 1 Human Fighter — HP 12,
+  AC 16".
+- **Notes:** The shield checkbox state appeared not to be factored into the AC
+  computation (or not sent to the wizard build endpoint).
+- **Resolution:** No longer reproducible — fixed as a side effect of commit
+  `670f63d` ("feat(engine): worn-armor identity, creature size &
+  weapon-mastery size gates", Workstream D1/EQP-06), which refactored
+  `equip_armor`/`compute_sheet_ac` to correctly layer a shield's +2 on top of
+  body armor via `compute_armor_class(..., shield=shield)`
+  (`game-engine/src/game_engine/rules/dnd_5_5e/data/armor.py`). That commit
+  landed about an hour after the playtest run that found this bug and didn't
+  reference PT-27. Verified via `dm-api/tests/test_character_creation.py::
+  test_build_fighter` (asserts AC 18 for Chain Mail + Shield) and the
+  `game-engine` equipment test suite, both passing.
 
 ### PT-25 — DM state is shared across browser tabs via localStorage; no in-app way to preview/exit DM mode
 - **Status:** resolved

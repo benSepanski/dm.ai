@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { api, type CombatStateResponse } from "../../api/client";
+import { useCallback, useEffect, useState } from "react";
+import { api, type CombatStateResponse, type WeaponMasteryOption } from "../../api/client";
 import { useGameStore, type ActiveCombat, type CharacterData, type Combatant } from "../../store/gameStore";
 
 // Build the ActiveCombat view by zipping initiative_order (has initiative score)
@@ -94,22 +94,41 @@ function parseApiError(err: unknown): string {
   }
 }
 
+// PT-29: an equipped weapon is just an equipment string that also names a
+// registry weapon. Unarmed Strike is always offered — it's the engine's own
+// fallback and isn't a registry entry.
+const UNARMED_STRIKE = "Unarmed Strike";
+
+function equippedWeaponNames(
+  equipment: string[] | null | undefined,
+  weaponOptions: WeaponMasteryOption[]
+): string[] {
+  const registryNames = new Set(weaponOptions.map((w) => w.name));
+  const owned = (equipment ?? []).filter((item) => registryNames.has(item));
+  return [UNARMED_STRIKE, ...Array.from(new Set(owned))];
+}
+
 function CombatActions({
   sessionId,
   currentActorId,
   combatants,
+  weaponOptions,
   disabled,
 }: {
   sessionId: string;
   currentActorId: string | undefined;
   combatants: Combatant[];
+  weaponOptions: WeaponMasteryOption[];
   disabled: boolean;
 }) {
-  const { setCombat, addMessage } = useGameStore();
+  const { setCombat, addMessage, characters } = useGameStore();
   const [targetId, setTargetId] = useState<string | null>(null);
+  const [weaponName, setWeaponName] = useState(UNARMED_STRIKE);
   const [error, setError] = useState<string | null>(null);
 
   const targets = combatants.filter((c) => c.char_id !== currentActorId);
+  const actorEquipment = characters.find((c) => c.id === currentActorId)?.equipment;
+  const weaponChoices = equippedWeaponNames(actorEquipment, weaponOptions);
 
   const handleAction = useCallback(
     async (actionType: string, needsTarget: boolean) => {
@@ -124,6 +143,7 @@ function CombatActions({
           actor_id: currentActorId,
           action_type: actionType,
           ...(needsTarget && targetId ? { target_id: targetId } : {}),
+          ...(actionType === "Attack" ? { attack_details: { weapon_name: weaponName } } : {}),
         });
         setCombat(mapCombatResponse(result));
         const lastLog = result.combat_log?.[result.combat_log.length - 1];
@@ -141,7 +161,7 @@ function CombatActions({
         setError(parseApiError(err));
       }
     },
-    [sessionId, currentActorId, targetId, setCombat, addMessage]
+    [sessionId, currentActorId, targetId, weaponName, setCombat, addMessage]
   );
 
   const handleNextTurn = useCallback(async () => {
@@ -179,6 +199,34 @@ function CombatActions({
               </button>
             ))}
           </div>
+        </div>
+      )}
+      {weaponChoices.length > 1 && (
+        <div style={{ marginBottom: 6 }}>
+          <label style={{ fontSize: 11, color: "#aaa", display: "block", marginBottom: 4 }}>
+            Weapon (for Attack)
+            <select
+              value={weaponName}
+              onChange={(e) => setWeaponName(e.target.value)}
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: 2,
+                padding: "3px 4px",
+                background: "#111",
+                border: "1px solid #555",
+                borderRadius: 3,
+                color: "#fff",
+                fontSize: 12,
+              }}
+            >
+              {weaponChoices.map((w) => (
+                <option key={w} value={w}>
+                  {w}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       )}
       {error && (
@@ -330,6 +378,7 @@ function StartCombatDialog({
           hp_max: updated.hp_max,
           ac: updated.ac,
           stats: updated.stats,
+          equipment: updated.equipment,
         });
       }
 
@@ -543,6 +592,18 @@ export default function CombatTracker() {
   // controls — the server enforces this too (combat mutations are DM-only).
   const { sessionId, combat, setCombat, isDM } = useGameStore();
   const [showDialog, setShowDialog] = useState(false);
+  const [weaponOptions, setWeaponOptions] = useState<WeaponMasteryOption[]>([]);
+
+  // Weapon registry is static game data (not session-scoped) — fetch once
+  // so the Attack action's weapon picker (PT-29) can tell which equipment
+  // strings name a real weapon.
+  useEffect(() => {
+    if (!isDM) return;
+    api
+      .getCreationOptions()
+      .then((opts) => setWeaponOptions(opts.weapon_mastery_options))
+      .catch((err) => console.error("Failed to load weapon options:", err));
+  }, [isDM]);
 
   const handleEnd = useCallback(async () => {
     if (!sessionId) return;
@@ -640,6 +701,7 @@ export default function CombatTracker() {
           sessionId={sessionId}
           currentActorId={currentActorId}
           combatants={combat.combatants}
+          weaponOptions={weaponOptions}
           disabled={combat.combatants.length === 0}
         />
       )}

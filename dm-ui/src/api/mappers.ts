@@ -16,6 +16,7 @@ export function mapCharacterResponse(char: CharacterResponse): CharacterData {
     hp_max: char.hp_max,
     ac: char.ac,
     stats: char.stats,
+    equipment: char.equipment,
   };
 }
 
