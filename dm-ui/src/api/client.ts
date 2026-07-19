@@ -72,6 +72,10 @@ export interface CharacterResponse {
   hp_max: number | null;
   ac: number | null;
   speed: number | null;
+  // Flat list of item-name strings (e.g. "Spear", "Chain Mail", "Shield").
+  // Names that match the weapon registry (see CreationOptions.weapon_mastery_options)
+  // are offered as Attack weapon choices in the combat tracker (PT-29).
+  equipment: string[] | null;
 }
 
 // ---- Character creation (engine-backed) ----
@@ -293,10 +297,19 @@ export interface CharacterPatchRequest {
   name?: string;
 }
 
+// Mirrors dm_api.db.models.combat.AttackDetailsRequest. Only weapon_name is
+// sent by the UI — when it matches the weapon registry, the server derives
+// damage dice/type/ability/mastery from the registry and the actor's
+// training rather than trusting client-supplied combat numbers.
+export interface AttackDetailsRequest {
+  weapon_name: string;
+}
+
 export interface CombatActionRequest {
   actor_id: string;
   action_type: string;
   target_id?: string;
+  attack_details?: AttackDetailsRequest;
 }
 
 export type AIProvider = "anthropic" | "claude_cli";

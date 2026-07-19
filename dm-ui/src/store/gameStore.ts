@@ -93,6 +93,8 @@ export interface CharacterData {
   hp_max: number | null;
   ac: number | null;
   stats: Record<string, unknown> | null;
+  // Flat list of item-name strings; see CharacterResponse.equipment.
+  equipment: string[] | null;
 }
 
 // Grid cell coordinates of a battle-map token, keyed by character id.
