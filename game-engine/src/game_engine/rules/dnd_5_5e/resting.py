@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from game_engine.core.dice import roll_dice
 from game_engine.rules.dnd_5_5e._damage import _apply_healing_impl
-from game_engine.types import Ability, CharacterClass, CharacterSheet, Condition
+from game_engine.types import Ability, CharacterSheet, Condition
 
 
 @dataclass
@@ -71,17 +71,13 @@ def short_rest(char: CharacterSheet, hit_dice_to_spend: int = 0) -> RestResult:
         result.hp_restored += healed
         result.hit_dice_spent += 1
 
-    warlock_levels = char.class_level(CharacterClass.WARLOCK)
-    if warlock_levels > 0:
-        from game_engine.rules.dnd_5_5e.spellcasting import pact_slots_for_level
-
-        for pact_slot in pact_slots_for_level(warlock_levels):
-            slot = next(
-                (s for s in char.spell_slots if s.slot_level == pact_slot.slot_level), None
-            )
-            if slot is not None and slot.remaining < slot.maximum:
-                slot.remaining = slot.maximum
-                result.slots_restored = True
+    # SPL-15: pact slots are their own pool (SpellSlotState.is_pact), never
+    # merged with standard slots at the same level, so restoring by that flag
+    # can't also refill a standard slot that happens to share a slot level.
+    for slot in char.spell_slots:
+        if slot.is_pact and slot.remaining < slot.maximum:
+            slot.remaining = slot.maximum
+            result.slots_restored = True
     return result
 
 

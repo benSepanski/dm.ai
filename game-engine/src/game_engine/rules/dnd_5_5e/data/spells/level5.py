@@ -114,6 +114,9 @@ LEVEL_5_SPELLS: list[SpellData] = [
         secondary_damage_type=DamageType.RADIANT,
         secondary_damage_dice=DiceNotation("5d6"),
         upcast_damage_per_slot=DiceNotation("1d6"),
+        # 2024 PHB: "each damage type increases by 1d6" per slot level above
+        # 5 — both fire and radiant pools upcast (SPL-17).
+        secondary_upcast_damage_per_slot=DiceNotation("1d6"),
         area=AreaShape.CYLINDER,
         area_size_ft=10,
     ),

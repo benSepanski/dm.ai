@@ -525,27 +525,69 @@ A long tail of individual spells misfire because the schema lacks the fields to 
 
 ---
 
-## Workstream K — Spell slot & upcast math (root cause: pact/standard pool merge; flat-modifier upcast dropped; secondary-damage not upcast)
+## Workstream K — Spell slot & upcast math (root cause: pact/standard pool merge; flat-modifier upcast dropped; secondary-damage not upcast) ✅ done
 
 Slot bookkeeping and upcast-scaling arithmetic bugs in `spellcasting.py`/`_spell_resolution.py`.
 
+**Status: ✅ all six findings done.** `SpellSlotState` gained an `is_pact: bool
+= False` field; `pact_slots_for_level` sets it, and `compute_spell_slots`
+(`spellcasting.py`) now `extend`s pact slots onto the standard-slot list
+instead of merging into an existing same-level entry — a Warlock/Wizard
+multiclass sharing a slot level ends up with two separate `SpellSlotState`
+rows at that level, one `is_pact=True`. `resting.short_rest` now restores
+by iterating `char.spell_slots` for `is_pact` directly instead of
+recomputing `pact_slots_for_level` and matching by slot level (the latter
+could accidentally hit a same-level standard slot post-merge — the actual
+SPL-15 bug). `_scale_dice` (`spellcasting.py`) gained an `extra_flat`
+parameter, and `_roll_damage` (`_spell_resolution.py`) now computes it as
+`upcast_per_slot.modifier * upcast_levels`, so Magic Missile's upcast
+notation `"1d4+1"` scales its own `+1` alongside its die — a level-2 slot
+now deals `4d4+4`, not `4d4+3`. `SpellData` gained a
+`secondary_upcast_damage_per_slot: DiceNotation | None` field, independent
+of the primary pool's `upcast_damage_per_slot`; the secondary-damage roll
+in `cast_spell` now passes the real `upcast_levels` and this new field
+instead of always `(None, 0)`. Ice Storm's dice were stale 2014 values
+(`2d8`/`+1d8`) — corrected to the 2024 PHB's `2d10`/`+1d10`, with its cold
+pool's `secondary_upcast_damage_per_slot` left `None` (2024 Ice Storm only
+upcasts bludgeoning); Flame Strike sets
+`secondary_upcast_damage_per_slot=DiceNotation("1d6")` since 2024 Flame
+Strike upcasts *both* damage types. `duration_rounds` (`spellcasting.py`)
+replaced its four literal-substring checks with a single regex matching any
+`N round(s)`/`N minute(s)`/`N hour(s)` substring, so durations like "8
+hours" (present in the spell data but previously falling through to
+`None`) now parse correctly; still returns `None` for genuinely
+unparseable/unbounded text ("Instantaneous", "Until dispelled"). Finally,
+`ClassLevelEntry` (`types/character_state.py`) is now `@dataclass(eq=False)`
+— identity-based equality/hash, since `progression.level_up` mutates
+`.level`/`.subclass` in place and no code relies on value equality — which
+makes it hashable and unblocks `compute_spell_slots`'s `caster_types`
+override (previously `TypeError: unhashable type` on first use). See
+`game-engine/tests/test_spellcasting.py::TestSlotTables::test_multiclass_pact_and_standard_slots_kept_separate`
+/ `test_caster_types_override_is_hashable`,
+`TestCasting::test_upcast_scales_flat_modifier` /
+`test_secondary_pool_upcasts_when_configured` /
+`test_secondary_pool_fixed_when_not_configured`, `TestDurationRounds`,
+`game-engine/tests/test_resting_exploration.py::test_multiclass_short_rest_restores_only_pact_slots`,
+`game-engine/tests/test_data_spells.py::TestSpotChecks::test_magic_missile`
+/ `test_ice_storm` / `test_flame_strike`.
+
 **Findings**
-- Pact slots merged into the shared multiclass pool let a short rest restore standard slots (`spellcasting.py:146` [SPL-15], **major**)
-- Upcast drops the flat modifier: Magic Missile → 4d4+3 instead of 4d4+4 (`_spell_resolution.py:56` [SPL-05], **major**)
-- Dual-damage spells never upcast their secondary pool (Flame Strike) (`_spell_resolution.py:150` [SPL-17], **minor**)
-- Ice Storm uses stale 2014 dice (2d8/+1d8 vs 2024 2d10/+1d10) (`level4.py:40` [SPL-19], **minor**)
-- `duration_rounds` returns None for long durations, making rider conditions permanent (`spellcasting.py:180` [SPL-23], **minor**)
-- `compute_spell_slots` `caster_types` override unusable — `ClassLevelEntry` is unhashable (`spellcasting.py:130` [SPL-22], **minor**)
+- Pact slots merged into the shared multiclass pool let a short rest restore standard slots (`spellcasting.py:146` [SPL-15], **major**) ✅ done
+- Upcast drops the flat modifier: Magic Missile → 4d4+3 instead of 4d4+4 (`_spell_resolution.py:56` [SPL-05], **major**) ✅ done
+- Dual-damage spells never upcast their secondary pool (Flame Strike) (`_spell_resolution.py:150` [SPL-17], **minor**) ✅ done
+- Ice Storm uses stale 2014 dice (2d8/+1d8 vs 2024 2d10/+1d10) (`level4.py:40` [SPL-19], **minor**) ✅ done
+- `duration_rounds` returns None for long durations, making rider conditions permanent (`spellcasting.py:180` [SPL-23], **minor**) ✅ done — general regex parsing; still `None` for genuinely unbounded/unparseable text
+- `compute_spell_slots` `caster_types` override unusable — `ClassLevelEntry` is unhashable (`spellcasting.py:130` [SPL-22], **minor**) ✅ done
 
 **Fix approach**:
-- Add an `is_pact` distinction to `SpellSlotState` (or track pact slots as a separate pool) so short rest restores only pact slots and `compute_spell_slots` stops merging pact into standard.
-- Add `upcast_damage_flat_per_slot` and have `_scale_dice`/`_roll_damage` scale the flat modifier with the dice (Magic Missile +1 per dart).
-- Pass real `upcast_per_slot`/`upcast_levels` when rolling `secondary_damage_dice` (Flame Strike radiant scales too).
-- Update Ice Storm to 2024 dice (2d10 bludgeoning + 4d6 cold, +1d10/level).
-- Make `duration_rounds` total (or return an explicit "until dispelled" sentinel) instead of silently `None`; per the repo's no-raw-strings standard, prefer a typed duration on `SpellData` over substring matching.
-- Make `ClassLevelEntry` hashable (frozen or `eq=True`+`__hash__`) so the `caster_types` override works, or drop the dead parameter.
+- ✅ Add an `is_pact` distinction to `SpellSlotState` (kept as a separate pool, not merged) so short rest restores only pact slots and `compute_spell_slots` stops merging pact into standard.
+- ✅ Add an `extra_flat` scale to `_scale_dice`/`_roll_damage` sourced from the upcast notation's own modifier (Magic Missile +1 per dart).
+- ✅ Pass real `upcast_per_slot`/`upcast_levels` when rolling `secondary_damage_dice`, via a new `secondary_upcast_damage_per_slot` field (Flame Strike radiant scales too; Ice Storm's cold pool deliberately does not).
+- ✅ Update Ice Storm to 2024 dice (2d10 bludgeoning + 4d6 cold, +1d10/level).
+- ✅ Make `duration_rounds` parse any `N round/minute/hour` substring instead of four literal phrases (a full typed-duration schema was judged out of scope for this workstream's size; still returns `None` for unbounded/unparseable text rather than a distinct sentinel).
+- ✅ Make `ClassLevelEntry` hashable (`eq=False`, identity-based) so the `caster_types` override works.
 
-**Tests**: Warlock5/Wizard10 short rest restores only 2 of 5 L3 slots; Magic Missile at L2 deals 4d4+4; Flame Strike at L6 adds 1d6 to both pools; Ice Storm rolls 2d10+4d6; an 8-hour rider condition expires; the `caster_types` override no longer raises `TypeError`.
+**Tests**: ✅ Warlock2/Wizard3 keeps a separate pact slot at level 1 instead of merging into the standard level-1 pool; ✅ a short rest on that multiclass restores only the pact slot; ✅ Magic Missile at a level-3 slot deals 4d4+4 (not 4d4+3); ✅ Flame Strike upcast adds 1d6 to both the fire and radiant pools; ✅ Ice Storm upcast adds 1d10 to bludgeoning only, cold stays fixed at 4d6; ✅ `duration_rounds("8 hours") == 4800`, `duration_rounds("24 hours") == 14400`, `duration_rounds("Until dispelled") is None`; ✅ the `caster_types` override no longer raises `TypeError`.
 
 **Size**: M. Mostly independent; can proceed in parallel with J.
 
@@ -607,10 +649,10 @@ casting time, range, areas of effect" row is corrected from a blanket ✅ to
 9. **Workstream E** ✅ done — Slow/Cleave/Graze/unarmed-strike plus the Push and grapple/shove size gates, the latter unblocked by D1's `CharacterSheet.size` field.
 10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) and **I2** ✅ done (condition-immunity centralization) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
 11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
-12. **Workstream J** (remaining spell-schema gaps) & **Workstream K** (slot/upcast math) — parallelizable; K is largely independent.
+12. **Workstream J** (remaining spell-schema gaps) — still open. **Workstream K** ✅ done (pact/standard slot separation, upcast flat-modifier scaling, secondary-pool upcast, Ice Storm 2024 dice, `duration_rounds` parsing, `ClassLevelEntry` hashability).
 
 **Minors (fix last):**
-13. Remaining minor items folded into their workstreams (D3 currency/encumbrance/tools, K duration/hashable, L Dodge-speed-zero & dead spell metadata, H initiative/remove-combatant).
+13. Remaining minor items folded into their workstreams (D3 currency/encumbrance/tools, L Dodge-speed-zero & dead spell metadata, H initiative/remove-combatant). K's minors (duration parsing, `ClassLevelEntry` hashability) are done.
 
 **Cross-cutting throughout:** **Workstream M** (spec reconciliation + structural anti-regression tests) — update the relevant spec row and add a consumer-existence test as each workstream merges.
 

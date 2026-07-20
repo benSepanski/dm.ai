@@ -54,6 +54,12 @@ class SpellData:
     secondary_damage_type: DamageType | None = None
     secondary_damage_dice: DiceNotation | None = None
     upcast_damage_per_slot: DiceNotation | None = None
+    # Upcast scaling for the secondary pool, independent of the primary
+    # pool's ``upcast_damage_per_slot`` (SPL-17) — e.g. Flame Strike scales
+    # both its fire and radiant dice, while Ice Storm scales only its
+    # bludgeoning (primary) dice and leaves cold (secondary) fixed. `None`
+    # means the secondary pool does not upcast.
+    secondary_upcast_damage_per_slot: DiceNotation | None = None
     # Healing
     healing_dice: DiceNotation | None = None
     healing_flat: int = 0

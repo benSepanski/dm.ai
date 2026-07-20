@@ -37,10 +37,13 @@ LEVEL_4_SPELLS: list[SpellData] = [
         save=Ability.DEXTERITY,
         half_damage_on_save=True,
         damage_type=DamageType.BLUDGEONING,
-        damage_dice=DiceNotation("2d8"),
+        # 2024 PHB: 2d10 bludgeoning (was 2d8 in 2014); the bludgeoning
+        # damage increases by 1d10 per slot level above 4 — the cold pool
+        # does not upcast (SPL-19).
+        damage_dice=DiceNotation("2d10"),
         secondary_damage_type=DamageType.COLD,
         secondary_damage_dice=DiceNotation("4d6"),
-        upcast_damage_per_slot=DiceNotation("1d8"),
+        upcast_damage_per_slot=DiceNotation("1d10"),
         area=AreaShape.CYLINDER,
         area_size_ft=20,
     ),

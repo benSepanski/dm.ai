@@ -7,8 +7,10 @@ from unittest.mock import patch
 from game_engine.rules.dnd_5_5e._spell_resolution import cast_spell
 from game_engine.rules.dnd_5_5e.data.spells import SpellData
 from game_engine.rules.dnd_5_5e.spellcasting import (
+    SpellcasterType,
     cantrip_dice_multiplier,
     compute_spell_slots,
+    duration_rounds,
     pact_slots_for_level,
     slots_for_caster_level,
     spell_attack_bonus,
@@ -104,6 +106,30 @@ class TestSlotTables:
         )
         assert [(s.slot_level, s.maximum) for s in slots] == [(1, 4), (2, 3)]
 
+    def test_multiclass_pact_and_standard_slots_kept_separate(self):
+        # SPL-15: Warlock 2 (pact: 2 slots at level 1) + Wizard 3 (standard:
+        # [4, 2] at levels 1-2) must NOT merge the level-1 pools — only pact
+        # slots are restored by a short rest, so merging would let a short
+        # rest also refill standard level-1 slots.
+        slots = compute_spell_slots(
+            [
+                ClassLevelEntry(CharacterClass.WARLOCK, 2),
+                ClassLevelEntry(CharacterClass.WIZARD, 3),
+            ]
+        )
+        assert [(s.slot_level, s.maximum, s.is_pact) for s in slots] == [
+            (1, 4, False),
+            (1, 2, True),
+            (2, 2, False),
+        ]
+
+    def test_caster_types_override_is_hashable(self):
+        # SPL-22: ClassLevelEntry must be usable as a dict key so the
+        # caster_types override can be built from the caller's own entries.
+        entries = [ClassLevelEntry(CharacterClass.FIGHTER, 5)]
+        slots = compute_spell_slots(entries, caster_types={entries[0]: SpellcasterType.FULL})
+        assert [(s.slot_level, s.maximum) for s in slots] == [(1, 4), (2, 3), (3, 2)]
+
     def test_dc_and_attack_bonus(self):
         caster = _caster()  # level 5, INT 16
         assert spell_save_dc(caster, Ability.INTELLIGENCE) == 14  # 8 + 3 + 3
@@ -114,6 +140,24 @@ class TestSlotTables:
         assert cantrip_dice_multiplier(5) == 2
         assert cantrip_dice_multiplier(11) == 3
         assert cantrip_dice_multiplier(17) == 4
+
+
+class TestDurationRounds:
+    def test_short_durations_unchanged(self):
+        assert duration_rounds("1 round") == 1
+        assert duration_rounds("1 minute") == 10
+        assert duration_rounds("Concentration, up to 10 minutes") == 100
+        assert duration_rounds("1 hour") == 600
+
+    def test_multi_hour_durations_no_longer_silently_none(self):
+        # SPL-23: previously only the exact literal "1 hour" matched, so
+        # "8 hours" (a real duration in the spell data) fell through to None.
+        assert duration_rounds("8 hours") == 4800
+        assert duration_rounds("24 hours") == 14400
+
+    def test_unparseable_duration_is_none(self):
+        assert duration_rounds("Instantaneous") is None
+        assert duration_rounds("Until dispelled") is None
 
 
 class TestCasting:
@@ -175,6 +219,75 @@ class TestCasting:
             count_upcast = mock_roll.call_args_list[0][0][0]
         assert count_base == 8
         assert count_upcast == 10
+
+    def test_upcast_scales_flat_modifier(self):
+        # SPL-05: Magic Missile's upcast notation "1d4+1" should scale its
+        # own flat modifier per extra slot level, not just its dice count —
+        # a level-2 slot should deal 4d4+4, not 4d4+3.
+        caster = _caster()
+        state = self._state(caster)
+        spell = _spell(
+            damage_type=DamageType.FORCE,
+            damage_dice=DiceNotation("3d4+3"),
+            upcast_damage_per_slot=DiceNotation("1d4+1"),
+            level=1,
+        )
+        with patch(f"{RES}.roll_dice") as mock_roll:
+            mock_roll.return_value = (10, [])
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"], slot_level=1)
+            count_base, _, mod_base = mock_roll.call_args_list[0][0]
+        caster.spell_slots = compute_spell_slots([ClassLevelEntry(CharacterClass.WIZARD, 9)])
+        state.reset_turn(caster.id)  # simulate a new turn: SPL-06 allows one leveled spell each
+        with patch(f"{RES}.roll_dice") as mock_roll:
+            mock_roll.return_value = (10, [])
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"], slot_level=3)
+            count_upcast, _, mod_upcast = mock_roll.call_args_list[0][0]
+        assert (count_base, mod_base) == (3, 3)
+        assert (count_upcast, mod_upcast) == (5, 5)  # +2 slot levels → +2 dice, +2 flat
+
+    def test_secondary_pool_upcasts_when_configured(self):
+        # SPL-17: a dual-damage spell whose secondary_upcast_damage_per_slot
+        # is set (e.g. Flame Strike) scales both pools on upcast.
+        caster = _caster()
+        state = self._state(caster)
+        caster.spell_slots = compute_spell_slots([ClassLevelEntry(CharacterClass.WIZARD, 11)])
+        spell = _spell(
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("5d6"),
+            upcast_damage_per_slot=DiceNotation("1d6"),
+            secondary_damage_type=DamageType.RADIANT,
+            secondary_damage_dice=DiceNotation("5d6"),
+            secondary_upcast_damage_per_slot=DiceNotation("1d6"),
+            level=5,
+        )
+        with patch(f"{RES}.roll_dice") as mock_roll:
+            mock_roll.return_value = (10, [])
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"], slot_level=6)
+            primary_count = mock_roll.call_args_list[0][0][0]
+            secondary_count = mock_roll.call_args_list[1][0][0]
+        assert (primary_count, secondary_count) == (6, 6)  # both +1 die for the +1 slot level
+
+    def test_secondary_pool_fixed_when_not_configured(self):
+        # SPL-17/SPL-19: Ice Storm leaves secondary_upcast_damage_per_slot
+        # unset, so its cold pool stays fixed while bludgeoning upcasts.
+        caster = _caster()
+        state = self._state(caster)
+        caster.spell_slots = compute_spell_slots([ClassLevelEntry(CharacterClass.WIZARD, 9)])
+        spell = _spell(
+            damage_type=DamageType.BLUDGEONING,
+            damage_dice=DiceNotation("2d10"),
+            upcast_damage_per_slot=DiceNotation("1d10"),
+            secondary_damage_type=DamageType.COLD,
+            secondary_damage_dice=DiceNotation("4d6"),
+            level=4,
+        )
+        with patch(f"{RES}.roll_dice") as mock_roll:
+            mock_roll.return_value = (10, [])
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"], slot_level=5)
+            primary_count = mock_roll.call_args_list[0][0][0]
+            secondary_count = mock_roll.call_args_list[1][0][0]
+        assert primary_count == 3  # 2 + 1 slot level above base
+        assert secondary_count == 4  # unchanged
 
     def test_cantrip_needs_no_slot_and_scales(self):
         caster = _caster(level=11)

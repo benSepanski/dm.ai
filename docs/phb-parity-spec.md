@@ -99,7 +99,7 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 
 | Feature | Module | Status |
 |---|---|---|
-| Spell slot consumption, upcasting | `rules.dnd_5_5e.spellcasting` | ✅ |
+| Spell slot consumption, upcasting | `rules.dnd_5_5e.spellcasting` | ✅ pact/standard slot pools kept separate so short rest restores only pact slots, upcast flat modifiers (Magic Missile) and secondary-pool upcasting (Flame Strike) now scale correctly, `ClassLevelEntry` is hashable (Workstream K) |
 | Cantrip damage scaling (char levels 5/11/17) | `spellcasting` | ✅ |
 | Concentration (single effect, CON save on damage) | `spellcasting` + `_damage` | 🟡 CON save now fires on weapon *and* spell damage, DC'd off effective post-immunity/resistance damage and capped at 30, breaks on gaining an Incapacitating condition (Workstream F); breaking/replacing concentration still does not remove the spell's effects from its targets (SPL-07, tracked open) |
 | Ritual casting | `spellcasting` | ✅ |

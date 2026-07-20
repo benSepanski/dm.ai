@@ -118,6 +118,15 @@ class TestEverySpellInvariants:
             assert spell.upcast_damage_per_slot is None
             assert spell.upcast_healing_per_slot is None
             assert spell.upcast_healing_flat_per_slot == 0
+            assert spell.secondary_upcast_damage_per_slot is None
+
+    @pytest.mark.parametrize("spell", SPELLS, ids=lambda s: s.name)
+    def test_secondary_upcast_implies_secondary_damage(self, spell: SpellData) -> None:
+        # SPL-17: a secondary upcast rate is meaningless without a secondary
+        # damage pool to apply it to.
+        if spell.secondary_upcast_damage_per_slot is not None:
+            assert spell.secondary_damage_dice is not None
+            assert spell.secondary_damage_type is not None
 
     @pytest.mark.parametrize("spell", SPELLS, ids=lambda s: s.name)
     def test_classes_and_description(self, spell: SpellData) -> None:
@@ -173,6 +182,28 @@ class TestSpotChecks:
         assert s.save is None
         assert not s.attack_roll
         assert s.damage_dice is not None
+        # SPL-05: the upcast notation carries its own +1 flat modifier per
+        # slot level (4d4+4 at a level-2 slot, not 4d4+3).
+        assert s.upcast_damage_per_slot == DiceNotation("1d4+1")
+
+    def test_ice_storm(self) -> None:
+        s = _require("Ice Storm")
+        # SPL-19: 2024 PHB dice (2d10 bludgeoning, was 2d8 in 2014); only
+        # the bludgeoning pool upcasts, cold stays fixed at 4d6 (SPL-17).
+        assert s.damage_type is DamageType.BLUDGEONING
+        assert s.damage_dice == DiceNotation("2d10")
+        assert s.upcast_damage_per_slot == DiceNotation("1d10")
+        assert s.secondary_damage_type is DamageType.COLD
+        assert s.secondary_damage_dice == DiceNotation("4d6")
+        assert s.secondary_upcast_damage_per_slot is None
+
+    def test_flame_strike(self) -> None:
+        s = _require("Flame Strike")
+        # SPL-17: 2024 PHB upcasts BOTH damage types by 1d6 per slot level.
+        assert s.damage_dice == DiceNotation("5d6")
+        assert s.upcast_damage_per_slot == DiceNotation("1d6")
+        assert s.secondary_damage_dice == DiceNotation("5d6")
+        assert s.secondary_upcast_damage_per_slot == DiceNotation("1d6")
 
     def test_shield(self) -> None:
         s = _require("Shield")
