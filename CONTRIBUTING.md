@@ -71,7 +71,7 @@ dm.ai/
 │   ├── pyproject.toml
 │   ├── tests/
 │   └── src/game_engine/
-│       ├── types.py             — enums + dataclasses (single source of truth)
+│       ├── types/               — enums (package) + dataclasses (single source of truth)
 │       ├── interface.py         — RuleEngine ABC + result dataclasses
 │       ├── core/                — dice, conditions, initiative, combat, character
 │       └── rules/
@@ -134,7 +134,8 @@ dm.ai enforces a **no magic strings** policy for all domain concepts. Every
 fixed-value concept (character class, damage type, condition, ability, skill, action
 type, location type, etc.) must be represented as a `str, Enum` subclass.
 
-All canonical enums live in `game_engine/types.py`. Import from there.
+All canonical enums live under `game_engine/types/enums/`, re-exported from
+`game_engine.types`. Import from there.
 
 ```python
 # BAD — typo-prone, no IDE support, no static type checking
@@ -151,13 +152,13 @@ def deal_damage(target: CharacterSheet, amount: int, dtype: DamageType) -> None:
 ```
 
 When you need to represent a new game concept that has a fixed set of values, add
-a `str, Enum` subclass to `game_engine/types.py` — do not introduce ad-hoc string
-constants scattered across the codebase.
+a `str, Enum` subclass under `game_engine/types/enums/` — do not introduce ad-hoc
+string constants scattered across the codebase.
 
 #### Typed dataclasses over dicts
 
 Never pass an untyped `dict` as a function argument when the dict represents a
-structured entity. Use the typed dataclasses from `game_engine/types.py`.
+structured entity. Use the typed dataclasses from `game_engine.types`.
 
 ```python
 # BAD — no editor support, no runtime safety
@@ -256,9 +257,8 @@ Two backends are supported, controlled by the `AI_PROVIDER` env var in `.env`:
 Model roles — override in `.env` to tune cost/capability tradeoffs:
 
 ```bash
-ORCHESTRATOR_MODEL=claude-sonnet-4-6       # main DM chat responses
-PLANNING_MODEL=claude-sonnet-4-6           # world-building, complex proposals
-GENERATION_MODEL=claude-haiku-4-5-20251001 # quick summaries, flavor text
+ORCHESTRATOR_MODEL=claude-sonnet-4-6       # main DM chat responses (narrative turn)
+GENERATION_MODEL=claude-haiku-4-5-20251001 # condensation, summaries, flavor text
 ```
 
 Rule of thumb: use Haiku for tasks that require fast, high-volume output (NPC
@@ -277,7 +277,7 @@ dialogue options, short flavor text); use Sonnet for reasoning-heavy tasks
 - [ ] `pytest tests/ -v` passes in `dm-api/`
 - [ ] `npx tsc --noEmit` passes in `dm-ui/`
 - [ ] `npm run lint` passes with zero warnings in `dm-ui/`
-- [ ] No raw string literals for game domain concepts — use enums from `game_engine/types.py`
+- [ ] No raw string literals for game domain concepts — use enums from `game_engine.types`
 - [ ] No untyped `dict` parameters for structured entities — use dataclasses
 - [ ] Every new public function/method has type annotations and a docstring
 - [ ] New features have tests; new bug fixes have regression tests
@@ -297,8 +297,8 @@ refactor as part of the review — do not approve with a "clean it up later" com
    `roll_check`, `apply_damage`, `apply_condition`, `remove_condition`,
    `get_available_actions`, `resolve_action`, `roll_initiative`,
    `validate_character`, `calculate_proficiency_bonus`
-3. Add new enum values to `CharacterClass` in `game_engine/types.py` if the system
-   introduces unique classes (or create a system-specific enum subclass)
+3. Add new enum values to `CharacterClass` in `game_engine/types/enums/` if the
+   system introduces unique classes (or create a system-specific enum subclass)
 4. Register the engine in `game_engine/rules/__init__.py`
 5. Write tests in `game_engine/tests/test_<system_name>_engine.py`
 6. Document the system's key rules and any deviations in `docs/architecture.md`
@@ -313,22 +313,24 @@ never raw strings.
 
 ### Spells
 
-Edit `game_engine/rules/dnd_5_5e/data/spells.py`. Each entry is a dict with keys:
-`name`, `level`, `school`, `casting_time`, `range`, `components`, `duration`,
-`description`, `damage_dice`, `damage_type` (use `DamageType` enum), `save`,
-`attack_type`.
+Spell data is split by level under `game_engine/rules/dnd_5_5e/data/spells/`
+(`cantrips.py`, `level1.py` … `level9.py`); add each new `SpellData` entry to
+the module matching its level and re-export it from `data/spells/__init__.py`.
+Use `DamageType`, `SpellSchool`, `CastingTime`, etc. for typed fields — never
+raw strings.
 
 ### Monsters
 
-Edit `game_engine/rules/dnd_5_5e/data/monsters.py`. Each entry includes a full
-stat block. Use `DamageType` enum values for `damage_resistances`,
-`damage_immunities`, and `damage_vulnerabilities`. Use `Condition` enum values for
-`condition_immunities`.
+Edit `game_engine/rules/dnd_5_5e/data/monsters.py`, adding to the `MONSTERS`
+list. Each entry includes a full stat block. Use `DamageType` enum values for
+`damage_resistances`, `damage_immunities`, and `damage_vulnerabilities`. Use
+`Condition` enum values for `condition_immunities`.
 
-### Items / Weapons / Armor
+### Weapons / Armor
 
-Edit `game_engine/rules/dnd_5_5e/data/items.py`. Add weapons to `WEAPONS` and
-armor to `ARMOR`. Use `DamageType` enum for `damage_type`.
+Edit `game_engine/rules/dnd_5_5e/data/weapons.py`, adding to the `WEAPONS`
+list, or `game_engine/rules/dnd_5_5e/data/armor.py`, adding to the `ARMOR`
+list. Use `DamageType` enum for `damage_type`.
 
 ---
 
