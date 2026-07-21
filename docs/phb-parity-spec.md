@@ -87,10 +87,10 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 
 | Feature | Module | Status |
 |---|---|---|
-| Full 2024 weapon table (all simple/martial, melee/ranged) | `data.items` | ✅ |
-| Weapon masteries (Cleave, Graze, Nick, Push, Sap, Slow, Topple, Vex) | `data.items` + `_attacks` + `_masteries` | 🟡 mastery reaches attack resolution via the registry bridge (Workstream C); Nick/Graze/Sap/Vex/Topple/Cleave/Slow have state-mutating effects that downstream rules consume (Workstream E). Push now honors its 2024 size gate (only a Large-or-smaller target is affected, via `CharacterSheet.size`), but the 10 ft displacement itself is log-only (`pushed_ft`) — the engine has no positional model, so nothing consumes it, the same theater-of-mind caveat that applies to Cleave's "within reach" |
-| Weapon properties (incl. range, ammunition) | `data.items` | 🟡 Heavy/Versatile/Finesse consumed via the registry bridge (Workstream C); Ammunition/Loading tracking not yet wired (deferred to Workstream D) |
-| Full armor table + AC computation (dex caps, str minimums) | `data.items` + `character_builder` + `_equipment` | 🟡 armor table + AC (dex caps) ✅; worn-armor identity stored with equip/unequip AC recompute and a shield-as-body guard (Workstream D1 ✅); Str-minimum speed penalty consumer still open (EQP-04, Workstream D2) |
+| Full 2024 weapon table (all simple/martial, melee/ranged) | `data.weapons` | ✅ |
+| Weapon masteries (Cleave, Graze, Nick, Push, Sap, Slow, Topple, Vex) | `data.weapons` + `_attacks` + `_masteries` | 🟡 mastery reaches attack resolution via the registry bridge (Workstream C); Nick/Graze/Sap/Vex/Topple/Cleave/Slow have state-mutating effects that downstream rules consume (Workstream E). Push now honors its 2024 size gate (only a Large-or-smaller target is affected, via `CharacterSheet.size`), but the 10 ft displacement itself is log-only (`pushed_ft`) — the engine has no positional model, so nothing consumes it, the same theater-of-mind caveat that applies to Cleave's "within reach" |
+| Weapon properties (incl. range, ammunition) | `data.weapons` | 🟡 Heavy/Versatile/Finesse consumed via the registry bridge (Workstream C); Ammunition/Loading tracking not yet wired (deferred to Workstream D) |
+| Full armor table + AC computation (dex caps, str minimums) | `data.armor` + `character_builder` + `_equipment` | 🟡 armor table + AC (dex caps) ✅; worn-armor identity stored with equip/unequip AC recompute and a shield-as-body guard (Workstream D1 ✅); Str-minimum speed penalty consumer still open (EQP-04, Workstream D2) |
 | Adventuring gear, tools, packs | `data.gear` | ✅ |
 | Coinage (cp/sp/ep/gp/pp) | `types.Currency` | ✅ |
 | Carrying capacity / drag-lift-push | `rules.dnd_5_5e.exploration` | ✅ |
@@ -147,7 +147,7 @@ game_engine/
     exploration.py    # encumbrance, environment, DCs
     classes.py        # static class data
     data/             # SRD 5.2 content registries
-      items.py  gear.py  species.py  backgrounds.py  feats.py
+      weapons.py  armor.py  gear.py  species.py  backgrounds.py  feats.py
       spells/  class_features/  monsters.py
 ```
 
