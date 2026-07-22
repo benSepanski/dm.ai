@@ -10,6 +10,7 @@ from game_engine.core.conditions import CONDITION_EFFECTS
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import SaveResult
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
+from game_engine.rules.dnd_5_5e._equipment import is_armor_untrained
 from game_engine.types import Ability, CharacterSheet, Condition
 
 
@@ -35,6 +36,7 @@ def _roll_saving_throw_impl(
     - automatic failure of STR/DEX saves while paralyzed, petrified,
       stunned, or unconscious;
     - disadvantage on DEX saves while restrained;
+    - disadvantage on STR/DEX saves while wearing untrained armor (D2);
     - save proficiency (proficiency bonus);
     - exhaustion's flat −2/level penalty on all d20 tests.
 
@@ -52,6 +54,10 @@ def _roll_saving_throw_impl(
         return SaveResult(success=False, roll=0, total=0, dc=dc, margin=-dc, auto_failed=True)
 
     if ability is Ability.DEXTERITY and Condition.RESTRAINED in char.conditions:
+        disadvantage = True
+
+    # D2/EQP-03: untrained armor imposes disadvantage on STR/DEX saves.
+    if ability in (Ability.STRENGTH, Ability.DEXTERITY) and is_armor_untrained(char):
         disadvantage = True
 
     modifier = char.ability_scores.modifier(ability)

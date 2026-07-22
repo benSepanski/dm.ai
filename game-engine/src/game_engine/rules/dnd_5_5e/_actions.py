@@ -14,6 +14,10 @@ from typing import Any
 from game_engine.interface import Action, ActionResult
 from game_engine.rules.dnd_5_5e._attacks import _has_mastery, _resolve_attack, _validate_attack
 from game_engine.rules.dnd_5_5e._checks import _roll_check_impl
+from game_engine.rules.dnd_5_5e._equipment import effective_speed as _armor_effective_speed
+from game_engine.rules.dnd_5_5e._equipment import (
+    has_stealth_disadvantage,
+)
 from game_engine.rules.dnd_5_5e._reactions import (
     resolve_cleave_attack,
     resolve_opportunity_attack,
@@ -135,14 +139,17 @@ def _attacks_per_action(actor: CharacterSheet) -> int:
 
 
 def _effective_speed(actor: CharacterSheet, ts: TurnState) -> int:
-    """*actor*'s speed after exhaustion/speed-zero conditions and Slow mastery.
+    """*actor*'s speed after exhaustion/speed-zero conditions, under-Strength
+    armor, and Slow mastery.
 
     ``CharacterSheet.effective_speed`` is a pure sheet property with no
-    visibility into combat state, so the Slow mastery's -10 ft (ACT-07,
+    visibility into combat state or the rules-layer armor registry, so the
+    Strength-minimum armor penalty (D2, EQP-04, via
+    ``_equipment.effective_speed``) and the Slow mastery's -10 ft (ACT-07,
     granted on the *target's* :class:`TurnState` via
-    :meth:`CombatStateData.grant_slow`) is applied here instead.
+    :meth:`CombatStateData.grant_slow`) are both applied here instead.
     """
-    speed = actor.effective_speed
+    speed = _armor_effective_speed(actor)
     if ts.slowed:
         speed = max(0, speed - 10)
     return speed
@@ -331,7 +338,14 @@ def _resolve_non_attack(
             action, True, f"{name} helps an ally, granting advantage on their next roll."
         )
     if action.action_type is ActionType.HIDE:
-        check = _roll_check_impl(actor, Skill.STEALTH, _HIDE_DC, turn_state=ts)
+        # D2/EQP-02: noisy armor imposes disadvantage on the Stealth check.
+        check = _roll_check_impl(
+            actor,
+            Skill.STEALTH,
+            _HIDE_DC,
+            disadvantage=has_stealth_disadvantage(actor),
+            turn_state=ts,
+        )
         ts.hidden = check.success
         outcome = "hides successfully" if check.success else "fails to hide"
         return _simple_result(

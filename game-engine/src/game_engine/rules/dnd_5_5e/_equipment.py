@@ -65,11 +65,53 @@ def equip_armor(sheet: CharacterSheet, armor_name: str | None) -> list[str]:
     """
     warnings: list[str] = []
     armor = resolve_body_armor(armor_name, warnings)
-    if armor is not None and armor.armor_type not in sheet.armor_training:
-        warnings.append(f"{sheet.char_class.value} lacks {armor.armor_type.value} armor training.")
     sheet.worn_armor = armor.name if armor is not None else None
+    if armor is not None and is_armor_untrained(sheet):
+        warnings.append(f"{sheet.char_class.value} lacks {armor.armor_type.value} armor training.")
     sheet.ac = compute_sheet_ac(sheet, armor, sheet.worn_shield)
     return warnings
+
+
+def is_armor_untrained(sheet: CharacterSheet) -> bool:
+    """True when wearing body armor whose category the character lacks training in.
+
+    Drives the 2024 PHB armor-training penalty (D2, EQP-03): disadvantage on
+    STR/DEX checks and saving throws, and an inability to cast spells, while
+    wearing untrained armor. Shields are out of scope, matching the
+    equip-time warning this helper also backs.
+    """
+    if sheet.worn_armor is None:
+        return False
+    armor = get_armor(sheet.worn_armor)
+    return armor is not None and armor.armor_type not in sheet.armor_training
+
+
+def has_stealth_disadvantage(sheet: CharacterSheet) -> bool:
+    """True if the worn armor imposes disadvantage on Stealth checks (D2, EQP-02)."""
+    armor = get_armor(sheet.worn_armor) if sheet.worn_armor else None
+    return armor is not None and armor.stealth_disadvantage
+
+
+def armor_speed_penalty(sheet: CharacterSheet) -> int:
+    """Return the -10 ft speed penalty for being under the worn armor's Strength
+    minimum (D2, EQP-04), else 0.
+    """
+    armor = get_armor(sheet.worn_armor) if sheet.worn_armor else None
+    if armor is None or sheet.ability_scores.get(Ability.STRENGTH) >= armor.min_strength:
+        return 0
+    return 10
+
+
+def effective_speed(sheet: CharacterSheet) -> int:
+    """``sheet.effective_speed`` minus the Strength-minimum armor penalty (D2, EQP-04).
+
+    ``CharacterSheet.effective_speed`` is a pure types-layer property with no
+    visibility into the rules-layer armor registry, so the under-Strength
+    penalty is layered on here instead — mirrors how
+    ``_actions._effective_speed`` layers the Slow mastery's combat-only
+    penalty on top of this.
+    """
+    return max(0, sheet.effective_speed - armor_speed_penalty(sheet))
 
 
 def unequip_armor(sheet: CharacterSheet) -> None:

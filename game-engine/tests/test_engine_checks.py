@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import replace
+from unittest.mock import patch
 
 import pytest
 
@@ -15,6 +16,7 @@ from game_engine.rules.dnd_5_5e.engine import DnD55eEngine
 from game_engine.types import (
     Ability,
     AbilityScoreSet,
+    ArmorCategory,
     CharacterClass,
     CharacterSheet,
     Condition,
@@ -278,6 +280,52 @@ class TestAdvantageDisadvantage:
             for _ in range(100)
         ]
         assert sum(dis_totals) <= sum(normal_totals)
+
+
+class TestArmorTrainingDisadvantage:
+    """D2/EQP-03: untrained armor imposes disadvantage on STR/DEX checks."""
+
+    def test_untrained_armor_disadvantages_strength_check(self, engine: DnD55eEngine):
+        char = make_fighter()
+        char.worn_armor = "Plate Armor"
+        char.armor_training = []
+        with patch(
+            "game_engine.rules.dnd_5_5e._checks.roll_with_disadvantage",
+            return_value=(3, [3, 18]),
+        ) as dis:
+            engine.roll_check(char, Ability.STRENGTH, dc=10)
+        dis.assert_called_once()
+
+    def test_untrained_armor_disadvantages_dexterity_check(self, engine: DnD55eEngine):
+        char = make_fighter()
+        char.worn_armor = "Plate Armor"
+        char.armor_training = []
+        with patch(
+            "game_engine.rules.dnd_5_5e._checks.roll_with_disadvantage",
+            return_value=(3, [3, 18]),
+        ) as dis:
+            engine.roll_check(char, Ability.DEXTERITY, dc=10)
+        dis.assert_called_once()
+
+    def test_untrained_armor_does_not_affect_mental_checks(self, engine: DnD55eEngine):
+        char = make_fighter()
+        char.worn_armor = "Plate Armor"
+        char.armor_training = []
+        with patch(
+            "game_engine.rules.dnd_5_5e._checks.roll_dice", return_value=(10, [10])
+        ) as plain:
+            engine.roll_check(char, Ability.WISDOM, dc=5)
+        plain.assert_called_once()
+
+    def test_trained_armor_no_disadvantage(self, engine: DnD55eEngine):
+        char = make_fighter()
+        char.worn_armor = "Plate Armor"
+        char.armor_training = [ArmorCategory.HEAVY]
+        with patch(
+            "game_engine.rules.dnd_5_5e._checks.roll_dice", return_value=(10, [10])
+        ) as plain:
+            engine.roll_check(char, Ability.STRENGTH, dc=5)
+        plain.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

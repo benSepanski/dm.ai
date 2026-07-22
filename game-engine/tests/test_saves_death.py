@@ -83,6 +83,25 @@ class TestSavingThrows:
             result = engine.roll_saving_throw(char, Ability.WISDOM, dc=10)
         assert result.total == 4  # 10 - 6
 
+    def test_untrained_armor_disadvantages_strength_and_dex_saves(self, engine):
+        # D2/EQP-03: untrained armor imposes disadvantage on STR/DEX saves.
+        char = _char(worn_armor="Plate Armor", armor_training=[])
+        for ability in (Ability.STRENGTH, Ability.DEXTERITY):
+            with patch(
+                "game_engine.rules.dnd_5_5e._saves.roll_with_disadvantage",
+                return_value=(3, [3, 18]),
+            ) as mock_dis:
+                engine.roll_saving_throw(char, ability, dc=10)
+            mock_dis.assert_called_once()
+
+    def test_untrained_armor_does_not_affect_mental_saves(self, engine):
+        char = _char(worn_armor="Plate Armor", armor_training=[])
+        with patch(
+            "game_engine.rules.dnd_5_5e._saves.roll_dice", return_value=(10, [10])
+        ) as mock_plain:
+            engine.roll_saving_throw(char, Ability.WISDOM, dc=10)
+        mock_plain.assert_called_once()
+
 
 class TestDamageAtZeroAndTempHp:
     def test_drop_to_zero_falls_unconscious_and_prone(self, engine):
