@@ -124,6 +124,39 @@ All three must pass before opening a pull request.
 
 ---
 
+## Logs & Mocking the AI Layer
+
+**Logs.** `dm-api` logs to stdout in `TIMESTAMP LEVEL logger.name  message  key=value ...`
+format — set `LOG_LEVEL=DEBUG` in `.env` (or export it) to see every AI call's
+model, token counts, and duration; `INFO` (the default) logs only major events
+like requests and orchestrator completions. See
+[`dm-api/src/dm_api/logging_config.py`](./dm-api/src/dm_api/logging_config.py)
+for the full format and how to silence logging in a test.
+
+**Mocking the AI layer.** Two patterns are used throughout `dm-api/tests/`,
+depending on what you're testing:
+
+- **Route/endpoint tests** — patch the whole orchestrator so no AI backend is
+  ever constructed: `patch("dm_api.api.sessions.DMOrchestrator", return_value=mock_orch)`
+  (see `dm-api/tests/test_sessions_chat.py`).
+- **Orchestrator-level tests** — subclass the `AIBackend` ABC
+  (`dm_api.ai.backends.base.AIBackend`) with a scripted fake that replays
+  canned replies and records every call, so `DMOrchestrator` itself runs for
+  real against no network. See `_ScriptedBackend` in
+  `dm-api/tests/test_dm_orchestrator.py`.
+
+The full `dm-api` test suite runs against SQLite in-memory with
+`AI_PROVIDER=anthropic ANTHROPIC_API_KEY=test-key` (see **Running Tests**
+above) — that key is a dummy value; no test makes a real network call, they
+all go through one of the two mocks above.
+
+For **manual, interactive testing without burning API credits**, run the
+backend locally with `AI_PROVIDER=claude_cli` (uses the `claude` CLI on your
+`PATH` instead of the Anthropic SDK — host-only, not supported in Docker; see
+the README's Quick Start note).
+
+---
+
 ## Code Style Guide
 
 ### Python
