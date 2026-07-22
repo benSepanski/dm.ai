@@ -57,9 +57,14 @@ def _roll_damage(
         return 0
     multiplier = cantrip_dice_multiplier(caster_level) if spell.is_cantrip else 1
     extra_dice = 0
+    extra_flat = 0
     if upcast_levels > 0 and upcast_per_slot is not None:
         extra_dice = upcast_per_slot.num_dice * upcast_levels
-    total, _ = roll_dice(*_scale_dice(dice, multiplier, extra_dice).parsed())
+        # SPL-05: the per-slot upcast notation's own flat modifier (e.g.
+        # Magic Missile's "1d4+1") scales with the number of slots above
+        # base too, not just its dice.
+        extra_flat = upcast_per_slot.modifier * upcast_levels
+    total, _ = roll_dice(*_scale_dice(dice, multiplier, extra_dice, extra_flat).parsed())
     return max(0, total)
 
 
@@ -166,7 +171,17 @@ def cast_spell(
             spell, spell.damage_dice, spell.upcast_damage_per_slot, caster.level, upcast_levels
         )
         if spell.secondary_damage_dice is not None and spell.secondary_damage_type is not None:
-            secondary = _roll_damage(spell, spell.secondary_damage_dice, None, caster.level, 0)
+            # SPL-17: use the real upcast level and the secondary pool's own
+            # upcast dice (e.g. Flame Strike scales both fire and radiant;
+            # Ice Storm's `secondary_upcast_damage_per_slot` is None, so its
+            # cold pool correctly stays fixed).
+            secondary = _roll_damage(
+                spell,
+                spell.secondary_damage_dice,
+                spell.secondary_upcast_damage_per_slot,
+                caster.level,
+                upcast_levels,
+            )
         else:
             secondary = 0
 

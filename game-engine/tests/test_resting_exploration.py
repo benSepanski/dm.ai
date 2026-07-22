@@ -101,6 +101,29 @@ class TestShortRest:
         assert result.slots_restored
         assert char.spell_slots[0].remaining == char.spell_slots[0].maximum
 
+    def test_multiclass_short_rest_restores_only_pact_slots(self):
+        # SPL-15: Warlock 2 (pact: 2 slots at level 1) + Wizard 3 (standard:
+        # 4 slots at level 1) share a slot level but must not be merged —
+        # a short rest restores only the pact pool, leaving the standard
+        # level-1 slots spent.
+        char = _char(
+            char_class=CharacterClass.WARLOCK,
+            level=5,
+            class_levels=[
+                ClassLevelEntry(CharacterClass.WARLOCK, 2),
+                ClassLevelEntry(CharacterClass.WIZARD, 3),
+            ],
+        )
+        char.spell_slots = compute_spell_slots(char.class_levels)
+        for slot in char.spell_slots:
+            slot.remaining = 0
+        result = short_rest(char)
+        assert result.slots_restored
+        pact = next(s for s in char.spell_slots if s.is_pact)
+        standard_l1 = next(s for s in char.spell_slots if not s.is_pact and s.slot_level == 1)
+        assert pact.remaining == pact.maximum
+        assert standard_l1.remaining == 0
+
 
 class TestLongRest:
     def test_restores_everything(self):

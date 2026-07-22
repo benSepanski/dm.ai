@@ -11,6 +11,7 @@ Spell effect resolution (damage, conditions, healing) lives in
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field
 
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
@@ -103,7 +104,7 @@ def pact_slots_for_level(warlock_level: int) -> list[SpellSlotState]:
     if warlock_level <= 0:
         return []
     count, slot_level = _PACT_SLOTS[min(20, warlock_level)]
-    return [SpellSlotState(slot_level=slot_level, maximum=count, remaining=count)]
+    return [SpellSlotState(slot_level=slot_level, maximum=count, remaining=count, is_pact=True)]
 
 
 def compute_spell_slots(
@@ -119,8 +120,10 @@ def compute_spell_slots(
 
     Returns:
         Fresh (fully restored) :class:`SpellSlotState` list. Pact slots are
-        merged into the same list (the warlock's slots sit at their pact
-        slot level).
+        kept as their own entries — even at a slot level a standard slot
+        also occupies — rather than merged into the standard pool, since
+        only pact slots are restored by a short rest (SPL-15); see
+        :func:`SpellSlotState.is_pact`.
     """
     from game_engine.rules.dnd_5_5e.data.class_features import CLASS_PROGRESSIONS
 
@@ -138,13 +141,7 @@ def compute_spell_slots(
             total_caster_level += caster_level_contribution(ctype, entry.level)
 
     slots = slots_for_caster_level(total_caster_level)
-    for pact_slot in pact:
-        existing = next((s for s in slots if s.slot_level == pact_slot.slot_level), None)
-        if existing is None:
-            slots.append(pact_slot)
-        else:
-            existing.maximum += pact_slot.maximum
-            existing.remaining += pact_slot.remaining
+    slots.extend(pact)
     return sorted(slots, key=lambda s: s.slot_level)
 
 
@@ -169,26 +166,36 @@ def cantrip_dice_multiplier(character_level: int) -> int:
     return 1
 
 
-def _scale_dice(dice: DiceNotation, multiplier: int = 1, extra_dice: int = 0) -> DiceNotation:
-    """Return *dice* with the die count multiplied and extra dice added."""
+def _scale_dice(
+    dice: DiceNotation, multiplier: int = 1, extra_dice: int = 0, extra_flat: int = 0
+) -> DiceNotation:
+    """Return *dice* with the die count multiplied, extra dice, and extra flat modifier added."""
     count, sides, mod = dice.parsed()
     new_count = count * multiplier + extra_dice
-    suffix = f"{mod:+d}" if mod else ""
+    new_mod = mod + extra_flat
+    suffix = f"{new_mod:+d}" if new_mod else ""
     return DiceNotation(f"{new_count}d{sides}{suffix}")
 
 
+_DURATION_RE = re.compile(r"(\d+)\s*(round|minute|hour)")
+_ROUNDS_PER_UNIT = {"round": 1, "minute": 10, "hour": 600}
+
+
 def duration_rounds(duration: str) -> int | None:
-    """Best-effort conversion of a duration string to combat rounds."""
-    text = duration.lower()
-    if "1 round" in text:
-        return 1
-    if "1 minute" in text:
-        return 10
-    if "10 minutes" in text:
-        return 100
-    if "1 hour" in text:
-        return 600
-    return None
+    """Best-effort conversion of a duration string to combat rounds.
+
+    Matches any ``N round(s)``/``N minute(s)``/``N hour(s)`` substring (e.g.
+    "8 hours", "Concentration, up to 10 minutes") rather than a fixed set of
+    literal phrases (SPL-23), so durations outside the handful originally
+    special-cased don't silently fall through to ``None``. Returns ``None``
+    for genuinely unbounded/unparseable durations (e.g. "Until dispelled",
+    "Instantaneous").
+    """
+    match = _DURATION_RE.search(duration.lower())
+    if match is None:
+        return None
+    count = int(match.group(1))
+    return count * _ROUNDS_PER_UNIT[match.group(2)]
 
 
 @dataclass

@@ -15,9 +15,16 @@ from typing import Any
 from game_engine.types.enums import CharacterClass, Subclass
 
 
-@dataclass
+@dataclass(eq=False)
 class ClassLevelEntry:
-    """One class in a (possibly multiclassed) character's level breakdown."""
+    """One class in a (possibly multiclassed) character's level breakdown.
+
+    ``eq=False`` keeps identity-based ``__eq__``/``__hash__`` (the dataclass
+    default for ``eq=True`` sets ``__hash__`` to ``None``, since ``level`` and
+    ``subclass`` are mutated in place by :func:`level_up`) so an entry can be
+    used as a dict key, e.g. ``compute_spell_slots``'s ``caster_types``
+    override (SPL-22).
+    """
 
     character_class: CharacterClass
     level: int
@@ -103,17 +110,25 @@ class DeathSaveState:
 
 @dataclass
 class SpellSlotState:
-    """Spell slots of a single level (slot level 1-9)."""
+    """Spell slots of a single level (slot level 1-9).
+
+    ``is_pact`` distinguishes Warlock pact-magic slots from standard slots
+    (SPL-15): the two pools are never merged even when they share a slot
+    level, since only pact slots are restored by a short rest — both are
+    restored by a long rest.
+    """
 
     slot_level: int
     maximum: int
     remaining: int
+    is_pact: bool = False
 
-    def to_dict(self) -> dict[str, int]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "slot_level": self.slot_level,
             "maximum": self.maximum,
             "remaining": self.remaining,
+            "is_pact": self.is_pact,
         }
 
     @classmethod
@@ -123,6 +138,7 @@ class SpellSlotState:
             slot_level=int(d.get("slot_level", 1)),
             maximum=maximum,
             remaining=max(0, min(maximum, int(d.get("remaining", maximum)))),
+            is_pact=bool(d.get("is_pact", False)),
         )
 
 
