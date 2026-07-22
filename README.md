@@ -192,6 +192,7 @@ fill in the values relevant to your setup.
 | `FRONTEND_URL` | `http://localhost:5173` | CORS allowed origin |
 | `CONTEXT_TOKEN_LIMIT` | `180000` | Token count that triggers context summarization |
 | `CONTEXT_PRESERVE_LAST_N` | `5` | Messages kept verbatim before the summary |
+| `LOG_LEVEL` | `INFO` | `DEBUG`/`INFO`/`WARNING`/`ERROR`/`CRITICAL`. `DEBUG` shows AI call details and token counts — see `dm_api/logging_config.py` for the log line format |
 
 ## Project Structure
 
