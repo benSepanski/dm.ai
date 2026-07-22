@@ -13,6 +13,12 @@ from game_engine.rules.dnd_5_5e import (
     unequip_armor,
     unequip_shield,
 )
+from game_engine.rules.dnd_5_5e._equipment import (
+    armor_speed_penalty,
+    effective_speed,
+    has_stealth_disadvantage,
+    is_armor_untrained,
+)
 from game_engine.rules.dnd_5_5e.data.armor import compute_armor_class, get_armor
 from game_engine.types import (
     Ability,
@@ -132,6 +138,52 @@ class TestWornArmorAndEquip:
 
         unequip_armor(sheet)
         assert sheet.ac == ud_ac  # UD restored, not plain 10 + DEX
+
+
+class TestArmorTrainingAndStrengthPenalties:
+    """Workstream D2 (EQP-02/03/04): Str-minimum speed penalty, Stealth
+    disadvantage from noisy armor, and the armor-training gate consumed by
+    checks/saves/casting in ``_checks.py``/``_saves.py``/``_spell_resolution.py``."""
+
+    def test_understrength_armor_reduces_speed_by_10(self):
+        # Chain Mail's min_strength is 13; STR 10 is under it.
+        sheet = _build(armor_name="Chain Mail", ability_scores=_scores(strength=10))
+        assert sheet.speed == 30
+        assert effective_speed(sheet) == 20
+        assert armor_speed_penalty(sheet) == 10
+
+    def test_meeting_strength_minimum_no_speed_penalty(self):
+        sheet = _build(armor_name="Chain Mail", ability_scores=_scores(strength=13))
+        assert effective_speed(sheet) == 30
+        assert armor_speed_penalty(sheet) == 0
+
+    def test_unarmored_no_speed_penalty_regardless_of_strength(self):
+        sheet = _build(armor_name=None, ability_scores=_scores(strength=3))
+        assert effective_speed(sheet) == 30
+        assert armor_speed_penalty(sheet) == 0
+
+    def test_noisy_armor_flags_stealth_disadvantage(self):
+        sheet = _build(armor_name="Chain Mail")
+        assert has_stealth_disadvantage(sheet)
+
+    def test_no_stealth_disadvantage_unarmored(self):
+        sheet = _build(armor_name=None)
+        assert not has_stealth_disadvantage(sheet)
+
+    def test_untrained_armor_flagged(self):
+        # Wizards have no heavy-armor training.
+        sheet = _build(character_class=CharacterClass.WIZARD, armor_name=None)
+        equip_armor(sheet, "Plate Armor")
+        assert is_armor_untrained(sheet)
+
+    def test_trained_armor_not_flagged(self):
+        # Fighters are trained in heavy armor.
+        sheet = _build(character_class=CharacterClass.FIGHTER, armor_name="Chain Mail")
+        assert not is_armor_untrained(sheet)
+
+    def test_unarmored_never_untrained(self):
+        sheet = _build(character_class=CharacterClass.WIZARD, armor_name=None)
+        assert not is_armor_untrained(sheet)
 
 
 class TestCreatureSize:

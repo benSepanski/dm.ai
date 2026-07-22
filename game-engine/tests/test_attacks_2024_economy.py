@@ -243,3 +243,23 @@ class TestHelpAndHideSurviveBeginTurn:
             engine.resolve_action(_attack(), state)
         adv.assert_called_once()
         assert state.turn_state_for("a").hidden is False
+
+
+class TestHideConsumesArmorStealthPenalty:
+    """D2/EQP-02: noisy worn armor imposes disadvantage on the Hide check."""
+
+    def test_hide_with_noisy_armor_rolls_with_disadvantage(self, engine, state):
+        state.get_combatant("a").worn_armor = "Chain Mail"
+        with patch(
+            "game_engine.rules.dnd_5_5e._checks.roll_with_disadvantage",
+            return_value=(3, [3, 18]),
+        ) as dis:
+            engine.resolve_action(Action(ActionType.HIDE, "a", None), state)
+        dis.assert_called_once()
+
+    def test_hide_unarmored_rolls_plain(self, engine, state):
+        with patch(
+            "game_engine.rules.dnd_5_5e._checks.roll_dice", return_value=(18, [18])
+        ) as plain:
+            engine.resolve_action(Action(ActionType.HIDE, "a", None), state)
+        plain.assert_called_once()

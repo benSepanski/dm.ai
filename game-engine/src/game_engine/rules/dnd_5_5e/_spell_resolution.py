@@ -14,6 +14,7 @@ from game_engine.rules.dnd_5_5e._damage import (
     _apply_healing_impl,
     _concentration_check,
 )
+from game_engine.rules.dnd_5_5e._equipment import is_armor_untrained
 from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
 from game_engine.rules.dnd_5_5e.data.spells import SpellData
 from game_engine.rules.dnd_5_5e.spellcasting import (
@@ -86,7 +87,9 @@ def cast_spell(
 
     Whether the spell is known/prepared, and the Magic action's economy,
     are the caller's responsibility (see :mod:`._actions`). This function
-    does enforce the 2024 PHB "one leveled spell per turn" rule (SPL-06):
+    rejects the cast outright if the caster is wearing body armor they
+    aren't trained to use (D2/EQP-03). It also enforces the 2024 PHB
+    "one leveled spell per turn" rule (SPL-06):
     a leveled (non-cantrip) spell cast without ``as_ritual`` is rejected if
     the caster already cast one earlier this turn, tracked via
     ``TurnState.leveled_spell_cast``; cantrips and ritual casts are exempt.
@@ -103,6 +106,14 @@ def cast_spell(
     Returns:
         :class:`~game_engine.rules.dnd_5_5e.spellcasting.SpellCastResult`.
     """
+    # D2/EQP-03: 2024 PHB — wearing armor you aren't trained to use prevents
+    # spellcasting entirely, cantrips and rituals included.
+    if is_armor_untrained(caster):
+        return _fail(
+            spell,
+            "armor_untrained",
+            f"{caster.name} can't cast spells while wearing armor they aren't trained to use.",
+        )
     used_slot: int | None = None
     if as_ritual:
         if not spell.ritual:

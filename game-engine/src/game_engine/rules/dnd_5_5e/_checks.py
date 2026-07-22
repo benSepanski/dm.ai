@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import CheckResult
+from game_engine.rules.dnd_5_5e._equipment import is_armor_untrained
 from game_engine.types import Ability, CharacterSheet, Condition, Skill, TurnState
 
 # Conditions that impose disadvantage on ability checks (2024 PHB).
@@ -151,6 +152,10 @@ def _roll_check_impl(
 
     # Poisoned/frightened impose disadvantage on ability checks.
     if any(c in _CHECK_DISADVANTAGE_CONDITIONS for c in char.conditions):
+        disadvantage = True
+
+    # D2/EQP-03: untrained armor imposes disadvantage on STR/DEX checks.
+    if ability in (Ability.STRENGTH, Ability.DEXTERITY) and is_armor_untrained(char):
         disadvantage = True
 
     # Help (2024 PHB): advantage on the helped character's next roll, of

@@ -19,6 +19,7 @@ from game_engine.rules.dnd_5_5e.spellcasting import (
 from game_engine.types import (
     Ability,
     AbilityScoreSet,
+    ArmorCategory,
     CastingTime,
     CharacterClass,
     CharacterSheet,
@@ -195,6 +196,27 @@ class TestCasting:
         result = cast_spell(caster, _spell(), Ability.INTELLIGENCE, self._state(caster), [])
         assert not result.success
         assert result.error == "no_slot"
+
+    def test_untrained_armor_blocks_leveled_cast(self):
+        # D2/EQP-03: 2024 PHB — untrained armor prevents spellcasting entirely.
+        caster = _caster(worn_armor="Plate Armor", armor_training=[])
+        slots_before = next(s for s in caster.spell_slots if s.slot_level == 1).remaining
+        result = cast_spell(caster, _spell(), Ability.INTELLIGENCE, self._state(caster), ["t"])
+        assert not result.success
+        assert result.error == "armor_untrained"
+        assert next(s for s in caster.spell_slots if s.slot_level == 1).remaining == slots_before
+
+    def test_untrained_armor_blocks_cantrip_too(self):
+        caster = _caster(worn_armor="Plate Armor", armor_training=[])
+        cantrip = _spell(level=0, damage_type=DamageType.FIRE, damage_dice=DiceNotation("1d10"))
+        result = cast_spell(caster, cantrip, Ability.INTELLIGENCE, self._state(caster), ["t"])
+        assert not result.success
+        assert result.error == "armor_untrained"
+
+    def test_trained_armor_does_not_block_cast(self):
+        caster = _caster(worn_armor="Padded Armor", armor_training=[ArmorCategory.LIGHT])
+        result = cast_spell(caster, _spell(), Ability.INTELLIGENCE, self._state(caster), ["t"])
+        assert result.success
 
     def test_upcast_adds_dice(self):
         caster = _caster()

@@ -20,7 +20,7 @@ The 12 workstreams below (A–M) group the findings by root cause. This section 
 |------|----------|------|
 | **A** ✅ done — TurnState lifecycle: split per-turn economy state from cross-turn effect state with per-effect expiry | ACT-03 ✅ done, ACT-19 ✅ done | M |
 | **C** ✅ done — Weapon-registry ↔ attack-resolution bridge (`WeaponData` → `AttackDetails`, incl. dm-api) | EQP-01 ✅ done, EQP-08 🟡 partial (Heavy wired; Ammunition/Loading deferred to D), ACT-18 ✅ done | L |
-| **D1** ✅ done — Worn-armor identity + equip/unequip AC recompute + shield-as-body guard + `CharacterSheet.size` | EQP-04 🟡 (worn-armor stored; Str-min speed in D2), EQP-06 ✅, EQP-07 🟡 (AC recompute done via `worn_armor`/`worn_shield`; `InventoryItem.equipped`-driven weapon selection deferred to D2/D3) | L |
+| **D1** ✅ done — Worn-armor identity + equip/unequip AC recompute + shield-as-body guard + `CharacterSheet.size` | EQP-04 ✅ done (worn-armor stored; Str-min speed penalty in D2), EQP-06 ✅, EQP-07 🟡 (AC recompute done via `worn_armor`/`worn_shield`; `InventoryItem.equipped`-driven weapon selection deferred to D3) | L |
 | **F.1** — Make `_apply_damage_impl` return post-mitigation damage; route all damage paths through one concentration check | groundwork for SPL-02, EFF-07 | M |
 
 **Exit criteria:** Help/Sap/Vex/Hide effects survive `begin_turn` and are consumed on the correct later turn; an attack built through dm-api carries mastery/properties/proficiency from the registry; every damage path reports effective (post-immunity/resistance) damage.
@@ -51,10 +51,10 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 
 | Work | Findings | Size |
 |------|----------|------|
-| **G** — Death & damage ordering: instant death at 0 HP, death-save reset on 3 successes, temp HP at 0 HP, crit doubles dice only | EFF-08, EFF-09, EFF-13, ACT-09 | M |
-| **D1** ✅ done / **D2** — Worn-armor identity ✅, equip/unequip AC recompute ✅, shield-as-armor guard ✅; Str-min speed, stealth disadvantage, armor-training penalties (D2, open) | EQP-06 ✅, EQP-07 🟡 (AC recompute done; `InventoryItem.equipped` weapon selection in D2/D3), EQP-04 🟡 (D2), EQP-02, EQP-03 | L |
+| **G** ✅ done — Death & damage ordering: instant death at 0 HP, death-save reset on 3 successes, temp HP at 0 HP, crit doubles dice only | EFF-08 ✅, EFF-09 ✅, EFF-13 ✅, ACT-09 ✅ | M |
+| **D1** ✅ done / **D2** ✅ done — Worn-armor identity ✅, equip/unequip AC recompute ✅, shield-as-armor guard ✅; Str-min speed ✅, stealth disadvantage ✅, armor-training penalties ✅ | EQP-06 ✅, EQP-07 🟡 (AC recompute done; `InventoryItem.equipped` weapon selection in D3), EQP-04 ✅, EQP-02 ✅, EQP-03 ✅ | L |
 | **E** ✅ done — Mastery mechanics (Slow/Cleave/Graze/unarmed-strike + Push & grapple/shove size gates, now that `CharacterSheet.size` exists) | ACT-07 ✅, ACT-17 ✅, ACT-16 ✅, ACT-11 ✅ | M |
-| **I1** — Stale 2024 condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, single source of truth | EFF-06, EFF-05, EFF-14, EFF-11 | S–M |
+| **I1** ✅ done — Stale 2024 condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, single source of truth | EFF-06 ✅, EFF-05 ✅, EFF-14 ✅, EFF-11 ✅ | S–M |
 | **H** — Check/initiative correctness ✅ done (independent quick win; can land in any phase) | ACT-10, ACT-20, ACT-12 | S |
 
 **Exit criteria:** massive damage at 0 HP kills; crits double dice only; heavy armor slows weak wearers and noisy armor hinders Hide; Slow/Push/Cleave have table effects; save proficiency no longer leaks into ability checks.
@@ -64,7 +64,7 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 | Work | Findings | Size |
 |------|----------|------|
 | **J (remainder)** — SpellData vocabulary: non-damage effects, multi-beam, on-hit riders, staged/choice conditions, divided healing, HP-max buffs, thresholds; spell-attack adv/disadv + crits | SPL-08, SPL-09, SPL-10, SPL-11, SPL-12, SPL-13, SPL-14, SPL-18, SPL-20, SPL-21 | L |
-| **K** — Slot & upcast math: pact-slot separation, flat-modifier upcast, secondary-pool upcast, Ice Storm dice, typed durations, hashable ClassLevelEntry | SPL-15, SPL-05, SPL-17, SPL-19, SPL-23, SPL-22 | M |
+| **K** ✅ done — Slot & upcast math: pact-slot separation, flat-modifier upcast, secondary-pool upcast, Ice Storm dice, typed durations, hashable ClassLevelEntry | SPL-15 ✅, SPL-05 ✅, SPL-17 ✅, SPL-19 ✅, SPL-23 ✅, SPL-22 ✅ | M |
 | **I4** — Repeat-save/save-to-end hook + exhaustion stacking (pairs with J staged conditions) | SPL-04, EFF-03 | M |
 | **I3** — Condition source-identity: Grappled and Charmed relational effects | EFF-04, EFF-02 | M |
 
@@ -182,34 +182,49 @@ field; `rules.dnd_5_5e` exposes `equip_armor`/`unequip_armor`/`equip_shield`/
 barbarian/monk Unarmored Defense on the armor table) so AC recomputes on
 every equip change. `compute_armor_class` now raises on a shield passed as
 body armor, and `build_character` warns and treats `armor_name='Shield'` as
-unarmored+shield rather than yielding AC 2. **D2/D3 remain** (Str-min speed,
-stealth disadvantage, armor-training penalties; starting equipment/currency/
+unarmored+shield rather than yielding AC 2.
+
+**D2 status: ✅ done.** `_equipment.py` gained three consumers of the
+worn-armor identity D1 introduced: `armor_speed_penalty`/`effective_speed`
+(−10 ft while STR < the worn armor's `min_strength`, layered onto
+`CharacterSheet.effective_speed` — a pure types-layer property with no
+armor-registry visibility — from the rules layer instead, and consumed by
+`_actions._effective_speed` so Dash's movement reflects it too),
+`has_stealth_disadvantage` (consumed by the Hide action in `_actions.py`,
+passed as `disadvantage` to `_roll_check_impl`), and `is_armor_untrained`
+(refactored out of D1's existing `equip_armor` warning — armor-category not
+in `CharacterSheet.armor_training`). `is_armor_untrained` is now also
+consumed by `_checks._roll_check_impl` and `_saves._roll_saving_throw_impl`
+(disadvantage on STR/DEX checks and saves only) and by
+`_spell_resolution.cast_spell` (rejects the cast outright, cantrips and
+rituals included, with a new `"armor_untrained"` error code) — the 2024 PHB
+armor-training penalty. **D3 remains** (starting equipment/currency/
 encumbrance/tools).
 
 Originally, `build_character` applied AC once at creation and discarded the armor — `CharacterSheet` had no worn-armor field — so Str-minimum speed penalties, stealth disadvantage, and armor-training penalties were structurally unreachable, and AC never recomputed.
 
 **Findings**
-- Heavy-armor Str minimum never reduces speed; worn-armor identity never stored (`character_builder.py:269` [EQP-04], **major**) 🟡 worn-armor identity now stored (D1 ✅); Str-min speed penalty still open (D2)
-- Armor `stealth_disadvantage` never consumed — Hide ignores noisy armor (`_actions.py:179` [EQP-02], **major**)
-- Armor training & weapon proficiency have no in-play effect (`character_builder.py:228` [EQP-03], **major**)
-- `InventoryItem.equipped` never read — no equip/unequip recomputes AC or selects weapons (`character_state.py:163` [EQP-07], **major**) 🟡 equip/unequip now recompute AC (D1 ✅, via `worn_armor`/`worn_shield` + `_equipment.equip_armor`); the `InventoryItem.equipped` flag itself is still inert and weapon selection is deferred to D2/D3
-- Passing `'Shield'` as body armor yields AC 2 (`data/armor.py:194` [EQP-06], **major**)
+- Heavy-armor Str minimum never reduces speed; worn-armor identity never stored (`character_builder.py:269` [EQP-04], **major**) ✅ done — worn-armor identity (D1) and the Str-min speed penalty (D2, `_equipment.effective_speed`) are both wired
+- Armor `stealth_disadvantage` never consumed — Hide ignores noisy armor (`_actions.py:179` [EQP-02], **major**) ✅ done — Hide passes `has_stealth_disadvantage(actor)` as `disadvantage`
+- Armor training & weapon proficiency have no in-play effect (`character_builder.py:228` [EQP-03], **major**) ✅ done — weapon proficiency already fed the attack-roll proficiency bonus (Workstream C's `AttackDetails.proficient`); armor training now disadvantages STR/DEX checks/saves and blocks casting (D2, `is_armor_untrained`)
+- `InventoryItem.equipped` never read — no equip/unequip recomputes AC or selects weapons (`character_state.py:163` [EQP-07], **major**) 🟡 equip/unequip now recompute AC (D1 ✅, via `worn_armor`/`worn_shield` + `_equipment.equip_armor`); the `InventoryItem.equipped` flag itself is still inert and weapon selection is deferred to D3
+- Passing `'Shield'` as body armor yields AC 2 (`data/armor.py:194` [EQP-06], **major**) ✅ done
 - Starting equipment & gold never applied to inventory/currency (`character_builder.py:284` [EQP-05], **major**)
 - `is_encumbered` has no rule consumers (`exploration.py:44` [EQP-10], **minor**)
 - `Currency.total_gp` never consumed; no purchase/spend logic (`character_state.py:141` [EQP-11], **minor**)
 - `ToolData.ability` dead — tool checks ignore governing ability & proficiency (`data/gear.py:28` [EQP-09], **minor**)
 
 **Fix approach**:
-1. ✅ Add a **worn-armor / equipped-weapon** concept to `CharacterSheet` (store the equipped armor and shield identity, not just the derived AC) plus an equip/unequip API that recomputes AC via `compute_sheet_ac`. *(equipped-weapon selection itself is deferred to D2/D3.)*
+1. ✅ Add a **worn-armor / equipped-weapon** concept to `CharacterSheet` (store the equipped armor and shield identity, not just the derived AC) plus an equip/unequip API that recomputes AC via `compute_sheet_ac`. *(equipped-weapon selection itself is deferred to D3.)*
 2. ✅ Guard `compute_armor_class` against `ArmorCategory.SHIELD` passed as body armor (raises `ValueError`, no longer returns base_ac 2); `build_character` warns and treats `armor_name='Shield'` as unarmored+shield.
-3. Feed worn armor into `effective_speed` (−10 ft while STR < `min_strength`) and into the Hide check (`disadvantage=True` when the worn armor has `stealth_disadvantage`).
-4. Apply the 2024 **armor-training** penalty: disadvantage on STR/DEX D20 tests and can't-cast while wearing untrained armor — wire through `_advantage_state`, `_checks`, `_saves`, and a spellcasting gate.
+3. ✅ Feed worn armor into `effective_speed` (−10 ft while STR < `min_strength`, `_equipment.effective_speed`) and into the Hide check (`disadvantage=True` when the worn armor has `stealth_disadvantage`, `_equipment.has_stealth_disadvantage`).
+4. ✅ Apply the 2024 **armor-training** penalty: disadvantage on STR/DEX D20 tests (`_checks.py`, `_saves.py`) and can't-cast (`_spell_resolution.cast_spell`) while wearing untrained armor, via `_equipment.is_armor_untrained`.
 5. Expand `BackgroundData.equipment` (including gold and PACK contents) into `inventory`/`currency` at build time; persist inventory in dm-api (`stats=sheet.to_dict()`), not just as a string column.
 6. Consume `is_encumbered` in `effective_speed`/travel pace; add tool-check resolution mapping tool name → `ToolData.ability` + proficiency; add basic currency debit/credit for purchases.
 
-**Tests**: STR-10 fighter in Chain Mail has speed 20; character in Plate rolls Hide with disadvantage; wizard in Plate gets disadvantage on DEX saves and can't cast; `armor_name='Shield'` no longer yields AC 2; a built character has non-empty inventory and starting gp; over-capacity inventory reduces speed; equipping/unequipping armor recomputes AC.
+**Tests**: ✅ STR-10 fighter in Chain Mail has speed 20 (`test_equipment_2024.py::TestArmorTrainingAndStrengthPenalties`); ✅ Hide with noisy armor worn rolls with disadvantage (`test_attacks_2024_economy.py::TestHideConsumesArmorStealthPenalty`); ✅ untrained armor gives disadvantage on STR/DEX checks (`test_engine_checks.py::TestArmorTrainingDisadvantage`) and saves (`test_saves_death.py::test_untrained_armor_disadvantages_strength_and_dex_saves`) but not mental ones, and blocks casting including cantrips (`test_spellcasting.py::TestCasting::test_untrained_armor_blocks_leveled_cast`/`test_untrained_armor_blocks_cantrip_too`); ✅ `armor_name='Shield'` no longer yields AC 2; a built character has non-empty inventory and starting gp (D3, open); over-capacity inventory reduces speed (D3, open); equipping/unequipping armor recomputes AC.
 
-**Size**: L. The worn-armor field (step 1) is shared infrastructure; the Str-min/stealth/training consumers depend on it. Best done as D1 (worn-armor field + AC recompute + shield guard), D2 (speed/stealth/training consumers), D3 (starting equipment/currency/encumbrance/tools).
+**Size**: L. The worn-armor field (step 1) is shared infrastructure; the Str-min/stealth/training consumers depend on it. D1 ✅ (worn-armor field + AC recompute + shield guard), D2 ✅ (speed/stealth/training consumers), D3 (starting equipment/currency/encumbrance/tools) remains.
 
 ---
 
@@ -645,7 +660,7 @@ casting time, range, areas of effect" row is corrected from a blanket ✅ to
 
 **Majors that affect ordinary play (fix next):**
 7. **Workstream G** ✅ done (instant death, death-save reset, crit modifier doubling — EFF-08/EFF-09/EFF-13/ACT-09) — F's effective-damage refactor (`_apply_damage_effective`) was reused here. EFF-16 (long-rest-at-0-HP) investigated and deliberately not changed; see the workstream section.
-8. **Workstream D** (armor/proficiency/inventory) — **D1 ✅ done** (worn-armor identity + equip/unequip AC recompute + shield guard + `CharacterSheet.size`); **D2** (Str-min speed / stealth / armor-training penalties) and **D3** (starting equipment/currency/encumbrance/tools) remain.
+8. **Workstream D** (armor/proficiency/inventory) — **D1 ✅ done** (worn-armor identity + equip/unequip AC recompute + shield guard + `CharacterSheet.size`) and **D2 ✅ done** (Str-min speed penalty, Hide stealth disadvantage, armor-training disadvantage on STR/DEX checks/saves and the can't-cast gate); **D3** (starting equipment/currency/encumbrance/tools) remains.
 9. **Workstream E** ✅ done — Slow/Cleave/Graze/unarmed-strike plus the Push and grapple/shove size gates, the latter unblocked by D1's `CharacterSheet.size` field.
 10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) and **I2** ✅ done (condition-immunity centralization) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
 11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
