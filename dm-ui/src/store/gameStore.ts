@@ -81,6 +81,14 @@ export interface LocationData {
   description: string | null;
 }
 
+// See CharacterResponse.spell_slots (api/client.ts).
+export interface SpellSlot {
+  slot_level: number;
+  maximum: number;
+  remaining: number;
+  is_pact: boolean;
+}
+
 export interface CharacterData {
   id: string;
   // CharacterType enum value from the backend: "PC" | "NPC" | "MONSTER".
@@ -95,6 +103,9 @@ export interface CharacterData {
   stats: Record<string, unknown> | null;
   // Flat list of item-name strings; see CharacterResponse.equipment.
   equipment: string[] | null;
+  // See CharacterResponse.known_spells / .spell_slots.
+  known_spells: string[] | null;
+  spell_slots: SpellSlot[] | null;
 }
 
 // Grid cell coordinates of a battle-map token, keyed by character id.

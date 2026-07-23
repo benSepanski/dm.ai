@@ -9,8 +9,9 @@ the full record.
 What players may see:
 - **Characters** — PCs in full (it's their own sheet) minus DM bookkeeping
   (``known_facts``, ``interaction_log_summary``). NPCs and monsters are
-  reduced to name/race/level/location: stat blocks, spells, equipment, and
-  roleplay hooks (personality/ideals/bonds/flaws) would spoil encounters.
+  reduced to name/race/level/location: stat blocks, spells (including the
+  derived ``known_spells``/``spell_slots``), equipment, and roleplay hooks
+  (personality/ideals/bonds/flaws) would spoil encounters.
 - **Locations** — name, type, description, and map data; ``lore`` and
   ``history`` are the DM's planned reveals.
 - **Worlds** — name, setting, and themes (the campaign pitch);
@@ -45,6 +46,8 @@ def character_read_for(character: Character, role: ClientRole) -> CharacterRead:
                 "speed": None,
                 "abilities": None,
                 "spells": None,
+                "known_spells": None,
+                "spell_slots": None,
                 "equipment": None,
                 "personality_traits": None,
                 "ideals": None,

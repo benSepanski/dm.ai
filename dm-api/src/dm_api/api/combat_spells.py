@@ -124,7 +124,7 @@ def _cast_log_entry(combat: CombatState, actor_id: str, result: SpellCastResult)
         "spell": result.spell_name,
         "slot_level_used": result.slot_level_used,
         "concentration_started": result.concentration_started,
-        "flavor": result.flavor_text,
+        "flavor_text": result.flavor_text,
         "outcomes": [
             {
                 "target_id": o.target_id,

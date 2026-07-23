@@ -34,26 +34,6 @@ hard/confusing/missing an affordance a real player or DM would expect.
 
 ## Open
 
-### PT-28 — No way to cast a spell in combat; only Attack / Dash / Dodge
-- **Status:** open
-- **Severity:** major
-- **Type:** usability
-- **Phase:** 6 — Combat
-- **Found:** runs/2026-07-18-trial-run.md
-- **Steps:** Started combat with a Wizard (Kira Vael, cantrips Fire Bolt / Ray
-  of Frost / Light and spells Burning Hands / Magic Missile / Mage Armor /
-  Shield). On her turn, inspected the combat action controls.
-- **Observed:** The only structured combat actions are **Attack**, **Dash**,
-  and **Dodge**, plus a target picker. There is no cast-spell control, no
-  cantrip/spell list, and no spell-slot UI — a spellcaster cannot cast anything
-  through the combat tracker.
-- **Expected:** A way to cast known/prepared spells in combat (attack-roll and
-  saving-throw spells), consuming slots, per the Phase 6 acceptance check
-  ("one spell (attack-roll and/or save)").
-- **Notes:** Also no bonus action / reaction / other 2024 action-economy
-  controls. The engine supports spellcasting (`cast_spell`), so this is a
-  combat-UI gap rather than a rules gap.
-
 ### PT-30 — Human "Versatile" origin feat (feat of choice) is never offered in the wizard
 - **Status:** open
 - **Severity:** minor
@@ -74,6 +54,59 @@ hard/confusing/missing an affordance a real player or DM would expect.
   to the user with no way to satisfy it.
 
 ## Resolved
+
+### PT-28 — No way to cast a spell in combat; only Attack / Dash / Dodge
+- **Status:** resolved
+- **Severity:** major
+- **Type:** usability
+- **Phase:** 6 — Combat
+- **Found:** runs/2026-07-18-trial-run.md
+- **Steps:** Started combat with a Wizard (Kira Vael, cantrips Fire Bolt / Ray
+  of Frost / Light and spells Burning Hands / Magic Missile / Mage Armor /
+  Shield). On her turn, inspected the combat action controls.
+- **Observed:** The only structured combat actions are **Attack**, **Dash**,
+  and **Dodge**, plus a target picker. There is no cast-spell control, no
+  cantrip/spell list, and no spell-slot UI — a spellcaster cannot cast anything
+  through the combat tracker.
+- **Expected:** A way to cast known/prepared spells in combat (attack-roll and
+  saving-throw spells), consuming slots, per the Phase 6 acceptance check
+  ("one spell (attack-roll and/or save)").
+- **Notes:** Also no bonus action / reaction / other 2024 action-economy
+  controls. The engine supports spellcasting (`cast_spell`), so this is a
+  combat-UI gap rather than a rules gap.
+- **Resolution:** The `POST .../combat/cast-spell` endpoint
+  (`dm-api/src/dm_api/api/combat_spells.py`) was already fully wired to the
+  engine's `cast_spell` — the gap was purely that nothing in the UI called
+  it, and (found while wiring it up) its combat-log entry wrote a
+  `"flavor"` key instead of the `"flavor_text"` key every other action-log
+  entry uses (`combat.py`), so even a curl'd cast would never have surfaced
+  its narration in the chat feed; fixed alongside the UI. `CharacterRead`
+  (`dm-api/src/dm_api/db/models/character.py`) gained two derived,
+  request-boundary-typed fields — `known_spells` (deduped union of
+  `stats.known_spells`/`stats.prepared_spells`, falling back to the legacy
+  top-level `spells` column for characters created outside the wizard) and
+  `spell_slots` (from `stats.spell_slots`) — computed by a
+  `model_validator(mode="after")` that intentionally degrades to `None`
+  rather than `[]` when the source data is itself `None`, so it survives
+  FastAPI's response-model re-validation of an already player-redacted
+  instance without clobbering the redaction back to a visible empty list
+  (see `visibility.py`, which now also hides both fields for NPCs/monsters
+  viewed by a player). `CombatTracker.tsx`'s `CombatActions` renders a "Cast
+  Spell" panel (spell picker restricted to the actor's `known_spells`,
+  optional multi-target chip picker, optional upcast slot-level input)
+  whenever the current actor has any known spells, posting to the new
+  `api.castSpell` client method and pushing the returned `flavor_text` into
+  the chat feed exactly like Attack/Dash/Dodge. Regression tests:
+  `dm-api/tests/test_characters.py::test_known_spells_derived_from_spells_column`
+  / `test_known_spells_derived_from_stats_blob` /
+  `test_known_spells_and_spell_slots_hidden_for_monster_viewed_by_player`,
+  and the `flavor_text` assertion added to
+  `dm-api/tests/test_combat_spells.py::test_cast_cantrip_logs_and_consumes_no_slot`.
+  Casting a spell with no attack roll and no save (a pure buff/utility spell)
+  is still only as good as the engine's own `SpellData` vocabulary — see
+  Workstream J in `docs/engine-correctness-remediation.md` for the known
+  gaps there (Shield/Counterspell/Bless etc.); this fix is the UI path, not
+  a new engine capability.
 
 ### PT-29 — Combat "Attack" uses an unarmed strike, ignoring equipped weapons and weapon masteries
 - **Status:** resolved

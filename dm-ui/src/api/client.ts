@@ -58,6 +58,14 @@ export interface ChatMessageResponse {
   timestamp: string;
 }
 
+// A single spell-slot level's capacity. Mirrors dm_api.db.models.character.SpellSlotRead.
+export interface SpellSlot {
+  slot_level: number;
+  maximum: number;
+  remaining: number;
+  is_pact: boolean;
+}
+
 export interface CharacterResponse {
   id: string;
   world_id: string;
@@ -76,6 +84,12 @@ export interface CharacterResponse {
   // Names that match the weapon registry (see CreationOptions.weapon_mastery_options)
   // are offered as Attack weapon choices in the combat tracker (PT-29).
   equipment: string[] | null;
+  // Derived server-side (CharacterRead._derive_spellcasting_fields) from the
+  // engine's known_spells/prepared_spells/spells column — offered as Cast
+  // Spell choices in the combat tracker (PT-28). null means none known, or
+  // hidden because this is an NPC/monster viewed by a player.
+  known_spells: string[] | null;
+  spell_slots: SpellSlot[] | null;
 }
 
 // ---- Character creation (engine-backed) ----
@@ -312,6 +326,15 @@ export interface CombatActionRequest {
   attack_details?: AttackDetailsRequest;
 }
 
+// Mirrors dm_api.db.models.combat.CastSpellRequest. slot_level omitted lets
+// the engine default to the spell's own level (no upcast).
+export interface CastSpellRequest {
+  actor_id: string;
+  spell_name: string;
+  target_ids: string[];
+  slot_level?: number;
+}
+
 export type AIProvider = "anthropic" | "claude_cli";
 
 // Per-game overrides; null means "inherit the deployment default".
@@ -413,6 +436,11 @@ export const api = {
     request<CombatStateResponse>(`/sessions/${sessionId}/combat/action`, {
       method: "POST",
       body: JSON.stringify(action),
+    }),
+  castSpell: (sessionId: string, payload: CastSpellRequest) =>
+    request<CombatStateResponse>(`/sessions/${sessionId}/combat/cast-spell`, {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
   nextTurn: (sessionId: string) =>
     request<CombatStateResponse>(`/sessions/${sessionId}/combat/next-turn`, { method: "POST" }),

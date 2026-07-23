@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type CombatStateResponse, type WeaponMasteryOption } from "../../api/client";
+import { mapCharacterResponse } from "../../api/mappers";
 import { useGameStore, type ActiveCombat, type CharacterData, type Combatant } from "../../store/gameStore";
 
 // Build the ActiveCombat view by zipping initiative_order (has initiative score)
@@ -124,11 +125,35 @@ function CombatActions({
   const { setCombat, addMessage, characters } = useGameStore();
   const [targetId, setTargetId] = useState<string | null>(null);
   const [weaponName, setWeaponName] = useState(UNARMED_STRIKE);
+  const [spellName, setSpellName] = useState("");
+  const [spellTargetIds, setSpellTargetIds] = useState<string[]>([]);
+  const [slotLevelInput, setSlotLevelInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const targets = combatants.filter((c) => c.char_id !== currentActorId);
-  const actorEquipment = characters.find((c) => c.id === currentActorId)?.equipment;
-  const weaponChoices = equippedWeaponNames(actorEquipment, weaponOptions);
+  const actor = characters.find((c) => c.id === currentActorId);
+  const weaponChoices = equippedWeaponNames(actor?.equipment, weaponOptions);
+  const knownSpells = actor?.known_spells ?? [];
+  const selectedSpell = spellName || knownSpells[0] || "";
+
+  // Shared by Attack/Dash/Dodge (submitAction) and Cast Spell (castSpell) —
+  // both return a CombatStateResponse whose newest combat_log entry may
+  // carry narratable flavor_text (PT-23/PT-28).
+  const pushFlavorText = useCallback(
+    (result: CombatStateResponse) => {
+      const lastLog = result.combat_log?.[result.combat_log.length - 1];
+      const flavorText = lastLog?.flavor_text;
+      if (typeof flavorText === "string" && flavorText) {
+        addMessage({
+          id: `combat-${result.id}-${result.combat_log!.length}`,
+          role: "system",
+          content: flavorText,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    },
+    [addMessage]
+  );
 
   const handleAction = useCallback(
     async (actionType: string, needsTarget: boolean) => {
@@ -146,23 +171,47 @@ function CombatActions({
           ...(actionType === "Attack" ? { attack_details: { weapon_name: weaponName } } : {}),
         });
         setCombat(mapCombatResponse(result));
-        const lastLog = result.combat_log?.[result.combat_log.length - 1];
-        const flavorText = lastLog?.flavor_text;
-        if (typeof flavorText === "string" && flavorText) {
-          addMessage({
-            id: `combat-${result.id}-${result.combat_log!.length}`,
-            role: "system",
-            content: flavorText,
-            timestamp: new Date().toISOString(),
-          });
-        }
+        pushFlavorText(result);
         setTargetId(null);
       } catch (err) {
         setError(parseApiError(err));
       }
     },
-    [sessionId, currentActorId, targetId, weaponName, setCombat, addMessage]
+    [sessionId, currentActorId, targetId, weaponName, setCombat, pushFlavorText]
   );
+
+  const toggleSpellTarget = useCallback((id: string) => {
+    setSpellTargetIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }, []);
+
+  const handleCastSpell = useCallback(async () => {
+    if (!currentActorId || !selectedSpell) return;
+    setError(null);
+    try {
+      const trimmedSlot = slotLevelInput.trim();
+      const result = await api.castSpell(sessionId, {
+        actor_id: currentActorId,
+        spell_name: selectedSpell,
+        target_ids: spellTargetIds,
+        ...(trimmedSlot ? { slot_level: parseInt(trimmedSlot, 10) } : {}),
+      });
+      setCombat(mapCombatResponse(result));
+      pushFlavorText(result);
+      setSpellTargetIds([]);
+    } catch (err) {
+      setError(parseApiError(err));
+    }
+  }, [
+    sessionId,
+    currentActorId,
+    selectedSpell,
+    spellTargetIds,
+    slotLevelInput,
+    setCombat,
+    pushFlavorText,
+  ]);
 
   const handleNextTurn = useCallback(async () => {
     try {
@@ -227,6 +276,105 @@ function CombatActions({
               ))}
             </select>
           </label>
+        </div>
+      )}
+      {knownSpells.length > 0 && (
+        <div
+          style={{
+            marginBottom: 6,
+            padding: 6,
+            background: "#151530",
+            borderRadius: 4,
+          }}
+        >
+          <label style={{ fontSize: 11, color: "#aaa", display: "block", marginBottom: 4 }}>
+            Spell
+            <select
+              value={selectedSpell}
+              onChange={(e) => setSpellName(e.target.value)}
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: 2,
+                padding: "3px 4px",
+                background: "#111",
+                border: "1px solid #555",
+                borderRadius: 3,
+                color: "#fff",
+                fontSize: 12,
+              }}
+            >
+              {knownSpells.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </label>
+          {targets.length > 0 && (
+            <div style={{ marginBottom: 4 }}>
+              <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>
+                Targets (optional — pick 0+)
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {targets.map((t) => (
+                  <button
+                    key={t.char_id}
+                    onClick={() => toggleSpellTarget(t.char_id)}
+                    style={{
+                      padding: "3px 8px",
+                      background: spellTargetIds.includes(t.char_id) ? "#7c6af7" : "#222",
+                      color: "#fff",
+                      border: "1px solid #444",
+                      borderRadius: 12,
+                      cursor: "pointer",
+                      fontSize: 11,
+                    }}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <label style={{ fontSize: 11, color: "#aaa", display: "block", marginBottom: 4 }}>
+            Slot Level (blank = spell's own level)
+            <input
+              type="number"
+              min={1}
+              max={9}
+              value={slotLevelInput}
+              onChange={(e) => setSlotLevelInput(e.target.value)}
+              placeholder="e.g. 3 to upcast"
+              style={{
+                display: "block",
+                width: "100%",
+                marginTop: 2,
+                padding: "3px 4px",
+                background: "#111",
+                border: "1px solid #555",
+                borderRadius: 3,
+                color: "#fff",
+                fontSize: 12,
+              }}
+            />
+          </label>
+          <button
+            onClick={handleCastSpell}
+            disabled={disabled || !currentActorId}
+            style={{
+              width: "100%",
+              padding: "5px 0",
+              background: disabled || !currentActorId ? "#333" : "#5b3a9e",
+              color: disabled || !currentActorId ? "#666" : "#fff",
+              border: "1px solid #444",
+              borderRadius: 4,
+              cursor: disabled || !currentActorId ? "not-allowed" : "pointer",
+              fontSize: 12,
+            }}
+          >
+            Cast {selectedSpell || "Spell"}
+          </button>
         </div>
       )}
       {error && (
@@ -367,19 +515,7 @@ function StartCombatDialog({
           hp_current: entry.char.hp_current ?? hp,
           ac,
         });
-        upsertCharacter({
-          id: updated.id,
-          type: updated.type,
-          name: updated.name,
-          char_class: updated.char_class,
-          race: updated.race,
-          level: updated.level,
-          hp_current: updated.hp_current,
-          hp_max: updated.hp_max,
-          ac: updated.ac,
-          stats: updated.stats,
-          equipment: updated.equipment,
-        });
+        upsertCharacter(mapCharacterResponse(updated));
       }
 
       const result = await api.startCombat(

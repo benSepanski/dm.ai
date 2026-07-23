@@ -19,7 +19,7 @@ startup if unset) splits clients into two roles:
 
 | Entity | Hidden from players |
 |---|---|
-| Character (NPC/monster) | `char_class`, `alignment`, `stats`, `hp_current`, `hp_max`, `ac`, `speed`, `abilities`, `spells`, `equipment`, `personality_traits`, `ideals`, `bonds`, `flaws`, `known_facts`, `interaction_log_summary` |
+| Character (NPC/monster) | `char_class`, `alignment`, `stats`, `hp_current`, `hp_max`, `ac`, `speed`, `abilities`, `spells`, `known_spells`, `spell_slots`, `equipment`, `personality_traits`, `ideals`, `bonds`, `flaws`, `known_facts`, `interaction_log_summary` |
 | Character (PC) | `known_facts`, `interaction_log_summary` |
 | Location | `lore`, `history`, `character_associations`, `interaction_log_summary` |
 | World | `lore_summary` |
@@ -253,7 +253,12 @@ the background. `armor_name` must match an entry in the `/options` armor list
 `personality_traits`, `ideals`, `bonds`, `flaws`, `current_location_id`
 
 **201** → `CharacterRead` (all fields above + `id`, `interaction_log_summary`,
-`created_at`, `updated_at`)
+`created_at`, `updated_at`, plus two server-derived fields consumed by the
+combat tracker's Cast Spell control (PT-28): `known_spells` (deduped union
+of `stats.known_spells`/`stats.prepared_spells`, falling back to the
+top-level `spells` column when neither is set) and `spell_slots` (from
+`stats.spell_slots`) — both `null` when there's nothing to report or the
+field is hidden per the role table above)
 
 ### GET /api/characters/{char_id} — fetch character
 
@@ -406,9 +411,13 @@ caster enters combat; spent slots persist on the character after the fight.
 spellcasting ability)
 
 **200** → `CombatStateRead` — the log entry carries
-`{"event": "cast_spell", spell, slot_level_used, outcomes: [{target_id,
-hit, attack_total, save_total, save_success, damage, healing,
-conditions_applied}]}`
+`{"event": "cast_spell", action_type, spell, slot_level_used,
+concentration_started, flavor_text, outcomes: [{target_id, hit,
+attack_total, save_total, save_success, damage, healing, conditions_applied,
+concentration_save_dc, concentration_save_total, concentration_broken}]}`.
+`flavor_text` is what the dm-ui combat tracker's Cast Spell control (PT-28)
+pushes into the chat feed, mirroring how Attack/Dash/Dodge surface their own
+`flavor_text` from `combat.py`.
 
 **404** unknown spell / actor / target | **409** no slot remaining, economy
 spent, caster can't act, or casting time too long for combat | **422**

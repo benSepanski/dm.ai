@@ -58,6 +58,11 @@ async def test_cast_cantrip_logs_and_consumes_no_slot(client, world_id):
     assert outcome["attack_total"] is not None
     # A level-3 wizard's slots (4×L1, 2×L2) are untouched by a cantrip.
     assert _slot_remaining(_combatant(data, wizard_id), 1) == 4
+    # PT-28: the combat-tracker UI reads this key (matching the Attack/Dash/
+    # Dodge action-log entries in combat.py) to surface the cast in the chat
+    # feed — a prior version of this endpoint wrote "flavor" instead.
+    assert log["flavor_text"]
+    assert "flavor" not in log
 
 
 @pytest.mark.asyncio
