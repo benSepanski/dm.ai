@@ -181,7 +181,12 @@ updates.
         {
           "name": "Skillful",
           "description": "You gain proficiency in one skill of your choice.",
-          "choice": { "skill_options": ["acrobatics", "athletics", ...], "lineage_options": [] }
+          "choice": { "skill_options": ["acrobatics", "athletics", ...], "lineage_options": [], "feat_options": [] }
+        },
+        {
+          "name": "Versatile",
+          "description": "You gain an Origin feat of your choice.",
+          "choice": { "skill_options": [], "lineage_options": [], "feat_options": ["Alert", "Crafter", ...] }
         }
       ],
       "damage_resistances": [],
@@ -248,11 +253,14 @@ set masteries later.
 
 `species_trait_choices` (optional) is a map of trait name → chosen option
 value, for every species trait whose `/options` entry has a non-null
-`choice` — e.g. `{"Elven Lineage": "Drow", "Keen Senses": "perception"}` for
-an Elf, or `{"Skillful": "stealth"}` for a Human. A value outside that
-trait's `choice.skill_options` / `choice.lineage_options` returns **422**; a
-choice-bearing trait left unanswered still builds successfully, with a
-warning instead of failing. `starting_cantrips`/`starting_spells` (optional,
+`choice` — e.g. `{"Elven Lineage": "Drow", "Keen Senses": "perception",
+"Skillful": "stealth", "Versatile": "Alert"}`. A value outside that trait's
+`choice.skill_options` / `choice.lineage_options` / `choice.feat_options`
+returns **422**; a choice-bearing trait left unanswered still builds
+successfully, with a warning instead of failing. Human's Versatile origin
+feat stacks with — and must differ from — the background's own
+`origin_feat`; picking the same feat twice is dropped with a warning rather
+than granting it twice. `starting_cantrips`/`starting_spells` (optional,
 spellcasting classes only) must be legal level-1 picks from `/options`
 `spells` for the chosen class — required counts come from that class's
 `cantrips_known`/`prepared_spells_known` — and are likewise deferrable with

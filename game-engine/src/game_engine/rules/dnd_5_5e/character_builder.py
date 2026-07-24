@@ -175,9 +175,9 @@ def build_character(
             choose later.
         species_trait_choices: Map of trait name → chosen option value, for
             species traits that require a pick (e.g. ``{"Elven Lineage":
-            "Drow", "Keen Senses": "perception"}`` or ``{"Skillful":
-            "stealth"}``). Every value is validated
-            against that trait's closed option set; an invalid pick raises
+            "Drow", "Keen Senses": "perception", "Skillful": "stealth",
+            "Versatile": "Alert"}``). Every value is validated against that
+            trait's closed option set; an invalid pick raises
             :class:`ValueError`. Missing choices for a choice-bearing trait
             emit a warning rather than failing the build.
         starting_cantrips: Cantrip names known at level 1, validated against
@@ -238,7 +238,7 @@ def build_character(
         if skill not in chosen:
             chosen.append(skill)
 
-    species_lineage, bonus_skill = resolve_species_trait_choices(
+    species_lineage, bonus_skill, bonus_origin_feat = resolve_species_trait_choices(
         species_data, species_trait_choices or {}, warnings
     )
     if bonus_skill is not None and bonus_skill not in chosen:
@@ -250,8 +250,15 @@ def build_character(
     if any(t.name == _TRAIT_DWARVEN_TOUGHNESS for t in species_data.traits):
         hp_max += 1
     feats = [background_data.origin_feat]
-    if background_data.origin_feat is Feat.TOUGH:
-        hp_max += 2
+    if bonus_origin_feat is not None:
+        if bonus_origin_feat in feats:
+            warnings.append(
+                f"Versatile origin feat {bonus_origin_feat.value!r} duplicates the "
+                f"background's origin feat — choose a different one via character edit."
+            )
+        else:
+            feats.append(bonus_origin_feat)
+    hp_max += 2 * feats.count(Feat.TOUGH)
     hp_max = max(1, hp_max)
 
     # Creature size (2024): species declare their legal size(s); an explicit

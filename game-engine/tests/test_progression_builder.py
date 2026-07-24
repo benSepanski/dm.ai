@@ -271,6 +271,77 @@ class TestBuildCharacter:
             )
 
 
+class TestBuildCharacterVersatileFeat:
+    """PT-30: Human's Versatile trait grants an extra Origin feat of choice,
+    on top of the background's origin feat."""
+
+    def _build(self, **overrides):
+        params = dict(
+            char_id="pc1",
+            name="Aria",
+            character_class=CharacterClass.FIGHTER,
+            species=Species.HUMAN,
+            background=Background.SOLDIER,
+            ability_scores=_scores(
+                strength=15, dexterity=14, constitution=13, intelligence=12, wisdom=10, charisma=8
+            ),
+            skill_choices=[Skill.ATHLETICS, Skill.PERCEPTION],
+            armor_name="Chain Mail",
+        )
+        params.update(overrides)
+        return build_character(**params)
+
+    def test_versatile_feat_added_alongside_background_feat(self):
+        from game_engine.types import Feat
+
+        result = self._build(species_trait_choices={"Versatile": "Alert"})
+        assert result.sheet.feats == [Feat.SAVAGE_ATTACKER, Feat.ALERT]
+        assert not any("Versatile" in w for w in result.warnings)
+
+    def test_missing_versatile_choice_warns_not_errors(self):
+        from game_engine.types import Feat
+
+        result = self._build()
+        assert any("Versatile requires a choice" in w for w in result.warnings)
+        assert result.sheet.feats == [Feat.SAVAGE_ATTACKER]
+
+    def test_illegal_versatile_choice_rejected(self):
+        with pytest.raises(ValueError, match="Versatile"):
+            self._build(species_trait_choices={"Versatile": "Not A Feat"})
+
+    def test_non_origin_feat_rejected(self):
+        # Ability Score Improvement is a General feat, not in Versatile's
+        # closed Origin-feat option set.
+        with pytest.raises(ValueError, match="Versatile"):
+            self._build(species_trait_choices={"Versatile": "Ability Score Improvement"})
+
+    def test_versatile_duplicating_background_feat_warns_and_is_not_added_twice(self):
+        from game_engine.types import Feat
+
+        result = self._build(species_trait_choices={"Versatile": "Savage Attacker"})
+        assert result.sheet.feats == [Feat.SAVAGE_ATTACKER]
+        assert any("duplicates the background's origin feat" in w for w in result.warnings)
+
+    def test_versatile_tough_grants_hp_bonus(self):
+        result = self._build(
+            background=Background.FARMER,
+            skill_choices=[Skill.ATHLETICS, Skill.SURVIVAL],
+            species_trait_choices={"Versatile": "Alert"},
+        )
+        # d10 + CON 2 + Farmer's own Tough (+2) = 14
+        assert result.sheet.hp_max == 14
+
+    def test_versatile_duplicating_tough_background_feat_grants_hp_once(self):
+        result = self._build(
+            background=Background.FARMER,
+            skill_choices=[Skill.ATHLETICS, Skill.SURVIVAL],
+            species_trait_choices={"Versatile": "Tough"},
+        )
+        # Duplicate pick is dropped, not stacked: d10 + CON 2 + Tough once (+2) = 14
+        assert result.sheet.hp_max == 14
+        assert any("duplicates the background's origin feat" in w for w in result.warnings)
+
+
 class TestBuildCharacterSpeciesAndSpellChoices:
     """PT-19: species sub-choices (Elf) and starting cantrips/spells."""
 

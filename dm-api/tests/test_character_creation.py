@@ -122,6 +122,21 @@ async def test_creation_options(client):
     resourceful_trait = next(t for t in human["traits"] if t["name"] == "Resourceful")
     assert resourceful_trait["choice"] is None
 
+    # PT-30: Human's Versatile trait offers the full Origin-feat pool.
+    versatile_trait = next(t for t in human["traits"] if t["name"] == "Versatile")
+    assert set(versatile_trait["choice"]["feat_options"]) == {
+        "Alert",
+        "Crafter",
+        "Healer",
+        "Lucky",
+        "Magic Initiate",
+        "Musician",
+        "Savage Attacker",
+        "Skilled",
+        "Tavern Brawler",
+        "Tough",
+    }
+
     # PT-19: level-1 spells/cantrips are enumerated so the UI can build pickers.
     spell_names = [s["name"] for s in data["spells"]]
     assert "Fire Bolt" in spell_names
@@ -170,6 +185,50 @@ async def test_build_fighter(client, world_id):
     r = await client.get(f"/api/characters/{char['id']}")
     assert r.status_code == 200
     assert r.json()["hp_max"] == 11
+
+
+@pytest.mark.asyncio
+async def test_build_human_fighter_with_versatile_feat(client, world_id):
+    """PT-30: Human's Versatile trait adds a second, player-chosen feat
+    alongside the background's origin feat (Soldier → Savage Attacker)."""
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={
+            "world_id": world_id,
+            **FIGHTER_BUILD,
+            "species_trait_choices": {"Versatile": "Alert"},
+        },
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert data["character"]["stats"]["feats"] == ["Savage Attacker", "Alert"]
+    assert not any("Versatile" in w for w in data["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_build_human_fighter_missing_versatile_choice_warns(client, world_id):
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={"world_id": world_id, **FIGHTER_BUILD},
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert data["character"]["stats"]["feats"] == ["Savage Attacker"]
+    assert any("Versatile requires a choice" in w for w in data["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_build_human_fighter_illegal_versatile_choice_422(client, world_id):
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={
+            "world_id": world_id,
+            **FIGHTER_BUILD,
+            "species_trait_choices": {"Versatile": "Ability Score Improvement"},
+        },
+    )
+    assert r.status_code == 422
+    assert "Versatile" in r.json()["detail"]
 
 
 @pytest.mark.asyncio
