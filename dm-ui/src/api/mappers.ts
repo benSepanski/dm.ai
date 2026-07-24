@@ -17,6 +17,8 @@ export function mapCharacterResponse(char: CharacterResponse): CharacterData {
     ac: char.ac,
     stats: char.stats,
     equipment: char.equipment,
+    known_spells: char.known_spells,
+    spell_slots: char.spell_slots,
   };
 }
 

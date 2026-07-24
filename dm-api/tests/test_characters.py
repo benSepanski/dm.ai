@@ -66,6 +66,72 @@ async def test_create_character_monster(client, world_id):
 
 
 @pytest.mark.asyncio
+async def test_known_spells_derived_from_spells_column(client, world_id):
+    """Manually-created casters (no ``stats.known_spells``) fall back to the
+    top-level ``spells`` column — the path ``combat_helpers._create_caster``
+    exercises and ``combat_utils.character_to_sheet`` mirrors server-side."""
+    r = await client.post(
+        "/api/characters/",
+        json={
+            "world_id": world_id,
+            "type": "PC",
+            "name": "Kira",
+            "char_class": "Wizard",
+            "spells": ["Fire Bolt", "Cure Wounds"],
+        },
+    )
+    assert r.status_code == 201
+    assert r.json()["known_spells"] == ["Fire Bolt", "Cure Wounds"]
+
+
+@pytest.mark.asyncio
+async def test_known_spells_derived_from_stats_blob(client, world_id):
+    """Wizard-built PCs (character_creation.py) store spells in ``stats``, not
+    the ``spells`` column — known_spells should still surface them, deduped
+    against prepared_spells."""
+    r = await client.post(
+        "/api/characters/",
+        json={
+            "world_id": world_id,
+            "type": "PC",
+            "name": "Maret",
+            "char_class": "Wizard",
+            "stats": {
+                "known_spells": ["Fire Bolt", "Mage Armor"],
+                "prepared_spells": ["Mage Armor", "Shield"],
+            },
+        },
+    )
+    assert r.status_code == 201
+    assert r.json()["known_spells"] == ["Fire Bolt", "Mage Armor", "Shield"]
+
+
+@pytest.mark.asyncio
+async def test_known_spells_and_spell_slots_hidden_for_monster_viewed_by_player(
+    client, player_client, world_id
+):
+    r = await client.post(
+        "/api/characters/",
+        json={
+            "world_id": world_id,
+            "type": "MONSTER",
+            "name": "Drowned Acolyte",
+            "spells": ["Sacred Flame"],
+            "stats": {"spell_slots": [{"slot_level": 1, "maximum": 2, "remaining": 2}]},
+        },
+    )
+    assert r.status_code == 201
+    char_id = r.json()["id"]
+    assert r.json()["known_spells"] == ["Sacred Flame"]
+
+    r = await player_client.get(f"/api/characters/{char_id}")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["known_spells"] is None
+    assert data["spell_slots"] is None
+
+
+@pytest.mark.asyncio
 async def test_create_character_rejects_illegal_combat_stats(client, world_id):
     r = await client.post(
         "/api/characters/",

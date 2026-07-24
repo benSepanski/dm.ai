@@ -7,7 +7,7 @@ from typing import Any
 import sqlalchemy as sa
 from game_engine.types import CharacterType, RestType
 from pgvector.sqlalchemy import Vector
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -110,6 +110,15 @@ class CharacterCreate(BaseModel):
     interaction_log_summary: str | None = None
 
 
+class SpellSlotRead(BaseModel):
+    """A single spell-slot level's capacity, mirroring the engine's SpellSlotState."""
+
+    slot_level: int
+    maximum: int
+    remaining: int
+    is_pact: bool = False
+
+
 class CharacterRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -138,6 +147,37 @@ class CharacterRead(BaseModel):
     interaction_log_summary: str | None
     created_at: datetime
     updated_at: datetime
+
+    # Derived, not stored columns — mirrors combat_utils.character_to_sheet's
+    # own known_spells/spell_slots derivation so the combat-cast-spell UI
+    # (PT-28) can list a caster's spells without parsing the opaque ``stats``
+    # blob client-side. ``None`` means "hidden from this role", matching the
+    # ``spells``/``equipment`` redaction convention in visibility.py.
+    known_spells: list[str] | None = Field(default=None)
+    spell_slots: list[SpellSlotRead] | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def _derive_spellcasting_fields(self) -> "CharacterRead":
+        """Re-derive on every validation, including FastAPI's response-model
+        re-validation of an already-hidden instance — so this must fall back
+        to ``None`` (not ``[]``) when ``stats``/``spells`` are themselves
+        ``None``, matching those fields' own "hidden" state rather than
+        stomping it back to a visible empty list.
+        """
+        stats = self.stats or {}
+        combined = [*stats.get("known_spells", []), *stats.get("prepared_spells", [])]
+        if not combined and self.spells:
+            combined = [str(s) for s in self.spells]
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for name in combined:
+            if name not in seen:
+                seen.add(name)
+                deduped.append(name)
+        self.known_spells = deduped or None
+        slots = [SpellSlotRead.model_validate(slot) for slot in stats.get("spell_slots", [])]
+        self.spell_slots = slots or None
+        return self
 
 
 class RestRequest(BaseModel):
