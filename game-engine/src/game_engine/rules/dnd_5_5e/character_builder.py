@@ -15,6 +15,7 @@ from game_engine.rules.dnd_5_5e._character_builder_choices import (
     resolve_starting_spells,
 )
 from game_engine.rules.dnd_5_5e._equipment import equip_armor
+from game_engine.rules.dnd_5_5e._starting_equipment import resolve_starting_equipment
 from game_engine.rules.dnd_5_5e.classes import CLASSES
 from game_engine.rules.dnd_5_5e.data.backgrounds import get_background
 from game_engine.rules.dnd_5_5e.data.species import get_species
@@ -288,6 +289,8 @@ def build_character(
                     "set them later via character edit."
                 )
 
+    starting_inventory, starting_currency = resolve_starting_equipment(background_data.equipment)
+
     known_spells: list[str] = []
     prepared_spells: list[str] = []
     if progression is not None:
@@ -338,6 +341,8 @@ def build_character(
         darkvision_ft=species_data.darkvision_ft,
         damage_resistances=list(species_data.damage_resistances),
         worn_shield=shield,
+        inventory=starting_inventory,
+        currency=starting_currency,
     )
     # Store worn-armor identity and compute AC once through the shared equip
     # path (handles unknown-armor / shield-as-body / armor-training warnings

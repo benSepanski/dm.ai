@@ -8,6 +8,7 @@ from game_engine.rules.dnd_5_5e._equipment import (
     unequip_shield,
 )
 from game_engine.rules.dnd_5_5e._spell_resolution import cast_spell
+from game_engine.rules.dnd_5_5e._starting_equipment import resolve_starting_equipment
 from game_engine.rules.dnd_5_5e._weapon_bridge import to_attack_details
 from game_engine.rules.dnd_5_5e.character_builder import (
     MANUAL_SCORE_MAX,
@@ -79,6 +80,7 @@ __all__ = [
     "equip_shield",
     "unequip_armor",
     "unequip_shield",
+    "resolve_starting_equipment",
     # resting
     "RestResult",
     "long_rest",
