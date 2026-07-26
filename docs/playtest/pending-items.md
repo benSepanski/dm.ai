@@ -28,7 +28,7 @@ broken but routable around; **minor** = cosmetic or small friction.
 `type`: **bug** = behaves incorrectly; **usability** = behaves as built but is
 hard/confusing/missing an affordance a real player or DM would expect.
 
-`PT-<n>` is a simple incrementing id — next id is **PT-32**.
+`PT-<n>` is a simple incrementing id — next id is **PT-33**.
 
 ---
 
@@ -54,6 +54,54 @@ hard/confusing/missing an affordance a real player or DM would expect.
   to the user with no way to satisfy it.
 
 ## Resolved
+
+### PT-32 — Locations created without "Set as current" are permanently unreachable, and the checkbox lied about local state
+- **Status:** resolved
+- **Severity:** major
+- **Type:** bug
+- **Phase:** cross-cutting (2–5, wherever the DM uses "+ New" in the Location panel)
+- **Found:** Discovered by inspection while reviewing older, rarely-touched
+  files for drift (`dm-api/src/dm_api/api/locations.py` led to
+  `CreateLocationDialog.tsx`/`LocationPanel.tsx`).
+- **Steps:** As DM, click **Location → + New**, fill in a location, and
+  **uncheck** "Set as current location" before clicking Create.
+- **Observed:** Two compounding bugs. (1) `LocationPanel.tsx` has no location
+  list/browser — `api.listWorldLocations` was defined in `client.ts` but never
+  called anywhere in the app — so a location created without "Set as current"
+  was written to the database but had no path back into the UI; it could only
+  be found again via direct API/DB access. (2) Independent of that, unchecking
+  the box didn't even work correctly in the DM's *own* view:
+  `CreateLocationDialog`'s `onCreated` callback fired with the same shape
+  whether or not the checkbox was checked, and `LocationPanel.tsx` called
+  `setLocation(...)` unconditionally in that callback — so the DM's local
+  "current location" card switched to the new location regardless, while the
+  actual session (`current_location_id` in the DB) and every other connected
+  client stayed on the old one. The DM's screen silently diverged from
+  reality.
+- **Expected:** A location created without "Set as current" should still be
+  reachable later (to promote it to current once the party actually arrives),
+  and the DM's own view shouldn't show a location as current when the session
+  wasn't actually updated to match.
+- **Notes:** This also meant the PT-14 resolution note's claim ("the location
+  ... is broadcast over WebSocket to all connected clients so the sidebar
+  updates live") was only true when "Set as current" was checked — the
+  `entity_update` broadcast for a location is emitted by `PATCH
+  /sessions/{id}` when `current_location_id` changes (`sessions.py`), not by
+  `POST /locations/` itself, so an unchecked create never broadcasts anything
+  to anyone (correctly, once bug (2) is fixed, since nothing changed for
+  other clients).
+- **Resolution:** `CreateLocationDialog`'s `onCreated` prop now passes
+  `wasSetAsCurrent: boolean` alongside the created location, so callers know
+  whether the session was actually updated. `LocationPanel.tsx` only calls
+  `setLocation(...)` when `wasSetAsCurrent` is true. Added a DM-only
+  **"Change"** button next to "+ New" that lazily fetches
+  `api.listWorldLocations(worldId)` (the existing, previously-dead client
+  method) and renders a pick list of every location in the world — including
+  ones created without "Set as current" — each entry calling the same
+  `PATCH /sessions/{id}` path `CreateLocationDialog` already uses to switch
+  the current location (and broadcast the change to other clients). The
+  cached location list is invalidated after creating a new one so it shows up
+  immediately next time "Change" is opened.
 
 ### PT-31 — Human "Skillful" trait (skill of choice) is never offered in the wizard
 - **Status:** resolved
