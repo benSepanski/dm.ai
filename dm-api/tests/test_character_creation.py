@@ -113,6 +113,15 @@ async def test_creation_options(client):
     fey_ancestry_trait = next(t for t in elf["traits"] if t["name"] == "Fey Ancestry")
     assert fey_ancestry_trait["choice"] is None
 
+    # PT-31: Human's Skillful trait offers the full 18-skill pool, mirroring
+    # Elf's Keen Senses shape (a skill_options choice) but unrestricted.
+    human = next(s for s in data["species"] if s["species"] == "Human")
+    skillful_trait = next(t for t in human["traits"] if t["name"] == "Skillful")
+    assert len(skillful_trait["choice"]["skill_options"]) == 18
+    assert "stealth" in skillful_trait["choice"]["skill_options"]
+    resourceful_trait = next(t for t in human["traits"] if t["name"] == "Resourceful")
+    assert resourceful_trait["choice"] is None
+
     # PT-19: level-1 spells/cantrips are enumerated so the UI can build pickers.
     spell_names = [s["name"] for s in data["spells"]]
     assert "Fire Bolt" in spell_names
@@ -371,3 +380,47 @@ async def test_build_missing_species_and_spell_choices_warns(client, world_id):
     assert any("Keen Senses requires a choice" in w for w in warnings)
     assert any("starting cantrip" in w for w in warnings)
     assert any("starting spell" in w for w in warnings)
+
+
+@pytest.mark.asyncio
+async def test_build_human_fighter_with_skillful_skill(client, world_id):
+    """PT-31: Human's Skillful trait adds a second, player-chosen skill
+    proficiency alongside class/background skills."""
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={
+            "world_id": world_id,
+            **FIGHTER_BUILD,
+            "species_trait_choices": {"Skillful": "stealth"},
+        },
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert "stealth" in data["character"]["stats"]["proficiencies"]
+    assert not any("Skillful" in w for w in data["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_build_human_fighter_missing_skillful_choice_warns(client, world_id):
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={"world_id": world_id, **FIGHTER_BUILD},
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert any("Skillful requires a choice" in w for w in data["warnings"])
+    assert "stealth" not in data["character"]["stats"]["proficiencies"]
+
+
+@pytest.mark.asyncio
+async def test_build_human_fighter_illegal_skillful_choice_422(client, world_id):
+    r = await client.post(
+        "/api/characters/creation/build",
+        json={
+            "world_id": world_id,
+            **FIGHTER_BUILD,
+            "species_trait_choices": {"Skillful": "not-a-skill"},
+        },
+    )
+    assert r.status_code == 422
+    assert "Skillful" in r.json()["detail"]

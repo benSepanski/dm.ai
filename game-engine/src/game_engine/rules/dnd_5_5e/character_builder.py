@@ -175,7 +175,8 @@ def build_character(
             choose later.
         species_trait_choices: Map of trait name → chosen option value, for
             species traits that require a pick (e.g. ``{"Elven Lineage":
-            "Drow", "Keen Senses": "perception"}``). Every value is validated
+            "Drow", "Keen Senses": "perception"}`` or ``{"Skillful":
+            "stealth"}``). Every value is validated
             against that trait's closed option set; an invalid pick raises
             :class:`ValueError`. Missing choices for a choice-bearing trait
             emit a warning rather than failing the build.
@@ -237,11 +238,11 @@ def build_character(
         if skill not in chosen:
             chosen.append(skill)
 
-    species_lineage, keen_senses_skill = resolve_species_trait_choices(
+    species_lineage, bonus_skill = resolve_species_trait_choices(
         species_data, species_trait_choices or {}, warnings
     )
-    if keen_senses_skill is not None and keen_senses_skill not in chosen:
-        chosen.append(keen_senses_skill)
+    if bonus_skill is not None and bonus_skill not in chosen:
+        chosen.append(bonus_skill)
 
     con_mod = scores.modifier(Ability.CONSTITUTION)
     hp_max = class_data.hit_die + con_mod

@@ -382,3 +382,47 @@ class TestBuildCharacterSpeciesAndSpellChoices:
         assert "Magic Missile" in sheet.known_spells
         assert "Shield" in sheet.known_spells
         assert sheet.prepared_spells == []
+
+
+class TestBuildCharacterHumanSkillful:
+    """PT-31: Human's Skillful trait grants an extra skill proficiency of
+    choice, on top of class/background skills (mirrors Elf's Keen Senses)."""
+
+    def _build(self, **overrides):
+        params = dict(
+            char_id="pc1",
+            name="Roderick",
+            character_class=CharacterClass.FIGHTER,
+            species=Species.HUMAN,
+            background=Background.SOLDIER,
+            ability_scores=_scores(
+                strength=15, dexterity=14, constitution=13, intelligence=12, wisdom=10, charisma=8
+            ),
+            skill_choices=[Skill.ATHLETICS, Skill.ACROBATICS],
+            armor_name="Chain Mail",
+        )
+        params.update(overrides)
+        return build_character(**params)
+
+    def test_skillful_skill_added_alongside_class_and_background_skills(self):
+        result = self._build(species_trait_choices={"Skillful": "stealth"})
+        sheet = result.sheet
+        assert Skill.STEALTH in sheet.proficient_skills
+        assert Skill.ATHLETICS in sheet.proficient_skills  # class choice
+        assert Skill.INTIMIDATION in sheet.proficient_skills  # Soldier background
+        assert not any("Skillful" in w for w in result.warnings)
+
+    def test_skillful_duplicating_existing_skill_is_not_added_twice(self):
+        # Athletics is already a class skill choice; picking it again for
+        # Skillful must not produce a duplicate entry.
+        result = self._build(species_trait_choices={"Skillful": "athletics"})
+        assert result.sheet.proficient_skills.count(Skill.ATHLETICS) == 1
+
+    def test_missing_skillful_choice_warns_not_errors(self):
+        result = self._build()
+        assert any("Skillful requires a choice" in w for w in result.warnings)
+        assert Skill.STEALTH not in result.sheet.proficient_skills
+
+    def test_illegal_skillful_choice_rejected(self):
+        with pytest.raises(ValueError, match="Skillful"):
+            self._build(species_trait_choices={"Skillful": "not-a-skill"})

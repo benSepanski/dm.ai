@@ -19,8 +19,9 @@ class SpeciesTraitChoice:
     """Marks a trait as requiring a player pick from a closed option set.
 
     Exactly one of ``skill_options`` / ``lineage_options`` is non-empty,
-    matching the trait this choice is attached to (e.g. Elf's Keen Senses
-    picks a :class:`Skill`, Elven Lineage picks a :class:`SpeciesLineage`).
+    matching the trait this choice is attached to (e.g. Elf's Keen Senses and
+    Human's Skillful each pick a :class:`Skill`, Elven Lineage picks a
+    :class:`SpeciesLineage`).
     """
 
     skill_options: list[Skill] = field(default_factory=list)
@@ -153,6 +154,7 @@ SPECIES: dict[Species, SpeciesData] = {
             SpeciesTraitData(
                 name="Skillful",
                 description="You gain proficiency in one skill of your choice.",
+                choice=SpeciesTraitChoice(skill_options=list(Skill)),
             ),
             SpeciesTraitData(
                 name="Versatile",
