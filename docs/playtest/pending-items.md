@@ -28,7 +28,7 @@ broken but routable around; **minor** = cosmetic or small friction.
 `type`: **bug** = behaves incorrectly; **usability** = behaves as built but is
 hard/confusing/missing an affordance a real player or DM would expect.
 
-`PT-<n>` is a simple incrementing id — next id is **PT-31**.
+`PT-<n>` is a simple incrementing id — next id is **PT-32**.
 
 ---
 
@@ -54,6 +54,51 @@ hard/confusing/missing an affordance a real player or DM would expect.
   to the user with no way to satisfy it.
 
 ## Resolved
+
+### PT-31 — Human "Skillful" trait (skill of choice) is never offered in the wizard
+- **Status:** resolved
+- **Severity:** minor
+- **Type:** bug
+- **Phase:** 1 — Character creation
+- **Found:** Discovered by inspection while auditing the species-trait-choice
+  registry for gaps analogous to PT-30 (Human's Versatile origin feat).
+- **Steps:** Build a **Human** character and inspect the Origin step.
+- **Observed:** Human's `Skillful` trait text reads "You gain proficiency in
+  one skill of your choice," but the trait had no `choice` attached in
+  `SPECIES[Species.HUMAN].traits`
+  (`game-engine/src/game_engine/rules/dnd_5_5e/data/species.py`), so the
+  wizard never rendered a picker for it and the bonus skill proficiency was
+  silently dropped from the built sheet.
+- **Expected:** Human characters should be able to choose one extra skill
+  proficiency, on top of their class/background skills, and it should appear
+  on the sheet.
+- **Notes:** Same root-cause class as PT-30, but the fix was simpler:
+  `SpeciesTraitChoice.skill_options` already existed (used by Elf's Keen
+  Senses), so Skillful only needed to opt into that existing mechanism rather
+  than adding a new option-set kind.
+- **Resolution:** `SPECIES[Species.HUMAN]`'s `Skillful` trait now sets
+  `choice=SpeciesTraitChoice(skill_options=list(Skill))` — any of the 18
+  skills, since the trait text places no restriction (unlike Keen Senses'
+  3-skill list). `resolve_species_trait_choices`
+  (`_character_builder_choices.py`) already resolved any `skill_options`
+  trait generically; its return value was renamed from the Elf-specific
+  `keen_senses_skill` to `bonus_skill` since it now also serves Human, and
+  `build_character` (`character_builder.py`) already appended that skill to
+  `proficient_skills` (deduplicated) — no behavioral change needed there.
+  `dm-ui`'s `SkillsStep.tsx` and `dm-api`'s `SpeciesTraitChoiceRead` needed no
+  changes at all: both already handle any `skill_options`-bearing trait
+  generically (the picker already branches on `skill_options` before
+  `lineage_options`), so this was a pure data-registry fix plus a rename for
+  clarity. Regression tests:
+  `game-engine/tests/test_progression_builder.py::TestBuildCharacterHumanSkillful`
+  (4 cases — applied, dedup-against-existing-skill, missing-warns,
+  illegal-rejected) and
+  `dm-api/tests/test_character_creation.py::test_build_human_fighter_with_skillful_skill`
+  / `test_build_human_fighter_missing_skillful_choice_warns` /
+  `test_build_human_fighter_illegal_skillful_choice_422`, plus a
+  `creation/options` assertion that Human's Skillful trait exposes all 18
+  skills. See **PT-30** (still open) for the analogous gap on Human's
+  `Versatile` (bonus Origin feat) trait.
 
 ### PT-28 — No way to cast a spell in combat; only Attack / Dash / Dodge
 - **Status:** resolved

@@ -176,7 +176,14 @@ updates.
       "size_options": ["medium", "small"],
       "speed": 30,
       "darkvision_ft": 0,
-      "traits": [{ "name": "Resourceful", "description": "..." }],
+      "traits": [
+        { "name": "Resourceful", "description": "...", "choice": null },
+        {
+          "name": "Skillful",
+          "description": "You gain proficiency in one skill of your choice.",
+          "choice": { "skill_options": ["acrobatics", "athletics", ...], "lineage_options": [] }
+        }
+      ],
       "damage_resistances": [],
       "description": "..."
     }, ...
@@ -223,14 +230,33 @@ scores) return **422**.
   "languages": [],
   "armor_name": "Chain Mail",
   "shield": true,
-  "alignment": "Lawful Good"
+  "alignment": "Lawful Good",
+  "weapon_masteries": ["Greatsword", "Longsword", "Handaxe"],
+  "species_trait_choices": { "Skillful": "stealth" },
+  "starting_cantrips": ["Fire Bolt", "Light", "Acid Splash"],
+  "starting_spells": ["Magic Missile", "Shield", "Mage Armor", "Detect Magic"]
 }
 ```
 
 `background_ability_allocation` (optional) lets the player direct the background's
 +2/+1 ability bonus. If omitted, the engine picks the default allocation for
 the background. `armor_name` must match an entry in the `/options` armor list
-(or be omitted for no armor). `shield` adds +2 AC.
+(or be omitted for no armor). `shield` adds +2 AC. `weapon_masteries` (optional)
+must have exactly `weapon_mastery_count` entries for the chosen class (from
+`/options`); omitted entirely, the build still succeeds with a warning to
+set masteries later.
+
+`species_trait_choices` (optional) is a map of trait name → chosen option
+value, for every species trait whose `/options` entry has a non-null
+`choice` — e.g. `{"Elven Lineage": "Drow", "Keen Senses": "perception"}` for
+an Elf, or `{"Skillful": "stealth"}` for a Human. A value outside that
+trait's `choice.skill_options` / `choice.lineage_options` returns **422**; a
+choice-bearing trait left unanswered still builds successfully, with a
+warning instead of failing. `starting_cantrips`/`starting_spells` (optional,
+spellcasting classes only) must be legal level-1 picks from `/options`
+`spells` for the chosen class — required counts come from that class's
+`cantrips_known`/`prepared_spells_known` — and are likewise deferrable with
+a warning rather than a hard failure.
 
 **201** →
 ```json

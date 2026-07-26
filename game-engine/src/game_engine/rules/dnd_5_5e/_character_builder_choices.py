@@ -19,14 +19,16 @@ def resolve_species_trait_choices(
 ) -> tuple[SpeciesLineage | None, Skill | None]:
     """Validate and resolve every choice-bearing trait on *species_data*.
 
-    Returns ``(species_lineage, keen_senses_skill)`` — currently the only two
-    choice-bearing traits in the registry (Elf's Elven Lineage and Keen
-    Senses). Raises :class:`ValueError` if a submitted choice isn't in that
-    trait's closed option set; emits a warning (not an error) if a
+    Returns ``(species_lineage, bonus_skill)`` — currently the only
+    choice-bearing trait shapes in the registry: a lineage pick (Elf's Elven
+    Lineage) and a skill pick (Elf's Keen Senses, Human's Skillful). A
+    species only ever has one skill-choice trait, so ``bonus_skill`` is a
+    single value. Raises :class:`ValueError` if a submitted choice isn't in
+    that trait's closed option set; emits a warning (not an error) if a
     choice-bearing trait was left unanswered.
     """
     species_lineage: SpeciesLineage | None = None
-    keen_senses_skill: Skill | None = None
+    bonus_skill: Skill | None = None
     for trait in species_data.traits:
         if trait.choice is None:
             continue
@@ -61,8 +63,8 @@ def resolve_species_trait_choices(
                     f"{skill.value!r} is not a valid choice for {trait.name} "
                     f"(options: {', '.join(o.value for o in trait.choice.skill_options)})."
                 )
-            keen_senses_skill = skill
-    return species_lineage, keen_senses_skill
+            bonus_skill = skill
+    return species_lineage, bonus_skill
 
 
 def resolve_starting_spells(
