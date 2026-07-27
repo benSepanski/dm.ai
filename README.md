@@ -187,7 +187,6 @@ fill in the values relevant to your setup.
 | `GENERATION_MODEL` | `claude-haiku-4-5-20251001` | Fast tasks: summaries, dialogue |
 | `DATABASE_URL` | `postgresql+asyncpg://dmuser:dmpass@localhost:5432/dmdb` | PostgreSQL (asyncpg) |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection |
-| `SECRET_KEY` | `dev-secret-key` | FastAPI signing key (change in production) |
 | `DM_TOKEN` | — (auto-generated) | Shared token that unlocks the DM role (`X-DM-Token` header / `dm_token` WS param). Leave unset to generate one per run, printed in the API logs |
 | `FRONTEND_URL` | `http://localhost:5173` | CORS allowed origin |
 | `CONTEXT_TOKEN_LIMIT` | `180000` | Token count that triggers context summarization |

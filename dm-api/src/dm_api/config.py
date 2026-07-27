@@ -12,7 +12,6 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     database_url: str = "postgresql+asyncpg://dmuser:dmpass@localhost:5432/dmdb"
     redis_url: str = "redis://localhost:6379"
-    secret_key: str = "dev-secret-key"
     frontend_url: str = "http://localhost:5173"
 
     # Shared token that unlocks the DM role (X-DM-Token header / dm_token WS
