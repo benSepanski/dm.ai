@@ -34,8 +34,10 @@ hard/confusing/missing an affordance a real player or DM would expect.
 
 ## Open
 
+## Resolved
+
 ### PT-30 — Human "Versatile" origin feat (feat of choice) is never offered in the wizard
-- **Status:** open
+- **Status:** resolved
 - **Severity:** minor
 - **Type:** bug
 - **Phase:** 1 — Character creation
@@ -52,8 +54,37 @@ hard/confusing/missing an affordance a real player or DM would expect.
   Attacker, Sage → Magic Initiate); the gap is specifically the Human species
   bonus feat. Low-confidence on exact 2024 wording but the trait text is shown
   to the user with no way to satisfy it.
-
-## Resolved
+- **Resolution:** Generalized the existing species-trait-choice abstraction
+  (previously Elf-only: Elven Lineage → `SpeciesLineage`, Keen Senses →
+  `Skill`) to also support a closed `Feat` option set —
+  `SpeciesTraitChoice.feat_options` (`game-engine/.../data/species.py`).
+  Human's `Versatile` trait now sets
+  `feat_options=[f for f in Feat if f.category is FeatCategory.ORIGIN]`,
+  reusing the existing `FeatCategory.ORIGIN` grouping rather than a new
+  hard-coded list. `resolve_species_trait_choices`
+  (`_character_builder_choices.py`) validates the submitted feat against
+  that set and returns it as `bonus_origin_feat`; `build_character`
+  (`character_builder.py`) appends it to `feats` alongside the background's
+  `origin_feat` (deduplicated — the same feat can't be granted twice; a
+  duplicate pick is dropped with a warning instead), and the `Tough` HP
+  rider (+2 max HP) now applies once per distinct `Tough` pick rather than
+  being hard-coded to the background feat only. `dm-api`'s
+  `SpeciesTraitChoiceRead` gained the matching `feat_options: list[Feat]`
+  field (no new build-request field needed — `species_trait_choices: dict[str,
+  str]` already threads arbitrary trait-name → value pairs through
+  unchanged). `dm-ui`'s `SkillsStep.tsx` generalized its species-trait-choice
+  picker to branch on `feat_options` alongside `skill_options`/
+  `lineage_options`; `ReviewStep.tsx` needed no change since it already
+  renders every `speciesTraitChoices` entry generically. Regression tests:
+  `game-engine/tests/test_progression_builder.py::TestBuildCharacterVersatileFeat`
+  (7 cases: applied, missing-warns, illegal-rejected, non-origin-feat-rejected,
+  duplicate-warns, Tough HP stacking) and
+  `dm-api/tests/test_character_creation.py::test_build_human_fighter_with_versatile_feat`
+  / `test_build_human_fighter_missing_versatile_choice_warns` /
+  `test_build_human_fighter_illegal_versatile_choice_422`, plus a
+  `creation/options` assertion that Human's Versatile trait exposes the full
+  10-feat Origin pool. See **PT-31** for the analogous fix to Human's
+  `Skillful` (bonus skill) trait, resolved separately in PR #122.
 
 ### PT-32 — Locations created without "Set as current" are permanently unreachable, and the checkbox lied about local state
 - **Status:** resolved
@@ -145,8 +176,8 @@ hard/confusing/missing an affordance a real player or DM would expect.
   / `test_build_human_fighter_missing_skillful_choice_warns` /
   `test_build_human_fighter_illegal_skillful_choice_422`, plus a
   `creation/options` assertion that Human's Skillful trait exposes all 18
-  skills. See **PT-30** (still open) for the analogous gap on Human's
-  `Versatile` (bonus Origin feat) trait.
+  skills. See **PT-30** for the analogous fix to Human's `Versatile` (bonus
+  Origin feat) trait.
 
 ### PT-28 — No way to cast a spell in combat; only Attack / Dash / Dodge
 - **Status:** resolved

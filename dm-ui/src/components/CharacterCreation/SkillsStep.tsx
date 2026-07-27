@@ -210,7 +210,9 @@ export default function SkillsStep({
           {choiceTraits.map((trait) => {
             const options_ = trait.choice?.skill_options.length
               ? trait.choice.skill_options
-              : (trait.choice?.lineage_options ?? []);
+              : trait.choice?.lineage_options.length
+                ? trait.choice.lineage_options
+                : (trait.choice?.feat_options ?? []);
             const isSkillChoice = (trait.choice?.skill_options.length ?? 0) > 0;
             const selected = draft.speciesTraitChoices[trait.name];
             return (

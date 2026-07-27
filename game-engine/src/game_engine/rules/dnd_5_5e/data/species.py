@@ -8,6 +8,8 @@ from game_engine.types import (
     CreatureSize,
     CreatureType,
     DamageType,
+    Feat,
+    FeatCategory,
     Skill,
     Species,
     SpeciesLineage,
@@ -18,14 +20,16 @@ from game_engine.types import (
 class SpeciesTraitChoice:
     """Marks a trait as requiring a player pick from a closed option set.
 
-    Exactly one of ``skill_options`` / ``lineage_options`` is non-empty,
-    matching the trait this choice is attached to (e.g. Elf's Keen Senses and
-    Human's Skillful each pick a :class:`Skill`, Elven Lineage picks a
-    :class:`SpeciesLineage`).
+    Exactly one of ``skill_options`` / ``lineage_options`` / ``feat_options``
+    is non-empty, matching the trait this choice is attached to (e.g. Elf's
+    Keen Senses and Human's Skillful each pick a :class:`Skill`, Elven
+    Lineage picks a :class:`SpeciesLineage`, Human's Versatile picks a
+    :class:`Feat`).
     """
 
     skill_options: list[Skill] = field(default_factory=list)
     lineage_options: list[SpeciesLineage] = field(default_factory=list)
+    feat_options: list[Feat] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -159,6 +163,9 @@ SPECIES: dict[Species, SpeciesData] = {
             SpeciesTraitData(
                 name="Versatile",
                 description="You gain an Origin feat of your choice.",
+                choice=SpeciesTraitChoice(
+                    feat_options=[f for f in Feat if f.category is FeatCategory.ORIGIN]
+                ),
             ),
         ],
         description=(

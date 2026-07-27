@@ -119,6 +119,7 @@ def _creation_options() -> CreationOptionsRead:
                             SpeciesTraitChoiceRead(
                                 skill_options=t.choice.skill_options,
                                 lineage_options=t.choice.lineage_options,
+                                feat_options=t.choice.feat_options,
                             )
                             if t.choice is not None
                             else None

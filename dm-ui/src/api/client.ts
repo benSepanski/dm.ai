@@ -130,6 +130,7 @@ export interface ClassOption {
 export interface SpeciesTraitChoice {
   skill_options: string[];
   lineage_options: string[];
+  feat_options: string[];
 }
 
 export interface SpeciesTrait {

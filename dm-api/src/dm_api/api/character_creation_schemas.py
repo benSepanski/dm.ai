@@ -67,6 +67,7 @@ class SpeciesTraitChoiceRead(BaseModel):
 
     skill_options: list[Skill] = Field(default_factory=list)
     lineage_options: list[SpeciesLineage] = Field(default_factory=list)
+    feat_options: list[Feat] = Field(default_factory=list)
 
 
 class SpeciesTraitRead(BaseModel):
