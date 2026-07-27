@@ -254,6 +254,58 @@ class TestStringSkillLookup:
 
 
 # ---------------------------------------------------------------------------
+# Tool checks (EQP-09)
+# ---------------------------------------------------------------------------
+
+
+class TestToolCheck:
+    def test_tool_check_uses_governing_ability(self, engine: DnD55eEngine):
+        """Thieves' Tools is governed by DEX, not the character's best stat."""
+        char = make_fighter(strength=18, dexterity=14, proficient_skills=[])
+        random.seed(3)
+        result = engine.roll_check(char, "Thieves' Tools", dc=1)
+        random.seed(3)
+        raw_roll, _ = roll_dice(1, 20)
+        # DEX mod = +2, not proficient (empty tool_proficiencies) → roll + 2.
+        assert result.total == raw_roll + 2
+
+    def test_tool_proficiency_adds_bonus(self, engine: DnD55eEngine):
+        char = replace(
+            make_fighter(dexterity=14, level=5, proficient_skills=[]),
+            tool_proficiencies=["Thieves' Tools"],
+        )
+        non_prof = replace(
+            make_fighter(dexterity=14, level=5, proficient_skills=[]), tool_proficiencies=[]
+        )
+        random.seed(11)
+        result_prof = engine.roll_check(char, "Thieves' Tools", dc=1)
+        random.seed(11)
+        result_non_prof = engine.roll_check(non_prof, "Thieves' Tools", dc=1)
+        assert result_prof.roll == result_non_prof.roll
+        assert result_prof.total == result_non_prof.total + 3  # level-5 prof bonus
+
+    def test_tool_proficiency_lookup_is_case_insensitive(self, engine: DnD55eEngine):
+        char = replace(make_fighter(proficient_skills=[]), tool_proficiencies=["thieves' tools"])
+        result = engine.roll_check(char, "Thieves' Tools", dc=1)
+        assert isinstance(result, CheckResult)
+
+    def test_skill_proficiency_does_not_grant_tool_check_bonus(self, engine: DnD55eEngine):
+        """Skill proficiency and tool proficiency are separate lists — a
+        character proficient in Athletics gets no bonus on a tool check."""
+        char = make_fighter(level=5, proficient_skills=[Skill.ATHLETICS])
+        random.seed(5)
+        result = engine.roll_check(char, "Herbalism Kit", dc=1)
+        random.seed(5)
+        raw_roll, _ = roll_dice(1, 20)
+        int_mod = char.ability_scores.modifier(Ability.INTELLIGENCE)
+        assert result.total == raw_roll + int_mod
+
+    def test_unknown_tool_raises_value_error(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        with pytest.raises(ValueError):
+            engine.roll_check(fighter, "Not A Real Tool", dc=10)
+
+
+# ---------------------------------------------------------------------------
 # Advantage / disadvantage
 # ---------------------------------------------------------------------------
 

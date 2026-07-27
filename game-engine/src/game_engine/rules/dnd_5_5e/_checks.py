@@ -9,6 +9,7 @@ from __future__ import annotations
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import CheckResult
 from game_engine.rules.dnd_5_5e._equipment import is_armor_untrained
+from game_engine.rules.dnd_5_5e.data.gear import get_tool
 from game_engine.types import Ability, CharacterSheet, Condition, Skill, TurnState
 
 # Conditions that impose disadvantage on ability checks (2024 PHB).
@@ -101,6 +102,10 @@ def _roll_check_impl(
     Args:
         char: Character sheet.
         skill: Skill or ability enum, or a name string (case-insensitive).
+            A string that isn't a skill/ability name is tried against the
+            tool registry (e.g. ``"Thieves' Tools"``, EQP-09) — its
+            :attr:`ToolData.ability` governs the roll, and proficiency comes
+            from ``char.tool_proficiencies`` rather than skill proficiency.
         dc: Difficulty class (integer).
         advantage: Roll twice and take the higher result.
         disadvantage: Roll twice and take the lower result.
@@ -113,9 +118,10 @@ def _roll_check_impl(
         :class:`~game_engine.interface.CheckResult`.
 
     Raises:
-        ValueError: If *skill* is not recognised.
+        ValueError: If *skill* is not a recognised skill, ability, or tool.
     """
-    # Resolve skill/ability key
+    # Resolve skill/ability/tool key
+    tool = None
     if isinstance(skill, Skill):
         ability = skill.governing_ability
         skill_key = skill.value
@@ -125,26 +131,34 @@ def _roll_check_impl(
     else:
         skill_key = skill.lower()
         resolved = SKILL_ABILITY_MAP.get(skill_key)
-        if resolved is None:
-            raise ValueError(
-                f"Unknown skill or ability {skill!r}.  "
-                f"Valid skills: {sorted(SKILL_ABILITY_MAP.keys())}"
-            )
-        ability = resolved
+        if resolved is not None:
+            ability = resolved
+        else:
+            tool = get_tool(skill_key)
+            if tool is None:
+                raise ValueError(
+                    f"Unknown skill, ability, or tool {skill!r}.  "
+                    f"Valid skills: {sorted(SKILL_ABILITY_MAP.keys())}"
+                )
+            ability = tool.ability
 
     ability_mod = char.ability_scores.modifier(ability)
     prof_bonus = _calc_prof_bonus(char.level)
 
-    # Proficiency check: only *skill* proficiency grants a bonus on a check.
+    # Proficiency check: only *skill*/*tool* proficiency grants a bonus.
     # `CharacterSheet.proficient_abilities` records saving-throw proficiency
     # (see `_saves.py`) and must never leak into a raw ability check.
-    try:
-        skill_key_enum = Skill(skill_key)
-    except ValueError:
+    if tool is not None:
+        is_proficient = any(p.lower() == tool.name.lower() for p in char.tool_proficiencies)
         skill_key_enum = None
-    is_proficient = skill_key_enum is not None and char.is_proficient(skill_key_enum)
+    else:
+        try:
+            skill_key_enum = Skill(skill_key)
+        except ValueError:
+            skill_key_enum = None
+        is_proficient = skill_key_enum is not None and char.is_proficient(skill_key_enum)
     total_mod = ability_mod + (prof_bonus if is_proficient else 0)
-    # Expertise doubles the proficiency bonus.
+    # Expertise doubles the proficiency bonus (tool checks have no expertise).
     if skill_key_enum is not None and char.has_expertise(skill_key_enum):
         total_mod += prof_bonus
     # Exhaustion: flat -2 per level on every d20 test (2024 rules).
