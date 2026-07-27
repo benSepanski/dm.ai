@@ -87,7 +87,12 @@ economy fields (`reaction_used` for the first two, `cleave_available`/
 point on-turn actions use, dispatched by three non-on-turn `ActionType`
 members (`OPPORTUNITY_ATTACK`, `READIED_ACTION`, `CLEAVE_ATTACK`) rather than
 a parallel API. Those helpers in turn use shared utilities from
-`game_engine/core/` (dice, conditions, initiative). Beyond the ABC, the engine
+`game_engine/core/` (dice, conditions). `game_engine/core/initiative.py`
+also lives here as a standalone `InitiativeTracker` primitive, but the 5.5e
+engine and dm-api's combat flow don't use it — `roll_initiative` returns a
+raw int total, and dm-api's `combat_utils.roll_and_sort_initiatives` does its
+own sort/tie-break and stores plain dicts on `CombatState.initiative_order`
+instead. Beyond the ABC, the engine
 exposes 5.5e-specific methods (`roll_death_save`, `stabilize`, `grant_temp_hp`,
 `begin_turn`, `passive_score`, `concentration_save_dc`).
 
