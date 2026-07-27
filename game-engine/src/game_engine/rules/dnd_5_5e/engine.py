@@ -115,11 +115,14 @@ class DnD55eEngine(RuleEngine):
         disadvantage: bool = False,
         turn_state: TurnState | None = None,
     ) -> CheckResult:
-        """Roll a skill or ability check against *dc*.
+        """Roll a skill, ability, or tool check against *dc*.
 
         Args:
             char: Character sheet.
-            skill: Skill or ability enum, or a name string (case-insensitive).
+            skill: Skill or ability enum, or a name string (case-insensitive)
+                — a string also matches the tool registry (e.g. ``"Thieves'
+                Tools"``), governed by that tool's ability and
+                ``char.tool_proficiencies`` instead of skill proficiency.
             dc: Difficulty class (integer).
             advantage: Roll twice and take the higher result.
             disadvantage: Roll twice and take the lower result.
@@ -131,7 +134,7 @@ class DnD55eEngine(RuleEngine):
             :class:`~game_engine.interface.CheckResult`.
 
         Raises:
-            ValueError: If *skill* is not recognised.
+            ValueError: If *skill* is not a recognised skill, ability, or tool.
         """
         return _roll_check_impl(char, skill, dc, advantage, disadvantage, turn_state)
 

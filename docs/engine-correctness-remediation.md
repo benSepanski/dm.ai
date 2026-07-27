@@ -74,7 +74,7 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 
 | Work | Findings | Size |
 |------|----------|------|
-| **D3** 🟡 partial — Starting equipment/gold into inventory ✅ done; encumbrance consumer, tool-check abilities, currency spend remain | EQP-05 ✅, EQP-10, EQP-09, EQP-11 | M |
+| **D3** 🟡 partial — Starting equipment/gold into inventory ✅ done; tool checks ✅ done; encumbrance consumer, currency spend remain | EQP-05 ✅, EQP-09 ✅, EQP-10, EQP-11 | M |
 | **L** ✅ done — Dodge speed-0 gate; dead spell metadata de-claimed in spec | ACT-15 ✅ done, SPL-24 ✅ de-claimed | S |
 | Remaining minors folded into their workstreams | ACT-11, ACT-13, ACT-14, EFF-12, EFF-15, EFF-16 | S |
 
@@ -211,10 +211,9 @@ anything else (`"Book (prayers)"`, `"Artisan's Tools (choice)"`) stays
 part of the item name rather than being guessed at. `CharacterSheet.to_dict()`
 already round-trips `inventory`/`currency` and dm-api already persists
 `stats=sheet.to_dict()` verbatim, so no dm-api change was needed — a built
-character's inventory/gold show up in the DB automatically. **Encumbrance
-(EQP-10), tool-check ability wiring (EQP-09), and currency debit/credit for
-purchases (EQP-11) remain open** — this pass only covers the
-equipment-into-inventory half of D3, not the "consume" half.
+character's inventory/gold show up in the DB automatically. Tool-check
+ability wiring (EQP-09) is now also done (see below). **Encumbrance
+(EQP-10) and currency debit/credit for purchases (EQP-11) remain open.**
 
 Originally, `build_character` applied AC once at creation and discarded the armor — `CharacterSheet` had no worn-armor field — so Str-minimum speed penalties, stealth disadvantage, and armor-training penalties were structurally unreachable, and AC never recomputed.
 
@@ -227,7 +226,7 @@ Originally, `build_character` applied AC once at creation and discarded the armo
 - Starting equipment & gold never applied to inventory/currency (`character_builder.py:284` [EQP-05], **major**) ✅ done — `_starting_equipment.resolve_starting_equipment`, wired into `build_character`
 - `is_encumbered` has no rule consumers (`exploration.py:44` [EQP-10], **minor**)
 - `Currency.total_gp` never consumed; no purchase/spend logic (`character_state.py:141` [EQP-11], **minor**)
-- `ToolData.ability` dead — tool checks ignore governing ability & proficiency (`data/gear.py:28` [EQP-09], **minor**)
+- `ToolData.ability` dead — tool checks ignore governing ability & proficiency (`data/gear.py:28` [EQP-09], **minor**) ✅ done — `_roll_check_impl` (`_checks.py`) now falls back to `data.gear.get_tool` when a check's `skill` string isn't a `Skill`/`Ability` name, using the tool's governing ability and `char.tool_proficiencies` (case-insensitive) instead of skill proficiency
 
 **Fix approach**:
 1. ✅ Add a **worn-armor / equipped-weapon** concept to `CharacterSheet` (store the equipped armor and shield identity, not just the derived AC) plus an equip/unequip API that recomputes AC via `compute_sheet_ac`. *(equipped-weapon selection itself is deferred to D3.)*
@@ -235,11 +234,11 @@ Originally, `build_character` applied AC once at creation and discarded the armo
 3. ✅ Feed worn armor into `effective_speed` (−10 ft while STR < `min_strength`, `_equipment.effective_speed`) and into the Hide check (`disadvantage=True` when the worn armor has `stealth_disadvantage`, `_equipment.has_stealth_disadvantage`).
 4. ✅ Apply the 2024 **armor-training** penalty: disadvantage on STR/DEX D20 tests (`_checks.py`, `_saves.py`) and can't-cast (`_spell_resolution.cast_spell`) while wearing untrained armor, via `_equipment.is_armor_untrained`.
 5. ✅ Expand `BackgroundData.equipment` (including gold and PACK contents) into `inventory`/`currency` at build time (`_starting_equipment.resolve_starting_equipment`); persisted automatically via dm-api's existing `stats=sheet.to_dict()`, not just as a string column.
-6. Consume `is_encumbered` in `effective_speed`/travel pace; add tool-check resolution mapping tool name → `ToolData.ability` + proficiency; add basic currency debit/credit for purchases. **Still open** (EQP-09/10/11).
+6. ✅ Add tool-check resolution mapping tool name → `ToolData.ability` + proficiency (`_checks.py`, EQP-09). Consume `is_encumbered` in `effective_speed`/travel pace and add basic currency debit/credit for purchases remain **open** (EQP-10/11).
 
 **Tests**: ✅ STR-10 fighter in Chain Mail has speed 20 (`test_equipment_2024.py::TestArmorTrainingAndStrengthPenalties`); ✅ Hide with noisy armor worn rolls with disadvantage (`test_attacks_2024_economy.py::TestHideConsumesArmorStealthPenalty`); ✅ untrained armor gives disadvantage on STR/DEX checks (`test_engine_checks.py::TestArmorTrainingDisadvantage`) and saves (`test_saves_death.py::test_untrained_armor_disadvantages_strength_and_dex_saves`) but not mental ones, and blocks casting including cantrips (`test_spellcasting.py::TestCasting::test_untrained_armor_blocks_leveled_cast`/`test_untrained_armor_blocks_cantrip_too`); ✅ `armor_name='Shield'` no longer yields AC 2; ✅ a built character has non-empty inventory and starting gp, and pack names expand into their contents (`test_starting_equipment.py`); over-capacity inventory reduces speed (EQP-10, open); equipping/unequipping armor recomputes AC.
 
-**Size**: L. The worn-armor field (step 1) is shared infrastructure; the Str-min/stealth/training consumers depend on it. D1 ✅ (worn-armor field + AC recompute + shield guard), D2 ✅ (speed/stealth/training consumers), D3 🟡 partial (EQP-05 starting equipment/currency done; EQP-09/10/11 tool-check/encumbrance/spend remain).
+**Size**: L. The worn-armor field (step 1) is shared infrastructure; the Str-min/stealth/training consumers depend on it. D1 ✅ (worn-armor field + AC recompute + shield guard), D2 ✅ (speed/stealth/training consumers), D3 🟡 partial (EQP-05 starting equipment/currency ✅, EQP-09 tool checks ✅; EQP-10/11 encumbrance/spend remain).
 
 ---
 
@@ -675,7 +674,7 @@ casting time, range, areas of effect" row is corrected from a blanket ✅ to
 
 **Majors that affect ordinary play (fix next):**
 7. **Workstream G** ✅ done (instant death, death-save reset, crit modifier doubling — EFF-08/EFF-09/EFF-13/ACT-09) — F's effective-damage refactor (`_apply_damage_effective`) was reused here. EFF-16 (long-rest-at-0-HP) investigated and deliberately not changed; see the workstream section.
-8. **Workstream D** (armor/proficiency/inventory) — **D1 ✅ done** (worn-armor identity + equip/unequip AC recompute + shield guard + `CharacterSheet.size`), **D2 ✅ done** (Str-min speed penalty, Hide stealth disadvantage, armor-training disadvantage on STR/DEX checks/saves and the can't-cast gate), and **D3 🟡 partial** (EQP-05 starting equipment/gold → inventory/currency done; EQP-09/10/11 tool-check ability wiring, encumbrance consumer, and currency spend remain).
+8. **Workstream D** (armor/proficiency/inventory) — **D1 ✅ done** (worn-armor identity + equip/unequip AC recompute + shield guard + `CharacterSheet.size`), **D2 ✅ done** (Str-min speed penalty, Hide stealth disadvantage, armor-training disadvantage on STR/DEX checks/saves and the can't-cast gate), and **D3 🟡 partial** (EQP-05 starting equipment/gold → inventory/currency done, EQP-09 tool-check ability wiring done; encumbrance consumer and currency spend, EQP-10/11, remain).
 9. **Workstream E** ✅ done — Slow/Cleave/Graze/unarmed-strike plus the Push and grapple/shove size gates, the latter unblocked by D1's `CharacterSheet.size` field.
 10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) and **I2** ✅ done (condition-immunity centralization) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
 11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
