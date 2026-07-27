@@ -16,7 +16,9 @@ const LOCATION_TYPES = [
 interface Props {
   worldId: string;
   sessionId: string;
-  onCreated: (location: LocationResponse) => void;
+  // `wasSetAsCurrent` reflects the "Set as current location" checkbox — the
+  // caller should only treat `location` as the new current location when true.
+  onCreated: (location: LocationResponse, wasSetAsCurrent: boolean) => void;
   onCancel: () => void;
 }
 
@@ -45,7 +47,7 @@ export default function CreateLocationDialog({ worldId, sessionId, onCreated, on
       if (setAsCurrent) {
         await api.patchSession(sessionId, { current_location_id: location.id });
       }
-      onCreated(location);
+      onCreated(location, setAsCurrent);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create location.");
     } finally {
