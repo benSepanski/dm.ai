@@ -3,6 +3,15 @@ Initiative tracker for the RPG game engine.
 
 Manages turn order for combat encounters using the standard D&D initiative
 system: highest total goes first, with Dexterity modifier used to break ties.
+
+Not currently wired into the D&D 5.5e engine or dm-api: ``DnD55eEngine.
+roll_initiative`` returns a raw int, and dm-api's session combat flow
+(``dm_api.api.combat_utils.roll_and_sort_initiatives``) does its own
+sort/tie-break and stores plain dicts on ``CombatState.initiative_order``
+rather than using this class. This module is a rule-agnostic primitive
+available for a rule implementation or API layer that wants stateful
+turn-order tracking (skip-inactive, wrap-around, mid-combat add/remove) built
+in rather than reimplemented ad hoc.
 """
 
 from __future__ import annotations
