@@ -60,11 +60,23 @@ def _get_available_actions_impl(
     char: CharacterSheet,
     combat_state: CombatStateData,
 ) -> list[Action]:
-    """Return the list of actions the character may legally take.
+    """Return the list of actions the character may legally take right now.
 
     The Magic action is included only for characters with spells known or
     prepared. Returned ``Action`` objects have ``target_id=None``; the
-    caller supplies a concrete target on submission.
+    caller supplies a concrete target on submission, and ``resolve_action``
+    performs the full legality check (e.g. a specific off-hand weapon's
+    Light property) — this list is a same-turn economy filter, not a
+    replacement for that validation (ACT-13).
+
+    Once the actor's action is spent, every action-consuming option drops
+    out except ``ATTACK``, which can still resolve as a bonus-action
+    off-hand or Nick swing; it is only omitted once the action, bonus
+    action, and Nick slot are all spent. A pending Cleave follow-up
+    (``TurnState.cleave_available``) is surfaced as ``CLEAVE_ATTACK`` since
+    it is a genuine free action available this turn, unlike the reaction
+    events (``OPPORTUNITY_ATTACK``, ``READIED_ACTION``) which trigger off
+    another creature's action rather than being chosen from this list.
 
     Args:
         char: Character sheet.
@@ -76,14 +88,25 @@ def _get_available_actions_impl(
     if not char.can_act:
         return []
 
-    available = list(_ALWAYS_AVAILABLE)
-    if char.prepared_spells or char.known_spells:
-        available.append(ActionType.MAGIC)
+    ts = combat_state.turn_state_for(char.id)
 
-    return [
+    available: list[ActionType] = []
+    if not ts.action_used:
+        available.extend(_ALWAYS_AVAILABLE)
+        if char.prepared_spells or char.known_spells:
+            available.append(ActionType.MAGIC)
+    elif not (ts.bonus_action_used and ts.nick_used):
+        available.append(ActionType.ATTACK)
+
+    actions = [
         Action(action_type=action_type, actor_id=char.id, target_id=None)
         for action_type in available
     ]
+    if ts.cleave_available and not ts.cleave_used:
+        actions.append(
+            Action(action_type=ActionType.CLEAVE_ATTACK, actor_id=char.id, target_id=None)
+        )
+    return actions
 
 
 def _begin_turn_impl(char: CharacterSheet, combat_state: CombatStateData) -> TurnState:
