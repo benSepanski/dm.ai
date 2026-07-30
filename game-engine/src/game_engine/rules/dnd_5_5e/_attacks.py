@@ -3,12 +3,12 @@ D&D 5.5e attack resolution (2024 rules).
 
 Handles to-hit advantage/disadvantage from conditions and turn flags,
 cover, critical hits (including melee auto-crits vs paralyzed/unconscious),
-off-hand attacks, unarmed grapple/shove, the Ammunition property's
-inventory spend/precondition (EQP-08), and concentration checks on
-damage. On-hit weapon mastery effects live in :mod:`._masteries`; reaction
-resolution (opportunity attacks, readied actions) lives in
-:mod:`._reactions` — both reuse ``_validate_attack``/``_resolve_attack``/
-``_failure`` from here.
+off-hand attacks, unarmed grapple/shove, and concentration checks on
+damage. On-hit weapon mastery effects live in :mod:`._masteries`; the
+Ammunition property's inventory spend/precondition (EQP-08) lives in
+:mod:`._ammunition`; reaction resolution (opportunity attacks, readied
+actions) lives in :mod:`._reactions` — all three reuse
+``_validate_attack``/``_resolve_attack``/``_failure`` from here.
 
 Internal module — import via :class:`DnD55eEngine`.
 """
@@ -20,6 +20,7 @@ from typing import Any
 from game_engine.core.conditions import CONDITION_EFFECTS
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import Action, ActionResult
+from game_engine.rules.dnd_5_5e._ammunition import _consume_ammunition, _has_ammunition
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
 from game_engine.rules.dnd_5_5e._conditions import _apply_condition_impl
 from game_engine.rules.dnd_5_5e._damage import (
@@ -124,25 +125,6 @@ def _advantage_state(
         disadvantage = True
 
     return advantage, disadvantage
-
-
-def _has_ammunition(actor: CharacterSheet, ammo_name: str) -> bool:
-    """True if *actor*'s inventory has at least one unit of *ammo_name* left."""
-    return any(
-        item.name.lower() == ammo_name.lower() and item.quantity > 0 for item in actor.inventory
-    )
-
-
-def _consume_ammunition(actor: CharacterSheet, ammo_name: str) -> None:
-    """Spend one unit of *ammo_name* from *actor*'s inventory, if any is there.
-
-    A no-op if none is found — callers are expected to have already gated on
-    :func:`_has_ammunition` via ``_validate_attack``.
-    """
-    for item in actor.inventory:
-        if item.name.lower() == ammo_name.lower() and item.quantity > 0:
-            item.quantity -= 1
-            return
 
 
 def _log_concentration_result(log: dict[str, Any], result: ConcentrationSaveResult | None) -> None:
