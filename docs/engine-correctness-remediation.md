@@ -76,7 +76,7 @@ Depends on Phase 1 (A). Split of Workstream **B**:
 |------|----------|------|
 | **D3** ✅ done — Starting equipment/gold into inventory ✅, tool checks ✅, encumbrance consumer ✅, currency spend ✅ | EQP-05 ✅, EQP-09 ✅, EQP-10 ✅, EQP-11 ✅ | M |
 | **L** ✅ done — Dodge speed-0 gate; dead spell metadata de-claimed in spec | ACT-15 ✅ done, SPL-24 ✅ de-claimed | S |
-| Remaining minors folded into their workstreams | ACT-11, ACT-13, ACT-14, EFF-12, EFF-15, EFF-16 | S |
+| Remaining minors folded into their workstreams | ACT-14, EFF-12, EFF-15, EFF-16 | S |
 
 ### Cross-cutting (every phase) — Workstream M: parity-spec truth
 
@@ -103,6 +103,24 @@ The single highest-leverage bug. `TurnState.reset_turn` (`game-engine/src/game_e
 ---
 
 ## Workstream B — Action economy model (root cause: no attacks-per-action / reaction / casting-time concept)
+
+**Status: B1, B2, and ACT-13 done.** `_get_available_actions_impl`
+(`_actions.py`) now reads `combat_state.turn_state_for(char.id)` instead of
+returning the same static action list regardless of what economy the actor
+has already spent: once `ts.action_used` is set, every action-consuming
+option drops out of the list except `ATTACK`, which is only omitted once
+the action, bonus action, *and* Nick slot (`ts.bonus_action_used` and
+`ts.nick_used`) are all spent — since Attack can still resolve as a
+bonus-action off-hand or Nick swing after the main action is gone. A
+pending Cleave follow-up (`ts.cleave_available` and not `ts.cleave_used`)
+is now surfaced as `ActionType.CLEAVE_ATTACK`, since — unlike
+`OPPORTUNITY_ATTACK`/`READIED_ACTION`, which trigger off another creature's
+action rather than being chosen from this list — it's a genuine free
+action available to the actor this turn. As before, this list is a
+same-turn economy filter/hint; `resolve_action` still performs the full
+per-submission legality check (e.g. a specific off-hand weapon's Light
+property) when the caller actually submits an action. See
+`game-engine/tests/test_attacks_2024_economy.py::TestAvailableActionsReflectTurnEconomy`.
 
 **Status: B1 and B2 done.** `_attacks_per_action` (`game-engine/src/game_engine/rules/dnd_5_5e/_actions.py`) now reads the `attacks_granted` field of each class's "Extra Attack" `ClassFeatureData` (`data/class_features/*.py`) through the actor's level — Fighter 5/11/20 → 2/3/4, Barbarian/Monk/Paladin/Ranger/Artificer(Battle Smith) 5 → 2; multiclass characters take the best tier, not the sum. `_resolve_action_impl`/`_resolve_attack_action` validate the attack (`_attacks._validate_attack`) *before* touching any economy slot, so a rejected attack (unknown actor/target, total cover) costs nothing and an unknown actor creates no ghost `TurnState` — the action slot is only marked spent once `attacks_made` reaches the Extra Attack pool. Nick-mastery off-hand attacks now consume a once-per-turn `TurnState.nick_used` flag instead of the bonus action.
 
@@ -137,7 +155,7 @@ itself) are exempt from this check since Nick only unlocks on Light weapons.
 - Action/bonus slot consumed *before* attack validation, so rejected attacks burn the slot; unknown actor creates a ghost TurnState (`_actions.py:138` [ACT-05], **major**) ✅ done
 - Nick mastery: off-hand attack always consumes the bonus action (`_attacks.py:155` [ACT-08], **major**) ✅ done
 - Two-weapon fighting never validates the Light property or a prior Attack action — any weapon works off-hand (`_actions.py:122` [ACT-04], **major**) ✅ done
-- `get_available_actions` ignores turn state & bonus/reaction economy (`_actions.py:43` [ACT-13], **minor**)
+- `get_available_actions` ignores turn state & bonus/reaction economy (`_actions.py:43` [ACT-13], **minor**) ✅ done
 - Dash flag / `movement_used_ft` are dead (`_actions.py:155` [ACT-14], **minor**)
 
 **Fix approach**:
@@ -148,9 +166,9 @@ itself) are exempt from this check since Nick only unlocks on Light weapons.
 5. ✅ Nick: when the off-hand weapon has the Nick mastery unlocked, resolve the extra Light attack as part of the Attack action (do not set `bonus_action_used`), once per turn — independent of hit.
 5b. ✅ Validate two-weapon fighting: a plain (non-Nick) `is_offhand` attack requires the off-hand weapon to have the Light property and a prior same-turn Attack-action attack with a Light main-hand weapon (`TurnState.light_attack_used`), reject otherwise. Now that Workstream C bridges `WeaponData.properties` into `AttackDetails` in the real dm-api pipeline, this has real-play effect; engine-level callers can still pass `properties` explicitly.
 6. ✅ Ready: `TurnState.readied: ReadiedAction | None` stores the trigger text, target, and `AttackDetails`; `ActionType.READIED_ACTION` resolves it later via the same reaction path as opportunity attacks, and an unused readied action is cleared by `reset_turn` (lost at the start of the readier's own next turn, per the 2024 rule). Only readying an attack is supported — readying a spell (which would need concentration wiring into a reaction cast) is left as a documented gap, not silently claimed.
-7. Make `get_available_actions` consult `turn_state_for` and surface remaining action/bonus/reaction options.
+7. ✅ Make `get_available_actions` consult `turn_state_for` and surface remaining action/bonus/reaction options.
 
-**Tests**: ✅ level-5 fighter makes 2 attacks then is rejected on the 3rd; ✅ an attack behind total cover leaves `action_used=False` and a follow-up legal attack succeeds; ✅ Nick off-hand attack leaves `bonus_action_used=False`; ✅ opportunity attack consumes reaction and a second in the same round is rejected (engine tests in `test_attacks_2024.py::TestOpportunityAttacks`, API tests in `dm-api/tests/test_combat_actions.py`); ✅ a disengaged mover provokes no opportunity attack and spends no reaction; ✅ Ready stores a trigger+attack, `READIED_ACTION` fires it once via the reaction, and an unused readied action is lost at the start of the readier's own next turn (`test_attacks_2024.py::TestReadiedActions`); ✅ Healing Word (bonus) leaves the action free (`dm-api/tests/test_combat_spells.py::test_bonus_action_spell_uses_bonus_action`); ✅ a second leveled spell same turn is rejected while a cantrip/ritual is allowed (`test_spellcasting.py::TestOneLeveledSpellPerTurn`); ✅ an off-hand attack with a non-Light weapon, or with no prior Light main-hand attack this turn, is rejected (`test_attacks_2024.py::TestTwoWeaponFighting`).
+**Tests**: ✅ level-5 fighter makes 2 attacks then is rejected on the 3rd; ✅ an attack behind total cover leaves `action_used=False` and a follow-up legal attack succeeds; ✅ Nick off-hand attack leaves `bonus_action_used=False`; ✅ opportunity attack consumes reaction and a second in the same round is rejected (engine tests in `test_attacks_2024.py::TestOpportunityAttacks`, API tests in `dm-api/tests/test_combat_actions.py`); ✅ a disengaged mover provokes no opportunity attack and spends no reaction; ✅ Ready stores a trigger+attack, `READIED_ACTION` fires it once via the reaction, and an unused readied action is lost at the start of the readier's own next turn (`test_attacks_2024.py::TestReadiedActions`); ✅ Healing Word (bonus) leaves the action free (`dm-api/tests/test_combat_spells.py::test_bonus_action_spell_uses_bonus_action`); ✅ a second leveled spell same turn is rejected while a cantrip/ritual is allowed (`test_spellcasting.py::TestOneLeveledSpellPerTurn`); ✅ an off-hand attack with a non-Light weapon, or with no prior Light main-hand attack this turn, is rejected (`test_attacks_2024.py::TestTwoWeaponFighting`); ✅ spending the action drops Dash/Dodge/Hide/etc. from `get_available_actions` but keeps `ATTACK` available for a bonus-action/Nick swing, `ATTACK` itself drops once the bonus action and Nick slot are both spent, and a pending Cleave follow-up surfaces as `CLEAVE_ATTACK` until used (`test_attacks_2024_economy.py::TestAvailableActionsReflectTurnEconomy`).
 
 **Size**: L. Depends on Workstream A (shared `TurnState` refactor). This is the largest single workstream; split into B1 ✅ (Extra Attack + validation ordering + Nick — done), B2 ✅ (reactions/opportunity/Ready — done), B3 ✅ (spell casting-time + one-slot-per-turn + TWF Light validation — done).
 

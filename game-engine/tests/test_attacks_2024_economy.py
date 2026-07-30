@@ -191,6 +191,53 @@ class TestActionEconomyAndConcentration:
         assert ActionType.MAGIC in actions
 
 
+class TestAvailableActionsReflectTurnEconomy:
+    """ACT-13: get_available_actions must consult TurnState, not just return
+    the same static list regardless of what economy the actor has already
+    spent this turn."""
+
+    def test_spending_the_action_drops_action_consuming_options(self, engine, state):
+        actor = state.get_combatant("a")
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            # Level-1 fighter: no Extra Attack, so this spends the action.
+            engine.resolve_action(_attack(), state)
+        actions = {a.action_type for a in engine.get_available_actions(actor, state)}
+        assert ActionType.DASH not in actions
+        assert ActionType.DODGE not in actions
+        assert ActionType.HIDE not in actions
+
+    def test_attack_stays_available_for_a_bonus_action_offhand_swing(self, engine, state):
+        actor = state.get_combatant("a")
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            engine.resolve_action(_attack(), state)
+        actions = {a.action_type for a in engine.get_available_actions(actor, state)}
+        assert ActionType.ATTACK in actions
+
+    def test_attack_drops_once_bonus_action_and_nick_are_both_spent(self, engine, state):
+        actor = state.get_combatant("a")
+        ts = state.turn_state_for("a")
+        ts.action_used = True
+        ts.bonus_action_used = True
+        ts.nick_used = True
+        actions = {a.action_type for a in engine.get_available_actions(actor, state)}
+        assert ActionType.ATTACK not in actions
+
+    def test_cleave_available_surfaces_cleave_attack(self, engine, state):
+        actor = state.get_combatant("a")
+        ts = state.turn_state_for("a")
+        ts.cleave_available = True
+        actions = {a.action_type for a in engine.get_available_actions(actor, state)}
+        assert ActionType.CLEAVE_ATTACK in actions
+
+    def test_cleave_used_no_longer_surfaces_cleave_attack(self, engine, state):
+        actor = state.get_combatant("a")
+        ts = state.turn_state_for("a")
+        ts.cleave_available = True
+        ts.cleave_used = True
+        actions = {a.action_type for a in engine.get_available_actions(actor, state)}
+        assert ActionType.CLEAVE_ATTACK not in actions
+
+
 class TestHelpAndHideSurviveBeginTurn:
     """2024 PHB: Help and Hide grant advantage that outlives a turn boundary
     other than the granting one — begin_turn must not wipe them early."""
