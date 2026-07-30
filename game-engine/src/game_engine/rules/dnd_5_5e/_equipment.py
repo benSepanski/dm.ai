@@ -14,6 +14,7 @@ Internal module — import the ``equip_*`` / ``unequip_*`` helpers via
 from __future__ import annotations
 
 from game_engine.rules.dnd_5_5e.data.armor import ArmorData, compute_armor_class, get_armor
+from game_engine.rules.dnd_5_5e.exploration import is_encumbered
 from game_engine.types import Ability, ArmorCategory, CharacterClass, CharacterSheet
 
 
@@ -103,15 +104,20 @@ def armor_speed_penalty(sheet: CharacterSheet) -> int:
 
 
 def effective_speed(sheet: CharacterSheet) -> int:
-    """``sheet.effective_speed`` minus the Strength-minimum armor penalty (D2, EQP-04).
+    """``sheet.effective_speed`` minus the Strength-minimum armor penalty (D2, EQP-04),
+    further capped at 5 ft while carrying more than the sheet's carrying capacity
+    (2024 PHB encumbrance, EQP-10).
 
     ``CharacterSheet.effective_speed`` is a pure types-layer property with no
-    visibility into the rules-layer armor registry, so the under-Strength
-    penalty is layered on here instead — mirrors how
-    ``_actions._effective_speed`` layers the Slow mastery's combat-only
-    penalty on top of this.
+    visibility into the rules-layer armor registry or inventory weight, so both
+    the under-Strength penalty and the encumbrance cap are layered on here
+    instead — mirrors how ``_actions._effective_speed`` layers the Slow
+    mastery's combat-only penalty on top of this.
     """
-    return max(0, sheet.effective_speed - armor_speed_penalty(sheet))
+    speed = max(0, sheet.effective_speed - armor_speed_penalty(sheet))
+    if speed > 0 and is_encumbered(sheet, sheet.size):
+        return min(speed, 5)
+    return speed
 
 
 def unequip_armor(sheet: CharacterSheet) -> None:

@@ -1,5 +1,11 @@
 """D&D 5.5e (2024 Player's Handbook) rule engine."""
 
+from game_engine.rules.dnd_5_5e._currency import (
+    can_afford,
+    credit_gold,
+    purchase_item,
+    spend_gold,
+)
 from game_engine.rules.dnd_5_5e._equipment import (
     compute_sheet_ac,
     equip_armor,
@@ -81,6 +87,11 @@ __all__ = [
     "unequip_armor",
     "unequip_shield",
     "resolve_starting_equipment",
+    # currency
+    "can_afford",
+    "credit_gold",
+    "purchase_item",
+    "spend_gold",
     # resting
     "RestResult",
     "long_rest",

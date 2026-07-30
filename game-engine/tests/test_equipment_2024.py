@@ -27,6 +27,7 @@ from game_engine.types import (
     CharacterClass,
     CharacterSheet,
     CreatureSize,
+    InventoryItem,
     Skill,
     Species,
 )
@@ -184,6 +185,35 @@ class TestArmorTrainingAndStrengthPenalties:
     def test_unarmored_never_untrained(self):
         sheet = _build(character_class=CharacterClass.WIZARD, armor_name=None)
         assert not is_armor_untrained(sheet)
+
+
+class TestEncumbrance:
+    """Workstream D3 (EQP-10): carrying over capacity caps speed at 5 ft."""
+
+    def test_overloaded_inventory_caps_speed_at_5(self):
+        sheet = _build(armor_name=None, ability_scores=_scores(strength=10))
+        assert effective_speed(sheet) == 30
+        # STR 10 -> 150 lb capacity; load well past it.
+        sheet.inventory.append(InventoryItem(name="Iron Ingots", quantity=20, weight_lb=20.0))
+        assert effective_speed(sheet) == 5
+
+    def test_encumbrance_stacks_with_understrength_armor_penalty(self):
+        # Chain Mail's min_strength (13) penalty would otherwise apply first;
+        # encumbrance caps the result at 5, not 20 - 10.
+        sheet = _build(armor_name="Chain Mail", ability_scores=_scores(strength=10))
+        sheet.inventory.append(InventoryItem(name="Iron Ingots", quantity=20, weight_lb=20.0))
+        assert effective_speed(sheet) == 5
+
+    def test_encumbrance_never_raises_a_speed_already_at_zero(self):
+        sheet = _build(armor_name=None, ability_scores=_scores(strength=10))
+        sheet.speed = 0
+        sheet.inventory.append(InventoryItem(name="Iron Ingots", quantity=20, weight_lb=20.0))
+        assert effective_speed(sheet) == 0
+
+    def test_light_load_no_speed_penalty(self):
+        sheet = _build(armor_name=None, ability_scores=_scores(strength=10))
+        sheet.inventory.append(InventoryItem(name="Rope", weight_lb=5.0))
+        assert effective_speed(sheet) == 30
 
 
 class TestCreatureSize:
