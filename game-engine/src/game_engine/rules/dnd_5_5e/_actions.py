@@ -230,7 +230,11 @@ def _resolve_attack_action(
     the action slot is only marked spent once that pool is exhausted; an
     unarmed grapple/shove is a single use of the action regardless of Extra
     Attack (its interaction with multiple attacks is Workstream E, out of
-    scope here).
+    scope here). A Loading weapon (EQP-08) can fire only once per main-hand
+    Attack-action use this turn, regardless of how many attacks Extra Attack
+    grants (``ts.loading_attack_used``) — a separate bonus-action/Nick shot
+    with a (possibly different) Loading weapon is its own "use" and isn't
+    gated by this same-turn flag.
     """
     validated = _validate_attack(action, combat_state)
     if isinstance(validated, ActionResult):
@@ -296,8 +300,17 @@ def _resolve_attack_action(
         return _simple_result(
             action, False, "Action already used this turn.", {"error": "action_used"}
         )
+    if WeaponProperty.LOADING in details.properties and ts.loading_attack_used:
+        return _simple_result(
+            action,
+            False,
+            "This weapon's Loading property allows only one shot per turn.",
+            {"error": "loading_already_fired"},
+        )
     if WeaponProperty.LIGHT in details.properties:
         ts.light_attack_used = True
+    if WeaponProperty.LOADING in details.properties:
+        ts.loading_attack_used = True
     result = _resolve_attack(action, combat_state)
     if ts.attacks_made >= max_attacks:
         ts.action_used = True

@@ -30,6 +30,9 @@ class WeaponData:
     range_long_ft: int | None = None
     weight_lb: float = 0.0
     cost_gp: float = 0.0
+    # EQP-08: the gear registry item (see data/gear.py) this weapon's
+    # Ammunition property draws from — None for weapons without it.
+    ammunition_name: str | None = None
 
     @property
     def two_handed(self) -> bool:
@@ -185,6 +188,7 @@ WEAPONS: list[WeaponData] = [
             WeaponProperty.LOADING,
             WeaponProperty.TWO_HANDED,
         ],
+        ammunition_name="Bolts",
         range_normal_ft=80,
         range_long_ft=320,
         weight_lb=5.0,
@@ -198,6 +202,7 @@ WEAPONS: list[WeaponData] = [
         damage_type=DamageType.PIERCING,
         mastery=WeaponMastery.VEX,
         properties=[WeaponProperty.AMMUNITION, WeaponProperty.TWO_HANDED],
+        ammunition_name="Arrows",
         range_normal_ft=80,
         range_long_ft=320,
         weight_lb=2.0,
@@ -211,6 +216,7 @@ WEAPONS: list[WeaponData] = [
         damage_type=DamageType.BLUDGEONING,
         mastery=WeaponMastery.SLOW,
         properties=[WeaponProperty.AMMUNITION],
+        ammunition_name="Bullets, Sling",
         range_normal_ft=30,
         range_long_ft=120,
         weight_lb=0.0,
@@ -434,6 +440,7 @@ WEAPONS: list[WeaponData] = [
         damage_type=DamageType.PIERCING,
         mastery=WeaponMastery.VEX,
         properties=[WeaponProperty.AMMUNITION, WeaponProperty.LOADING],
+        ammunition_name="Needles",
         range_normal_ft=25,
         range_long_ft=100,
         weight_lb=1.0,
@@ -451,6 +458,7 @@ WEAPONS: list[WeaponData] = [
             WeaponProperty.LIGHT,
             WeaponProperty.LOADING,
         ],
+        ammunition_name="Bolts",
         range_normal_ft=30,
         range_long_ft=120,
         weight_lb=3.0,
@@ -469,6 +477,7 @@ WEAPONS: list[WeaponData] = [
             WeaponProperty.LOADING,
             WeaponProperty.TWO_HANDED,
         ],
+        ammunition_name="Bolts",
         range_normal_ft=100,
         range_long_ft=400,
         weight_lb=18.0,
@@ -486,6 +495,7 @@ WEAPONS: list[WeaponData] = [
             WeaponProperty.HEAVY,
             WeaponProperty.TWO_HANDED,
         ],
+        ammunition_name="Arrows",
         range_normal_ft=150,
         range_long_ft=600,
         weight_lb=2.0,
@@ -503,6 +513,7 @@ WEAPONS: list[WeaponData] = [
             WeaponProperty.LOADING,
             WeaponProperty.TWO_HANDED,
         ],
+        ammunition_name="Bullets, Firearm",
         range_normal_ft=40,
         range_long_ft=120,
         weight_lb=10.0,
@@ -516,6 +527,7 @@ WEAPONS: list[WeaponData] = [
         damage_type=DamageType.PIERCING,
         mastery=WeaponMastery.VEX,
         properties=[WeaponProperty.AMMUNITION, WeaponProperty.LOADING],
+        ammunition_name="Bullets, Firearm",
         range_normal_ft=30,
         range_long_ft=90,
         weight_lb=3.0,

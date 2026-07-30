@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 from game_engine.rules.dnd_5_5e.data.armor import ARMOR, compute_armor_class, get_armor
-from game_engine.rules.dnd_5_5e.data.gear import GEAR, PACKS, TOOLS, get_tool
+from game_engine.rules.dnd_5_5e.data.gear import GEAR, PACKS, TOOLS, get_gear, get_tool
 from game_engine.rules.dnd_5_5e.data.weapons import WEAPONS, get_weapon
 from game_engine.types import (
     Ability,
@@ -60,6 +60,21 @@ class TestWeapons:
             assert weapon.range_normal_ft is not None, weapon.name
             assert weapon.range_long_ft is not None, weapon.name
             assert weapon.range_long_ft > weapon.range_normal_ft, weapon.name
+
+    def test_ammunition_weapons_have_a_resolvable_ammunition_name(self) -> None:
+        """EQP-08: every Ammunition weapon must name a real `data.gear` item —
+        a structural guard against the property going dead again (harness-
+        engineering principle #8: claimed-implemented mechanics need a test
+        asserting they have an actual consumer, not just a docstring claim)."""
+        ammunition = [w for w in WEAPONS if WeaponProperty.AMMUNITION in w.properties]
+        for weapon in ammunition:
+            assert weapon.ammunition_name is not None, weapon.name
+            assert get_gear(weapon.ammunition_name) is not None, weapon.name
+
+    def test_non_ammunition_weapons_have_no_ammunition_name(self) -> None:
+        for weapon in WEAPONS:
+            if WeaponProperty.AMMUNITION not in weapon.properties:
+                assert weapon.ammunition_name is None, weapon.name
 
     def test_thrown_weapons_have_ranges(self) -> None:
         for weapon in WEAPONS:

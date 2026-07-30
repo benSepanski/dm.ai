@@ -21,6 +21,7 @@ from game_engine.types import (
     CoverType,
     DamageType,
     DiceNotation,
+    InventoryItem,
     WeaponMastery,
     WeaponProperty,
 )
@@ -263,3 +264,157 @@ class TestHideConsumesArmorStealthPenalty:
         ) as plain:
             engine.resolve_action(Action(ActionType.HIDE, "a", None), state)
         plain.assert_called_once()
+
+
+class TestAmmunitionAndLoading:
+    """EQP-08: the Ammunition and Loading weapon properties.
+
+    Ammunition spends one matching inventory item per attack roll (hit or
+    miss) and blocks the attack outright — with no action-economy slot
+    spent — once none is left. Loading caps a Loading weapon to one shot
+    per main-hand Attack-action use this turn, regardless of Extra Attack.
+    """
+
+    def _bow_attack(self, actor="a", target="b", quantity=None) -> Action:
+        return _attack(
+            actor,
+            target,
+            weapon_name="Shortbow",
+            properties=[WeaponProperty.AMMUNITION, WeaponProperty.TWO_HANDED],
+            ammunition_name="Arrows",
+        )
+
+    def test_attack_consumes_one_matching_ammo_on_hit_and_miss(self, engine, state):
+        state.get_combatant("a").inventory.append(
+            InventoryItem(name="Arrows", quantity=2, weight_lb=1.0)
+        )
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            hit = engine.resolve_action(self._bow_attack(), state)
+        assert hit.success is True
+        arrows = state.get_combatant("a").inventory[0]
+        assert arrows.quantity == 1
+
+        engine.begin_turn(state.get_combatant("a"), state)
+        with patch(f"{ATTACKS}.roll_dice", return_value=(1, [1])):
+            miss = engine.resolve_action(self._bow_attack(), state)
+        assert miss.success is False  # missed the target, but ammo is still spent
+        assert arrows.quantity == 0
+
+    def test_out_of_ammunition_rejects_attack_and_spends_no_action(self, engine, state):
+        # No "Arrows" in inventory at all.
+        result = engine.resolve_action(self._bow_attack(), state)
+        assert result.success is False
+        assert result.log_entry["error"] == "out_of_ammunition"
+        assert state.turn_state_for("a").action_used is False
+
+    def test_zero_quantity_ammo_item_is_treated_as_out(self, engine, state):
+        state.get_combatant("a").inventory.append(
+            InventoryItem(name="Arrows", quantity=0, weight_lb=1.0)
+        )
+        result = engine.resolve_action(self._bow_attack(), state)
+        assert result.success is False
+        assert result.log_entry["error"] == "out_of_ammunition"
+
+    def test_non_ammunition_weapon_ignores_inventory(self, engine, state):
+        # A plain melee attack must never look at (or require) inventory.
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            result = engine.resolve_action(_attack(), state)
+        assert result.success is True
+
+    def _loading_attack(self, actor="a", target="b") -> Action:
+        # Light Crossbow, not Heavy Crossbow: avoids the Heavy property's
+        # own disadvantage-below-13-Strength interaction, which is
+        # irrelevant to what this test is checking.
+        return _attack(
+            actor,
+            target,
+            weapon_name="Light Crossbow",
+            properties=[
+                WeaponProperty.AMMUNITION,
+                WeaponProperty.LOADING,
+                WeaponProperty.TWO_HANDED,
+            ],
+            ammunition_name="Bolts",
+        )
+
+    def test_second_main_hand_loading_shot_this_turn_is_rejected(self, engine):
+        # Level-5 fighter: two attacks from Extra Attack, plenty of ammo.
+        actor = CharacterSheet(
+            id="a",
+            name="A",
+            level=5,
+            char_class=CharacterClass.FIGHTER,
+            hp_current=30,
+            hp_max=30,
+            ac=12,
+            inventory=[InventoryItem(name="Bolts", quantity=5, weight_lb=1.5)],
+        )
+        state = CombatStateData(combatants=[actor, _char("b")])
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            first = engine.resolve_action(self._loading_attack(), state)
+            second = engine.resolve_action(self._loading_attack(), state)
+        assert first.success is True
+        assert second.success is False
+        assert second.log_entry["error"] == "loading_already_fired"
+        # The rejected second shot never fired, so its ammo isn't spent —
+        # and the action slot itself isn't burned by the rejection.
+        assert state.get_combatant("a").inventory[0].quantity == 4
+        assert state.turn_state_for("a").action_used is False
+
+    def test_loading_flag_resets_next_turn(self, engine):
+        actor = CharacterSheet(
+            id="a",
+            name="A",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            hp_current=30,
+            hp_max=30,
+            ac=12,
+            inventory=[InventoryItem(name="Bolts", quantity=5, weight_lb=1.5)],
+        )
+        state = CombatStateData(combatants=[actor, _char("b")])
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            engine.resolve_action(self._loading_attack(), state)
+        assert state.turn_state_for("a").loading_attack_used is True
+
+        engine.begin_turn(actor, state)
+        assert state.turn_state_for("a").loading_attack_used is False
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            result = engine.resolve_action(self._loading_attack(), state)
+        assert result.success is True
+
+    def test_bonus_action_loading_shot_is_a_separate_use(self, engine):
+        # 2024 PHB: Loading restricts one shot per action/bonus-action/
+        # reaction *use*, not once per turn outright — a Nick off-hand shot
+        # with a second Loading+Light weapon (e.g. a paired Hand Crossbow)
+        # is unaffected by the main-hand shot already having fired.
+        actor = CharacterSheet(
+            id="a",
+            name="A",
+            level=1,
+            char_class=CharacterClass.FIGHTER,
+            hp_current=30,
+            hp_max=30,
+            ac=12,
+            inventory=[InventoryItem(name="Bolts", quantity=5, weight_lb=1.0)],
+        )
+        state = CombatStateData(combatants=[actor, _char("b")])
+        hand_crossbow_kwargs = dict(
+            weapon_name="Hand Crossbow",
+            properties=[
+                WeaponProperty.AMMUNITION,
+                WeaponProperty.LIGHT,
+                WeaponProperty.LOADING,
+            ],
+            ammunition_name="Bolts",
+            mastery=WeaponMastery.NICK,
+        )
+        actor.weapon_masteries = {"Hand Crossbow"}
+        with patch(f"{ATTACKS}.roll_dice", return_value=(15, [15])):
+            main_hand = engine.resolve_action(_attack(**hand_crossbow_kwargs), state)
+            off_hand = engine.resolve_action(
+                _attack(**hand_crossbow_kwargs, is_offhand=True), state
+            )
+        assert main_hand.success is True
+        assert off_hand.success is True
+        assert state.turn_state_for("a").nick_used is True

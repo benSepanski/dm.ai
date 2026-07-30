@@ -3,7 +3,8 @@ D&D 5.5e attack resolution (2024 rules).
 
 Handles to-hit advantage/disadvantage from conditions and turn flags,
 cover, critical hits (including melee auto-crits vs paralyzed/unconscious),
-off-hand attacks, unarmed grapple/shove, and concentration checks on
+off-hand attacks, unarmed grapple/shove, the Ammunition property's
+inventory spend/precondition (EQP-08), and concentration checks on
 damage. On-hit weapon mastery effects live in :mod:`._masteries`; reaction
 resolution (opportunity attacks, readied actions) lives in
 :mod:`._reactions` — both reuse ``_validate_attack``/``_resolve_attack``/
@@ -125,6 +126,25 @@ def _advantage_state(
     return advantage, disadvantage
 
 
+def _has_ammunition(actor: CharacterSheet, ammo_name: str) -> bool:
+    """True if *actor*'s inventory has at least one unit of *ammo_name* left."""
+    return any(
+        item.name.lower() == ammo_name.lower() and item.quantity > 0 for item in actor.inventory
+    )
+
+
+def _consume_ammunition(actor: CharacterSheet, ammo_name: str) -> None:
+    """Spend one unit of *ammo_name* from *actor*'s inventory, if any is there.
+
+    A no-op if none is found — callers are expected to have already gated on
+    :func:`_has_ammunition` via ``_validate_attack``.
+    """
+    for item in actor.inventory:
+        if item.name.lower() == ammo_name.lower() and item.quantity > 0:
+            item.quantity -= 1
+            return
+
+
 def _log_concentration_result(log: dict[str, Any], result: ConcentrationSaveResult | None) -> None:
     """Record a :func:`_concentration_check` outcome into an attack's log entry."""
     if result is None:
@@ -218,7 +238,9 @@ def _validate_attack(
 
     Pure lookup — rolls no dice and mutates no state — so callers (notably
     :mod:`._actions`'s action-economy gate, ACT-05) can validate an attack
-    *before* spending any action-economy slot on it.
+    *before* spending any action-economy slot on it. Also covers the EQP-08
+    Ammunition precondition: a weapon with the Ammunition property and no
+    matching ammo left in ``actor.inventory`` can't be fired at all.
     """
     actor = combat_state.get_combatant(action.actor_id)
     target = combat_state.get_combatant(action.target_id) if action.target_id else None
@@ -232,6 +254,16 @@ def _validate_attack(
         return _failure(
             action, "total_cover", f"{target.name} has total cover and can't be targeted."
         )
+    if (
+        WeaponProperty.AMMUNITION in details.properties
+        and details.ammunition_name is not None
+        and not _has_ammunition(actor, details.ammunition_name)
+    ):
+        return _failure(
+            action,
+            "out_of_ammunition",
+            f"{actor.name} has no {details.ammunition_name} left for the {details.weapon_name}.",
+        )
     return actor, target, details
 
 
@@ -241,6 +273,11 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
     if isinstance(validated, ActionResult):
         return validated
     actor, target, details = validated
+
+    # EQP-08: one piece of ammunition is spent per attack roll, hit or miss —
+    # _validate_attack already confirmed at least one unit was available.
+    if WeaponProperty.AMMUNITION in details.properties and details.ammunition_name is not None:
+        _consume_ammunition(actor, details.ammunition_name)
 
     actor_ts = combat_state.turn_state_for(actor.id)
     target_ts = combat_state.turn_state_for(target.id)

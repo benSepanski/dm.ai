@@ -36,6 +36,9 @@ def to_attack_details(
       ``_attacks._has_mastery``), matching hand-authored ``AttackDetails``.
     - ``is_ranged``: defaults to the weapon's own melee/ranged nature;
       callers may override for e.g. a Thrown melee weapon.
+    - ``ammunition_name``: copied from the registry (e.g. "Arrows", "Bolts")
+      for weapons with the Ammunition property; drives the ammo check/spend
+      in ``_attacks._validate_attack``/``_resolve_attack`` (EQP-08).
     """
     if WeaponProperty.FINESSE in weapon.properties:
         str_mod = actor.ability_scores.modifier(Ability.STRENGTH)
@@ -58,4 +61,5 @@ def to_attack_details(
         mastery=weapon.mastery,
         proficient=weapon.category in actor.weapon_category_training,
         is_offhand=is_offhand,
+        ammunition_name=weapon.ammunition_name,
     )
