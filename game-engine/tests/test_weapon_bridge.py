@@ -137,6 +137,18 @@ class TestToAttackDetails:
         assert details.damage_type == weapon.damage_type
         assert details.mastery == WeaponMastery.PUSH
 
+    def test_ammunition_name_from_registry(self):
+        weapon = get_weapon("Longbow")
+        actor = _char()
+        details = to_attack_details(weapon, actor)
+        assert details.ammunition_name == "Arrows"
+
+    def test_ammunition_name_none_for_a_weapon_without_the_property(self):
+        weapon = get_weapon("Warhammer")
+        actor = _char()
+        details = to_attack_details(weapon, actor)
+        assert details.ammunition_name is None
+
 
 class TestHeavyPropertyConsumedByAttackResolution:
     """EQP-08: Heavy weapon + attack-ability score below 13 → disadvantage."""

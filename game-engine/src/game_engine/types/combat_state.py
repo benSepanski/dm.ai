@@ -69,6 +69,13 @@ class TurnState:
     # ACT-04: set when a main-hand attack this turn used a Light weapon,
     # the prerequisite for a later bonus-action Two-Weapon Fighting attack.
     light_attack_used: bool = False
+    # EQP-08: set when a main-hand Attack-action attack this turn used a
+    # Loading weapon — 2024 PHB: only one shot from it "when you use an
+    # action ... to attack with it, regardless of the number of attacks you
+    # can normally make," so a second main-hand Loading shot this turn (via
+    # Extra Attack) is blocked. A separate bonus-action/reaction use of a
+    # Loading weapon is its own "use" and isn't gated by this flag.
+    loading_attack_used: bool = False
     # SPL-06: at most one leveled (non-cantrip, non-ritual) spell per turn.
     leveled_spell_cast: bool = False
     helped: bool = False
@@ -107,6 +114,7 @@ class TurnState:
             "dashing": self.dashing,
             "hidden": self.hidden,
             "light_attack_used": self.light_attack_used,
+            "loading_attack_used": self.loading_attack_used,
             "leveled_spell_cast": self.leveled_spell_cast,
             "helped": self.helped,
             "helped_expiry": self.helped_expiry.to_dict() if self.helped_expiry else None,
@@ -144,6 +152,7 @@ class TurnState:
             dashing=bool(d.get("dashing", False)),
             hidden=bool(d.get("hidden", False)),
             light_attack_used=bool(d.get("light_attack_used", False)),
+            loading_attack_used=bool(d.get("loading_attack_used", False)),
             leveled_spell_cast=bool(d.get("leveled_spell_cast", False)),
             helped=bool(d.get("helped", False)),
             helped_expiry=EffectExpiry.from_dict(helped_expiry) if helped_expiry else None,
@@ -193,7 +202,7 @@ class CombatStateData:
 
         Only the action-economy fields (action/bonus-action/reaction used,
         movement, attacks made, Nick's once-per-turn attack, Cleave's
-        once-per-turn follow-up, the Light main-hand attack and
+        once-per-turn follow-up, the Light and Loading main-hand attack and
         one-leveled-spell-per-turn flags, dodging/disengaging/dashing) are
         cleared here, plus an unused Readied action — 2024 PHB: a readied
         action is lost if its trigger doesn't happen before the start of your
@@ -214,6 +223,7 @@ class CombatStateData:
         ts.disengaging = False
         ts.dashing = False
         ts.light_attack_used = False
+        ts.loading_attack_used = False
         ts.leveled_spell_cast = False
         ts.cleave_available = False
         ts.cleave_used = False
@@ -300,6 +310,9 @@ class AttackDetails:
     # ability modifier (2024 PHB) — mirrors how is_offhand zeroes a
     # *positive* modifier, except Cleave always zeroes it.
     is_cleave_followup: bool = False
+    # EQP-08: the gear registry item name this weapon's Ammunition property
+    # draws from (e.g. "Arrows", "Bolts"); None for weapons without it.
+    ammunition_name: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serialisable dict (needed to persist a Readied attack)."""
@@ -317,6 +330,7 @@ class AttackDetails:
             "target_cover": self.target_cover.value if self.target_cover else None,
             "unarmed_option": self.unarmed_option.value if self.unarmed_option else None,
             "is_cleave_followup": self.is_cleave_followup,
+            "ammunition_name": self.ammunition_name,
         }
 
     @classmethod
@@ -325,6 +339,7 @@ class AttackDetails:
         target_cover = d.get("target_cover")
         unarmed_option = d.get("unarmed_option")
         mastery = d.get("mastery")
+        ammunition_name = d.get("ammunition_name")
         return cls(
             weapon_name=str(d.get("weapon_name", "Unarmed Strike")),
             damage_dice=DiceNotation(d.get("damage_dice", "1d1")),
@@ -339,6 +354,7 @@ class AttackDetails:
             target_cover=CoverType(target_cover) if target_cover else None,
             unarmed_option=UnarmedStrikeOption(unarmed_option) if unarmed_option else None,
             is_cleave_followup=bool(d.get("is_cleave_followup", False)),
+            ammunition_name=str(ammunition_name) if ammunition_name is not None else None,
         )
 
 

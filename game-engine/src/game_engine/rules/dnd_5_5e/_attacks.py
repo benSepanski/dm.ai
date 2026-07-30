@@ -4,10 +4,11 @@ D&D 5.5e attack resolution (2024 rules).
 Handles to-hit advantage/disadvantage from conditions and turn flags,
 cover, critical hits (including melee auto-crits vs paralyzed/unconscious),
 off-hand attacks, unarmed grapple/shove, and concentration checks on
-damage. On-hit weapon mastery effects live in :mod:`._masteries`; reaction
-resolution (opportunity attacks, readied actions) lives in
-:mod:`._reactions` — both reuse ``_validate_attack``/``_resolve_attack``/
-``_failure`` from here.
+damage. On-hit weapon mastery effects live in :mod:`._masteries`; the
+Ammunition property's inventory spend/precondition (EQP-08) lives in
+:mod:`._ammunition`; reaction resolution (opportunity attacks, readied
+actions) lives in :mod:`._reactions` — all three reuse
+``_validate_attack``/``_resolve_attack``/``_failure`` from here.
 
 Internal module — import via :class:`DnD55eEngine`.
 """
@@ -19,6 +20,7 @@ from typing import Any
 from game_engine.core.conditions import CONDITION_EFFECTS
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import Action, ActionResult
+from game_engine.rules.dnd_5_5e._ammunition import _consume_ammunition, _has_ammunition
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
 from game_engine.rules.dnd_5_5e._conditions import _apply_condition_impl
 from game_engine.rules.dnd_5_5e._damage import (
@@ -218,7 +220,9 @@ def _validate_attack(
 
     Pure lookup — rolls no dice and mutates no state — so callers (notably
     :mod:`._actions`'s action-economy gate, ACT-05) can validate an attack
-    *before* spending any action-economy slot on it.
+    *before* spending any action-economy slot on it. Also covers the EQP-08
+    Ammunition precondition: a weapon with the Ammunition property and no
+    matching ammo left in ``actor.inventory`` can't be fired at all.
     """
     actor = combat_state.get_combatant(action.actor_id)
     target = combat_state.get_combatant(action.target_id) if action.target_id else None
@@ -232,6 +236,16 @@ def _validate_attack(
         return _failure(
             action, "total_cover", f"{target.name} has total cover and can't be targeted."
         )
+    if (
+        WeaponProperty.AMMUNITION in details.properties
+        and details.ammunition_name is not None
+        and not _has_ammunition(actor, details.ammunition_name)
+    ):
+        return _failure(
+            action,
+            "out_of_ammunition",
+            f"{actor.name} has no {details.ammunition_name} left for the {details.weapon_name}.",
+        )
     return actor, target, details
 
 
@@ -241,6 +255,11 @@ def _resolve_attack(action: Action, combat_state: CombatStateData) -> ActionResu
     if isinstance(validated, ActionResult):
         return validated
     actor, target, details = validated
+
+    # EQP-08: one piece of ammunition is spent per attack roll, hit or miss —
+    # _validate_attack already confirmed at least one unit was available.
+    if WeaponProperty.AMMUNITION in details.properties and details.ammunition_name is not None:
+        _consume_ammunition(actor, details.ammunition_name)
 
     actor_ts = combat_state.turn_state_for(actor.id)
     target_ts = combat_state.turn_state_for(target.id)
