@@ -17,9 +17,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from game_engine.core.conditions import CONDITION_EFFECTS
 from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
 from game_engine.interface import Action, ActionResult
+from game_engine.rules.dnd_5_5e._advantage import _base_advantage_state
 from game_engine.rules.dnd_5_5e._ammunition import _consume_ammunition, _has_ammunition
 from game_engine.rules.dnd_5_5e._checks import _calc_prof_bonus
 from game_engine.rules.dnd_5_5e._conditions import _apply_condition_impl
@@ -32,7 +32,6 @@ from game_engine.rules.dnd_5_5e._masteries import _apply_mastery_effects, _has_m
 from game_engine.rules.dnd_5_5e._saves import _roll_saving_throw_impl
 from game_engine.types import (
     Ability,
-    AdvantageType,
     AttackDetails,
     CharacterSheet,
     CombatStateData,
@@ -70,52 +69,10 @@ def _advantage_state(
     actor_ts: TurnState,
     target_ts: TurnState,
 ) -> tuple[bool, bool]:
-    """Aggregate advantage/disadvantage sources for an attack roll.
-
-    Consumes one-shot flags (Help, Vex, Sap, hidden) from the turn states.
-    """
-    advantage = False
-    disadvantage = False
-
-    for cond in actor.conditions:
-        effect = CONDITION_EFFECTS.get(cond)
-        if effect is None or effect.attack_modifier is None:
-            continue
-        if effect.attack_modifier is AdvantageType.ADVANTAGE:
-            advantage = True
-        else:
-            disadvantage = True
-
-    for cond in target.conditions:
-        if cond is Condition.PRONE:
-            # Melee attacks vs prone have advantage; ranged have disadvantage.
-            if details.is_ranged:
-                disadvantage = True
-            else:
-                advantage = True
-            continue
-        effect = CONDITION_EFFECTS.get(cond)
-        if effect is None or effect.attack_against_modifier is None:
-            continue
-        if effect.attack_against_modifier is AdvantageType.ADVANTAGE:
-            advantage = True
-        else:
-            disadvantage = True
-
-    if target_ts.dodging and target.can_act and target.effective_speed > 0:
-        disadvantage = True
-    if actor_ts.helped:
-        advantage = True
-        actor_ts.helped = False
-    if actor_ts.vexed_target_id == target.id:
-        advantage = True
-        actor_ts.vexed_target_id = None
-    if actor_ts.sapped:
-        disadvantage = True
-        actor_ts.sapped = False
-    if actor_ts.hidden:
-        advantage = True
-        actor_ts.hidden = False  # attacking reveals you
+    """Aggregate advantage/disadvantage sources for a weapon attack roll."""
+    advantage, disadvantage = _base_advantage_state(
+        actor, target, details.is_ranged, actor_ts, target_ts
+    )
     if details.long_range:
         disadvantage = True
     if (

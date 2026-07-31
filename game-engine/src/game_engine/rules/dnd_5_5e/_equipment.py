@@ -111,8 +111,8 @@ def effective_speed(sheet: CharacterSheet) -> int:
     ``CharacterSheet.effective_speed`` is a pure types-layer property with no
     visibility into the rules-layer armor registry or inventory weight, so both
     the under-Strength penalty and the encumbrance cap are layered on here
-    instead — mirrors how ``_actions._effective_speed`` layers the Slow
-    mastery's combat-only penalty on top of this.
+    instead — mirrors how ``_non_attack_actions._effective_speed`` layers the
+    Slow mastery's combat-only penalty on top of this.
     """
     speed = max(0, sheet.effective_speed - armor_speed_penalty(sheet))
     if speed > 0 and is_encumbered(sheet, sheet.size):

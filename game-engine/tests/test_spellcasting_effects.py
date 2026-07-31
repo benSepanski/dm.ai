@@ -201,6 +201,113 @@ class TestDodgeInteraction:
         mock_adv.assert_not_called()
 
 
+class TestSpellAttackAdvantageAndCrits:
+    """SPL-08: spell attacks now read condition-based advantage/disadvantage
+    and turn-state flags (Help/Vex/Sap/Hide) like weapon attacks, and crit on
+    a natural 20 (doubling damage dice) or a melee touch-range hit against a
+    Paralyzed/Unconscious target."""
+
+    def test_blinded_caster_gets_spell_attack_disadvantage(self):
+        caster = _caster()
+        caster.conditions.append(Condition.BLINDED)
+        state = _state(caster)
+        spell = _spell(
+            level=0, attack_roll=True, damage_type=DamageType.FIRE, damage_dice=DiceNotation("1d6")
+        )
+        with (
+            patch(f"{RES}.roll_with_disadvantage", return_value=(10, [10, 15])) as mock_dis,
+            patch(f"{RES}.roll_dice", return_value=(4, [4])),
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_dis.assert_called_once()
+
+    def test_restrained_target_gives_spell_attack_advantage(self):
+        caster = _caster()
+        state = _state(caster)
+        state.get_combatant("t").conditions.append(Condition.RESTRAINED)
+        spell = _spell(
+            level=0, attack_roll=True, damage_type=DamageType.FIRE, damage_dice=DiceNotation("1d6")
+        )
+        with (
+            patch(f"{RES}.roll_with_advantage", return_value=(18, [18, 3])) as mock_adv,
+            patch(f"{RES}.roll_dice", return_value=(4, [4])),
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_adv.assert_called_once()
+
+    def test_help_grants_advantage_on_spell_attack_and_is_consumed(self):
+        caster = _caster()
+        state = _state(caster)
+        state.turn_state_for(caster.id).helped = True
+        spell = _spell(
+            level=0, attack_roll=True, damage_type=DamageType.FIRE, damage_dice=DiceNotation("1d6")
+        )
+        with (
+            patch(f"{RES}.roll_with_advantage", return_value=(18, [18, 3])) as mock_adv,
+            patch(f"{RES}.roll_dice", return_value=(4, [4])),
+        ):
+            cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        mock_adv.assert_called_once()
+        assert state.turn_state_for(caster.id).helped is False
+
+    def test_natural_20_spell_attack_crits_and_doubles_damage_dice(self):
+        # Leveled (non-cantrip) spell to sidestep cantrip level-scaling —
+        # this test is about crit doubling, not cantrip math.
+        caster = _caster()
+        state = _state(caster)
+        spell = _spell(
+            attack_roll=True, damage_type=DamageType.FIRE, damage_dice=DiceNotation("1d10")
+        )
+        with patch(f"{RES}.roll_dice") as mock_roll:
+            # attack roll (nat 20), base damage roll, crit-extra damage roll
+            mock_roll.side_effect = [(20, [20]), (6, []), (4, [])]
+            result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert result.outcomes[0].critical
+        assert result.outcomes[0].damage == 10  # 6 + 4, both 1d10 rolls, no modifier doubled
+        assert mock_roll.call_args_list[2][0] == (1, 10)
+
+    def test_melee_touch_spell_against_paralyzed_target_auto_crits(self):
+        caster = _caster()
+        state = _state(caster)
+        state.get_combatant("t").conditions.append(Condition.PARALYZED)
+        spell = _spell(
+            level=0,
+            attack_roll=True,
+            range_type=SpellRangeType.TOUCH,
+            range_ft=5,
+            damage_type=DamageType.NECROTIC,
+            damage_dice=DiceNotation("1d6"),
+        )
+        # PARALYZED already grants advantage against the target, so this
+        # rolls with advantage even on a non-20 total.
+        with (
+            patch(f"{RES}.roll_with_advantage", return_value=(10, [10, 3])),
+            patch(f"{RES}.roll_dice", return_value=(4, [4])),
+        ):
+            result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert result.outcomes[0].critical
+
+    def test_ranged_spell_against_paralyzed_target_does_not_auto_crit(self):
+        """Auto-crit vs Paralyzed/Unconscious only applies to melee (touch
+        range) spell attacks — a ranged spell attack still needs a nat 20."""
+        caster = _caster()
+        state = _state(caster)
+        state.get_combatant("t").conditions.append(Condition.PARALYZED)
+        spell = _spell(
+            level=0,
+            attack_roll=True,
+            range_type=SpellRangeType.RANGED,
+            damage_type=DamageType.FIRE,
+            damage_dice=DiceNotation("1d10"),
+        )
+        with (
+            patch(f"{RES}.roll_with_advantage", return_value=(10, [10, 3])),
+            patch(f"{RES}.roll_dice", return_value=(4, [4])),
+        ):
+            result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
+        assert not result.outcomes[0].critical
+
+
 class TestRegistryIntegration:
     def test_fireball_full_pipeline(self):
         fireball = get_spell("Fireball")

@@ -7,7 +7,8 @@ Internal module — import :func:`cast_spell` via
 
 from __future__ import annotations
 
-from game_engine.core.dice import roll_dice, roll_with_disadvantage
+from game_engine.core.dice import roll_dice, roll_with_advantage, roll_with_disadvantage
+from game_engine.rules.dnd_5_5e._advantage import _base_advantage_state
 from game_engine.rules.dnd_5_5e._conditions import _apply_condition_impl
 from game_engine.rules.dnd_5_5e._damage import (
     _apply_damage_effective,
@@ -31,7 +32,9 @@ from game_engine.types import (
     Ability,
     CharacterSheet,
     CombatStateData,
+    Condition,
     DiceNotation,
+    SpellRangeType,
 )
 
 
@@ -52,8 +55,15 @@ def _roll_damage(
     upcast_per_slot: DiceNotation | None,
     caster_level: int,
     upcast_levels: int,
+    critical: bool = False,
 ) -> int:
-    """Roll one of the spell's damage pools with cantrip/upcast scaling."""
+    """Roll one of the spell's damage pools with cantrip/upcast scaling.
+
+    ``critical`` doubles the already-scaled dice (cantrip multiplier and
+    upcast dice included), not the flat modifier — mirrors the weapon-attack
+    crit rule in ``_attacks.py::_resolve_attack`` (SPL-08). Callers rolling
+    healing must leave it ``False``; a crit never doubles healing.
+    """
     if dice is None:
         return 0
     multiplier = cantrip_dice_multiplier(caster_level) if spell.is_cantrip else 1
@@ -65,7 +75,11 @@ def _roll_damage(
         # Magic Missile's "1d4+1") scales with the number of slots above
         # base too, not just its dice.
         extra_flat = upcast_per_slot.modifier * upcast_levels
-    total, _ = roll_dice(*_scale_dice(dice, multiplier, extra_dice, extra_flat).parsed())
+    scaled = _scale_dice(dice, multiplier, extra_dice, extra_flat)
+    total, _ = roll_dice(*scaled.parsed())
+    if critical:
+        crit_dice, _ = roll_dice(scaled.num_dice, scaled.sides)
+        total += crit_dice
     return max(0, total)
 
 
@@ -147,6 +161,8 @@ def cast_spell(
         caster.concentrating_on = spell.name
         concentration_started = True
 
+    caster_ts = combat_state.turn_state_for(caster.id)
+
     outcomes: list[SpellTargetOutcome] = []
     for target_id in target_ids:
         target = combat_state.get_combatant(target_id)
@@ -161,8 +177,21 @@ def cast_spell(
         target_ts = combat_state.turn_state_for(target_id)
         target_dodging = target_ts.dodging and target.can_act and target.effective_speed > 0
 
+        critical = False
         if spell.attack_roll:
-            if target_dodging:
+            # SPL-08: spell attacks now read the same condition-based
+            # advantage/disadvantage and one-shot turn-state flags (Help,
+            # Vex, Sap, Hide) as weapon attacks — previously only Dodge was
+            # consulted. Touch-range spells (e.g. Shocking Grasp) count as
+            # melee for the Prone split and the auto-crit check below;
+            # every other range type is ranged.
+            is_ranged = spell.range_type is not SpellRangeType.TOUCH
+            advantage, disadvantage = _base_advantage_state(
+                caster, target, is_ranged, caster_ts, target_ts
+            )
+            if advantage and not disadvantage:
+                raw, _ = roll_with_advantage(20)
+            elif disadvantage and not advantage:
                 raw, _ = roll_with_disadvantage(20)
             else:
                 raw, _ = roll_dice(1, 20)
@@ -172,6 +201,14 @@ def cast_spell(
             if not outcome.hit:
                 outcomes.append(outcome)
                 continue
+            # A natural 20 always crits; a melee spell attack against a
+            # Paralyzed/Unconscious target within reach auto-crits too,
+            # matching the weapon-attack rule (_attacks.py::_resolve_attack).
+            auto_crit = not is_ranged and any(
+                c in target.conditions for c in (Condition.PARALYZED, Condition.UNCONSCIOUS)
+            )
+            critical = raw == 20 or auto_crit
+            outcome.critical = critical
         elif spell.save is not None:
             dex_save_advantage = target_dodging and spell.save is Ability.DEXTERITY
             save = _roll_saving_throw_impl(target, spell.save, dc, advantage=dex_save_advantage)
@@ -179,7 +216,12 @@ def cast_spell(
             outcome.save_success = save.success
 
         damage = _roll_damage(
-            spell, spell.damage_dice, spell.upcast_damage_per_slot, caster.level, upcast_levels
+            spell,
+            spell.damage_dice,
+            spell.upcast_damage_per_slot,
+            caster.level,
+            upcast_levels,
+            critical=critical,
         )
         if spell.secondary_damage_dice is not None and spell.secondary_damage_type is not None:
             # SPL-17: use the real upcast level and the secondary pool's own
@@ -192,6 +234,7 @@ def cast_spell(
                 spell.secondary_upcast_damage_per_slot,
                 caster.level,
                 upcast_levels,
+                critical=critical,
             )
         else:
             secondary = 0
@@ -206,11 +249,13 @@ def cast_spell(
 
         effective_damage = 0
         if damage > 0 and spell.damage_type is not None:
-            effective_damage += _apply_damage_effective(target, damage, spell.damage_type)
+            effective_damage += _apply_damage_effective(
+                target, damage, spell.damage_type, critical=critical
+            )
             outcome.damage += damage
         if secondary > 0 and spell.secondary_damage_type is not None:
             effective_damage += _apply_damage_effective(
-                target, secondary, spell.secondary_damage_type
+                target, secondary, spell.secondary_damage_type, critical=critical
             )
             outcome.damage += secondary
 
@@ -270,8 +315,11 @@ def cast_spell(
         total_damage = sum(o.damage for o in outcomes)
         total_healing = sum(o.healing for o in outcomes)
         revived_count = sum(1 for o in outcomes if o.revived)
+        crit_count = sum(1 for o in outcomes if o.critical)
         if total_damage:
             flavor += f" {hits}/{len(outcomes)} targets affected for {total_damage} damage."
+        if crit_count:
+            flavor += f" {crit_count} critical hit{'s' if crit_count != 1 else ''}!"
         if total_healing:
             flavor += f" Restores {total_healing} hit points."
         if revived_count:
