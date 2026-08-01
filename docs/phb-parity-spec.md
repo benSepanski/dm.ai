@@ -103,7 +103,7 @@ SRD omits (e.g. 3 of 4 subclasses per class), the engine ships the typed
 | Cantrip damage scaling (char levels 5/11/17) | `spellcasting` | ✅ |
 | Concentration (single effect, CON save on damage) | `spellcasting` + `_damage` | 🟡 CON save now fires on weapon *and* spell damage, DC'd off effective post-immunity/resistance damage and capped at 30, breaks on gaining an Incapacitating condition (Workstream F); breaking/replacing concentration still does not remove the spell's effects from its targets (SPL-07, tracked open) |
 | Ritual casting | `spellcasting` | ✅ |
-| Spell attack rolls & save DCs | `spellcasting` | ✅ |
+| Spell attack rolls & save DCs | `spellcasting` | ✅ spell attacks now read the same condition-based advantage/disadvantage and Help/Vex/Sap/Hide turn-state flags as weapon attacks (shared `_advantage.py`), and crit (doubling damage dice) on a natural 20 or a melee touch-range hit against a Paralyzed/Unconscious target (SPL-08) |
 | Components (V/S/M), casting time, range, areas of effect | `data.spells` | 🟡 casting time gates action economy (`dm_api.api.combat_spells`, Workstream B3); components, range, and area-of-effect shape/size are stored on `SpellData` but have zero rule-code consumers — no somatic/verbal gating, no range check, no AoE-shaped targeting (theater-of-mind scope, SPL-24, Workstream L) |
 | Spell data registry | `data.spells` | 🟡 ~100 SRD spells, levels 0–9 (registry extensible to full SRD list) |
 

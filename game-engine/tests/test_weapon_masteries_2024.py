@@ -176,7 +176,7 @@ class TestWeaponMasteries:
     def test_slow_reduces_speed_until_attackers_next_turn(self, engine, state):
         """ACT-07: Slow reduces the target's speed by 10 ft until the start
         of the attacker's own next turn, then restores it."""
-        from game_engine.rules.dnd_5_5e._actions import _effective_speed
+        from game_engine.rules.dnd_5_5e._non_attack_actions import _effective_speed
 
         actor = state.get_combatant("a")
         target = state.get_combatant("b")

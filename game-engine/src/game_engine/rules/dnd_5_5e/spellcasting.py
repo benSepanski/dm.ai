@@ -204,6 +204,7 @@ class SpellTargetOutcome:
 
     target_id: str
     hit: bool = True
+    critical: bool = False
     attack_total: int | None = None
     save_total: int | None = None
     save_success: bool | None = None

@@ -321,11 +321,14 @@ class TestCasting:
             damage_dice=DiceNotation("1d10"),
         )
         with patch(f"{RES}.roll_dice") as mock_roll:
-            mock_roll.side_effect = [(20, [20]), (15, [])]
+            # A natural 20 is also a critical hit (SPL-08), which rolls one
+            # extra (third) call for the doubled damage dice.
+            mock_roll.side_effect = [(20, [20]), (15, []), (5, [])]
             result = cast_spell(caster, spell, Ability.INTELLIGENCE, state, ["t"])
         # second call is damage: 3 dice at level 11
         assert mock_roll.call_args_list[1][0][0] == 3
         assert result.outcomes[0].hit
+        assert result.outcomes[0].critical
 
     def test_save_for_half(self):
         caster = _caster()

@@ -129,6 +129,7 @@ def _cast_log_entry(combat: CombatState, actor_id: str, result: SpellCastResult)
             {
                 "target_id": o.target_id,
                 "hit": o.hit,
+                "critical": o.critical,
                 "attack_total": o.attack_total,
                 "save_total": o.save_total,
                 "save_success": o.save_success,
