@@ -76,10 +76,17 @@ Result dataclasses (`CheckResult`, `SaveResult`, `DeathSaveResult`,
 2024 PHB rules (see `docs/phb-parity-spec.md` for the full feature matrix). It
 uses a **delegation pattern**: each method delegates to a focused private helper
 module in `game_engine/rules/dnd_5_5e/` (`_checks.py`, `_saves.py`,
-`_attacks.py`, `_masteries.py`, `_reactions.py`, `_actions.py`,
-`_conditions.py`, `_damage.py`, `_death.py`, `_validation.py`). `_masteries.py`
-applies on-hit weapon mastery effects (Topple, Sap, Vex, Slow, Cleave, Nick);
-split out of `_attacks.py` on the same file-length grounds as `_reactions.py`.
+`_attacks.py`, `_non_attack_actions.py`, `_advantage.py`, `_masteries.py`,
+`_reactions.py`, `_actions.py`, `_conditions.py`, `_damage.py`, `_death.py`,
+`_validation.py`). `_masteries.py` applies on-hit weapon mastery effects
+(Topple, Sap, Vex, Slow, Cleave, Nick); split out of `_attacks.py` on the same
+file-length grounds as `_reactions.py`. `_actions.py` retains action
+availability and the attack/reaction action-economy gating; non-attack action
+resolution (Dash, Disengage, Dodge, Help, Hide, Ready, …) was split out into
+`_non_attack_actions.py` for the same reason. `_advantage.py` aggregates the
+condition/Dodge/turn-state advantage-and-disadvantage sources shared by both
+weapon attacks (`_attacks.py`) and spell attacks (`_spell_resolution.py`,
+SPL-08) so both attack kinds compute it in exactly one place.
 `_reactions.py` resolves opportunity attacks, triggered Ready actions, and the
 Cleave mastery's free follow-up — all three consume dedicated `TurnState`
 economy fields (`reaction_used` for the first two, `cleave_available`/
