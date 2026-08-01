@@ -135,7 +135,9 @@ game_engine/
     _checks.py        # ability/skill checks
     _saves.py         # saving throws
     _attacks.py       # attack resolution (adv/dis, cover, crits, masteries)
-    _actions.py       # action economy + non-attack actions
+    _advantage.py     # adv/dis aggregation shared by _attacks and _spell_resolution
+    _actions.py       # action availability + attack/reaction action economy
+    _non_attack_actions.py  # Dash/Disengage/Dodge/Help/Hide/Ready resolution
     _damage.py        # damage/temp HP/healing
     _death.py         # death saves, dying
     _conditions.py    # condition application
