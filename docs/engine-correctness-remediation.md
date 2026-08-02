@@ -479,7 +479,7 @@ Roll-modifier bugs where check/initiative paths diverge from the (correct) attac
 
 The 2024 condition set is partly stale and partly unwired. Many require relational (source-identity) or hook (auto-fail, repeat-save) support the engine lacks.
 
-**Status: I1 and I2 done.** Stunned no longer sets speed to 0 (`Condition.STUNNED` removed
+**Status: I1, I2, and the EFF-03 slice of I4 are done.** Stunned no longer sets speed to 0 (`Condition.STUNNED` removed
 from `_SPEED_ZERO_CONDITIONS`, `types/enums/_core.py`); Petrified's
 `ConditionEffect` no longer carries `immunity_types=[POISON, PSYCHIC]` (a
 petrified creature now only *resists* poison/psychic damage like every other
@@ -523,13 +523,42 @@ folded in silently. See `tests/test_attacks_2024.py::test_topple_does_not_affect
 `tests/test_spellcasting.py::test_condition_immune_target_is_unaffected_by_rider`
 / `test_unconscious_rider_still_respects_prone_immunity`.
 
+**EFF-03 (exhaustion stacking).** A new `gain_exhaustion(target, levels=1)`
+function (`rules/dnd_5_5e/_conditions.py`, exported from
+`rules.dnd_5_5e`) is the one place that increments `exhaustion_level`
+(cumulative — `CharacterSheet.is_dead` already treats level ≥ 6 as death,
+and `d20_modifier`/`effective_speed` already scale off the level, so no
+further change was needed there). `_apply_condition_impl` now special-cases
+`Condition.EXHAUSTION` to delegate to `gain_exhaustion` instead of doing
+its ordinary bare-tag append, so the public `apply_condition(EXHAUSTION)`
+path — the engine's only previously-a-no-op entry point — now actually
+stacks a level; a creature with `Condition.EXHAUSTION` in
+`condition_immunities` still gains none, since `gain_exhaustion` checks
+`is_immune_to_condition` itself. The bare `Condition.EXHAUSTION` tag in
+`target.conditions` is kept in sync with `exhaustion_level` in both
+directions: `gain_exhaustion` adds the tag once `exhaustion_level` goes
+above 0 (never duplicated — it's a membership flag, not one entry per
+level), `_remove_condition_impl` zeroes `exhaustion_level` when the tag is
+removed via the generic API, and `resting.long_rest` strips the tag when
+its existing decrement drops the level back to 0. See
+`tests/test_engine_damage_conditions.py::TestApplyCondition::test_exhaustion_increments_level_instead_of_tagging_only`
+/ `test_exhaustion_stacks_cumulatively` / `test_exhaustion_has_derived_mechanical_effects`
+/ `test_exhaustion_level_six_is_death` / `test_immune_creature_gains_no_exhaustion`
+/ `test_gain_exhaustion_helper_accepts_multiple_levels`,
+`TestRemoveCondition::test_removing_exhaustion_zeroes_the_level`,
+`tests/test_resting_exploration.py::TestLongRest::test_clears_stale_exhaustion_tag_when_level_hits_zero`
+/ `test_keeps_exhaustion_tag_while_level_remains`. The remaining I4 pieces —
+repeat-save/save-to-end (SPL-04) and Blinded/Deafened auto-fail (EFF-12) —
+are still open; source-identity (I3: Grappled/Charmed, EFF-04/EFF-02) is
+also still open.
+
 **Findings**
 - Combat paths bypass condition immunities (spell riders, Topple, unarmed grapple/shove) (`_spell_resolution.py:181` [EFF-10], **major**) ✅ done
 - No repeat-save/save-to-end: Hold Person paralyzes for a full minute (`_conditions.py:71` [SPL-04], **major**)
 - Stunned sets speed 0 (2014); 2024 Stunned doesn't prevent movement (`core/conditions.py:189` [EFF-06], **major**) ✅ done
 - Petrified grants poison/psychic *damage* immunity instead of *Poisoned-condition* immunity (`core/conditions.py:147` [EFF-05], **major**) ✅ done
 - Grappled (2024) missing attack-disadvantage-vs-non-grappler, escape check, end-on-grappler-incapacitated (`core/conditions.py:97` [EFF-04], **major**)
-- Exhaustion can never be gained via the engine; `Condition.EXHAUSTION` is a no-op (`core/conditions.py:81` [EFF-03], **major**)
+- Exhaustion can never be gained via the engine; `Condition.EXHAUSTION` is a no-op (`core/conditions.py:81` [EFF-03], **major**) ✅ done
 - Charmed has zero mechanical effect (`core/conditions.py:66` [EFF-02], **major**)
 - Deafened has zero effect; Blinded/Deafened auto-fail of sight/hearing checks unmodeled (`core/conditions.py:74` [EFF-12], **minor**)
 - Unconscious applied directly doesn't add Prone (`_spell_resolution.py:180` [EFF-14], **minor**) ✅ done
@@ -540,14 +569,14 @@ folded in silently. See `tests/test_attacks_2024.py::test_topple_does_not_affect
 1. ✅ **Centralize condition application**: route spell riders, Topple, and unarmed grapple/shove through `_apply_condition_impl` (or a shared helper) so `is_immune_to_condition` is honored everywhere and future centralized handling (concentration break from Workstream F, Prone coupling, exhaustion stacking) runs uniformly.
 2. ✅ **Fix stale/incorrect definitions**: remove `speed_zero=True` from Stunned (and drop it from `_SPEED_ZERO_CONDITIONS`); change Petrified from poison/psychic damage immunity to Poisoned-*condition* immunity (keep resistance-to-all); couple Unconscious → Prone. (Removal-side Prone cleanup was deliberately *not* added — `_apply_healing_impl` already leaves Prone in place when Unconscious ends via healing, which is the rules-correct behavior since standing up costs movement; coupling removal would have made waking up stand you up for free.)
 3. **Add source-identity** to conditions so Grappled (disadvantage vs non-grappler, end on grappler incapacitated, escape check as an action) and Charmed (can't attack/target charmer; charmer advantage on social checks) can be honored.
-4. **Add exhaustion stacking**: `apply_condition(EXHAUSTION)` increments `exhaustion_level` (cumulative, death at 6); a `gain_exhaustion` API; keep `Condition.EXHAUSTION` and `exhaustion_level` consistent (long rest should also clear the stale enum entry).
+4. ✅ **Add exhaustion stacking**: `apply_condition(EXHAUSTION)` increments `exhaustion_level` (cumulative, death at 6); a `gain_exhaustion` API; keep `Condition.EXHAUSTION` and `exhaustion_level` consistent (long rest now also clears the stale enum entry).
 5. **Add a repeat-save / save-to-end hook**: a `SpellData.repeat_save` field and an end-of-turn re-save step in the condition-tick path for Hold Person/Monster/Confusion/Dominate/Blindness/Sleep's second save.
 6. **Add sight/hearing-requirement plumbing** to `_roll_check_impl` for Blinded/Deafened auto-fail; add Invisible advantage to initiative.
 7. ✅ **Eliminate the duplicate source of truth**: `ConditionEffect.can_act`/`speed_zero` deleted (dead fields, zero consumers); `CharacterSheet.can_act`/`effective_speed` already read the canonical `Condition.prevents_action`/`sets_speed_to_zero` frozensets in `types/enums/_core.py`, unchanged.
 
-**Tests**: ✅ a PARALYZED-immune target is not paralyzed by Hold Person; ✅ a GRAPPLED-immune target isn't grappled, and a PRONE-immune target isn't Toppled or Shoved; ✅ a stunned creature can still move; ✅ a petrified creature takes halved (not zero) poison damage and can't be Poisoned; a grappled creature attacks non-grapplers at disadvantage and can escape; `apply_condition(EXHAUSTION)` twice yields level 2 with −4/−10 ft; a charmed creature can't target its charmer; ✅ a slept creature is Prone (and a Prone-immune target sleeps without falling Prone); an invisible creature rolls initiative with advantage.
+**Tests**: ✅ a PARALYZED-immune target is not paralyzed by Hold Person; ✅ a GRAPPLED-immune target isn't grappled, and a PRONE-immune target isn't Toppled or Shoved; ✅ a stunned creature can still move; ✅ a petrified creature takes halved (not zero) poison damage and can't be Poisoned; a grappled creature attacks non-grapplers at disadvantage and can escape; ✅ `apply_condition(EXHAUSTION)` twice yields level 2 with −4/−10 ft; a charmed creature can't target its charmer; ✅ a slept creature is Prone (and a Prone-immune target sleeps without falling Prone); an invisible creature rolls initiative with advantage.
 
-**Size**: L. The centralization (step 1) and source-identity (step 3) are shared with Workstreams A and F. Split into I1 ✅ done (definition fixes: Stunned/Petrified/Unconscious/duplicate-source), I2 ✅ done (immunity centralization for spell riders/Topple/grapple-shove — concentration coupling itself was already wired directly in Workstream F, independent of this centralization), I3 (source-identity: Grappled/Charmed), I4 (exhaustion stacking + repeat-save + auto-fail hooks).
+**Size**: L. The centralization (step 1) and source-identity (step 3) are shared with Workstreams A and F. Split into I1 ✅ done (definition fixes: Stunned/Petrified/Unconscious/duplicate-source), I2 ✅ done (immunity centralization for spell riders/Topple/grapple-shove — concentration coupling itself was already wired directly in Workstream F, independent of this centralization), I3 (source-identity: Grappled/Charmed, still open), I4 (exhaustion stacking ✅ done + repeat-save + auto-fail hooks — the latter two still open).
 
 ---
 
@@ -708,7 +737,7 @@ casting time, range, areas of effect" row is corrected from a blanket ✅ to
 7. **Workstream G** ✅ done (instant death, death-save reset, crit modifier doubling — EFF-08/EFF-09/EFF-13/ACT-09) — F's effective-damage refactor (`_apply_damage_effective`) was reused here. EFF-16 (long-rest-at-0-HP) investigated and deliberately not changed; see the workstream section.
 8. **Workstream D** (armor/proficiency/inventory) — **D1 ✅ done** (worn-armor identity + equip/unequip AC recompute + shield guard + `CharacterSheet.size`), **D2 ✅ done** (Str-min speed penalty, Hide stealth disadvantage, armor-training disadvantage on STR/DEX checks/saves and the can't-cast gate), and **D3 ✅ done** (EQP-05 starting equipment/gold → inventory/currency, EQP-09 tool-check ability wiring, EQP-10 encumbrance consumer, EQP-11 currency spend/purchase).
 9. **Workstream E** ✅ done — Slow/Cleave/Graze/unarmed-strike plus the Push and grapple/shove size gates, the latter unblocked by D1's `CharacterSheet.size` field.
-10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) and **I2** ✅ done (condition-immunity centralization) / **I3/I4** remain (source-identity, exhaustion/repeat-save) — I3/I4 share source-identity with I2 and repeat-save with J.
+10. **Workstream I1** ✅ done (stale condition definitions: Stunned speed, Petrified immunity, Unconscious→Prone, duplicate source of truth) and **I2** ✅ done (condition-immunity centralization) / **I4's exhaustion-stacking slice** ✅ done (EFF-03: `apply_condition(EXHAUSTION)` now drives `exhaustion_level` via a new `gain_exhaustion` helper) / **I3 and the rest of I4** remain (source-identity, repeat-save, Blinded/Deafened auto-fail) — these share source-identity with I2 and repeat-save with J.
 11. **Workstream H** ✅ done (check proficiency leak, initiative) — small, independent; a fast major/minor win that can land any time.
 12. **Workstream J** (remaining spell-schema gaps) — still open. **Workstream K** ✅ done (pact/standard slot separation, upcast flat-modifier scaling, secondary-pool upcast, Ice Storm 2024 dice, `duration_rounds` parsing, `ClassLevelEntry` hashability).
 

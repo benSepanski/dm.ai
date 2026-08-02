@@ -139,6 +139,21 @@ class TestLongRest:
         assert char.exhaustion_level == 2
         assert result.exhaustion_reduced
 
+    def test_clears_stale_exhaustion_tag_when_level_hits_zero(self):
+        """EFF-03: a long rest that drops exhaustion_level to 0 must also
+        strip the bare Condition.EXHAUSTION tag, or the two drift apart."""
+        char = _char(exhaustion_level=1, conditions=[Condition.EXHAUSTION])
+        result = long_rest(char)
+        assert char.exhaustion_level == 0
+        assert Condition.EXHAUSTION not in char.conditions
+        assert result.exhaustion_reduced
+
+    def test_keeps_exhaustion_tag_while_level_remains(self):
+        char = _char(exhaustion_level=2, conditions=[Condition.EXHAUSTION])
+        long_rest(char)
+        assert char.exhaustion_level == 1
+        assert Condition.EXHAUSTION in char.conditions
+
     def test_no_effect_on_dead(self):
         char = _char()
         char.death_saves.is_dead = True

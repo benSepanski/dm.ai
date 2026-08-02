@@ -1,5 +1,6 @@
 """D&D 5.5e (2024 Player's Handbook) rule engine."""
 
+from game_engine.rules.dnd_5_5e._conditions import gain_exhaustion
 from game_engine.rules.dnd_5_5e._currency import (
     can_afford,
     credit_gold,
@@ -97,4 +98,6 @@ __all__ = [
     "long_rest",
     "short_rest",
     "spend_hit_die",
+    # conditions
+    "gain_exhaustion",
 ]

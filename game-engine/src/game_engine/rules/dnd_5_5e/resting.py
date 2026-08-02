@@ -135,4 +135,9 @@ def long_rest(char: CharacterSheet) -> RestResult:
     if char.exhaustion_level > 0:
         char.exhaustion_level -= 1
         result.exhaustion_reduced = True
+        if char.exhaustion_level == 0:
+            # Keep the bare Condition.EXHAUSTION tag (see
+            # _conditions.gain_exhaustion) in sync now that the level is 0.
+            char.conditions = [c for c in char.conditions if c != Condition.EXHAUSTION]
+            char.condition_durations.pop(Condition.EXHAUSTION, None)
     return result
