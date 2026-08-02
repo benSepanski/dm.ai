@@ -381,6 +381,50 @@ class TestApplyCondition:
         engine.apply_condition(fighter, Condition.FRIGHTENED)
         assert fighter.concentrating_on == "Bless"
 
+    def test_exhaustion_increments_level_instead_of_tagging_only(
+        self, engine: DnD55eEngine, fighter: CharacterSheet
+    ):
+        """EFF-03: apply_condition(EXHAUSTION) must not be a cosmetic no-op —
+        it drives exhaustion_level, the field every derived effect reads."""
+        assert fighter.exhaustion_level == 0
+        engine.apply_condition(fighter, Condition.EXHAUSTION)
+        assert fighter.exhaustion_level == 1
+        assert Condition.EXHAUSTION in fighter.conditions
+
+    def test_exhaustion_stacks_cumulatively(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        for _ in range(3):
+            engine.apply_condition(fighter, Condition.EXHAUSTION)
+        assert fighter.exhaustion_level == 3
+        # The bare tag is a single membership flag, not one per level.
+        assert fighter.conditions.count(Condition.EXHAUSTION) == 1
+
+    def test_exhaustion_has_derived_mechanical_effects(
+        self, engine: DnD55eEngine, fighter: CharacterSheet
+    ):
+        engine.apply_condition(fighter, Condition.EXHAUSTION)
+        engine.apply_condition(fighter, Condition.EXHAUSTION)
+        assert fighter.d20_modifier == -4
+        assert fighter.effective_speed == 20
+
+    def test_exhaustion_level_six_is_death(self, engine: DnD55eEngine, fighter: CharacterSheet):
+        for _ in range(6):
+            engine.apply_condition(fighter, Condition.EXHAUSTION)
+        assert fighter.is_dead is True
+
+    def test_immune_creature_gains_no_exhaustion(self, engine: DnD55eEngine):
+        char = make_fighter(condition_immunities=[Condition.EXHAUSTION])
+        engine.apply_condition(char, Condition.EXHAUSTION)
+        assert char.exhaustion_level == 0
+        assert Condition.EXHAUSTION not in char.conditions
+
+    def test_gain_exhaustion_helper_accepts_multiple_levels(
+        self, engine: DnD55eEngine, fighter: CharacterSheet
+    ):
+        from game_engine.rules.dnd_5_5e import gain_exhaustion
+
+        gain_exhaustion(fighter, levels=2)
+        assert fighter.exhaustion_level == 2
+
 
 # ---------------------------------------------------------------------------
 # remove_condition
@@ -436,6 +480,18 @@ class TestRemoveCondition:
         assert fighter.conditions == []
         engine.remove_condition(fighter, Condition.PRONE)
         assert fighter.conditions == []
+
+    def test_removing_exhaustion_zeroes_the_level(
+        self, engine: DnD55eEngine, fighter: CharacterSheet
+    ):
+        """Keeps Condition.EXHAUSTION and exhaustion_level consistent even
+        via the generic remove path (e.g. a full Greater Restoration cure)."""
+        engine.apply_condition(fighter, Condition.EXHAUSTION)
+        engine.apply_condition(fighter, Condition.EXHAUSTION)
+        assert fighter.exhaustion_level == 2
+        engine.remove_condition(fighter, Condition.EXHAUSTION)
+        assert fighter.exhaustion_level == 0
+        assert Condition.EXHAUSTION not in fighter.conditions
 
 
 # ---------------------------------------------------------------------------
