@@ -27,6 +27,26 @@ path = "rules_data.rs"
 name = "perf"
 path = "perf.rs"
 
+[[test]]
+name = "persistence"
+path = "persistence.rs"
+
+[[test]]
+name = "crash_harness"
+path = "crash_harness.rs"
+
+[[test]]
+name = "confirm_idempotency"
+path = "confirm_idempotency.rs"
+
+[[test]]
+name = "no_rewrite_on_load"
+path = "no_rewrite_on_load.rs"
+
+[[test]]
+name = "api_authority"
+path = "api_authority.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }

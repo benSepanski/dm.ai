@@ -26,25 +26,25 @@ States: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note why
   presentation contract (sheet view model), request/response enums for the
   WASM boundary, API wire types. serde + tsify derives on everything
   boundary-crossing.
-- [~] **3. `engine-core`**: choice slot (unlock condition, option source,
+- [x] **3. `engine-core`**: choice slot (unlock condition, option source,
   validators, effects), slot-graph resolution, log append/replay, validation
   → checklist, fold traversal, draft lifecycle (incl. dependent-clear
   computation, decision IDs, draft versions). Unit tests + proptest random
   walk over the slot graph.
-- [ ] **4. `ruleset-pf2e`**: mechanics module (boost math, proficiency
+- [x] **4. `ruleset-pf2e`**: mechanics module (boost math, proficiency
   arithmetic, HP, AC, saves, attacks, Bulk); kind modules (ancestry,
   background, class, feats, skills, equipment) with registration-only public
   surface; rules-data record parsing (records passed in, no file access);
   PF2e Fighter slot definitions; sheet derivation via the fold. Golden sheet
   tests (Torvald the Dwarf Fighter + 2 more hand-verified builds),
   `checks/replay.rs` (golden + property), fold benchmark in `checks/perf.rs`.
-- [ ] **5. `rules-data`**: versioned JSON (Dwarf/Human/Elf/Goblin + Player
+- [x] **5. `rules-data`**: versioned JSON (Dwarf/Human/Elf/Goblin + Player
   Core heritages + L1 ancestry feats; Field Medic/Warrior/Blacksmith/Hunter/
   Street Urchin; Fighter class + L1 class feats incl. one with prerequisite;
   skills; starting kit + small gear list). Stable IDs, per-record license
   metadata, ORC notice string. `checks/rules_data.rs` lint. Verified against
   Archives of Nethys (agent research notes in `run/` dir).
-- [ ] **6. `server` + persistence**: axum routes (roster, create draft,
+- [~] **6. `server` + persistence**: axum routes (roster, create draft,
   confirm decision, unconfirm/change with dependent-clear, finalize, view,
   delete-to-trash, resume); persistence module (private storage docs, temp →
   fsync → rename, schema v1 + unknown-version refusal, quarantine, `trash/`

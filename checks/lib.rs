@@ -41,3 +41,95 @@ pub fn load_rules_data() -> ruleset_pf2e::RulesData {
     })
     .expect("rules data parses and passes integrity checks")
 }
+
+// ---- Real-server harness for the persistence/crash/API checks ----
+
+use std::io::BufRead;
+use std::process::{Child, Command, Stdio};
+
+/// Path to the freshly built server binary (builds it if stale).
+pub fn server_binary() -> PathBuf {
+    static BUILT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    BUILT
+        .get_or_init(|| {
+            let root = workspace_root();
+            let status = Command::new(env!("CARGO"))
+                .args(["build", "-p", "server", "--quiet"])
+                .current_dir(&root)
+                .status()
+                .expect("cargo build -p server");
+            assert!(status.success(), "server build failed");
+            root.join("target/debug/server")
+        })
+        .clone()
+}
+
+/// A live server over a data directory. Killed (SIGKILL) on drop.
+pub struct TestServer {
+    child: Child,
+    pub url: String,
+}
+
+impl TestServer {
+    /// Spawn on an OS-assigned port and wait for the printed URL.
+    pub fn spawn(data_dir: &std::path::Path) -> TestServer {
+        let mut child = Command::new(server_binary())
+            .args(["--data-dir"])
+            .arg(data_dir)
+            .args(["--port", "0"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .expect("spawn server");
+        let stdout = child.stdout.take().expect("piped stdout");
+        let mut reader = std::io::BufReader::new(stdout);
+        let mut line = String::new();
+        reader.read_line(&mut line).expect("server prints its URL");
+        let url = line
+            .trim()
+            .strip_prefix("Serving at ")
+            .unwrap_or_else(|| panic!("unexpected server output: {line:?}"))
+            .to_string();
+        // Keep draining stdout so the child never blocks on a full pipe.
+        std::thread::spawn(move || {
+            let mut sink = String::new();
+            while let Ok(n) = reader.read_line(&mut sink) {
+                if n == 0 {
+                    break;
+                }
+                sink.clear();
+            }
+        });
+        TestServer { child, url }
+    }
+
+    /// Try to spawn where startup is expected to fail; returns stderr.
+    pub fn spawn_expect_failure(data_dir: &std::path::Path) -> (i32, String) {
+        let output = Command::new(server_binary())
+            .args(["--data-dir"])
+            .arg(data_dir)
+            .args(["--port", "0"])
+            .output()
+            .expect("run server");
+        (
+            output.status.code().unwrap_or(-1),
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        )
+    }
+
+    pub fn pid(&self) -> u32 {
+        self.child.id()
+    }
+
+    /// SIGKILL — the crash-harness path; also used by Drop.
+    pub fn kill(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+impl Drop for TestServer {
+    fn drop(&mut self) {
+        self.kill();
+    }
+}

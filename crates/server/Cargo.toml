@@ -15,7 +15,7 @@ axum = { workspace = true }
 tokio = { workspace = true }
 clap = { workspace = true }
 libc = { workspace = true }
-rust-embed = { workspace = true }
+rust-embed = { workspace = true, features = ["interpolate-folder-path"] }
 mime_guess = { workspace = true }
 
 [lints]
