@@ -18,3 +18,9 @@ console_error_panic_hook = { workspace = true }
 
 [lints]
 workspace = true
+
+# wasm-opt's default -O pass costs ~10s per build for no benefit a localhost
+# app can feel; -O1 keeps the warm engine->wasm+server rebuild inside the
+# 10-second budget the architecture asserts.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-O1"]
