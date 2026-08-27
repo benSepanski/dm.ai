@@ -1,0 +1,20 @@
+# Constraints emitted by .checkpoints/architecture/chargen-fighter.md.
+# Workspace-wide bans; narrowly-scoped `#[allow(clippy::disallowed_methods)]`
+# at a call site is a reviewed, visible exception (the server clock helper,
+# timing code inside checks).
+
+disallowed-methods = [
+    # Deletes are renames into trash/ — the app never unlinks a file.
+    { path = "std::fs::remove_file", reason = "deletes are renames into trash/; the app never unlinks" },
+    { path = "std::fs::remove_dir", reason = "deletes are renames into trash/; the app never unlinks" },
+    { path = "std::fs::remove_dir_all", reason = "deletes are renames into trash/; the app never unlinks" },
+    { path = "tokio::fs::remove_file", reason = "deletes are renames into trash/; the app never unlinks" },
+    { path = "tokio::fs::remove_dir", reason = "deletes are renames into trash/; the app never unlinks" },
+    { path = "tokio::fs::remove_dir_all", reason = "deletes are renames into trash/; the app never unlinks" },
+    # Derivation and validation are a pure fold: no clock, no env. The server
+    # gets wall-clock time through one allowed helper (trash timestamps).
+    { path = "std::time::SystemTime::now", reason = "no ambient clock; derivation is a pure fold (server::clock is the one allowed exception)" },
+    { path = "std::time::Instant::now", reason = "no ambient clock in domain code (perf checks may allow explicitly)" },
+    { path = "std::env::var", reason = "no ambient config; everything arrives via CLI flags or function arguments" },
+    { path = "std::env::vars", reason = "no ambient config; everything arrives via CLI flags or function arguments" },
+]

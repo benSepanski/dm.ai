@@ -1,0 +1,5 @@
+/target
+node_modules/
+ui/test-results/
+ui/playwright-report/
+.DS_Store

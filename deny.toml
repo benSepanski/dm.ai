@@ -1,0 +1,35 @@
+# Dependency hygiene — constraint row from
+# .checkpoints/architecture/chargen-fighter.md.
+
+[graph]
+all-features = false
+
+[licenses]
+# Workspace crates are unpublished (publish = false); the app's own license
+# is a product decision, not a dependency-hygiene one.
+private = { ignore = true }
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "MPL-2.0",
+    "CDLA-Permissive-2.0",
+]
+
+[bans]
+multiple-versions = "deny"
+# Populated only when a duplicate is unavoidable; every skip is a reviewed edit.
+skip = [
+    # proc-macro ecosystem is mid-migration from syn 2 to syn 3; both appear
+    # only at build time (derive macros), never in shipped code.
+    { crate = "syn", reason = "syn 2/3 split across derive-macro deps" },
+]
+skip-tree = []
+
+[advisories]
+yanked = "deny"

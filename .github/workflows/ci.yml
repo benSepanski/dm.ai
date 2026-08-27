@@ -1,0 +1,114 @@
+# Runs every row of the architecture doc's "Constraints emitted" table on
+# every push. The checks/ crate is the invariant layer; this file is the
+# wiring that makes it inescapable.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-pack and cargo-deny
+        run: |
+          curl -LsSf https://github.com/rustwasm/wasm-pack/releases/latest/download/wasm-pack-init.sh | sh || cargo install wasm-pack --locked
+          cargo install cargo-deny --locked
+
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy (disallowed methods, workspace lints)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Dependency hygiene (cargo-deny)
+        run: cargo deny check
+
+      - name: Build tests
+        run: cargo test --workspace --no-run
+      - name: Test suite (includes checks/) with wall-time budget
+        # < 20 s execution budget (architecture perf table). Compilation is
+        # excluded — the suite was built in the previous step.
+        run: |
+          start=$(date +%s)
+          cargo test --workspace
+          end=$(date +%s)
+          elapsed=$((end - start))
+          echo "test suite wall time: ${elapsed}s (budget 20s)"
+          test "$elapsed" -lt 20
+
+      - name: WASM build
+        run: wasm-pack build crates/wasm --target web --out-dir ../../ui/src/engine/pkg --no-pack
+
+      - name: Generated bindings never stale
+        run: git diff --exit-code -- ui/src/engine/pkg
+
+      - name: Warm incremental rebuild budget (< 10 s)
+        # Engine change -> new WASM + server binary, warm cache.
+        run: |
+          cargo build -p server
+          touch crates/engine-core/src/lib.rs
+          start=$(date +%s)
+          cargo build -p server --timings
+          wasm-pack build crates/wasm --target web --out-dir ../../ui/src/engine/pkg --no-pack
+          end=$(date +%s)
+          elapsed=$((end - start))
+          echo "warm incremental rebuild: ${elapsed}s (budget 10s)"
+          git checkout -- ui/src/engine/pkg
+          test "$elapsed" -lt 10
+      - name: Upload build timings
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-timings
+          path: target/cargo-timings/
+
+  ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+      - name: Typecheck (strict tsconfig)
+        run: npm run typecheck
+      - name: Lint (no-explicit-any, no-restricted-imports)
+        run: npm run lint
+      - name: Component tests
+        run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: e2e
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Build server (serves the committed UI build)
+        run: cargo build --release -p server
+      - run: npm ci
+        working-directory: ui
+      - run: npx playwright install --with-deps chromium
+        working-directory: ui
+      - name: Playwright user stories
+        run: npm run e2e
+        working-directory: ui
