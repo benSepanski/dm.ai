@@ -55,13 +55,13 @@ States: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note why
 - [x] **7. `wasm` crate + TS façade**: one request enum in, one response enum
   out via tsify `Ts<T>`; panic hook; committed generated bindings; CI
   bindings-freshness step green; WASM↔native parity smoke on fixture logs.
-- [~] **8. `ui`**: roster (create/resume/view/delete w/ confirm), 7-step
+- [x] **8. `ui`**: roster (create/resume/view/delete w/ confirm), 7-step
   wizard (concept → ancestry+heritage+ancestry feat → background → class →
   boosts → equipment → details), non-linear nav with badges, live checklist
   (incomplete vs illegal, jump-to-step), summary sidebar w/ live recompute,
   change-confirmed-choice flow with clear-list confirmation, finalize, sheet
   view, ORC notice. Component tests (checklist, counters).
-- [ ] **9. Playwright e2e**: first run (hand-checkable numbers), the mistake
+- [~] **9. Playwright e2e**: first run (hand-checkable numbers), the mistake
   (incl. clearing), the crash (real server kill), jumping ahead,
   change-ancestry dependent clearing, delete-to-trash.
 - [ ] **10. Full verification + report**: entire CI matrix green locally;
