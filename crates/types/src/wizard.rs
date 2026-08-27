@@ -49,6 +49,8 @@ pub enum SlotViewKind {
     Single,
     /// Pick `count` distinct options.
     Multi { count: u32 },
+    /// An open-ended list of options; repeats allowed (a shopping list).
+    List,
     /// Free text.
     Text { multiline: bool },
 }

@@ -397,3 +397,124 @@ are sufficient.
   Player Core pg. 280 in its sources; stats verified identical (see Section 5 note).
 - ORC attribution text (Section 7) is quoted from Paizo's license pages and a licensee's published
   ORC notice, not from AoN.
+
+---
+
+## 8. Supplemental verification (general feats, Bulk details)
+
+Verified against AoN Elasticsearch (`elasticsearch.aonprd.com/aon`) on 2026-08-27, remaster
+(Player Core) records only; legacy Core Rulebook duplicates identified and excluded.
+
+### 8.1 General feats (Player Core, level 1)
+
+All five are **level 1, trait General, no prerequisites** (prerequisite field empty on every
+remaster record). None has the Skill trait.
+
+| Feat | URL (remaster) | Pg. | Mechanics (exact) |
+|---|---|---|---|
+| Toughness | [/Feats.aspx?ID=5227](https://2e.aonprd.com/Feats.aspx?ID=5227) | 263 | Increase your **maximum HP by your level**. Reduce the DC of recovery checks by 1. *(Remaster change: legacy CRB version instead set recovery DC = 9 + dying value.)* |
+| Fleet | [/Feats.aspx?ID=5150](https://2e.aonprd.com/Feats.aspx?ID=5150) | 256 | Your **Speed increases by 5 feet**. |
+| Incredible Initiative | [/Feats.aspx?ID=5160](https://2e.aonprd.com/Feats.aspx?ID=5160) | 256 | **+2 circumstance bonus to initiative rolls**. |
+| Diehard | [/Feats.aspx?ID=5140](https://2e.aonprd.com/Feats.aspx?ID=5140) | 254 | You die from the dying condition at **dying 5** rather than dying 4. |
+| Ride | [/Feats.aspx?ID=5206](https://2e.aonprd.com/Feats.aspx?ID=5206) | 261 | When you Command an Animal you're mounted on to take a move action, you **automatically succeed** (no check). A mounted animal acts on your turn like a minion; if you Mount mid-encounter it skips its next turn, then acts on your next turn. |
+
+### 8.2 Worn-armor Bulk rule
+
+**The listed armor Bulk is already the worn value; carrying (not wearing) armor ADDS 1 Bulk** —
+i.e. worn armor does not "reduce listed Bulk by 1"; the reduction framing is inverted. Exact rule
+(Armor statistics → Bulk, [/Rules.aspx?ID=2176](https://2e.aonprd.com/Rules.aspx?ID=2176),
+Player Core pg. 271):
+
+> "This entry gives the armor's Bulk, assuming you're wearing the armor and distributing its
+> weight across your body. A suit of armor that's carried usually has 1 more Bulk than what's
+> listed here (or 1 Bulk total for armor of light Bulk)."
+
+So worn scale mail = 2 Bulk (as listed); the same suit carried in a pack = 3 Bulk.
+
+### 8.3 Light and negligible items in the Bulk total
+
+**Confirmed.** Bulk Values, [/Rules.aspx?ID=2155](https://2e.aonprd.com/Rules.aspx?ID=2155)
+(Player Core pg. 269):
+
+> "Ten light items count as 1 Bulk, and you round down fractions (so 9 light items count as
+> 0 Bulk, and 11 light items count as 1 Bulk). Items of negligible Bulk don't count toward Bulk
+> unless you try to carry vast numbers of them, as determined by the GM."
+
+Negligible = items marked "—" (e.g. a piece of chalk); light = "L" (e.g. a dagger or scroll).
+Rough guide ([/Rules.aspx?ID=2156](https://2e.aonprd.com/Rules.aspx?ID=2156), pg. 269): ~5–10 lb
+= 1 Bulk, under a few ounces = negligible, in between = light.
+
+### 8.4 Proficiency bonus formula
+
+**Confirmed.** Untrained **+0**; trained **level + 2**; expert **level + 4**; master
+**level + 6**; legendary **level + 8**.
+— Proficiency, [/Rules.aspx?ID=3305](https://2e.aonprd.com/Rules.aspx?ID=3305) (Player Core
+pg. 11); Proficiency Bonus table under Bonuses,
+[/Rules.aspx?ID=2281](https://2e.aonprd.com/Rules.aspx?ID=2281) (pg. 400); restated in Step 9:
+Calculate Modifiers, [/Rules.aspx?ID=2039](https://2e.aonprd.com/Rules.aspx?ID=2039) (pg. 25).
+
+### 8.5 Level-1 attribute cap
+
+**An explicit cap exists — not merely a structural impossibility.** Remaster uses attribute
+*modifiers* only (no 3–18 scores); the cap is **+4** (the equivalent of legacy score 18).
+Character Creation → Attribute Boosts,
+[/Rules.aspx?ID=2027](https://2e.aonprd.com/Rules.aspx?ID=2027) (Player Core pg. 17–19; the
+boost/partial-boost text is on pg. 19):
+
+> "However, if the attribute modifier to which you're applying an attribute boost is already +4
+> or higher, instead mark 'partial boost' on the character sheet for that attribute. ...
+> **At 1st level, a character can never have any attribute modifier that's higher than +4.**"
+
+Reinforced in Step 6: Finish Attribute Modifiers,
+[/Rules.aspx?ID=2036](https://2e.aonprd.com/Rules.aspx?ID=2036) (pg. 24): "You should have no
+attribute modifier lower than –1 or higher than +4." (Each batch of boosts must also go to
+different attributes, but the +4 rule is the binding cap; partial boosts only convert to a real
++1 at 5th level and beyond.)
+
+### 8.6 Fighter Kit price semantics
+
+**Confirmed: options are ADDITIONAL purchases on top of the 5 gp 8 sp base**, paid from the
+9 gp 2 sp "money left over." Fighter Kit,
+[/ClassKits.aspx?ID=20](https://2e.aonprd.com/ClassKits.aspx?ID=20) (Player Core pg. 268):
+base price **5 gp 8 sp** includes **scale mail (armor), dagger (weapon), adventurer's pack and
+grappling hook (gear)**; Bulk 2, 2 light; money left over 9 gp 2 sp. Options: **greatsword
+(2 gp)**, **longbow with 20 arrows (6 gp 2 sp)**, or **longsword and steel shield (3 gp)**.
+The governing rule (Quick Equipment Packages,
+[/Rules.aspx?ID=3418](https://2e.aonprd.com/Rules.aspx?ID=3418), Player Core pg. 268) states:
+"The Armor, Weapons, and Gear entries include the basics, and the **Options entries suggest
+additional items you might purchase with your leftover money**."
+
+### 8.7 Shield Block and Reactive Strike are automatic fighter features
+
+**Confirmed** (see Section 3 above, verified from the fighter class record,
+[/Classes.aspx?ID=35](https://2e.aonprd.com/Classes.aspx?ID=35), Player Core pg. 136): the
+level-1 fighter feature list is *attribute boosts, initial proficiencies, **Reactive Strike**,
+fighter feat, **Shield Block***. Reactive Strike is a class feature granting the reaction
+([/Actions.aspx?ID=2256](https://2e.aonprd.com/Actions.aspx?ID=2256), pg. 138), and Shield Block
+is granted as a free general feat ([/Feats.aspx?ID=5212](https://2e.aonprd.com/Feats.aspx?ID=5212),
+pg. 262). Neither consumes the separate "fighter feat" feature — the level-1 class feat slot
+remains free for one of the 8 feats in Section 3.
+
+### 8.8 Initiative defaults to Perception
+
+**Confirmed.** Step 1: Roll Initiative,
+[/Rules.aspx?ID=2423](https://2e.aonprd.com/Rules.aspx?ID=2423) (Player Core pg. 435):
+"Typically, you'll roll a Perception check to determine your initiative"; the GM may call for
+another check instead (e.g. Stealth while Avoiding Notice), and "in most cases, you can still
+use Perception if you prefer." Also Perception for Initiative,
+[/Rules.aspx?ID=2299](https://2e.aonprd.com/Rules.aspx?ID=2299) (pg. 405).
+
+### 8.9 Unarmored AC formula
+
+**Confirmed.** Armor Class, [/Rules.aspx?ID=2167](https://2e.aonprd.com/Rules.aspx?ID=2167)
+(Player Core pg. 271; restated at [/Rules.aspx?ID=2295](https://2e.aonprd.com/Rules.aspx?ID=2295),
+pg. 404):
+
+> "Armor Class = 10 + Dexterity modifier (up to your armor's Dex Cap) + proficiency bonus +
+> armor's item bonus to AC + other bonuses + penalties. ... If you're not wearing armor, use
+> your proficiency in unarmored defense."
+
+Unarmored: no armor item bonus and **no Dex Cap applies** (a Dex Cap is a statistic of the armor
+worn; "unarmored" as an equipment entry lists Dex Cap "—"). A level-1 fighter is **trained** in
+unarmored defense (Section 3), so unarmored AC = 10 + Dex mod + (level + 2) = 13 + Dex mod at
+level 1.

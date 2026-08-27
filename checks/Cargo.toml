@@ -15,13 +15,25 @@ path = "lib.rs"
 name = "crate_layering"
 path = "crate_layering.rs"
 
+[[test]]
+name = "replay"
+path = "replay.rs"
+
+[[test]]
+name = "rules_data"
+path = "rules_data.rs"
+
+[[test]]
+name = "perf"
+path = "perf.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
-
-[dev-dependencies]
 types = { workspace = true }
 engine-core = { workspace = true }
 ruleset-pf2e = { workspace = true }
+
+[dev-dependencies]
 serde_json = { workspace = true }
 tempfile = { workspace = true }
 reqwest = { workspace = true }
