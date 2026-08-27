@@ -1577,6 +1577,7 @@ dependencies = [
  "engine-core",
  "ruleset-pf2e",
  "serde",
+ "tsify",
  "types",
  "wasm-bindgen",
 ]

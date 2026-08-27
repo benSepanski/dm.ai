@@ -12,6 +12,7 @@ types = { workspace = true, features = ["ts"] }
 engine-core = { workspace = true }
 ruleset-pf2e = { workspace = true }
 serde = { workspace = true }
+tsify = { version = "0.5.8", features = ["js"] }
 wasm-bindgen = { workspace = true }
 console_error_panic_hook = { workspace = true }
 

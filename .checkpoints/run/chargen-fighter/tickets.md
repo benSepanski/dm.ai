@@ -44,7 +44,7 @@ States: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note why
   skills; starting kit + small gear list). Stable IDs, per-record license
   metadata, ORC notice string. `checks/rules_data.rs` lint. Verified against
   Archives of Nethys (agent research notes in `run/` dir).
-- [~] **6. `server` + persistence**: axum routes (roster, create draft,
+- [x] **6. `server` + persistence**: axum routes (roster, create draft,
   confirm decision, unconfirm/change with dependent-clear, finalize, view,
   delete-to-trash, resume); persistence module (private storage docs, temp →
   fsync → rename, schema v1 + unknown-version refusal, quarantine, `trash/`
@@ -52,10 +52,10 @@ States: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note why
   `verify` subcommand. Static file serving of built UI. Checks:
   `persistence.rs`, `crash_harness.rs`, `confirm_idempotency.rs`,
   `no_rewrite_on_load.rs`, `api_authority.rs`.
-- [ ] **7. `wasm` crate + TS façade**: one request enum in, one response enum
+- [x] **7. `wasm` crate + TS façade**: one request enum in, one response enum
   out via tsify `Ts<T>`; panic hook; committed generated bindings; CI
   bindings-freshness step green; WASM↔native parity smoke on fixture logs.
-- [ ] **8. `ui`**: roster (create/resume/view/delete w/ confirm), 7-step
+- [~] **8. `ui`**: roster (create/resume/view/delete w/ confirm), 7-step
   wizard (concept → ancestry+heritage+ancestry feat → background → class →
   boosts → equipment → details), non-linear nav with badges, live checklist
   (incomplete vs illegal, jump-to-step), summary sidebar w/ live recompute,
