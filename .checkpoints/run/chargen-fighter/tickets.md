@@ -8,7 +8,7 @@ States: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note why
 
 ## Tickets
 
-- [~] **1. Constraints emitted** (architecture "Constraints emitted" table,
+- [x] **1. Constraints emitted** (architecture "Constraints emitted" table,
   verbatim): cargo workspace skeleton (`types`, `engine-core`, `ruleset-pf2e`,
   `wasm`, `server`, `checks`), `clippy.toml` (disallowed methods/types),
   `deny.toml`, `[workspace.lints]` + `#![forbid(unsafe_code)]` in engine
@@ -22,7 +22,7 @@ States: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note why
   `#[ignore]`-free failing-if-absent placeholders? — NO: they land with
   their feature tickets; ticket 1 lands the files' *slots* in CI config so
   wiring is never an afterthought. Layering check green before ticket 2.
-- [ ] **2. `types` crate**: IDs, decision/log shapes, checklist entry,
+- [~] **2. `types` crate**: IDs, decision/log shapes, checklist entry,
   presentation contract (sheet view model), request/response enums for the
   WASM boundary, API wire types. serde + tsify derives on everything
   boundary-crossing.

@@ -72,8 +72,8 @@ relative to `https://2e.aonprd.com`. Legacy (Core Rulebook) records were explici
 | Feat | URL | Prereq | Summary |
 |---|---|---|---|
 | Ancestral Longevity | [/Feats.aspx?ID=4405](https://2e.aonprd.com/Feats.aspx?ID=4405) (pg. 48) | **at least 100 years old** | Each day, become trained in one skill of choice (temporary). |
-| Elven Lore | [/Feats.aspx?ID=4406](https://2e.aonprd.com/Feats.aspx?ID=4406) (pg. 48) | — | Trained in Arcana, Nature, and Elven Lore. |
-| Elven Weapon Familiarity | [/Feats.aspx?ID=4407](https://2e.aonprd.com/Feats.aspx?ID=4407) (pg. 48) | — | Familiarity/access with elf weapons (longbow, composite longbow, rapier, shortbow, etc.); treat elf weapons as one category simpler. |
+| Elven Lore | [/Feats.aspx?ID=4406](https://2e.aonprd.com/Feats.aspx?ID=4406) (pg. 48) | — | Trained in Arcana and Nature (swap for a free skill if already trained); gain Additional Lore (Elf Lore). |
+| Elven Weapon Familiarity | [/Feats.aspx?ID=4407](https://2e.aonprd.com/Feats.aspx?ID=4407) (pg. 48) | — | Access to uncommon elf weapons; treat elf-trait weapons plus longbows, composite longbows, rapiers, shortbows, composite shortbows as one proficiency category simpler; crit specialization with them at 5th. |
 | Forlorn | [/Feats.aspx?ID=4408](https://2e.aonprd.com/Feats.aspx?ID=4408) (pg. 48) | — | +1 circumstance bonus to saves vs. emotion effects; successes vs. emotion become crit successes. |
 | Nimble Elf | [/Feats.aspx?ID=4409](https://2e.aonprd.com/Feats.aspx?ID=4409) (pg. 48) | — | Speed increases by 5 feet. |
 | Otherworldly Magic | [/Feats.aspx?ID=4410](https://2e.aonprd.com/Feats.aspx?ID=4410) (pg. 48) | — | One arcane cantrip as an innate spell, cast at will. |
@@ -106,13 +106,13 @@ relative to `https://2e.aonprd.com`. Legacy (Core Rulebook) records were explici
 
 | Feat | URL | Prereq | Actions | Summary |
 |---|---|---|---|---|
-| Burn It! | [/Feats.aspx?ID=4438](https://2e.aonprd.com/Feats.aspx?ID=4438) (pg. 56) | — | — | +1 damage (status) with fire effects/persistent fire; bonus to fire-based Crafting. |
-| City Scavenger | [/Feats.aspx?ID=4439](https://2e.aonprd.com/Feats.aspx?ID=4439) (pg. 56) | — | — | +1/+2 circumstance to Subsist; can Subsist using Society or Survival in settlements. |
-| Goblin Lore | [/Feats.aspx?ID=4440](https://2e.aonprd.com/Feats.aspx?ID=4440) (pg. 56) | — | — | Trained in Nature, Stealth, and Goblin Lore. |
+| Burn It! | [/Feats.aspx?ID=4438](https://2e.aonprd.com/Feats.aspx?ID=4438) (pg. 56) | — | — | Fire-damage spells gain a status bonus of half the spell's rank; fire alchemical items gain a quarter of item level (min +1 either way); +1 status bonus to persistent fire damage you deal. |
+| City Scavenger | [/Feats.aspx?ID=4439](https://2e.aonprd.com/Feats.aspx?ID=4439) (pg. 56) | — | — | +1 circumstance to Subsist (+2 with irongut heritage); Subsist in settlements with Society or Survival; Earn Income while Subsisting in a city. |
+| Goblin Lore | [/Feats.aspx?ID=4440](https://2e.aonprd.com/Feats.aspx?ID=4440) (pg. 56) | — | — | Trained in Nature and Stealth (swap for a free skill if already trained); gain Additional Lore (Goblin Lore). |
 | Goblin Scuttle | [/Feats.aspx?ID=4441](https://2e.aonprd.com/Feats.aspx?ID=4441) (pg. 56) | — | Reaction (trigger: ally ends a move action adjacent to you) | Step as a reaction. |
 | Goblin Song | [/Feats.aspx?ID=4442](https://2e.aonprd.com/Feats.aspx?ID=4442) (pg. 56) | — | 1 action | Performance vs. Will DC to inflict –1 status penalty to Perception and Will saves. |
-| Goblin Weapon Familiarity | [/Feats.aspx?ID=4443](https://2e.aonprd.com/Feats.aspx?ID=4443) (pg. 56) | — | — | Familiarity/access with goblin weapons (dogslicer, horsechopper, etc.); treat goblin weapons as one category simpler. |
-| Junk Tinker | [/Feats.aspx?ID=4444](https://2e.aonprd.com/Feats.aspx?ID=4444) (pg. 56) | — | — | Craft level-0 items (incl. improvised) from junk at reduced cost/quality tradeoff. |
+| Goblin Weapon Familiarity | [/Feats.aspx?ID=4443](https://2e.aonprd.com/Feats.aspx?ID=4443) (pg. 56) | — | — | Access to uncommon goblin weapons; treat goblin-trait weapons as one proficiency category simpler (martial→simple, advanced→martial); crit specialization with them at 5th. |
+| Junk Tinker | [/Feats.aspx?ID=4444](https://2e.aonprd.com/Feats.aspx?ID=4444) (pg. 56) | — | — | Craft shoddy level-0 items (incl. weapons/armor) from junk at one-quarter Price; you don't take the shoddy penalty on items you made; junk grants a Crafting discount on any item. |
 | Rough Rider | [/Feats.aspx?ID=4445](https://2e.aonprd.com/Feats.aspx?ID=4445) (pg. 56) | — | — | Ride feat for goblin dogs/wolves; +1 circumstance to Nature checks to Command them. |
 | Very Sneaky | [/Feats.aspx?ID=4446](https://2e.aonprd.com/Feats.aspx?ID=4446) (pg. 56) | — | — | +5 ft when Sneaking; can Sneak between cover. |
 
@@ -219,14 +219,14 @@ class feat); **Shield Block**.
 
 | Feat | URL | Actions | Prerequisites | Requirements | Summary |
 |---|---|---|---|---|---|
-| Combat Assessment | [/Feats.aspx?ID=4768](https://2e.aonprd.com/Feats.aspx?ID=4768) (pg. 140) | 1 action | — | — | Melee Strike; on a hit, Recall Knowledge about the target as part of the action. |
-| Double Slice | [/Feats.aspx?ID=4769](https://2e.aonprd.com/Feats.aspx?ID=4769) (pg. 140) | 2 actions | — | Wielding two melee weapons, one in each hand | Strike with both weapons at the same MAP; combine damage. |
-| Exacting Strike | [/Feats.aspx?ID=4770](https://2e.aonprd.com/Feats.aspx?ID=4770) (pg. 140) | 1 action (press) | — | — | Strike that doesn't increase your multiple attack penalty on a failure. |
-| Point Blank Stance | [/Feats.aspx?ID=4771](https://2e.aonprd.com/Feats.aspx?ID=4771) (pg. 140) | 1 action (stance) | — | Wielding a ranged weapon | Stance: no volley penalty within volley range; +2 circumstance damage with ranged weapons within 30 ft. |
+| Combat Assessment | [/Feats.aspx?ID=4768](https://2e.aonprd.com/Feats.aspx?ID=4768) (pg. 140) | 1 action | — | — | Melee Strike; on a hit, immediately Recall Knowledge about the target (+2 circumstance to the check on a crit); target then immune 1 day. |
+| Double Slice | [/Feats.aspx?ID=4769](https://2e.aonprd.com/Feats.aspx?ID=4769) (pg. 140) | 2 actions | — | Wielding two melee weapons, one in each hand | Two Strikes (one per weapon, same target) at your current MAP; –2 on second Strike if its weapon isn't agile; if both hit, combine damage. |
+| Exacting Strike | [/Feats.aspx?ID=4770](https://2e.aonprd.com/Feats.aspx?ID=4770) (pg. 140) | 1 action (press) | — | — | Strike; on a failure, the attack doesn't count toward your multiple attack penalty. |
+| Point Blank Stance | [/Feats.aspx?ID=4771](https://2e.aonprd.com/Feats.aspx?ID=4771) (pg. 140) | 1 action (stance) | — | Wielding a ranged weapon | Stance: no attack penalty from the volley trait; non-volley ranged weapons get +2 circumstance damage within their first range increment. |
 | Reactive Shield | [/Feats.aspx?ID=4772](https://2e.aonprd.com/Feats.aspx?ID=4772) (pg. 140) | Reaction (trigger: enemy hits you with a melee Strike) | — | Wielding a shield | Raise a Shield as a reaction, applying its AC bonus against the triggering attack. |
-| Snagging Strike | [/Feats.aspx?ID=4773](https://2e.aonprd.com/Feats.aspx?ID=4773) (pg. 141) | 1 action | — | One hand free, target within reach of that hand | Strike; on a hit, target is off-guard until start of your next turn (while in your reach). |
-| Sudden Charge | [/Feats.aspx?ID=4774](https://2e.aonprd.com/Feats.aspx?ID=4774) (pg. 141) | 2 actions (flourish, open) | — | — | Stride twice, then make a melee Strike. |
-| Vicious Swing | [/Feats.aspx?ID=4775](https://2e.aonprd.com/Feats.aspx?ID=4775) (pg. 141) | 2 actions (flourish) | — | — | Melee Strike with an extra weapon damage die (remaster name for legacy Power Attack). |
+| Snagging Strike | [/Feats.aspx?ID=4773](https://2e.aonprd.com/Feats.aspx?ID=4773) (pg. 141) | 1 action | — | One hand free, target within reach of that hand | Strike keeping one hand free; on a hit, target is off-guard until the start of your next turn or until it leaves that hand's reach. |
+| Sudden Charge | [/Feats.aspx?ID=4774](https://2e.aonprd.com/Feats.aspx?ID=4774) (pg. 141) | 2 actions (flourish) | — | — | Stride twice; if you end within melee reach of an enemy, make a melee Strike against it. |
+| Vicious Swing | [/Feats.aspx?ID=4775](https://2e.aonprd.com/Feats.aspx?ID=4775) (pg. 141) | 2 actions (flourish) | — | — | Melee Strike counting as two attacks for MAP; on a hit, deal one extra weapon damage die (remaster name for legacy Power Attack). |
 
 > **Prerequisite note:** No Player Core level-1 fighter feat has a formal *prerequisite* line.
 > Four have *requirements* instead (Double Slice, Point Blank Stance, Reactive Shield, Snagging
