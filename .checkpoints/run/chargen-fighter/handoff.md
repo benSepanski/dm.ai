@@ -65,8 +65,8 @@ clearing, delete-to-trash); component tests for checklist/counters.
   then a browser at the printed localhost URL — the server serves the built
   UI; Node must not appear in his loop. The report's verify section must
   carry exact commands.
-- Git push over SSH fails here; use
-  `git -c url.https://github.com/.insteadOf=ssh://git@github.com/ push`.
+- Git push over SSH fails here; the origin is scp-style, so use
+  `git -c url.https://github.com/.insteadOf=git@github.com: push`.
 
 ## If the architecture turns out wrong
 
