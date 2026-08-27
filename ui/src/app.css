@@ -477,3 +477,26 @@ textarea {
   gap: 0.6rem;
   margin-top: 1rem;
 }
+
+.boost-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+.boost-row {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+}
+.boost-row span {
+  min-width: 4.5rem;
+  color: var(--ink-soft);
+}
+.boost-row select {
+  font: inherit;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: #fff;
+}

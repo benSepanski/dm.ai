@@ -61,10 +61,10 @@ States: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note why
   (incomplete vs illegal, jump-to-step), summary sidebar w/ live recompute,
   change-confirmed-choice flow with clear-list confirmation, finalize, sheet
   view, ORC notice. Component tests (checklist, counters).
-- [~] **9. Playwright e2e**: first run (hand-checkable numbers), the mistake
+- [x] **9. Playwright e2e**: first run (hand-checkable numbers), the mistake
   (incl. clearing), the crash (real server kill), jumping ahead,
   change-ancestry dependent clearing, delete-to-trash.
-- [ ] **10. Full verification + report**: entire CI matrix green locally;
+- [~] **10. Full verification + report**: entire CI matrix green locally;
   `--timings` artifact; spot-check data records vs AoN; write
   `.checkpoints/run/chargen-fighter/report.md`, commit, present. Ping Ben's
   phone (he asked 2026-08-27).

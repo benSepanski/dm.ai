@@ -97,7 +97,15 @@ function SlotEditor({
 }) {
   switch (slot.kind.kind) {
     case 'single':
-      return (
+      return slot.presentation_hint === 'attribute-boosts' ? (
+        <SingleBoostEditor
+          slot={slot}
+          tentative={tentative}
+          onTentative={onTentative}
+          onConfirm={onConfirm}
+          busy={busy}
+        />
+      ) : (
         <SingleEditor
           slot={slot}
           tentative={tentative}
@@ -107,7 +115,19 @@ function SlotEditor({
         />
       );
     case 'multi':
-      return (
+      // Attribute boosts render as one picker per boost so a player can
+      // (wrongly) put two boosts on the same attribute and watch the
+      // checklist flag it — the engine judges, the UI never blocks.
+      return slot.presentation_hint === 'attribute-boosts' ? (
+        <BoostsEditor
+          slot={slot}
+          count={slot.kind.count}
+          tentative={tentative}
+          onTentative={onTentative}
+          onConfirm={onConfirm}
+          busy={busy}
+        />
+      ) : (
         <MultiEditor
           slot={slot}
           count={slot.kind.count}
@@ -277,6 +297,124 @@ function MultiEditor({
           />
         ))}
       </ul>
+      <footer className="slot-actions">
+        <button
+          type="button"
+          className="confirm"
+          disabled={picked.length === 0 || busy}
+          onClick={() => onConfirm({ kind: 'options', value: picked })}
+        >
+          Confirm {slot.label.toLowerCase()}
+        </button>
+      </footer>
+    </div>
+  );
+}
+
+
+
+function SingleBoostEditor({
+  slot,
+  tentative,
+  onTentative,
+  onConfirm,
+  busy,
+}: {
+  slot: SlotView;
+  tentative: TentativeSelection;
+  onTentative: (selection: TentativeSelection) => void;
+  onConfirm: (selection: Selection) => void;
+  busy: boolean;
+}) {
+  const picked = tentative?.kind === 'option' ? tentative.value : '';
+  return (
+    <div>
+      <div className="boost-rows">
+        <label className="boost-row">
+          <span>Boost</span>
+          <select
+            value={picked}
+            disabled={busy}
+            onChange={(e) =>
+              onTentative(
+                e.target.value === '' ? null : { kind: 'option', value: e.target.value },
+              )
+            }
+          >
+            <option value="">— choose an attribute —</option>
+            {slot.options.map((option) => (
+              <option key={option.id} value={option.id} disabled={!option.available}>
+                {option.label}
+                {option.available ? '' : ` (${option.unavailable_reason ?? 'unavailable'})`}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <footer className="slot-actions">
+        <button
+          type="button"
+          className="confirm"
+          disabled={picked === '' || busy}
+          onClick={() => picked !== '' && onConfirm({ kind: 'option', value: picked })}
+        >
+          Confirm {slot.label.toLowerCase()}
+        </button>
+      </footer>
+    </div>
+  );
+}
+
+function BoostsEditor({
+  slot,
+  count,
+  tentative,
+  onTentative,
+  onConfirm,
+  busy,
+}: {
+  slot: SlotView;
+  count: number;
+  tentative: TentativeSelection;
+  onTentative: (selection: TentativeSelection) => void;
+  onConfirm: (selection: Selection) => void;
+  busy: boolean;
+}) {
+  const picked = tentative?.kind === 'options' ? tentative.value : [];
+  const rows = Array.from({ length: count }, (_, i) => picked[i] ?? '');
+  const setRow = (index: number, value: string) => {
+    const next = [...rows];
+    next[index] = value;
+    onTentative({ kind: 'options', value: next.filter((v) => v !== '') });
+  };
+  const remaining = count - picked.length;
+  return (
+    <div>
+      <p className="multi-counter" data-testid={`counter-${slot.id}`}>
+        {remaining > 0
+          ? `${remaining} of ${count} boost${count === 1 ? '' : 's'} left`
+          : 'All boosts assigned'}
+      </p>
+      <div className="boost-rows">
+        {rows.map((value, index) => (
+          <label key={index} className="boost-row">
+            <span>Boost {count > 1 ? index + 1 : ''}</span>
+            <select
+              value={value}
+              disabled={busy}
+              onChange={(e) => setRow(index, e.target.value)}
+            >
+              <option value="">— choose an attribute —</option>
+              {slot.options.map((option) => (
+                <option key={option.id} value={option.id} disabled={!option.available}>
+                  {option.label}
+                  {option.available ? '' : ` (${option.unavailable_reason ?? 'unavailable'})`}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
       <footer className="slot-actions">
         <button
           type="button"

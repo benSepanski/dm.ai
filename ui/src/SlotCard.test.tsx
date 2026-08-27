@@ -39,25 +39,27 @@ function renderCard(tentative: Selection | null, onTentative = vi.fn()) {
   return { onTentative, onConfirm };
 }
 
-describe('SlotCard multi counter', () => {
+describe('SlotCard boost counter', () => {
   it('counts down as picks land', () => {
     renderCard({ kind: 'options', value: ['attr.str', 'attr.con'] });
     expect(screen.getByTestId('counter-pf2e.boosts.free')).toHaveTextContent(
-      '2 of 4 choices left',
+      '2 of 4 boosts left',
     );
   });
 
   it('reports a full selection', () => {
     renderCard({ kind: 'options', value: ['attr.str', 'attr.con', 'attr.dex', 'attr.wis'] });
-    expect(screen.getByTestId('counter-pf2e.boosts.free')).toHaveTextContent('All choices made');
+    expect(screen.getByTestId('counter-pf2e.boosts.free')).toHaveTextContent(
+      'All boosts assigned',
+    );
   });
 
-  it('adds a pick through the checkbox', async () => {
+  it('accepts the same attribute twice — the checklist judges, not the UI', async () => {
     const { onTentative } = renderCard({ kind: 'options', value: ['attr.str'] });
-    await userEvent.click(screen.getByLabelText(/DEX/));
+    await userEvent.selectOptions(screen.getByLabelText('Boost 2'), 'attr.str');
     expect(onTentative).toHaveBeenCalledWith({
       kind: 'options',
-      value: ['attr.str', 'attr.dex'],
+      value: ['attr.str', 'attr.str'],
     });
   });
 
