@@ -64,14 +64,14 @@ States: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked (note why
 - [x] **9. Playwright e2e**: first run (hand-checkable numbers), the mistake
   (incl. clearing), the crash (real server kill), jumping ahead,
   change-ancestry dependent clearing, delete-to-trash.
-- [~] **10. Full verification + report**: entire CI matrix green locally;
+- [x] **10. Full verification + report**: entire CI matrix green locally;
   `--timings` artifact; spot-check data records vs AoN; write
   `.checkpoints/run/chargen-fighter/report.md`, commit, present. Ping Ben's
   phone (he asked 2026-08-27).
 
 ## Decisions made in-bounds (report these)
 
-(running list; see report)
+All 13 recorded in report.md ("Decisions made inside the contract").
 
 ## Complaints logged
 
