@@ -199,12 +199,13 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             }
         }),
         // The always-on gauge the budget rule derives from: a violation
-        // without a visible meter is unrepresentable.
+        // without a visible meter is unrepresentable. Shoppers think in
+        // what's left, so remaining is the headline.
         meters: Box::new(move |state, _| {
             let spend = total_spend_cp(state, &d_meter);
             vec![MeterView {
-                label: "Spent".into(),
-                current: format_cp(spend),
+                label: "Remaining".into(),
+                current: format_cp(STARTING_WEALTH_CP - spend),
                 limit: Some("15 gp".into()),
                 state: if spend > STARTING_WEALTH_CP {
                     MeterState::Exceeded

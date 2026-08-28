@@ -239,9 +239,12 @@ test('a half-confirmed multi slot stays open and finishes in place', async ({ pa
   await card.locator('label:has-text("Survival") input').check();
   await card.getByRole('button', { name: /confirm/i }).click();
 
-  // The slot stays editable, keeps the pick, and the meter says how short.
+  // The slot stays editable, keeps the pick, the meter says how short, and
+  // the save acknowledges itself (a partial save must not look like a dead
+  // click).
   await expect(card.locator('label:has-text("Survival") input')).toBeChecked();
   await expect(card.getByTestId('meter-Chosen')).toContainText('Chosen 1 of 3 — keep picking');
+  await expect(card.locator('.slot-ack')).toContainText('Saved — 2 skill choice(s) left');
 
   // Finish in place: two more picks, one Confirm — no clearing dialog.
   await card.locator('label:has-text("Religion") input').check();
@@ -267,18 +270,18 @@ test('the equipment budget meter is live and flips when overspent', async ({ pag
   const card = slot(page, 'pf2e.equipment.extra');
   await card.scrollIntoViewIfNeeded();
 
-  await expect(card.getByTestId('meter-Spent')).toContainText('Spent 0 cp of 15 gp');
+  await expect(card.getByTestId('meter-Remaining')).toContainText('Remaining 15 gp of 15 gp');
 
   // Two breastplates (16 gp) cross the 15 gp line — the meter flips before
   // anything is confirmed.
   const addBreastplate = card.getByRole('button', { name: /^Breastplate 8 gp/ });
   await addBreastplate.click();
   await addBreastplate.click();
-  await expect(card.getByTestId('meter-Spent')).toContainText('over the limit');
+  await expect(card.getByTestId('meter-Remaining')).toContainText('over the limit');
 
   // Removing one brings it back under.
   await card.locator('.shopping-list').getByRole('button', { name: 'remove' }).first().click();
-  await expect(card.getByTestId('meter-Spent')).toContainText('Spent 8 gp of 15 gp');
+  await expect(card.getByTestId('meter-Remaining')).toContainText('Remaining 7 gp of 15 gp');
 });
 
 test('changing ancestry lists exactly what will be cleared, then reopens those slots', async ({

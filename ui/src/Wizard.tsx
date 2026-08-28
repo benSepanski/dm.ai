@@ -58,6 +58,17 @@ export function Wizard({
     label: string;
     preview: ClearPreview;
   } | null>(null);
+  // Transient in-card acknowledgment for saves that leave the slot open —
+  // without it, a successful 4-of-5 confirm looks like a dead button.
+  const [ack, setAck] = useState<{ slot: string; message: string } | null>(null);
+
+  useEffect(() => {
+    if (ack === null) {
+      return;
+    }
+    const timer = setTimeout(() => setAck(null), 5000);
+    return () => clearTimeout(timer);
+  }, [ack]);
 
   useEffect(() => {
     let cancelled = false;
@@ -143,10 +154,26 @@ export function Wizard({
         source: 'player',
       });
       switch (outcome.outcome) {
-        case 'confirmed':
+        case 'confirmed': {
           setDraft(outcome.draft);
           setPending((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== slot)));
+          // Saved but still unfinished? Say so at the card, or the save is
+          // visually indistinguishable from a dead click.
+          const saved = outcome.draft.projection.steps
+            .flatMap((s) => s.slots)
+            .find((s) => s.id === slot);
+          if (saved !== undefined && saved.status !== 'complete') {
+            const remainder = outcome.draft.projection.checklist.find((e) => e.slot === slot);
+            setAck({
+              slot,
+              message:
+                remainder !== undefined ? `Saved — ${remainder.message}` : 'Saved',
+            });
+          } else {
+            setAck(null);
+          }
           break;
+        }
         case 'conflict':
           setDraft(outcome.current);
           setPending({});
@@ -306,6 +333,7 @@ export function Wizard({
             onConfirm={(selection) => void confirm(slot.id, selection)}
             onRequestChange={() => requestChange(slot.id, slot.label)}
             busy={busy}
+            ack={ack !== null && ack.slot === slot.id ? ack.message : null}
           />
         ))}
       </main>

@@ -184,11 +184,9 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 .cloned()
                 .unwrap_or_default();
             attribute_options(move |attr| {
+                // Kept short: this renders inside <option> text.
                 if batch.first() == Some(&attr) {
-                    Some(format!(
-                        "{} already has the background's other boost — boosts gained at the same time must go to different attributes",
-                        attr.name()
-                    ))
+                    Some("already has the background's other boost".to_string())
                 } else {
                     None
                 }

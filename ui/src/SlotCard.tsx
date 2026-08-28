@@ -14,6 +14,7 @@ export function SlotCard({
   onConfirm,
   onRequestChange,
   busy,
+  ack = null,
 }: {
   slot: SlotView;
   /** The previewed twin of this slot (meters/status track tentative picks). */
@@ -23,6 +24,8 @@ export function SlotCard({
   onConfirm: (selection: Selection) => void;
   onRequestChange: () => void;
   busy: boolean;
+  /** Transient save acknowledgment ("Saved — 1 skill choice left"). */
+  ack?: string | null;
 }) {
   const gauges = (live ?? slot).meters;
   if (slot.status === 'locked') {
@@ -63,6 +66,11 @@ export function SlotCard({
         )}
       </header>
       <MetersRow meters={gauges} />
+      {ack !== null && (
+        <p className="slot-ack" role="status">
+          ✓ {ack}
+        </p>
+      )}
       {editing ? (
         <SlotEditor
           slot={slot}

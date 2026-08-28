@@ -362,11 +362,10 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 .cloned()
                 .unwrap_or_default();
             attribute_options(move |attr| {
+                // Kept short: this renders inside <option> text. The full
+                // rule lives in the checklist when it actually trips.
                 if fixed.contains(&attr) {
-                    Some(format!(
-                        "{} already has an ancestry boost — boosts gained at the same time must go to different attributes",
-                        attr.name()
-                    ))
+                    Some("already has an ancestry boost".to_string())
                 } else {
                     None
                 }

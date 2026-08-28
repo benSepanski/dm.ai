@@ -143,6 +143,21 @@ describe('SlotCard boost counter', () => {
     expect(screen.getByTestId('meter-Spent')).toHaveTextContent('Spent 16 gp of 15 gp — over the limit');
   });
 
+  it('renders the save acknowledgment when provided', () => {
+    render(
+      <SlotCard
+        slot={boostSlot()}
+        tentative={null}
+        onTentative={() => undefined}
+        onConfirm={() => undefined}
+        onRequestChange={() => undefined}
+        busy={false}
+        ack="Saved — 1 skill choice(s) left"
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('Saved — 1 skill choice(s) left');
+  });
+
   it('locked slots explain themselves', () => {
     const slot: SlotView = { ...boostSlot(), status: 'locked', locked_reason: 'choose an ancestry first' };
     render(

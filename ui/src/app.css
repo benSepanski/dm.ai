@@ -533,3 +533,20 @@ textarea {
   color: #fff;
   background: var(--bad);
 }
+
+.notice {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 5;
+  box-shadow: 0 4px 14px rgba(43, 38, 32, 0.12);
+}
+.slot-ack {
+  color: var(--good);
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+.boost-row select {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}

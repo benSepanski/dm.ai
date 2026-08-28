@@ -95,8 +95,8 @@ ancestry free boost — nothing else — and clearing reopens those slots.
 Class step, confirm only one of your three trained skills: the slot stays
 open with the pick still checked, an amber edge, and a "Chosen 1 of 3 —
 keep picking" pill; check the other two and Confirm once — it finishes in
-place, no clearing dialog. Then on Equipment, watch the "Spent … of 15 gp"
-pill tick as you add items, and push past 15 gp: the pill goes red ("over
+place, no clearing dialog. Then on Equipment, watch the "Remaining … of 15 gp"
+pill tick down as you add items, and push past 15 gp: the pill goes red ("over
 the limit") before you confirm, the step badge shows !, and finalize stays
 blocked until you remove something.
 

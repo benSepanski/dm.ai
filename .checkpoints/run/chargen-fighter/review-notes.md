@@ -41,6 +41,18 @@ cascades deferred to level-up/retraining.
   semantics client-side too. e2e now asserts no phantom entries while
   finishing a partial slot.
 
+- [x] **6. (fixed) Select overflow** — disabled boost options embedded the
+  full rule sentence; a <select> sizes to its longest option and overran the
+  card (overlapping Confirm). Short in-option reasons at the source + CSS
+  max-width/flex guard.
+- [x] **7. (fixed) Budget meter shows remaining** — "Remaining 9 gp, 2 sp of
+  15 gp" (red when over) instead of amount spent.
+- [x] **8. (fixed) Silent partial saves** — Ben's "Confirm does nothing":
+  the amend HAD saved (Tee hee: Int +2 -> 5 skills required, 4 picked), but
+  a save that leaves the slot open was visually identical to a dead click.
+  Now: transient in-card "Saved — N left" acknowledgment + sticky notice bar
+  so rejections/conflicts can't land off-viewport. e2e asserts the ack.
+
 ## Answered without change
 
 - Details step ✓ at start: correct — the roster's working name is a real
