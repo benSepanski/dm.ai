@@ -1,0 +1,47 @@
+[
+  {
+    "id": "feat.general.toughness",
+    "level": 1,
+    "name": "Toughness",
+    "prerequisites": [],
+    "text": "You can withstand more punishment than most. Increase your maximum Hit Points by your level. Reduce the DC of recovery checks by 1.",
+    "effects": [{ "type": "hp_per_level", "value": 1 }],
+    "source": { "book": "Pathfinder Player Core", "page": 263, "url": "https://2e.aonprd.com/Feats.aspx?ID=5227", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.fleet",
+    "level": 1,
+    "name": "Fleet",
+    "prerequisites": [],
+    "text": "You move more quickly on foot. Your Speed increases by 5 feet.",
+    "effects": [{ "type": "speed_bonus", "value": 5 }],
+    "source": { "book": "Pathfinder Player Core", "page": 256, "url": "https://2e.aonprd.com/Feats.aspx?ID=5150", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.incredible-initiative",
+    "level": 1,
+    "name": "Incredible Initiative",
+    "prerequisites": [],
+    "text": "You react more quickly than others. You gain a +2 circumstance bonus to initiative rolls.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 256, "url": "https://2e.aonprd.com/Feats.aspx?ID=5160", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.diehard",
+    "level": 1,
+    "name": "Diehard",
+    "prerequisites": [],
+    "text": "It takes more to kill you than most. You die from the dying condition at dying 5, rather than dying 4.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 254, "url": "https://2e.aonprd.com/Feats.aspx?ID=5140", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.ride",
+    "level": 1,
+    "name": "Ride",
+    "prerequisites": [],
+    "text": "When you Command an Animal you're mounted on to take a move action, you automatically succeed. A mounted animal acts on your turn like a minion.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 261, "url": "https://2e.aonprd.com/Feats.aspx?ID=5206", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  }
+]

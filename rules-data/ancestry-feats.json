@@ -1,0 +1,313 @@
+[
+  {
+    "id": "feat.ancestry.dwarf.dwarven-doughtiness",
+    "ancestry": "ancestry.dwarf",
+    "level": 1,
+    "name": "Dwarven Doughtiness",
+    "prerequisites": [],
+    "text": "Your mind is as hard to sway as your feet are to move. At the end of your turn, reduce your frightened condition value by 2 instead of by 1.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Feats.aspx?ID=4387", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.dwarf.dwarven-lore",
+    "ancestry": "ancestry.dwarf",
+    "level": 1,
+    "name": "Dwarven Lore",
+    "prerequisites": [],
+    "text": "You grew up immersed in dwarven traditions. You become trained in Crafting and Religion (if you were already trained, you become trained in a skill of your choice instead). You also gain the Additional Lore feat for Dwarven Lore.",
+    "effects": [
+      { "type": "grant_skills", "skills": ["skill.crafting", "skill.religion"], "source_label": "Dwarven Lore" },
+      { "type": "grant_lore", "name": "Dwarven Lore" }
+    ],
+    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Feats.aspx?ID=4388", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.dwarf.dwarven-weapon-familiarity",
+    "ancestry": "ancestry.dwarf",
+    "level": 1,
+    "name": "Dwarven Weapon Familiarity",
+    "prerequisites": [],
+    "text": "You have access to uncommon dwarf weapons. You treat weapons with the dwarf trait, plus battle axes, picks, and warhammers, as one proficiency category simpler (martial as simple, advanced as martial). At 5th level you gain critical specialization effects with these weapons.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 44, "url": "https://2e.aonprd.com/Feats.aspx?ID=4389", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.dwarf.mountain-strategy",
+    "ancestry": "ancestry.dwarf",
+    "level": 1,
+    "name": "Mountain Strategy",
+    "prerequisites": [],
+    "text": "You learned to fight against your ancestral enemies. You deal an additional 1 circumstance damage (increasing with weapon damage dice) to creatures with the giant, goblin, hryngar, or orc trait, and to any creature that critically hits you.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 44, "url": "https://2e.aonprd.com/Feats.aspx?ID=4390", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.dwarf.rock-runner",
+    "ancestry": "ancestry.dwarf",
+    "level": 1,
+    "name": "Rock Runner",
+    "prerequisites": [],
+    "text": "Your feet are sure on stone. You ignore difficult terrain caused by rubble and uneven ground made of stone and earth. You aren't off-guard while Balancing on narrow surfaces of stone and earth, and successes on Acrobatics checks to Balance there become critical successes.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 44, "url": "https://2e.aonprd.com/Feats.aspx?ID=4391", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.dwarf.stonemasons-eye",
+    "ancestry": "ancestry.dwarf",
+    "level": 1,
+    "name": "Stonemason's Eye",
+    "prerequisites": [],
+    "text": "You become trained in Crafting (if you were already trained, you become trained in a skill of your choice instead). The GM rolls a secret check for you to notice unusual stonework even when you aren't Searching.",
+    "effects": [
+      { "type": "grant_skills", "skills": ["skill.crafting"], "source_label": "Stonemason's Eye" }
+    ],
+    "source": { "book": "Pathfinder Player Core", "page": 44, "url": "https://2e.aonprd.com/Feats.aspx?ID=4392", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.dwarf.unburdened-iron",
+    "ancestry": "ancestry.dwarf",
+    "level": 1,
+    "name": "Unburdened Iron",
+    "prerequisites": [],
+    "text": "You've learned to carry armor at a determined pace. Ignore the reduction to your Speed from any armor you wear, and reduce any other penalty to your Speed by 5 feet.",
+    "effects": [{ "type": "ignore_armor_speed_penalty" }],
+    "source": { "book": "Pathfinder Player Core", "page": 44, "url": "https://2e.aonprd.com/Feats.aspx?ID=4393", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.elf.ancestral-longevity",
+    "ancestry": "ancestry.elf",
+    "level": 1,
+    "name": "Ancestral Longevity",
+    "prerequisites": [{ "kind": "age", "text": "at least 100 years old" }],
+    "text": "You have accumulated a vast array of experience. During your daily preparations, you can reflect on your life to become temporarily trained in one skill of your choice until the next time you prepare.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 48, "url": "https://2e.aonprd.com/Feats.aspx?ID=4405", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.elf.elven-lore",
+    "ancestry": "ancestry.elf",
+    "level": 1,
+    "name": "Elven Lore",
+    "prerequisites": [],
+    "text": "You studied in traditional elven arts. You become trained in Arcana and Nature (if you were already trained, you become trained in a skill of your choice instead). You also gain the Additional Lore feat for Elven Lore.",
+    "effects": [
+      { "type": "grant_skills", "skills": ["skill.arcana", "skill.nature"], "source_label": "Elven Lore" },
+      { "type": "grant_lore", "name": "Elven Lore" }
+    ],
+    "source": { "book": "Pathfinder Player Core", "page": 48, "url": "https://2e.aonprd.com/Feats.aspx?ID=4406", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.elf.elven-weapon-familiarity",
+    "ancestry": "ancestry.elf",
+    "level": 1,
+    "name": "Elven Weapon Familiarity",
+    "prerequisites": [],
+    "text": "You have access to uncommon elf weapons. You treat weapons with the elf trait, plus longbows, composite longbows, rapiers, shortbows, and composite shortbows, as one proficiency category simpler. At 5th level you gain critical specialization effects with these weapons.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 48, "url": "https://2e.aonprd.com/Feats.aspx?ID=4407", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.elf.forlorn",
+    "ancestry": "ancestry.elf",
+    "level": 1,
+    "name": "Forlorn",
+    "prerequisites": [],
+    "text": "Watching your friends age and die fills you with moroseness. You gain a +1 circumstance bonus to saving throws against emotion effects, and successes on those saves become critical successes.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 48, "url": "https://2e.aonprd.com/Feats.aspx?ID=4408", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.elf.nimble-elf",
+    "ancestry": "ancestry.elf",
+    "level": 1,
+    "name": "Nimble Elf",
+    "prerequisites": [],
+    "text": "Your muscles are tightly honed. Your Speed increases by 5 feet.",
+    "effects": [{ "type": "speed_bonus", "value": 5 }],
+    "source": { "book": "Pathfinder Player Core", "page": 48, "url": "https://2e.aonprd.com/Feats.aspx?ID=4409", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.elf.otherworldly-magic",
+    "ancestry": "ancestry.elf",
+    "level": 1,
+    "name": "Otherworldly Magic",
+    "prerequisites": [],
+    "text": "Your elven magic manifests as a simple spell. Choose one arcane cantrip; you can cast it as an innate arcane spell at will.",
+    "effects": [{ "type": "choose_from_catalog", "catalog": "arcane_cantrips", "count": 1 }],
+    "source": { "book": "Pathfinder Player Core", "page": 48, "url": "https://2e.aonprd.com/Feats.aspx?ID=4410", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.elf.unwavering-mien",
+    "ancestry": "ancestry.elf",
+    "level": 1,
+    "name": "Unwavering Mien",
+    "prerequisites": [],
+    "text": "Your mystic control is difficult to disrupt. Reduce the duration of mental effects on you by 1 round (a 1-round effect is negated). You still get a saving throw against sleep effects even when asleep, and improve their outcome by one degree.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 48, "url": "https://2e.aonprd.com/Feats.aspx?ID=4411", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.goblin.burn-it",
+    "ancestry": "ancestry.goblin",
+    "level": 1,
+    "name": "Burn It!",
+    "prerequisites": [],
+    "text": "Fire fascinates you. Your spells that deal fire damage gain a status bonus equal to half the spell's rank; fire-damaging alchemical items gain a status bonus of a quarter of the item's level (minimum +1 either way). You also gain a +1 status bonus to any persistent fire damage you deal.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 56, "url": "https://2e.aonprd.com/Feats.aspx?ID=4438", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.goblin.city-scavenger",
+    "ancestry": "ancestry.goblin",
+    "level": 1,
+    "name": "City Scavenger",
+    "prerequisites": [],
+    "text": "You know how to survive on urban scraps. You gain a +1 circumstance bonus to Subsist checks (+2 with the irongut heritage), can Subsist in a settlement using Society or Survival, and can attempt to Earn Income while Subsisting in a city.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 56, "url": "https://2e.aonprd.com/Feats.aspx?ID=4439", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.goblin.goblin-lore",
+    "ancestry": "ancestry.goblin",
+    "level": 1,
+    "name": "Goblin Lore",
+    "prerequisites": [],
+    "text": "You picked up skills from your extended goblin family. You become trained in Nature and Stealth (if you were already trained, you become trained in a skill of your choice instead). You also gain the Additional Lore feat for Goblin Lore.",
+    "effects": [
+      { "type": "grant_skills", "skills": ["skill.nature", "skill.stealth"], "source_label": "Goblin Lore" },
+      { "type": "grant_lore", "name": "Goblin Lore" }
+    ],
+    "source": { "book": "Pathfinder Player Core", "page": 56, "url": "https://2e.aonprd.com/Feats.aspx?ID=4440", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.goblin.goblin-scuttle",
+    "ancestry": "ancestry.goblin",
+    "level": 1,
+    "name": "Goblin Scuttle",
+    "prerequisites": [],
+    "text": "Reaction. Trigger: an ally ends a move action adjacent to you. You take advantage of the opening: you Step.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 56, "url": "https://2e.aonprd.com/Feats.aspx?ID=4441", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.goblin.goblin-song",
+    "ancestry": "ancestry.goblin",
+    "level": 1,
+    "name": "Goblin Song",
+    "prerequisites": [],
+    "text": "One action. You sing an annoying goblin song: attempt a Performance check against the Will DCs of up to two enemies within 30 feet. On a success the target takes a –1 status penalty to Perception checks and Will saves for 1 round (crit: 1 minute).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 56, "url": "https://2e.aonprd.com/Feats.aspx?ID=4442", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.goblin.goblin-weapon-familiarity",
+    "ancestry": "ancestry.goblin",
+    "level": 1,
+    "name": "Goblin Weapon Familiarity",
+    "prerequisites": [],
+    "text": "You have access to uncommon goblin weapons. You treat weapons with the goblin trait as one proficiency category simpler (martial as simple, advanced as martial). At 5th level you gain critical specialization effects with these weapons.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 56, "url": "https://2e.aonprd.com/Feats.aspx?ID=4443", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.goblin.junk-tinker",
+    "ancestry": "ancestry.goblin",
+    "level": 1,
+    "name": "Junk Tinker",
+    "prerequisites": [],
+    "text": "You can make useful tools out of scrap. You can Craft shoddy level-0 items, including weapons and armor, from junk at one-quarter the usual Price; you don't take the usual penalties for a shoddy item you made yourself, and junk grants a discount when you Craft any item.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 56, "url": "https://2e.aonprd.com/Feats.aspx?ID=4444", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.goblin.rough-rider",
+    "ancestry": "ancestry.goblin",
+    "level": 1,
+    "name": "Rough Rider",
+    "prerequisites": [],
+    "text": "You gain the Ride feat, even if you don't meet its prerequisites, and you're an expert at riding goblin dogs and wolves: you gain a +1 circumstance bonus to Nature checks to Command such an Animal serving as your mount.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 56, "url": "https://2e.aonprd.com/Feats.aspx?ID=4445", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.goblin.very-sneaky",
+    "ancestry": "ancestry.goblin",
+    "level": 1,
+    "name": "Very Sneaky",
+    "prerequisites": [],
+    "text": "Taller creatures rarely look down. You can move 5 feet farther when you take the Sneak action, and you can Sneak between cover as long as you end the move in cover or concealment.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 56, "url": "https://2e.aonprd.com/Feats.aspx?ID=4446", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.human.adapted-cantrip",
+    "ancestry": "ancestry.human",
+    "level": 1,
+    "name": "Adapted Cantrip",
+    "prerequisites": [{ "kind": "spellcasting", "text": "requires a spellcasting class feature" }],
+    "text": "Through study of humanity's magical versatility, you've adapted a spell from another tradition: swap one of your cantrips for a common cantrip of the same rank from another tradition's spell list.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 63, "url": "https://2e.aonprd.com/Feats.aspx?ID=4474", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.human.cooperative-nature",
+    "ancestry": "ancestry.human",
+    "level": 1,
+    "name": "Cooperative Nature",
+    "prerequisites": [],
+    "text": "The short human life span lends perspective on teamwork. You gain a +4 circumstance bonus on checks to Aid.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 64, "url": "https://2e.aonprd.com/Feats.aspx?ID=4475", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.human.general-training",
+    "ancestry": "ancestry.human",
+    "level": 1,
+    "name": "General Training",
+    "prerequisites": [],
+    "text": "Your adaptability manifests in your mastery of a range of useful abilities. You gain a 1st-level general feat of your choice (you must meet its prerequisites).",
+    "effects": [{ "type": "choose_from_catalog", "catalog": "general_feats", "count": 1 }],
+    "source": { "book": "Pathfinder Player Core", "page": 64, "url": "https://2e.aonprd.com/Feats.aspx?ID=4476", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.human.haughty-obstinacy",
+    "ancestry": "ancestry.human",
+    "level": 1,
+    "name": "Haughty Obstinacy",
+    "prerequisites": [],
+    "text": "Your powerful ego makes you hard to control. Successes on saves against effects that would make you act against your will become critical successes, and foes who fail to Coerce you get a critical failure instead.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 64, "url": "https://2e.aonprd.com/Feats.aspx?ID=4477", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.human.natural-ambition",
+    "ancestry": "ancestry.human",
+    "level": 1,
+    "name": "Natural Ambition",
+    "prerequisites": [],
+    "text": "You were raised to be ambitious. You gain a 1st-level class feat for your class (you must meet its prerequisites).",
+    "effects": [{ "type": "choose_from_catalog", "catalog": "class_feats", "count": 1 }],
+    "source": { "book": "Pathfinder Player Core", "page": 64, "url": "https://2e.aonprd.com/Feats.aspx?ID=4478", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.human.natural-skill",
+    "ancestry": "ancestry.human",
+    "level": 1,
+    "name": "Natural Skill",
+    "prerequisites": [],
+    "text": "Your ingenuity allows you to learn a wide variety of skills. You become trained in two skills of your choice.",
+    "effects": [{ "type": "choose_skills", "count": 2, "source_label": "Natural Skill" }],
+    "source": { "book": "Pathfinder Player Core", "page": 64, "url": "https://2e.aonprd.com/Feats.aspx?ID=4479", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.human.unconventional-weaponry",
+    "ancestry": "ancestry.human",
+    "level": 1,
+    "name": "Unconventional Weaponry",
+    "prerequisites": [],
+    "text": "You've familiarized yourself with a particular weapon. Choose an uncommon simple or martial weapon; you gain access to it and treat it as one proficiency category simpler if it's from another culture's tradition.",
+    "effects": [{ "type": "choose_from_catalog", "catalog": "uncommon_weapons", "count": 1 }],
+    "source": { "book": "Pathfinder Player Core", "page": 64, "url": "https://2e.aonprd.com/Feats.aspx?ID=4480", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  }
+]

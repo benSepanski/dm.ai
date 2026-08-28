@@ -1,0 +1,35 @@
+[
+  {
+    "id": "class.fighter",
+    "name": "Fighter",
+    "text": "Fighting for honor, greed, loyalty, or simply the thrill of battle, you are an undisputed master of weaponry and combat techniques.",
+    "key_attribute_choice": ["str", "dex"],
+    "hp_per_level": 10,
+    "proficiencies": {
+      "perception": "expert",
+      "fortitude": "expert",
+      "reflex": "expert",
+      "will": "trained",
+      "simple_weapons": "expert",
+      "martial_weapons": "expert",
+      "advanced_weapons": "trained",
+      "unarmed_attacks": "expert",
+      "armor": "trained",
+      "unarmored_defense": "trained",
+      "class_dc": "trained"
+    },
+    "class_skill_choice": ["skill.acrobatics", "skill.athletics"],
+    "additional_skills_base": 3,
+    "features": [
+      {
+        "name": "Reactive Strike",
+        "text": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+      },
+      {
+        "name": "Shield Block",
+        "text": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+      }
+    ],
+    "source": { "book": "Pathfinder Player Core", "page": 136, "url": "https://2e.aonprd.com/Classes.aspx?ID=35", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  }
+]

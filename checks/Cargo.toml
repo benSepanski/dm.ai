@@ -1,0 +1,64 @@
+# The repo's invariant layer — every row of the architecture doc's
+# "Constraints emitted" table that runs as a test lives here as an explicit
+# [[test]] target. CI runs `cargo test -p checks` on every push.
+
+[package]
+name = "checks"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[[test]]
+name = "crate_layering"
+path = "crate_layering.rs"
+
+[[test]]
+name = "replay"
+path = "replay.rs"
+
+[[test]]
+name = "rules_data"
+path = "rules_data.rs"
+
+[[test]]
+name = "perf"
+path = "perf.rs"
+
+[[test]]
+name = "persistence"
+path = "persistence.rs"
+
+[[test]]
+name = "crash_harness"
+path = "crash_harness.rs"
+
+[[test]]
+name = "confirm_idempotency"
+path = "confirm_idempotency.rs"
+
+[[test]]
+name = "no_rewrite_on_load"
+path = "no_rewrite_on_load.rs"
+
+[[test]]
+name = "api_authority"
+path = "api_authority.rs"
+
+[dependencies]
+cargo_metadata = { workspace = true }
+types = { workspace = true }
+engine-core = { workspace = true }
+ruleset-pf2e = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+reqwest = { workspace = true }
+libc = { workspace = true }
+proptest = { workspace = true }
+
+[lints]
+workspace = true

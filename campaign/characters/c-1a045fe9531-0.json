@@ -1,0 +1,467 @@
+{
+  "schema_version": 1,
+  "id": "c-1a045fe9531-0",
+  "rules_version": "pf2e-pc.0.1.0",
+  "state": "finalized",
+  "current_step": "class",
+  "draft_version": 27,
+  "sheet": {
+    "name": "Tee hee",
+    "summary": [
+      "Elf (Seer Elf) Fighter 1",
+      "Medium · Speed 30 feet · low-light vision"
+    ],
+    "sections": [
+      {
+        "title": "Attributes",
+        "entries": [
+          {
+            "label": "Strength",
+            "value": "+2",
+            "detail": "+1 ancestry, +1 free boost"
+          },
+          {
+            "label": "Dexterity",
+            "value": "+4",
+            "detail": "+1 ancestry, +1 background, +1 class key attribute, +1 free boost"
+          },
+          {
+            "label": "Constitution",
+            "value": "+1",
+            "detail": "+1 background, +1 free boost, -1 ancestry flaw"
+          },
+          {
+            "label": "Intelligence",
+            "value": "+2",
+            "detail": "+1 ancestry, +1 free boost"
+          },
+          {
+            "label": "Wisdom",
+            "value": "+0",
+            "detail": null
+          },
+          {
+            "label": "Charisma",
+            "value": "+0",
+            "detail": null
+          }
+        ]
+      },
+      {
+        "title": "Defense",
+        "entries": [
+          {
+            "label": "Hit Points",
+            "value": "17",
+            "detail": "6 ancestry + 10 class + 1 Con"
+          },
+          {
+            "label": "Armor Class",
+            "value": "18",
+            "detail": "10 + 2 Dex (cap +2) + 3 Scale Mail + 3 trained armor prof"
+          },
+          {
+            "label": "Fortitude",
+            "value": "+6",
+            "detail": "5 expert + 1 Con"
+          },
+          {
+            "label": "Reflex",
+            "value": "+9",
+            "detail": "5 expert + 4 Dex"
+          },
+          {
+            "label": "Will",
+            "value": "+3",
+            "detail": "3 trained + 0 Wis"
+          },
+          {
+            "label": "Perception",
+            "value": "+5",
+            "detail": "5 expert + 0 Wis (initiative)"
+          },
+          {
+            "label": "Class DC",
+            "value": "17",
+            "detail": "10 + 3 trained + 4 Dex"
+          }
+        ]
+      },
+      {
+        "title": "Attacks",
+        "entries": [
+          {
+            "label": "Fist",
+            "value": "+9 · 1d4+2 B",
+            "detail": "5 expert + 4 Dex · agile, finesse, nonlethal, unarmed"
+          },
+          {
+            "label": "Dagger",
+            "value": "+9 · 1d4 P+2",
+            "detail": "5 expert (simple) + 4 Dex · thrown 10 ft. · agile, finesse, thrown 10 ft., versatile S"
+          },
+          {
+            "label": "Greatsword",
+            "value": "+7 · 1d12 S+2",
+            "detail": "5 expert (martial) + 2 Str · versatile P"
+          }
+        ]
+      },
+      {
+        "title": "Skills",
+        "entries": [
+          {
+            "label": "Acrobatics",
+            "value": "+7",
+            "detail": "3 trained + 4 Dex · from Fighter"
+          },
+          {
+            "label": "Arcana",
+            "value": "+5",
+            "detail": "3 trained + 2 Int · from Fighter"
+          },
+          {
+            "label": "Athletics",
+            "value": "+5",
+            "detail": "3 trained + 2 Str · from Fighter"
+          },
+          {
+            "label": "Crafting",
+            "value": "+5",
+            "detail": "3 trained + 2 Int · from Fighter"
+          },
+          {
+            "label": "Deception",
+            "value": "+3",
+            "detail": "3 trained + 0 Cha · from Fighter"
+          },
+          {
+            "label": "Diplomacy",
+            "value": "+3",
+            "detail": "3 trained + 0 Cha · from Fighter"
+          },
+          {
+            "label": "Intimidation",
+            "value": "+3",
+            "detail": "3 trained + 0 Cha · from Background: Warrior"
+          },
+          {
+            "label": "Medicine",
+            "value": "+0",
+            "detail": "0 untrained + 0 Wis"
+          },
+          {
+            "label": "Nature",
+            "value": "+0",
+            "detail": "0 untrained + 0 Wis"
+          },
+          {
+            "label": "Occultism",
+            "value": "+2",
+            "detail": "0 untrained + 2 Int"
+          },
+          {
+            "label": "Performance",
+            "value": "+0",
+            "detail": "0 untrained + 0 Cha"
+          },
+          {
+            "label": "Religion",
+            "value": "+0",
+            "detail": "0 untrained + 0 Wis"
+          },
+          {
+            "label": "Society",
+            "value": "+2",
+            "detail": "0 untrained + 2 Int"
+          },
+          {
+            "label": "Stealth",
+            "value": "+4",
+            "detail": "0 untrained + 4 Dex"
+          },
+          {
+            "label": "Survival",
+            "value": "+0",
+            "detail": "0 untrained + 0 Wis"
+          },
+          {
+            "label": "Thievery",
+            "value": "+4",
+            "detail": "0 untrained + 4 Dex"
+          }
+        ]
+      },
+      {
+        "title": "Features",
+        "entries": [
+          {
+            "label": "Low-Light Vision",
+            "value": "Elf ancestry",
+            "detail": "You can see in dim light as though it were bright light, so you ignore the concealed condition due to dim light."
+          },
+          {
+            "label": "Seer Elf",
+            "value": "heritage",
+            "detail": "You can cast the detect magic cantrip as an arcane innate spell at will, and you gain a +1 circumstance bonus to checks to Identify Magic and to Decipher Writing of a magical nature."
+          },
+          {
+            "label": "Elven Weapon Familiarity",
+            "value": "ancestry feat",
+            "detail": "You have access to uncommon elf weapons. You treat weapons with the elf trait, plus longbows, composite longbows, rapiers, shortbows, and composite shortbows, as one proficiency category simpler. At 5th level you gain critical specialization effects with these weapons."
+          },
+          {
+            "label": "Reactive Strike",
+            "value": "Fighter feature",
+            "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+          },
+          {
+            "label": "Shield Block",
+            "value": "Fighter feature",
+            "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+          },
+          {
+            "label": "Double Slice",
+            "value": "class feat",
+            "detail": "Make two Strikes against the same target, one with each required weapon, at your current multiple attack penalty. The second Strike takes a –2 penalty if its weapon doesn't have the agile trait. If both hit, combine their damage. This counts as two attacks toward your multiple attack penalty."
+          },
+          {
+            "label": "Intimidating Glare",
+            "value": "skill feat — Warrior",
+            "detail": "You lived your life by the sword, either as a mercenary or a warrior defending your people."
+          }
+        ]
+      },
+      {
+        "title": "Equipment",
+        "entries": [
+          {
+            "label": "Scale Mail",
+            "value": "2 Bulk",
+            "detail": "Fighter Kit; worn"
+          },
+          {
+            "label": "Dagger",
+            "value": "1 L",
+            "detail": "Fighter Kit"
+          },
+          {
+            "label": "Adventurer's Pack",
+            "value": "1 Bulk",
+            "detail": "Fighter Kit"
+          },
+          {
+            "label": "Grappling Hook",
+            "value": "1 L",
+            "detail": "Fighter Kit"
+          },
+          {
+            "label": "Greatsword",
+            "value": "2 Bulk",
+            "detail": "Fighter Kit"
+          },
+          {
+            "label": "Coins",
+            "value": "7 gp, 2 sp",
+            "detail": "15 gp starting wealth - 7 gp, 8 sp spent"
+          },
+          {
+            "label": "Bulk",
+            "value": "5 Bulk, 2 L",
+            "detail": "encumbered above 7 Bulk, maximum 12 Bulk"
+          }
+        ]
+      },
+      {
+        "title": "Languages & Lore",
+        "entries": [
+          {
+            "label": "Languages",
+            "value": "Common, Elven",
+            "detail": null
+          },
+          {
+            "label": "Warfare Lore",
+            "value": "trained",
+            "detail": "Background: Warrior"
+          }
+        ]
+      }
+    ]
+  },
+  "log": [
+    {
+      "id": "c-1a045fe9531-0-initial-name",
+      "slot": "pf2e.details.name",
+      "selection": {
+        "kind": "text",
+        "value": "Tee hee"
+      },
+      "source": "player",
+      "order": 0
+    },
+    {
+      "id": "137ce269-567f-45cc-bed7-82eef09d188e",
+      "slot": "pf2e.concept",
+      "selection": {
+        "kind": "text",
+        "value": "Hey!"
+      },
+      "source": "player",
+      "order": 1
+    },
+    {
+      "id": "2b963797-4c19-4846-91fe-04b35ccebde0",
+      "slot": "pf2e.ancestry",
+      "selection": {
+        "kind": "option",
+        "value": "ancestry.elf"
+      },
+      "source": "player",
+      "order": 2
+    },
+    {
+      "id": "3acd5ad0-6f62-45ba-8cc5-186092cb2c40",
+      "slot": "pf2e.ancestry.heritage",
+      "selection": {
+        "kind": "option",
+        "value": "heritage.elf.seer"
+      },
+      "source": "player",
+      "order": 3
+    },
+    {
+      "id": "432ae470-46c6-41df-bece-88c4a9ac9656",
+      "slot": "pf2e.ancestry.feat",
+      "selection": {
+        "kind": "option",
+        "value": "feat.ancestry.elf.elven-weapon-familiarity"
+      },
+      "source": "player",
+      "order": 4
+    },
+    {
+      "id": "2f1919d1-674a-4116-9512-a30c9d91c90a",
+      "slot": "pf2e.boosts.ancestry-free",
+      "selection": {
+        "kind": "options",
+        "value": [
+          "attr.str"
+        ]
+      },
+      "source": "player",
+      "order": 5
+    },
+    {
+      "id": "c909bff5-b5ef-41d3-b9bc-3169274348c1",
+      "slot": "pf2e.background",
+      "selection": {
+        "kind": "option",
+        "value": "background.warrior"
+      },
+      "source": "player",
+      "order": 6
+    },
+    {
+      "id": "c4aa6a55-48c4-42b1-b4b5-5e05391b952e",
+      "slot": "pf2e.boosts.background-free",
+      "selection": {
+        "kind": "option",
+        "value": "attr.dex"
+      },
+      "source": "player",
+      "order": 7
+    },
+    {
+      "id": "5e555e5a-6582-4a32-b3f1-a0c5b424a8af",
+      "slot": "pf2e.boosts.background-choice",
+      "selection": {
+        "kind": "option",
+        "value": "attr.con"
+      },
+      "source": "player",
+      "order": 8
+    },
+    {
+      "id": "e8f170c2-ff83-4d8a-905e-61ba8e6a1e6c",
+      "slot": "pf2e.class",
+      "selection": {
+        "kind": "option",
+        "value": "class.fighter"
+      },
+      "source": "player",
+      "order": 9
+    },
+    {
+      "id": "a8bf3c70-61c4-4edb-8e0a-d1aab8541286",
+      "slot": "pf2e.class.key-attribute",
+      "selection": {
+        "kind": "option",
+        "value": "attr.dex"
+      },
+      "source": "player",
+      "order": 10
+    },
+    {
+      "id": "6c5dfe03-d723-411a-8a4d-d32fad88ff48",
+      "slot": "pf2e.class.feat",
+      "selection": {
+        "kind": "option",
+        "value": "feat.class.fighter.double-slice"
+      },
+      "source": "player",
+      "order": 11
+    },
+    {
+      "id": "a4d913f7-6f86-4d46-bb2a-491dbe681c15",
+      "slot": "pf2e.skills.class-choice",
+      "selection": {
+        "kind": "option",
+        "value": "skill.acrobatics"
+      },
+      "source": "player",
+      "order": 12
+    },
+    {
+      "id": "48b488b5-0aa1-4a69-95c6-e98abd9a098d",
+      "slot": "pf2e.boosts.free",
+      "selection": {
+        "kind": "options",
+        "value": [
+          "attr.str",
+          "attr.dex",
+          "attr.con",
+          "attr.int"
+        ]
+      },
+      "source": "player",
+      "order": 13
+    },
+    {
+      "id": "536cf677-28e4-4560-b5ff-e4423968b668",
+      "slot": "pf2e.equipment.kit",
+      "selection": {
+        "kind": "option",
+        "value": "kit.fighter.greatsword"
+      },
+      "source": "player",
+      "order": 14
+    },
+    {
+      "id": "60bf1a5d-c1cf-400f-be4f-9ac0fa14eb93",
+      "slot": "pf2e.skills.trained",
+      "selection": {
+        "kind": "options",
+        "value": [
+          "skill.crafting",
+          "skill.athletics",
+          "skill.arcana",
+          "skill.deception",
+          "skill.diplomacy"
+        ]
+      },
+      "source": "player",
+      "order": 15
+    }
+  ]
+}

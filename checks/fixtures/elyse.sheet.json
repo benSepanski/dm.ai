@@ -1,0 +1,289 @@
+{
+  "name": "Elyse",
+  "summary": [
+    "Human (Skilled Human) Fighter 1",
+    "Medium · Speed 20 feet"
+  ],
+  "sections": [
+    {
+      "title": "Attributes",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "+1",
+          "detail": "+1 background"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+4",
+          "detail": "+1 ancestry, +1 background, +1 class key attribute, +1 free boost"
+        },
+        {
+          "label": "Constitution",
+          "value": "+1",
+          "detail": "+1 free boost"
+        },
+        {
+          "label": "Intelligence",
+          "value": "+1",
+          "detail": "+1 free boost"
+        },
+        {
+          "label": "Wisdom",
+          "value": "+2",
+          "detail": "+1 ancestry, +1 free boost"
+        },
+        {
+          "label": "Charisma",
+          "value": "+0",
+          "detail": null
+        }
+      ]
+    },
+    {
+      "title": "Defense",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "19",
+          "detail": "8 ancestry + 10 class + 1 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "18",
+          "detail": "10 + 2 Dex (cap +2) + 3 Scale Mail + 3 trained armor prof"
+        },
+        {
+          "label": "Fortitude",
+          "value": "+6",
+          "detail": "5 expert + 1 Con"
+        },
+        {
+          "label": "Reflex",
+          "value": "+9",
+          "detail": "5 expert + 4 Dex"
+        },
+        {
+          "label": "Will",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis"
+        },
+        {
+          "label": "Perception",
+          "value": "+7",
+          "detail": "5 expert + 2 Wis (initiative)"
+        },
+        {
+          "label": "Class DC",
+          "value": "17",
+          "detail": "10 + 3 trained + 4 Dex"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": [
+        {
+          "label": "Fist",
+          "value": "+9 · 1d4+1 B",
+          "detail": "5 expert + 4 Dex · agile, finesse, nonlethal, unarmed"
+        },
+        {
+          "label": "Dagger",
+          "value": "+9 · 1d4 P+1",
+          "detail": "5 expert (simple) + 4 Dex · thrown 10 ft. · agile, finesse, thrown 10 ft., versatile S"
+        },
+        {
+          "label": "Longbow",
+          "value": "+9 · 1d8 P",
+          "detail": "5 expert (martial) + 4 Dex · 100 ft., reload 0 · deadly d10, volley 30 ft."
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+5",
+          "detail": "3 trained + 4 Dex -2 armor check penalty · from Fighter"
+        },
+        {
+          "label": "Arcana",
+          "value": "+1",
+          "detail": "0 untrained + 1 Int"
+        },
+        {
+          "label": "Athletics",
+          "value": "+2",
+          "detail": "3 trained + 1 Str -2 armor check penalty · from Fighter"
+        },
+        {
+          "label": "Crafting",
+          "value": "+1",
+          "detail": "0 untrained + 1 Int"
+        },
+        {
+          "label": "Deception",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Diplomacy",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Medicine",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis · from Skilled Human heritage"
+        },
+        {
+          "label": "Nature",
+          "value": "+2",
+          "detail": "0 untrained + 2 Wis"
+        },
+        {
+          "label": "Occultism",
+          "value": "+1",
+          "detail": "0 untrained + 1 Int"
+        },
+        {
+          "label": "Performance",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Religion",
+          "value": "+2",
+          "detail": "0 untrained + 2 Wis"
+        },
+        {
+          "label": "Society",
+          "value": "+4",
+          "detail": "3 trained + 1 Int · from Fighter"
+        },
+        {
+          "label": "Stealth",
+          "value": "+5",
+          "detail": "3 trained + 4 Dex -2 armor check penalty · from Fighter"
+        },
+        {
+          "label": "Survival",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis · from Background: Hunter"
+        },
+        {
+          "label": "Thievery",
+          "value": "+5",
+          "detail": "3 trained + 4 Dex -2 armor check penalty · from Fighter"
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Skilled Human",
+          "value": "heritage",
+          "detail": "You become trained in one skill of your choice. At 5th level, you become an expert in that skill."
+        },
+        {
+          "label": "Cooperative Nature",
+          "value": "ancestry feat",
+          "detail": "The short human life span lends perspective on teamwork. You gain a +4 circumstance bonus on checks to Aid."
+        },
+        {
+          "label": "Reactive Strike",
+          "value": "Fighter feature",
+          "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+        },
+        {
+          "label": "Shield Block",
+          "value": "Fighter feature",
+          "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+        },
+        {
+          "label": "Point Blank Stance",
+          "value": "class feat",
+          "detail": "While in this stance, you take no penalty from the volley trait, and ranged weapons without the volley trait deal +2 circumstance damage against targets within the weapon's first range increment."
+        },
+        {
+          "label": "Survey Wildlife",
+          "value": "skill feat — Hunter",
+          "detail": "You stalked and took down animals and other creatures of the wild."
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Scale Mail",
+          "value": "2 Bulk",
+          "detail": "Fighter Kit; worn"
+        },
+        {
+          "label": "Dagger",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Adventurer's Pack",
+          "value": "1 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Grappling Hook",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Longbow",
+          "value": "2 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Arrows (10)",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Arrows (10)",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Coins",
+          "value": "3 gp",
+          "detail": "15 gp starting wealth - 12 gp spent"
+        },
+        {
+          "label": "Bulk",
+          "value": "5 Bulk, 4 L",
+          "detail": "encumbered above 6 Bulk, maximum 11 Bulk"
+        }
+      ]
+    },
+    {
+      "title": "Languages & Lore",
+      "entries": [
+        {
+          "label": "Languages",
+          "value": "Common",
+          "detail": null
+        },
+        {
+          "label": "Tanning Lore",
+          "value": "trained",
+          "detail": "Background: Hunter"
+        }
+      ]
+    }
+  ]
+}

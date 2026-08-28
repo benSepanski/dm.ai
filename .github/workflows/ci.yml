@@ -1,0 +1,143 @@
+# Runs every row of the architecture doc's "Constraints emitted" table on
+# every push. The checks/ crate is the invariant layer; this file is the
+# wiring that makes it inescapable.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install wasm-pack and cargo-deny
+        # Prebuilt binaries; a curl|sh pipeline can 404 and still exit 0.
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack,cargo-deny
+
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy (disallowed methods, workspace lints)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Dependency hygiene (cargo-deny)
+        run: cargo deny check
+
+      - name: Build tests
+        run: cargo test --workspace --no-run
+      - name: Test suite (includes checks/) with wall-time budget
+        # < 20 s execution budget (architecture perf table). Compilation is
+        # excluded — the suite was built in the previous step.
+        run: |
+          start=$(date +%s)
+          cargo test --workspace
+          end=$(date +%s)
+          elapsed=$((end - start))
+          echo "test suite wall time: ${elapsed}s (budget 20s)"
+          test "$elapsed" -lt 20
+
+      - name: WASM build
+        # wasm-pack drops a .gitignore ('*') into the out-dir that would
+        # silently untrack the committed bindings — remove it every build.
+        run: |
+          wasm-pack build crates/wasm --target web --out-dir ../../ui/src/engine/pkg --no-pack
+          rm -f ui/src/engine/pkg/.gitignore
+
+      - name: Generated bindings never stale
+        # porcelain (not diff) so UNTRACKED drift fails too. The TS surface
+        # (.js/.d.ts) must match byte-for-byte — wasm-bindgen's version is
+        # locked, so it is deterministic. The .wasm binary embeds
+        # environment-dependent bytes (source paths, wasm-opt), so its
+        # staleness is enforced BEHAVIORALLY instead: the ui job's parity
+        # smoke runs the committed binary against fixture sheets the native
+        # engine keeps fresh — a stale binary fails there on any engine
+        # behavior change.
+        run: |
+          git status --porcelain -- ui/src/engine/pkg
+          git checkout -- ui/src/engine/pkg/wasm_bg.wasm
+          test -z "$(git status --porcelain -- ui/src/engine/pkg)" 
+
+      - name: Warm incremental rebuild budget (< 10 s)
+        # Engine change -> new WASM + server binary, warm cache. rust-cache
+        # exports CARGO_INCREMENTAL=0 globally; this budget is specifically
+        # about the incremental loop, so turn it back on here.
+        env:
+          CARGO_INCREMENTAL: "1"
+        # Millisecond timing, best of two attempts: shared-runner scheduler
+        # noise can't fake a failure, and a real crate-bloat regression (the
+        # thing this budget attributes) shows up as multiples, not tenths.
+        run: |
+          cargo build -p server
+          best=9999999
+          for attempt in 1 2; do
+            touch crates/engine-core/src/lib.rs
+            start=$(date +%s%3N)
+            cargo build -p server --timings
+            wasm-pack build crates/wasm --target web --out-dir ../../ui/src/engine/pkg --no-pack
+            rm -f ui/src/engine/pkg/.gitignore
+            end=$(date +%s%3N)
+            ms=$((end - start))
+            echo "warm incremental rebuild attempt ${attempt}: ${ms}ms"
+            if [ "$ms" -lt "$best" ]; then best=$ms; fi
+          done
+          git checkout -- ui/src/engine/pkg
+          echo "warm incremental rebuild best-of-2: ${best}ms (budget 10000ms)"
+          test "$best" -lt 10000
+      - name: Upload build timings
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-timings
+          path: target/cargo-timings/
+
+  ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+      - name: Typecheck (strict tsconfig)
+        run: npm run typecheck
+      - name: Lint (no-explicit-any, no-restricted-imports)
+        run: npm run lint
+      - name: Component tests
+        run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: e2e
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Build server (serves the committed UI build)
+        run: cargo build --release -p server
+      - run: npm ci
+        working-directory: ui
+      - run: npx playwright install --with-deps chromium
+        working-directory: ui
+      - name: Playwright user stories
+        run: npm run e2e
+        working-directory: ui

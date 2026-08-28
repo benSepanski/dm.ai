@@ -1,0 +1,47 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/types",
+    "crates/engine-core",
+    "crates/ruleset-pf2e",
+    "crates/wasm",
+    "crates/server",
+    "checks",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace.dependencies]
+types = { path = "crates/types" }
+engine-core = { path = "crates/engine-core" }
+ruleset-pf2e = { path = "crates/ruleset-pf2e" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "fs", "signal"] }
+clap = { version = "4", features = ["derive"] }
+libc = "0.2"
+rust-embed = "8"
+mime_guess = "2"
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"
+proptest = "1"
+tempfile = "3"
+cargo_metadata = "0.19"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json"] }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+disallowed_methods = "deny"
+disallowed_types = "deny"
+dbg_macro = "deny"
+
+[profile.release]
+lto = "thin"

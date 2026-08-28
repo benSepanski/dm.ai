@@ -1,0 +1,26 @@
+[package]
+name = "wasm"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+types = { workspace = true, features = ["ts"] }
+engine-core = { workspace = true }
+ruleset-pf2e = { workspace = true }
+serde = { workspace = true }
+tsify = { version = "0.5.8", features = ["js"] }
+wasm-bindgen = { workspace = true }
+console_error_panic_hook = { workspace = true }
+
+[lints]
+workspace = true
+
+# wasm-opt's default -O pass costs ~10s per build for no benefit a localhost
+# app can feel; -O1 keeps the warm engine->wasm+server rebuild inside the
+# 10-second budget the architecture asserts.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-O1"]

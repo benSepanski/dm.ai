@@ -1,0 +1,105 @@
+[
+  {
+    "id": "ancestry.dwarf",
+    "name": "Dwarf",
+    "hp": 10,
+    "size": "medium",
+    "speed": 20,
+    "boosts": ["con", "wis"],
+    "free_boosts": 1,
+    "flaws": ["cha"],
+    "languages": ["Common", "Dwarven"],
+    "traits": ["dwarf", "humanoid"],
+    "senses": ["darkvision"],
+    "specials": [
+      {
+        "name": "Darkvision",
+        "text": "You can see in darkness and dim light just as well as you can see in bright light, though your vision in darkness is in black and white."
+      },
+      {
+        "name": "Clan Dagger",
+        "text": "You get one clan dagger of your clan for free, as it was given to you at birth. Selling this dagger is considered a terrible taboo."
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 42,
+      "url": "https://2e.aonprd.com/Ancestries.aspx?ID=59",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "ancestry.elf",
+    "name": "Elf",
+    "hp": 6,
+    "size": "medium",
+    "speed": 30,
+    "boosts": ["dex", "int"],
+    "free_boosts": 1,
+    "flaws": ["con"],
+    "languages": ["Common", "Elven"],
+    "traits": ["elf", "humanoid"],
+    "senses": ["low-light vision"],
+    "specials": [
+      {
+        "name": "Low-Light Vision",
+        "text": "You can see in dim light as though it were bright light, so you ignore the concealed condition due to dim light."
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 46,
+      "url": "https://2e.aonprd.com/Ancestries.aspx?ID=60",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "ancestry.goblin",
+    "name": "Goblin",
+    "hp": 6,
+    "size": "small",
+    "speed": 25,
+    "boosts": ["dex", "cha"],
+    "free_boosts": 1,
+    "flaws": ["wis"],
+    "languages": ["Common", "Goblin"],
+    "traits": ["goblin", "humanoid"],
+    "senses": ["darkvision"],
+    "specials": [
+      {
+        "name": "Darkvision",
+        "text": "You can see in darkness and dim light just as well as you can see in bright light, though your vision in darkness is in black and white."
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 54,
+      "url": "https://2e.aonprd.com/Ancestries.aspx?ID=62",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "ancestry.human",
+    "name": "Human",
+    "hp": 8,
+    "size": "medium",
+    "speed": 25,
+    "boosts": [],
+    "free_boosts": 2,
+    "flaws": [],
+    "languages": ["Common"],
+    "traits": ["human", "humanoid"],
+    "senses": [],
+    "specials": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 62,
+      "url": "https://2e.aonprd.com/Ancestries.aspx?ID=64",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  }
+]

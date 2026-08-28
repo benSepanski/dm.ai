@@ -1,0 +1,146 @@
+[
+  {
+    "id": "heritage.dwarf.ancient-blooded",
+    "ancestry": "ancestry.dwarf",
+    "name": "Ancient-Blooded Dwarf",
+    "text": "You gain the Call on Ancient Blood reaction: when you attempt a saving throw against a magical effect, gain a +1 circumstance bonus to the save.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=234", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.dwarf.death-warden",
+    "ancestry": "ancestry.dwarf",
+    "name": "Death Warden Dwarf",
+    "text": "When you roll a success on a saving throw against an effect with the void trait or one created by an undead creature, you get a critical success instead.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=235", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.dwarf.forge",
+    "ancestry": "ancestry.dwarf",
+    "name": "Forge Dwarf",
+    "text": "You gain fire resistance equal to half your level (minimum 1), and you treat environmental heat effects as if they were one step less extreme.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=236", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.dwarf.rock",
+    "ancestry": "ancestry.dwarf",
+    "name": "Rock Dwarf",
+    "text": "Your feet are firmly planted. You gain a +2 circumstance bonus to your Fortitude or Reflex DC against attempts to Reposition, Shove, or Trip you, and to saving throws against spells or effects that would force you to move or knock you prone. If any effect would force you to move 10 feet or more, you are moved only half the distance.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=237", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.dwarf.strong-blooded",
+    "ancestry": "ancestry.dwarf",
+    "name": "Strong-Blooded Dwarf",
+    "text": "You gain poison resistance equal to half your level (minimum 1), and each successful save against a poison reduces its stage by 2 (1 for a virulent poison); critical successes reduce it by 3 (2 for virulent).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=238", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.elf.ancient",
+    "ancestry": "ancestry.elf",
+    "name": "Ancient Elf",
+    "text": "In your long life you have dabbled in many paths. Choose a class other than your own; you gain that class's multiclass dedication feat, ignoring its level prerequisite.",
+    "effects": [{ "type": "choose_from_catalog", "catalog": "multiclass_dedications", "count": 1 }],
+    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=239", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.elf.arctic",
+    "ancestry": "ancestry.elf",
+    "name": "Arctic Elf",
+    "text": "You gain cold resistance equal to half your level (minimum 1), and you treat environmental cold effects as if they were one step less extreme.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=240", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.elf.cavern",
+    "ancestry": "ancestry.elf",
+    "name": "Cavern Elf",
+    "text": "You gain darkvision.",
+    "effects": [{ "type": "sense", "value": "darkvision" }],
+    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=241", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.elf.seer",
+    "ancestry": "ancestry.elf",
+    "name": "Seer Elf",
+    "text": "You can cast the detect magic cantrip as an arcane innate spell at will, and you gain a +1 circumstance bonus to checks to Identify Magic and to Decipher Writing of a magical nature.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=242", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.elf.whisper",
+    "ancestry": "ancestry.elf",
+    "name": "Whisper Elf",
+    "text": "Your ears are finely tuned. When you Seek, you gain a +2 circumstance bonus to locate undetected creatures within 30 feet, and your flat check to target concealed or hidden creatures is easier when the condition is due to sound.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=243", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.elf.woodland",
+    "ancestry": "ancestry.elf",
+    "name": "Woodland Elf",
+    "text": "When Climbing trees, vines, and other foliage, you move at half your Speed on a success and full Speed on a critical success. You can always use the Take Cover action in forest terrain.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=244", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.goblin.charhide",
+    "ancestry": "ancestry.goblin",
+    "name": "Charhide Goblin",
+    "text": "You gain fire resistance equal to half your level (minimum 1). Your flat check to remove persistent fire damage is DC 10 (DC 5 with appropriate assistance).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=250", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.goblin.irongut",
+    "ancestry": "ancestry.goblin",
+    "name": "Irongut Goblin",
+    "text": "You can subsist on garbage and can eat and drink while sickened. You gain a +2 circumstance bonus to saving throws against afflictions and the sickened condition from ingestion; successes on such Fortitude saves become critical successes.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=251", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.goblin.razortooth",
+    "ancestry": "ancestry.goblin",
+    "name": "Razortooth Goblin",
+    "text": "Your jaws are a natural weapon: you gain a jaws unarmed attack that deals 1d6 piercing damage, is in the brawling group, and has the finesse and unarmed traits.",
+    "effects": [{ "type": "unarmed_attack", "name": "Jaws", "damage": "1d6 P", "traits": ["finesse", "unarmed"] }],
+    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=252", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.goblin.snow",
+    "ancestry": "ancestry.goblin",
+    "name": "Snow Goblin",
+    "text": "You gain cold resistance equal to half your level (minimum 1), and you treat environmental cold effects as if they were one step less extreme.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=253", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.goblin.unbreakable",
+    "ancestry": "ancestry.goblin",
+    "name": "Unbreakable Goblin",
+    "text": "You're able to bounce back from injuries easily. Your maximum HP from your ancestry is 10 instead of 6. When you fall, reduce the falling damage as though you had fallen half the distance.",
+    "effects": [{ "type": "ancestry_hp_override", "value": 10 }],
+    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=254", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.human.skilled",
+    "ancestry": "ancestry.human",
+    "name": "Skilled Human",
+    "text": "You become trained in one skill of your choice. At 5th level, you become an expert in that skill.",
+    "effects": [{ "type": "choose_skills", "count": 1, "source_label": "Skilled Human heritage" }],
+    "source": { "book": "Pathfinder Player Core", "page": 63, "url": "https://2e.aonprd.com/Heritages.aspx?ID=261", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "heritage.human.versatile",
+    "ancestry": "ancestry.human",
+    "name": "Versatile Human",
+    "text": "You gain a general feat of your choice (you must meet its prerequisites).",
+    "effects": [{ "type": "choose_from_catalog", "catalog": "general_feats", "count": 1 }],
+    "source": { "book": "Pathfinder Player Core", "page": 63, "url": "https://2e.aonprd.com/Heritages.aspx?ID=262", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  }
+]

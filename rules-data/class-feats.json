@@ -1,0 +1,90 @@
+[
+  {
+    "id": "feat.class.fighter.combat-assessment",
+    "class": "class.fighter",
+    "level": 1,
+    "name": "Combat Assessment",
+    "actions": "1 action",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "Make a melee Strike. On a hit, you immediately attempt a check to Recall Knowledge about the target (+2 circumstance bonus on a critical hit). The target is then temporarily immune to Combat Assessment for 1 day.",
+    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4768", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.class.fighter.double-slice",
+    "class": "class.fighter",
+    "level": 1,
+    "name": "Double Slice",
+    "actions": "2 actions",
+    "prerequisites": [],
+    "requirements": "You are wielding two melee weapons, one in each hand.",
+    "text": "Make two Strikes against the same target, one with each required weapon, at your current multiple attack penalty. The second Strike takes a –2 penalty if its weapon doesn't have the agile trait. If both hit, combine their damage. This counts as two attacks toward your multiple attack penalty.",
+    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4769", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.class.fighter.exacting-strike",
+    "class": "class.fighter",
+    "level": 1,
+    "name": "Exacting Strike",
+    "actions": "1 action (press)",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "You make a controlled attack, accounting fully for your momentum. Make a Strike; it gains the following failure effect: this attack doesn't count toward your multiple attack penalty.",
+    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4770", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.class.fighter.point-blank-stance",
+    "class": "class.fighter",
+    "level": 1,
+    "name": "Point Blank Stance",
+    "actions": "1 action (stance)",
+    "prerequisites": [],
+    "requirements": "You are wielding a ranged weapon.",
+    "text": "While in this stance, you take no penalty from the volley trait, and ranged weapons without the volley trait deal +2 circumstance damage against targets within the weapon's first range increment.",
+    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4771", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.class.fighter.reactive-shield",
+    "class": "class.fighter",
+    "level": 1,
+    "name": "Reactive Shield",
+    "actions": "Reaction",
+    "prerequisites": [],
+    "requirements": "You are wielding a shield.",
+    "text": "Trigger: an enemy hits you with a melee Strike. You can snap your shield into place just as you would take a blow: you immediately use the Raise a Shield action, gaining your shield's bonus to AC against the triggering attack.",
+    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4772", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.class.fighter.snagging-strike",
+    "class": "class.fighter",
+    "level": 1,
+    "name": "Snagging Strike",
+    "actions": "1 action",
+    "prerequisites": [],
+    "requirements": "You have one hand free, and your target is within reach of that hand.",
+    "text": "Make a Strike while keeping one hand free to snag your opponent. On a hit, the target is off-guard until the start of your next turn or until it's no longer within reach of your free hand, whichever comes first.",
+    "source": { "book": "Pathfinder Player Core", "page": 141, "url": "https://2e.aonprd.com/Feats.aspx?ID=4773", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.class.fighter.sudden-charge",
+    "class": "class.fighter",
+    "level": 1,
+    "name": "Sudden Charge",
+    "actions": "2 actions (flourish)",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "With a quick sprint, you dash up to your foe and swing: Stride twice, and if you end your movement within melee reach of at least one enemy, make a melee Strike against that enemy. You can use Sudden Charge while Burrowing, Climbing, Flying, or Swimming instead of Striding if you have the corresponding movement type.",
+    "source": { "book": "Pathfinder Player Core", "page": 141, "url": "https://2e.aonprd.com/Feats.aspx?ID=4774", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.class.fighter.vicious-swing",
+    "class": "class.fighter",
+    "level": 1,
+    "name": "Vicious Swing",
+    "actions": "2 actions (flourish)",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "You unleash a particularly powerful attack. Make a melee Strike; it counts as two attacks for your multiple attack penalty. On a hit, deal one extra die of weapon damage.",
+    "source": { "book": "Pathfinder Player Core", "page": 141, "url": "https://2e.aonprd.com/Feats.aspx?ID=4775", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  }
+]

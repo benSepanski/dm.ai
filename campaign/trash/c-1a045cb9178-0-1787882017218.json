@@ -1,0 +1,477 @@
+{
+  "schema_version": 1,
+  "id": "c-1a045cb9178-0",
+  "rules_version": "pf2e-pc.0.1.0",
+  "state": "finalized",
+  "current_step": "details",
+  "draft_version": 42,
+  "sheet": {
+    "name": "Shit ass",
+    "summary": [
+      "Human (Skilled Human) Fighter 1",
+      "Medium · Speed 25 feet"
+    ],
+    "sections": [
+      {
+        "title": "Attributes",
+        "entries": [
+          {
+            "label": "Strength",
+            "value": "+4",
+            "detail": "+1 ancestry, +1 background, +1 class key attribute, +1 free boost"
+          },
+          {
+            "label": "Dexterity",
+            "value": "+2",
+            "detail": "+1 ancestry, +1 free boost"
+          },
+          {
+            "label": "Constitution",
+            "value": "+1",
+            "detail": "+1 free boost"
+          },
+          {
+            "label": "Intelligence",
+            "value": "+1",
+            "detail": "+1 free boost"
+          },
+          {
+            "label": "Wisdom",
+            "value": "+1",
+            "detail": "+1 background"
+          },
+          {
+            "label": "Charisma",
+            "value": "+0",
+            "detail": null
+          }
+        ]
+      },
+      {
+        "title": "Defense",
+        "entries": [
+          {
+            "label": "Hit Points",
+            "value": "20",
+            "detail": "8 ancestry + 10 class + 1 Con"
+          },
+          {
+            "label": "Armor Class",
+            "value": "18",
+            "detail": "10 + 2 Dex (cap +2) + 3 Scale Mail + 3 trained armor prof"
+          },
+          {
+            "label": "Fortitude",
+            "value": "+6",
+            "detail": "5 expert + 1 Con"
+          },
+          {
+            "label": "Reflex",
+            "value": "+7",
+            "detail": "5 expert + 2 Dex"
+          },
+          {
+            "label": "Will",
+            "value": "+4",
+            "detail": "3 trained + 1 Wis"
+          },
+          {
+            "label": "Perception",
+            "value": "+6",
+            "detail": "5 expert + 1 Wis (initiative)"
+          },
+          {
+            "label": "Class DC",
+            "value": "17",
+            "detail": "10 + 3 trained + 4 Str"
+          }
+        ]
+      },
+      {
+        "title": "Attacks",
+        "entries": [
+          {
+            "label": "Fist",
+            "value": "+9 · 1d4+4 B",
+            "detail": "5 expert + 4 Str · agile, finesse, nonlethal, unarmed"
+          },
+          {
+            "label": "Dagger",
+            "value": "+9 · 1d4 P+4",
+            "detail": "5 expert (simple) + 4 Str · thrown 10 ft. · agile, finesse, thrown 10 ft., versatile S"
+          }
+        ]
+      },
+      {
+        "title": "Skills",
+        "entries": [
+          {
+            "label": "Acrobatics",
+            "value": "+5",
+            "detail": "3 trained + 2 Dex · from Fighter"
+          },
+          {
+            "label": "Arcana",
+            "value": "+4",
+            "detail": "3 trained + 1 Int · from Fighter"
+          },
+          {
+            "label": "Athletics",
+            "value": "+7",
+            "detail": "3 trained + 4 Str · from Fighter"
+          },
+          {
+            "label": "Crafting",
+            "value": "+4",
+            "detail": "3 trained + 1 Int · from Skilled Human heritage"
+          },
+          {
+            "label": "Deception",
+            "value": "+3",
+            "detail": "3 trained + 0 Cha · from Fighter"
+          },
+          {
+            "label": "Diplomacy",
+            "value": "+0",
+            "detail": "0 untrained + 0 Cha"
+          },
+          {
+            "label": "Intimidation",
+            "value": "+3",
+            "detail": "3 trained + 0 Cha · from Background: Warrior"
+          },
+          {
+            "label": "Medicine",
+            "value": "+1",
+            "detail": "0 untrained + 1 Wis"
+          },
+          {
+            "label": "Nature",
+            "value": "+4",
+            "detail": "3 trained + 1 Wis · from Fighter"
+          },
+          {
+            "label": "Occultism",
+            "value": "+1",
+            "detail": "0 untrained + 1 Int"
+          },
+          {
+            "label": "Performance",
+            "value": "+0",
+            "detail": "0 untrained + 0 Cha"
+          },
+          {
+            "label": "Religion",
+            "value": "+1",
+            "detail": "0 untrained + 1 Wis"
+          },
+          {
+            "label": "Society",
+            "value": "+1",
+            "detail": "0 untrained + 1 Int"
+          },
+          {
+            "label": "Stealth",
+            "value": "+2",
+            "detail": "0 untrained + 2 Dex"
+          },
+          {
+            "label": "Survival",
+            "value": "+1",
+            "detail": "0 untrained + 1 Wis"
+          },
+          {
+            "label": "Thievery",
+            "value": "+2",
+            "detail": "0 untrained + 2 Dex"
+          }
+        ]
+      },
+      {
+        "title": "Features",
+        "entries": [
+          {
+            "label": "Skilled Human",
+            "value": "heritage",
+            "detail": "You become trained in one skill of your choice. At 5th level, you become an expert in that skill."
+          },
+          {
+            "label": "General Training",
+            "value": "ancestry feat",
+            "detail": "Your adaptability manifests in your mastery of a range of useful abilities. You gain a 1st-level general feat of your choice (you must meet its prerequisites)."
+          },
+          {
+            "label": "Reactive Strike",
+            "value": "Fighter feature",
+            "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+          },
+          {
+            "label": "Shield Block",
+            "value": "Fighter feature",
+            "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+          },
+          {
+            "label": "Reactive Shield",
+            "value": "class feat",
+            "detail": "Trigger: an enemy hits you with a melee Strike. You can snap your shield into place just as you would take a blow: you immediately use the Raise a Shield action, gaining your shield's bonus to AC against the triggering attack."
+          },
+          {
+            "label": "Diehard",
+            "value": "general feat",
+            "detail": "It takes more to kill you than most. You die from the dying condition at dying 5, rather than dying 4."
+          },
+          {
+            "label": "Intimidating Glare",
+            "value": "skill feat — Warrior",
+            "detail": "You lived your life by the sword, either as a mercenary or a warrior defending your people."
+          }
+        ]
+      },
+      {
+        "title": "Equipment",
+        "entries": [
+          {
+            "label": "Scale Mail",
+            "value": "2 Bulk",
+            "detail": "Fighter Kit; worn"
+          },
+          {
+            "label": "Dagger",
+            "value": "1 L",
+            "detail": "Fighter Kit"
+          },
+          {
+            "label": "Adventurer's Pack",
+            "value": "1 Bulk",
+            "detail": "Fighter Kit"
+          },
+          {
+            "label": "Grappling Hook",
+            "value": "1 L",
+            "detail": "Fighter Kit"
+          },
+          {
+            "label": "Coins",
+            "value": "9 gp, 2 sp",
+            "detail": "15 gp starting wealth - 5 gp, 8 sp spent"
+          },
+          {
+            "label": "Bulk",
+            "value": "3 Bulk, 2 L",
+            "detail": "encumbered above 9 Bulk, maximum 14 Bulk"
+          }
+        ]
+      },
+      {
+        "title": "Languages & Lore",
+        "entries": [
+          {
+            "label": "Languages",
+            "value": "Common",
+            "detail": null
+          },
+          {
+            "label": "Warfare Lore",
+            "value": "trained",
+            "detail": "Background: Warrior"
+          }
+        ]
+      }
+    ]
+  },
+  "log": [
+    {
+      "id": "c-1a045cb9178-0-initial-name",
+      "slot": "pf2e.details.name",
+      "selection": {
+        "kind": "text",
+        "value": "Shit ass"
+      },
+      "source": "player",
+      "order": 0
+    },
+    {
+      "id": "3ad85b6a-1e40-4c7c-9421-f181a74865de",
+      "slot": "pf2e.concept",
+      "selection": {
+        "kind": "text",
+        "value": "Test"
+      },
+      "source": "player",
+      "order": 1
+    },
+    {
+      "id": "95b31b3f-5659-4959-80d1-c48af99b678a",
+      "slot": "pf2e.ancestry",
+      "selection": {
+        "kind": "option",
+        "value": "ancestry.human"
+      },
+      "source": "player",
+      "order": 2
+    },
+    {
+      "id": "b693ecca-86e0-442e-ab7d-71d158139cc3",
+      "slot": "pf2e.class",
+      "selection": {
+        "kind": "option",
+        "value": "class.fighter"
+      },
+      "source": "player",
+      "order": 3
+    },
+    {
+      "id": "8dafcc8f-2793-4f00-b99b-a501418aeca6",
+      "slot": "pf2e.class.key-attribute",
+      "selection": {
+        "kind": "option",
+        "value": "attr.str"
+      },
+      "source": "player",
+      "order": 4
+    },
+    {
+      "id": "dbdc384f-5431-4fb9-87f8-f10df3266318",
+      "slot": "pf2e.class.feat",
+      "selection": {
+        "kind": "option",
+        "value": "feat.class.fighter.reactive-shield"
+      },
+      "source": "player",
+      "order": 5
+    },
+    {
+      "id": "12b695f4-9a0c-44da-9068-004deb8c4155",
+      "slot": "pf2e.skills.class-choice",
+      "selection": {
+        "kind": "option",
+        "value": "skill.acrobatics"
+      },
+      "source": "player",
+      "order": 6
+    },
+    {
+      "id": "c456ca90-d43c-483e-86f4-0a2948cbfe0f",
+      "slot": "pf2e.boosts.free",
+      "selection": {
+        "kind": "options",
+        "value": [
+          "attr.str",
+          "attr.dex",
+          "attr.con",
+          "attr.int"
+        ]
+      },
+      "source": "player",
+      "order": 7
+    },
+    {
+      "id": "fc08b756-9e2c-4eb7-8935-74de9d0a4530",
+      "slot": "pf2e.ancestry.heritage",
+      "selection": {
+        "kind": "option",
+        "value": "heritage.human.skilled"
+      },
+      "source": "player",
+      "order": 8
+    },
+    {
+      "id": "f8231767-f0ec-4c25-b3d2-59b13e907ef6",
+      "slot": "pf2e.ancestry.feat",
+      "selection": {
+        "kind": "option",
+        "value": "feat.ancestry.human.general-training"
+      },
+      "source": "player",
+      "order": 9
+    },
+    {
+      "id": "9b70d768-6890-4b34-a394-528879a030ed",
+      "slot": "pf2e.feats.general.ancestry-feat",
+      "selection": {
+        "kind": "option",
+        "value": "feat.general.diehard"
+      },
+      "source": "player",
+      "order": 10
+    },
+    {
+      "id": "98ec4f82-b07e-44dd-bca8-5b18fe5cede2",
+      "slot": "pf2e.skills.heritage-choice",
+      "selection": {
+        "kind": "option",
+        "value": "skill.crafting"
+      },
+      "source": "player",
+      "order": 11
+    },
+    {
+      "id": "62818343-e324-41c7-b224-e85986ad4d6a",
+      "slot": "pf2e.boosts.ancestry-free",
+      "selection": {
+        "kind": "options",
+        "value": [
+          "attr.str",
+          "attr.dex"
+        ]
+      },
+      "source": "player",
+      "order": 12
+    },
+    {
+      "id": "4ee68774-2c2d-4255-bd70-9a0710356146",
+      "slot": "pf2e.background",
+      "selection": {
+        "kind": "option",
+        "value": "background.warrior"
+      },
+      "source": "player",
+      "order": 13
+    },
+    {
+      "id": "e7afdc29-9419-47e0-976c-c78108856b2a",
+      "slot": "pf2e.boosts.background-choice",
+      "selection": {
+        "kind": "option",
+        "value": "attr.str"
+      },
+      "source": "player",
+      "order": 14
+    },
+    {
+      "id": "f587126d-e450-4cdb-ad83-68620336ca0c",
+      "slot": "pf2e.boosts.background-free",
+      "selection": {
+        "kind": "option",
+        "value": "attr.wis"
+      },
+      "source": "player",
+      "order": 15
+    },
+    {
+      "id": "3442a20b-cef0-4039-8864-faf6028988a1",
+      "slot": "pf2e.equipment.kit",
+      "selection": {
+        "kind": "option",
+        "value": "kit.fighter"
+      },
+      "source": "player",
+      "order": 16
+    },
+    {
+      "id": "7b809968-1fed-4edd-90b4-1a271a5f10a2",
+      "slot": "pf2e.skills.trained",
+      "selection": {
+        "kind": "options",
+        "value": [
+          "skill.arcana",
+          "skill.nature",
+          "skill.athletics",
+          "skill.deception"
+        ]
+      },
+      "source": "player",
+      "order": 17
+    }
+  ]
+}

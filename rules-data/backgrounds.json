@@ -1,0 +1,52 @@
+[
+  {
+    "id": "background.field-medic",
+    "name": "Field Medic",
+    "text": "In the chaos of battle, you learned to mend wounds while under fire.",
+    "boost_choice": ["con", "wis"],
+    "skill": "skill.medicine",
+    "lore": "Warfare Lore",
+    "skill_feat": "Battle Medicine",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=423", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.warrior",
+    "name": "Warrior",
+    "text": "You lived your life by the sword, either as a mercenary or a warrior defending your people.",
+    "boost_choice": ["str", "con"],
+    "skill": "skill.intimidation",
+    "lore": "Warfare Lore",
+    "skill_feat": "Intimidating Glare",
+    "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=445", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.artisan",
+    "name": "Artisan",
+    "text": "You trained in a specific artisanal craft — perhaps as a blacksmith's apprentice toiling over the forge.",
+    "boost_choice": ["str", "int"],
+    "skill": "skill.crafting",
+    "lore": "Guild Lore",
+    "skill_feat": "Specialty Crafting",
+    "source": { "book": "Pathfinder Player Core", "page": 84, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=409", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.hunter",
+    "name": "Hunter",
+    "text": "You stalked and took down animals and other creatures of the wild.",
+    "boost_choice": ["dex", "wis"],
+    "skill": "skill.survival",
+    "lore": "Tanning Lore",
+    "skill_feat": "Survey Wildlife",
+    "source": { "book": "Pathfinder Player Core", "page": 87, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=430", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.street-urchin",
+    "name": "Street Urchin",
+    "text": "You eked out a living by picking pockets on the streets of a major city.",
+    "boost_choice": ["dex", "con"],
+    "skill": "skill.thievery",
+    "lore": "City Lore",
+    "skill_feat": "Pickpocket",
+    "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=442", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  }
+]

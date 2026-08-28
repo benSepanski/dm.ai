@@ -1,0 +1,284 @@
+{
+  "name": "Krivvy",
+  "summary": [
+    "Goblin (Unbreakable Goblin) Fighter 1",
+    "Small · Speed 25 feet · darkvision"
+  ],
+  "sections": [
+    {
+      "title": "Attributes",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "+2",
+          "detail": "+1 background, +1 free boost"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+3",
+          "detail": "+1 ancestry, +1 class key attribute, +1 free boost"
+        },
+        {
+          "label": "Constitution",
+          "value": "+3",
+          "detail": "+1 ancestry, +1 background, +1 free boost"
+        },
+        {
+          "label": "Intelligence",
+          "value": "+0",
+          "detail": null
+        },
+        {
+          "label": "Wisdom",
+          "value": "-1",
+          "detail": "-1 ancestry flaw"
+        },
+        {
+          "label": "Charisma",
+          "value": "+2",
+          "detail": "+1 ancestry, +1 free boost"
+        }
+      ]
+    },
+    {
+      "title": "Defense",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "23",
+          "detail": "10 ancestry + 10 class + 3 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "17",
+          "detail": "10 + 3 Dex (cap +4) + 1 Leather Armor + 3 trained armor prof"
+        },
+        {
+          "label": "Fortitude",
+          "value": "+8",
+          "detail": "5 expert + 3 Con"
+        },
+        {
+          "label": "Reflex",
+          "value": "+8",
+          "detail": "5 expert + 3 Dex"
+        },
+        {
+          "label": "Will",
+          "value": "+2",
+          "detail": "3 trained + -1 Wis"
+        },
+        {
+          "label": "Perception",
+          "value": "+4",
+          "detail": "5 expert + -1 Wis (initiative)"
+        },
+        {
+          "label": "Class DC",
+          "value": "16",
+          "detail": "10 + 3 trained + 3 Dex"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": [
+        {
+          "label": "Fist",
+          "value": "+8 · 1d4+2 B",
+          "detail": "5 expert + 3 Dex · agile, finesse, nonlethal, unarmed"
+        },
+        {
+          "label": "Shortsword",
+          "value": "+8 · 1d6 P+2",
+          "detail": "5 expert (martial) + 3 Dex · agile, finesse, versatile S"
+        },
+        {
+          "label": "Sling",
+          "value": "+8 · 1d6 B+1",
+          "detail": "5 expert (simple) + 3 Dex · 50 ft., reload 1 · propulsive"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+6",
+          "detail": "3 trained + 3 Dex · from Fighter"
+        },
+        {
+          "label": "Arcana",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Athletics",
+          "value": "+2",
+          "detail": "0 untrained + 2 Str"
+        },
+        {
+          "label": "Crafting",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Deception",
+          "value": "+5",
+          "detail": "3 trained + 2 Cha · from Fighter"
+        },
+        {
+          "label": "Diplomacy",
+          "value": "+2",
+          "detail": "0 untrained + 2 Cha"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+2",
+          "detail": "0 untrained + 2 Cha"
+        },
+        {
+          "label": "Medicine",
+          "value": "-1",
+          "detail": "0 untrained + -1 Wis"
+        },
+        {
+          "label": "Nature",
+          "value": "-1",
+          "detail": "0 untrained + -1 Wis"
+        },
+        {
+          "label": "Occultism",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Performance",
+          "value": "+2",
+          "detail": "0 untrained + 2 Cha"
+        },
+        {
+          "label": "Religion",
+          "value": "-1",
+          "detail": "0 untrained + -1 Wis"
+        },
+        {
+          "label": "Society",
+          "value": "+3",
+          "detail": "3 trained + 0 Int · from replacement (already trained)"
+        },
+        {
+          "label": "Stealth",
+          "value": "+6",
+          "detail": "3 trained + 3 Dex · from Fighter"
+        },
+        {
+          "label": "Survival",
+          "value": "-1",
+          "detail": "0 untrained + -1 Wis"
+        },
+        {
+          "label": "Thievery",
+          "value": "+6",
+          "detail": "3 trained + 3 Dex · from Fighter"
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Darkvision",
+          "value": "Goblin ancestry",
+          "detail": "You can see in darkness and dim light just as well as you can see in bright light, though your vision in darkness is in black and white."
+        },
+        {
+          "label": "Unbreakable Goblin",
+          "value": "heritage",
+          "detail": "You're able to bounce back from injuries easily. Your maximum HP from your ancestry is 10 instead of 6. When you fall, reduce the falling damage as though you had fallen half the distance."
+        },
+        {
+          "label": "Goblin Song",
+          "value": "ancestry feat",
+          "detail": "One action. You sing an annoying goblin song: attempt a Performance check against the Will DCs of up to two enemies within 30 feet. On a success the target takes a –1 status penalty to Perception checks and Will saves for 1 round (crit: 1 minute)."
+        },
+        {
+          "label": "Reactive Strike",
+          "value": "Fighter feature",
+          "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+        },
+        {
+          "label": "Shield Block",
+          "value": "Fighter feature",
+          "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+        },
+        {
+          "label": "Exacting Strike",
+          "value": "class feat",
+          "detail": "You make a controlled attack, accounting fully for your momentum. Make a Strike; it gains the following failure effect: this attack doesn't count toward your multiple attack penalty."
+        },
+        {
+          "label": "Pickpocket",
+          "value": "skill feat — Street Urchin",
+          "detail": "You eked out a living by picking pockets on the streets of a major city."
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Leather Armor",
+          "value": "1 Bulk",
+          "detail": "purchased; worn"
+        },
+        {
+          "label": "Shortsword",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Sling",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Sling Bullets (10)",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Adventurer's Pack",
+          "value": "1 Bulk",
+          "detail": "purchased"
+        },
+        {
+          "label": "Coins",
+          "value": "10 gp, 5 sp, 9 cp",
+          "detail": "15 gp starting wealth - 4 gp, 4 sp, 1 cp spent"
+        },
+        {
+          "label": "Bulk",
+          "value": "2 Bulk, 3 L",
+          "detail": "encumbered above 7 Bulk, maximum 12 Bulk"
+        }
+      ]
+    },
+    {
+      "title": "Languages & Lore",
+      "entries": [
+        {
+          "label": "Languages",
+          "value": "Common, Goblin",
+          "detail": null
+        },
+        {
+          "label": "City Lore",
+          "value": "trained",
+          "detail": "Background: Street Urchin"
+        }
+      ]
+    }
+  ]
+}

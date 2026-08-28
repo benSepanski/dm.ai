@@ -1,0 +1,1210 @@
+//! Shared PF2e mechanics: attribute/boost arithmetic, proficiency math,
+//! money and Bulk, the folded character state, and sheet derivation.
+//! Kind modules depend on this; this module never references a kind.
+
+use std::collections::BTreeMap;
+
+use serde::Deserialize;
+use types::{OptionId, SheetEntry, SheetSection, SheetView};
+
+use crate::data::{Effect, RulesData};
+
+/// The six attributes. Remaster arithmetic is modifier-only: a boost is +1
+/// to the modifier, a flaw is -1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Attribute {
+    Str,
+    Dex,
+    Con,
+    Int,
+    Wis,
+    Cha,
+}
+
+pub const ALL_ATTRIBUTES: [Attribute; 6] = [
+    Attribute::Str,
+    Attribute::Dex,
+    Attribute::Con,
+    Attribute::Int,
+    Attribute::Wis,
+    Attribute::Cha,
+];
+
+impl Attribute {
+    pub fn name(self) -> &'static str {
+        match self {
+            Attribute::Str => "Strength",
+            Attribute::Dex => "Dexterity",
+            Attribute::Con => "Constitution",
+            Attribute::Int => "Intelligence",
+            Attribute::Wis => "Wisdom",
+            Attribute::Cha => "Charisma",
+        }
+    }
+    pub fn abbrev(self) -> &'static str {
+        match self {
+            Attribute::Str => "Str",
+            Attribute::Dex => "Dex",
+            Attribute::Con => "Con",
+            Attribute::Int => "Int",
+            Attribute::Wis => "Wis",
+            Attribute::Cha => "Cha",
+        }
+    }
+    pub fn option_id(self) -> OptionId {
+        OptionId::new(format!("attr.{}", self.abbrev().to_lowercase()))
+    }
+    pub fn from_option_id(id: &OptionId) -> Option<Attribute> {
+        ALL_ATTRIBUTES.into_iter().find(|a| a.option_id() == *id)
+    }
+}
+
+/// Proficiency ranks; bonus is rank value + level when trained or better.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Proficiency {
+    Untrained,
+    Trained,
+    Expert,
+    Master,
+    Legendary,
+}
+
+impl Proficiency {
+    pub fn parse(s: &str) -> Proficiency {
+        match s {
+            "trained" => Proficiency::Trained,
+            "expert" => Proficiency::Expert,
+            "master" => Proficiency::Master,
+            "legendary" => Proficiency::Legendary,
+            _ => Proficiency::Untrained,
+        }
+    }
+    pub fn bonus(self, level: i32) -> i32 {
+        match self {
+            Proficiency::Untrained => 0,
+            Proficiency::Trained => level + 2,
+            Proficiency::Expert => level + 4,
+            Proficiency::Master => level + 6,
+            Proficiency::Legendary => level + 8,
+        }
+    }
+    pub fn label(self) -> &'static str {
+        match self {
+            Proficiency::Untrained => "untrained",
+            Proficiency::Trained => "trained",
+            Proficiency::Expert => "expert",
+            Proficiency::Master => "master",
+            Proficiency::Legendary => "legendary",
+        }
+    }
+}
+
+pub fn format_signed(n: i32) -> String {
+    if n >= 0 {
+        format!("+{n}")
+    } else {
+        format!("{n}")
+    }
+}
+
+/// Coin arithmetic in copper pieces.
+pub const STARTING_WEALTH_CP: i64 = 1500;
+
+pub fn format_cp(cp: i64) -> String {
+    let negative = cp < 0;
+    let cp = cp.abs();
+    let gp = cp / 100;
+    let sp = (cp % 100) / 10;
+    let rem = cp % 10;
+    let mut parts = Vec::new();
+    if gp > 0 {
+        parts.push(format!("{gp} gp"));
+    }
+    if sp > 0 {
+        parts.push(format!("{sp} sp"));
+    }
+    if rem > 0 || parts.is_empty() {
+        parts.push(format!("{rem} cp"));
+    }
+    let joined = parts.join(", ");
+    if negative {
+        format!("-{joined}")
+    } else {
+        joined
+    }
+}
+
+/// Bulk in tenths: "L" = 1, "2" = 20, "-"/"" = 0.
+pub fn bulk_tenths(bulk: &str) -> i64 {
+    match bulk.trim() {
+        "L" | "l" => 1,
+        "-" | "—" | "" => 0,
+        n => n.parse::<i64>().map(|v| v * 10).unwrap_or(0),
+    }
+}
+
+pub fn format_bulk_tenths(tenths: i64) -> String {
+    let whole = tenths / 10;
+    let light = tenths % 10;
+    match (whole, light) {
+        (0, 0) => "—".to_string(),
+        (0, l) => format!("{l} L"),
+        (w, 0) => format!("{w} Bulk"),
+        (w, l) => format!("{w} Bulk, {l} L"),
+    }
+}
+
+/// A fixed skill-training grant (background skill, Lore-feat skills).
+#[derive(Debug, Clone)]
+pub struct SkillGrant {
+    pub skill: String,
+    pub source: String,
+}
+
+/// A player-chosen set of skills (class picks, chooser slots, replacements).
+#[derive(Debug, Clone)]
+pub struct SkillChoice {
+    pub slot: &'static str,
+    pub source: String,
+    pub skills: Vec<String>,
+}
+
+/// The folded PF2e character state. Kind modules write their slices during
+/// the fold; mechanics reads the whole to derive the sheet.
+#[derive(Debug, Clone, Default)]
+pub struct Pf2eState {
+    pub ancestry: Option<String>,
+    pub heritage: Option<String>,
+    pub ancestry_feat: Option<String>,
+    pub background: Option<String>,
+    pub class: Option<String>,
+    pub key_attribute: Option<Attribute>,
+    pub class_feat: Option<String>,
+
+    /// Boosts by batch; duplicates within a batch are recorded as picked
+    /// (validators flag them) but count once toward the modifier.
+    pub boost_batches: BTreeMap<String, Vec<Attribute>>,
+    pub flaws: Vec<Attribute>,
+
+    /// Fixed grants in canonical precedence order (background before feats).
+    pub skill_grants: Vec<SkillGrant>,
+    pub skill_choices: Vec<SkillChoice>,
+    pub class_skill_choice: Option<String>,
+    pub lores: Vec<(String, String)>,
+
+    /// Feats chosen through catalog choosers (general feats, bonus class
+    /// feats), in pick order.
+    pub chosen_general_feats: Vec<String>,
+    pub bonus_class_feats: Vec<String>,
+
+    /// Mechanical effects collected from heritage/feat records.
+    pub effects: Vec<Effect>,
+
+    /// Equipment: chosen kit option (kit id, option id) and itemized extras.
+    pub kit: Option<(String, Option<String>)>,
+    pub extra_items: Vec<String>,
+
+    pub name: Option<String>,
+    pub concept: Option<String>,
+    pub description: Option<String>,
+}
+
+impl Pf2eState {
+    pub fn modifier(&self, attr: Attribute) -> i32 {
+        let mut m = 0;
+        for batch in self.boost_batches.values() {
+            let mut distinct: Vec<Attribute> = batch.clone();
+            distinct.sort();
+            distinct.dedup();
+            if distinct.contains(&attr) {
+                m += 1;
+            }
+        }
+        m - self.flaws.iter().filter(|f| **f == attr).count() as i32
+    }
+
+    /// Trained skills in canonical precedence order plus the grant
+    /// collisions that open replacement slots. Choices count first (they
+    /// were picked against catalogs that excluded trained skills); fixed
+    /// grants landing on an already-trained skill collide and demand a
+    /// replacement pick, per the PF2e replacement rule.
+    pub fn skill_resolution(&self) -> SkillResolution {
+        let mut trained: Vec<(String, String)> = Vec::new();
+        let mut illegal_choice_dupes: Vec<(&'static str, String)> = Vec::new();
+
+        if let Some(s) = &self.class_skill_choice {
+            trained.push((s.clone(), "Fighter".to_string()));
+        }
+        for choice in &self.skill_choices {
+            for s in &choice.skills {
+                if trained.iter().any(|(t, _)| t == s) {
+                    illegal_choice_dupes.push((choice.slot, s.clone()));
+                } else {
+                    trained.push((s.clone(), choice.source.clone()));
+                }
+            }
+        }
+        let mut collisions: Vec<String> = Vec::new();
+        for grant in &self.skill_grants {
+            if trained.iter().any(|(t, _)| t == &grant.skill) {
+                collisions.push(grant.source.clone());
+            } else {
+                trained.push((grant.skill.clone(), grant.source.clone()));
+            }
+        }
+        SkillResolution {
+            trained,
+            collisions,
+            illegal_choice_dupes,
+        }
+    }
+
+    pub fn has_effect(&self, pred: impl Fn(&Effect) -> bool) -> bool {
+        self.effects.iter().any(pred)
+    }
+}
+
+pub struct SkillResolution {
+    /// (skill id, source label), in precedence order.
+    pub trained: Vec<(String, String)>,
+    /// One entry per fixed grant that landed on an already-trained skill —
+    /// each opens a replacement-skill slot, in order.
+    pub collisions: Vec<String>,
+    /// A chooser slot re-picked an already-trained skill (stale after an
+    /// upstream change): (slot id, skill id) — flagged Illegal there.
+    pub illegal_choice_dupes: Vec<(&'static str, String)>,
+}
+
+/// Everything owned, derived from kit + extras: (item id, source label).
+pub fn inventory(state: &Pf2eState, data: &RulesData) -> Vec<(String, String)> {
+    let mut items = Vec::new();
+    if let Some((kit_id, option)) = &state.kit {
+        if let Some(kit) = data.kit(kit_id) {
+            for item in &kit.contents {
+                items.push((item.clone(), kit.name.clone()));
+            }
+            if let Some(option_id) = option {
+                if let Some(opt) = kit.options.iter().find(|o| o.id == *option_id) {
+                    for item in &opt.items {
+                        items.push((item.clone(), kit.name.clone()));
+                    }
+                }
+            }
+        }
+    }
+    for item in &state.extra_items {
+        items.push((item.clone(), "purchased".to_string()));
+    }
+    items
+}
+
+/// Total spend in cp (kit price + option price + extras).
+pub fn total_spend_cp(state: &Pf2eState, data: &RulesData) -> i64 {
+    let mut spend: i64 = 0;
+    if let Some((kit_id, option)) = &state.kit {
+        if let Some(kit) = data.kit(kit_id) {
+            spend += kit.price_cp as i64;
+            if let Some(option_id) = option {
+                if let Some(opt) = kit.options.iter().find(|o| o.id == *option_id) {
+                    spend += opt.price_cp as i64;
+                }
+            }
+        }
+    }
+    for item in &state.extra_items {
+        spend += item_price_cp(item, data);
+    }
+    spend
+}
+
+pub fn item_price_cp(id: &str, data: &RulesData) -> i64 {
+    let e = &data.equipment;
+    e.weapons
+        .iter()
+        .find(|r| r.id == id)
+        .map(|r| r.price_cp as i64)
+        .or_else(|| {
+            e.armor
+                .iter()
+                .find(|r| r.id == id)
+                .map(|r| r.price_cp as i64)
+        })
+        .or_else(|| {
+            e.shields
+                .iter()
+                .find(|r| r.id == id)
+                .map(|r| r.price_cp as i64)
+        })
+        .or_else(|| {
+            e.gear
+                .iter()
+                .find(|r| r.id == id)
+                .map(|r| r.price_cp as i64)
+        })
+        .unwrap_or(0)
+}
+
+pub fn item_name(id: &str, data: &RulesData) -> String {
+    let e = &data.equipment;
+    e.weapons
+        .iter()
+        .find(|r| r.id == id)
+        .map(|r| r.name.clone())
+        .or_else(|| e.armor.iter().find(|r| r.id == id).map(|r| r.name.clone()))
+        .or_else(|| {
+            e.shields
+                .iter()
+                .find(|r| r.id == id)
+                .map(|r| r.name.clone())
+        })
+        .or_else(|| e.gear.iter().find(|r| r.id == id).map(|r| r.name.clone()))
+        .unwrap_or_else(|| id.to_string())
+}
+
+const LEVEL: i32 = 1;
+
+/// Derive the presentation-contract sheet from the folded state. Pure.
+pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
+    let name = state.name.clone().unwrap_or_default();
+    let ancestry = state.ancestry.as_ref().and_then(|id| data.ancestry(id));
+    let heritage = state.heritage.as_ref().and_then(|id| data.heritage(id));
+    let class = state.class.as_ref().and_then(|id| data.class(id));
+
+    let mut summary = Vec::new();
+    {
+        let mut identity = String::new();
+        if let Some(a) = ancestry {
+            identity.push_str(&a.name);
+            if let Some(h) = heritage {
+                identity = format!("{} ({})", identity, h.name);
+            }
+        }
+        if let Some(c) = class {
+            if !identity.is_empty() {
+                identity.push(' ');
+            }
+            identity.push_str(&format!("{} {LEVEL}", c.name));
+        }
+        if !identity.is_empty() {
+            summary.push(identity);
+        }
+        if let Some(a) = ancestry {
+            summary.push(format!(
+                "{} · Speed {} feet{}",
+                capitalize(&a.size),
+                effective_speed(state, data),
+                if a.senses.is_empty() {
+                    String::new()
+                } else {
+                    format!(" · {}", a.senses_with_effects(state))
+                }
+            ));
+        }
+    }
+
+    let mut sections = Vec::new();
+
+    // Attributes.
+    let mut attr_entries = Vec::new();
+    for attr in ALL_ATTRIBUTES {
+        let m = state.modifier(attr);
+        let mut parts: Vec<String> = Vec::new();
+        for (batch, boosts) in &state.boost_batches {
+            let mut distinct = boosts.clone();
+            distinct.sort();
+            distinct.dedup();
+            if distinct.contains(&attr) {
+                parts.push(format!("+1 {}", batch_label(batch)));
+            }
+        }
+        if state.flaws.contains(&attr) {
+            parts.push("-1 ancestry flaw".to_string());
+        }
+        attr_entries.push(SheetEntry {
+            label: attr.name().to_string(),
+            value: format_signed(m),
+            detail: if parts.is_empty() {
+                None
+            } else {
+                Some(parts.join(", "))
+            },
+        });
+    }
+    sections.push(SheetSection {
+        title: "Attributes".to_string(),
+        entries: attr_entries,
+    });
+
+    // Defense & vitals.
+    if let Some(c) = class {
+        let con = state.modifier(Attribute::Con);
+        let dex = state.modifier(Attribute::Dex);
+        let wis = state.modifier(Attribute::Wis);
+        let str_ = state.modifier(Attribute::Str);
+
+        let ancestry_hp = ancestry.map(|a| a.hp).unwrap_or(0);
+        let ancestry_hp = state
+            .effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::AncestryHpOverride { value } => Some(*value),
+                _ => None,
+            })
+            .unwrap_or(ancestry_hp);
+        let bonus_hp: i32 = state
+            .effects
+            .iter()
+            .map(|e| match e {
+                Effect::HpPerLevel { value } => *value as i32 * LEVEL,
+                _ => 0,
+            })
+            .sum();
+        let hp = ancestry_hp as i32 + c.hp_per_level as i32 + con * LEVEL + bonus_hp;
+        let mut hp_detail = format!(
+            "{ancestry_hp} ancestry + {} class + {con} Con",
+            c.hp_per_level
+        );
+        if bonus_hp != 0 {
+            hp_detail.push_str(&format!(" + {bonus_hp} Toughness"));
+        }
+
+        let worn = worn_armor(state, data);
+        let (ac, ac_detail) = match worn {
+            Some(armor) => {
+                let prof = Proficiency::parse(&c.proficiencies.armor).bonus(LEVEL);
+                let dex_used = dex.min(armor.dex_cap);
+                (
+                    10 + dex_used + armor.ac_bonus + prof,
+                    format!(
+                        "10 + {} Dex (cap {}) + {} {} + {} {} armor prof",
+                        dex_used,
+                        format_signed(armor.dex_cap),
+                        armor.ac_bonus,
+                        armor.name,
+                        prof,
+                        Proficiency::parse(&c.proficiencies.armor).label()
+                    ),
+                )
+            }
+            None => {
+                let prof = Proficiency::parse(&c.proficiencies.unarmored_defense).bonus(LEVEL);
+                (
+                    10 + dex + prof,
+                    format!(
+                        "10 + {dex} Dex + {prof} {} unarmored",
+                        Proficiency::parse(&c.proficiencies.unarmored_defense).label()
+                    ),
+                )
+            }
+        };
+
+        let save = |rank: &str, attr_mod: i32, attr: &str| -> (String, String) {
+            let p = Proficiency::parse(rank);
+            let total = p.bonus(LEVEL) + attr_mod;
+            (
+                format_signed(total),
+                format!("{} {} + {} {}", p.bonus(LEVEL), p.label(), attr_mod, attr),
+            )
+        };
+        let (fort, fort_d) = save(&c.proficiencies.fortitude, con, "Con");
+        let (refl, refl_d) = save(&c.proficiencies.reflex, dex, "Dex");
+        let (will, will_d) = save(&c.proficiencies.will, wis, "Wis");
+        let (perc, perc_d) = save(&c.proficiencies.perception, wis, "Wis");
+        let class_dc = 10
+            + Proficiency::parse(&c.proficiencies.class_dc).bonus(LEVEL)
+            + state.key_attribute.map(|a| state.modifier(a)).unwrap_or(0);
+
+        let mut entries = vec![
+            SheetEntry {
+                label: "Hit Points".into(),
+                value: hp.to_string(),
+                detail: Some(hp_detail),
+            },
+            SheetEntry {
+                label: "Armor Class".into(),
+                value: ac.to_string(),
+                detail: Some(ac_detail),
+            },
+            SheetEntry {
+                label: "Fortitude".into(),
+                value: fort,
+                detail: Some(fort_d),
+            },
+            SheetEntry {
+                label: "Reflex".into(),
+                value: refl,
+                detail: Some(refl_d),
+            },
+            SheetEntry {
+                label: "Will".into(),
+                value: will,
+                detail: Some(will_d),
+            },
+            SheetEntry {
+                label: "Perception".into(),
+                value: perc,
+                detail: Some(format!("{perc_d} (initiative)")),
+            },
+        ];
+        if state.key_attribute.is_some() {
+            entries.push(SheetEntry {
+                label: "Class DC".into(),
+                value: class_dc.to_string(),
+                detail: Some(format!(
+                    "10 + {} trained + {} {}",
+                    Proficiency::parse(&c.proficiencies.class_dc).bonus(LEVEL),
+                    state.key_attribute.map(|a| state.modifier(a)).unwrap_or(0),
+                    state
+                        .key_attribute
+                        .map(|a| a.abbrev())
+                        .unwrap_or("key attribute")
+                )),
+            });
+        }
+        let _ = str_;
+        sections.push(SheetSection {
+            title: "Defense".to_string(),
+            entries,
+        });
+
+        // Attacks.
+        sections.push(SheetSection {
+            title: "Attacks".to_string(),
+            entries: attack_entries(state, data, c),
+        });
+
+        // Skills.
+        sections.push(SheetSection {
+            title: "Skills".to_string(),
+            entries: skill_entries(state, data, c),
+        });
+    }
+
+    // Features.
+    let mut features = Vec::new();
+    if let Some(a) = ancestry {
+        for s in &a.specials {
+            features.push(SheetEntry {
+                label: s.name.clone(),
+                value: format!("{} ancestry", a.name),
+                detail: Some(s.text.clone()),
+            });
+        }
+    }
+    if let Some(h) = heritage {
+        features.push(SheetEntry {
+            label: h.name.clone(),
+            value: "heritage".into(),
+            detail: Some(h.text.clone()),
+        });
+    }
+    if let Some(f) = state
+        .ancestry_feat
+        .as_ref()
+        .and_then(|id| data.ancestry_feat(id))
+    {
+        features.push(SheetEntry {
+            label: f.name.clone(),
+            value: "ancestry feat".into(),
+            detail: Some(f.text.clone()),
+        });
+    }
+    if let Some(c) = class {
+        for feature in &c.features {
+            features.push(SheetEntry {
+                label: feature.name.clone(),
+                value: format!("{} feature", c.name),
+                detail: Some(feature.text.clone()),
+            });
+        }
+    }
+    if let Some(f) = state.class_feat.as_ref().and_then(|id| data.class_feat(id)) {
+        features.push(SheetEntry {
+            label: f.name.clone(),
+            value: "class feat".into(),
+            detail: Some(f.text.clone()),
+        });
+    }
+    for id in &state.bonus_class_feats {
+        if let Some(f) = data.class_feat(id) {
+            features.push(SheetEntry {
+                label: f.name.clone(),
+                value: "class feat (Natural Ambition)".into(),
+                detail: Some(f.text.clone()),
+            });
+        }
+    }
+    for id in &state.chosen_general_feats {
+        if let Some(f) = data.general_feat(id) {
+            features.push(SheetEntry {
+                label: f.name.clone(),
+                value: "general feat".into(),
+                detail: Some(f.text.clone()),
+            });
+        }
+    }
+    if let Some(b) = state.background.as_ref().and_then(|id| data.background(id)) {
+        features.push(SheetEntry {
+            label: b.skill_feat.clone(),
+            value: format!("skill feat — {}", b.name),
+            detail: Some(b.text.clone()),
+        });
+    }
+    for e in &state.effects {
+        if let Effect::GrantLore { name: lore } = e {
+            features.push(SheetEntry {
+                label: format!("Additional Lore ({lore})"),
+                value: "skill feat".into(),
+                detail: None,
+            });
+        }
+    }
+    if !features.is_empty() {
+        sections.push(SheetSection {
+            title: "Features".to_string(),
+            entries: features,
+        });
+    }
+
+    // Equipment.
+    let items = inventory(state, data);
+    if !items.is_empty() || state.kit.is_some() {
+        let mut entries: Vec<SheetEntry> = Vec::new();
+        let mut bulk_total: i64 = 0;
+        let mut armor_seen = false;
+        for (id, source) in &items {
+            let armor_record = data.equipment.armor.iter().find(|r| r.id == *id);
+            let mut bulk = data
+                .equipment
+                .weapons
+                .iter()
+                .find(|r| r.id == *id)
+                .map(|r| bulk_tenths(&r.bulk))
+                .or_else(|| armor_record.map(|r| bulk_tenths(&r.bulk)))
+                .or_else(|| {
+                    data.equipment
+                        .shields
+                        .iter()
+                        .find(|r| r.id == *id)
+                        .map(|r| bulk_tenths(&r.bulk))
+                })
+                .or_else(|| {
+                    data.equipment
+                        .gear
+                        .iter()
+                        .find(|r| r.id == *id)
+                        .map(|r| bulk_tenths(&r.bulk))
+                })
+                .unwrap_or(0);
+            let mut note = source.clone();
+            if let Some(a) = armor_record {
+                if armor_seen {
+                    // A second suit of armor is carried, not worn: +1 Bulk.
+                    bulk += 10;
+                    note = format!("{note}; carried");
+                } else {
+                    armor_seen = true;
+                    note = format!("{note}; worn");
+                }
+                let _ = a;
+            }
+            bulk_total += bulk;
+            entries.push(SheetEntry {
+                label: item_name(id, data),
+                value: format_bulk_tenths(bulk),
+                detail: Some(note),
+            });
+        }
+        let spend = total_spend_cp(state, data);
+        entries.push(SheetEntry {
+            label: "Coins".into(),
+            value: format_cp(STARTING_WEALTH_CP - spend),
+            detail: Some(format!(
+                "15 gp starting wealth - {} spent",
+                format_cp(spend)
+            )),
+        });
+        let str_mod = state.modifier(Attribute::Str);
+        entries.push(SheetEntry {
+            label: "Bulk".into(),
+            value: format_bulk_tenths(bulk_total),
+            detail: Some(format!(
+                "encumbered above {} Bulk, maximum {} Bulk",
+                5 + str_mod,
+                10 + str_mod
+            )),
+        });
+        sections.push(SheetSection {
+            title: "Equipment".to_string(),
+            entries,
+        });
+    }
+
+    // Languages and lore.
+    if let Some(a) = ancestry {
+        let mut entries = vec![SheetEntry {
+            label: "Languages".into(),
+            value: a.languages.join(", "),
+            detail: None,
+        }];
+        if !state.lores.is_empty() {
+            for (lore, source) in &state.lores {
+                entries.push(SheetEntry {
+                    label: lore.clone(),
+                    value: "trained".into(),
+                    detail: Some(source.clone()),
+                });
+            }
+        }
+        sections.push(SheetSection {
+            title: "Languages & Lore".to_string(),
+            entries,
+        });
+    }
+
+    SheetView {
+        name,
+        summary,
+        sections,
+    }
+}
+
+impl crate::data::AncestryRecord {
+    fn senses_with_effects(&self, state: &Pf2eState) -> String {
+        let mut senses: Vec<String> = self.senses.clone();
+        for e in &state.effects {
+            if let Effect::Sense { value } = e {
+                if !senses.contains(value) {
+                    senses.push(value.clone());
+                }
+            }
+        }
+        senses.join(", ")
+    }
+}
+
+fn batch_label(batch: &str) -> String {
+    match batch {
+        "ancestry" => "ancestry".to_string(),
+        "ancestry-free" => "ancestry (free)".to_string(),
+        "background" => "background".to_string(),
+        "class" => "class key attribute".to_string(),
+        "free" => "free boost".to_string(),
+        other => other.to_string(),
+    }
+}
+
+pub fn worn_armor<'a>(
+    state: &Pf2eState,
+    data: &'a RulesData,
+) -> Option<&'a crate::data::ArmorRecord> {
+    inventory(state, data)
+        .iter()
+        .find_map(|(id, _)| data.equipment.armor.iter().find(|r| r.id == *id))
+}
+
+fn effective_speed(state: &Pf2eState, data: &RulesData) -> i32 {
+    let base = state
+        .ancestry
+        .as_ref()
+        .and_then(|id| data.ancestry(id))
+        .map(|a| a.speed)
+        .unwrap_or(25);
+    let bonus: i32 = state
+        .effects
+        .iter()
+        .map(|e| match e {
+            Effect::SpeedBonus { value } => *value,
+            _ => 0,
+        })
+        .sum();
+    let ignore_armor = state.has_effect(|e| matches!(e, Effect::IgnoreArmorSpeedPenalty));
+    let armor_penalty = match worn_armor(state, data) {
+        Some(a) if !ignore_armor => {
+            // Meeting the armor's Strength requirement reduces the Speed
+            // penalty by 5 feet.
+            if state.modifier(Attribute::Str) >= a.str_req {
+                (a.speed_penalty + 5).min(0)
+            } else {
+                a.speed_penalty
+            }
+        }
+        _ => 0,
+    };
+    base + bonus + armor_penalty
+}
+
+fn attack_entries(
+    state: &Pf2eState,
+    data: &RulesData,
+    class: &crate::data::ClassRecord,
+) -> Vec<SheetEntry> {
+    let str_ = state.modifier(Attribute::Str);
+    let dex = state.modifier(Attribute::Dex);
+    let mut entries = Vec::new();
+
+    let prof_for = |category: &str| -> Proficiency {
+        match category {
+            "simple" => Proficiency::parse(&class.proficiencies.simple_weapons),
+            "martial" => Proficiency::parse(&class.proficiencies.martial_weapons),
+            "advanced" => Proficiency::parse(&class.proficiencies.advanced_weapons),
+            _ => Proficiency::Untrained,
+        }
+    };
+
+    // Fist first — everyone has it.
+    let unarmed_prof = Proficiency::parse(&class.proficiencies.unarmed_attacks);
+    let fist_attr = if dex > str_ { dex } else { str_ };
+    let fist_attr_name = if dex > str_ { "Dex" } else { "Str" };
+    entries.push(SheetEntry {
+        label: "Fist".into(),
+        value: format!(
+            "{} · 1d4{} B",
+            format_signed(unarmed_prof.bonus(LEVEL) + fist_attr),
+            if str_ != 0 {
+                format_signed(str_)
+            } else {
+                String::new()
+            }
+        ),
+        detail: Some(format!(
+            "{} {} + {} {} · agile, finesse, nonlethal, unarmed",
+            unarmed_prof.bonus(LEVEL),
+            unarmed_prof.label(),
+            fist_attr,
+            fist_attr_name
+        )),
+    });
+    for e in &state.effects {
+        if let Effect::UnarmedAttack {
+            name,
+            damage,
+            traits,
+        } = e
+        {
+            let finesse = traits.iter().any(|t| t == "finesse");
+            let attr = if finesse && dex > str_ { dex } else { str_ };
+            let attr_name = if finesse && dex > str_ { "Dex" } else { "Str" };
+            entries.push(SheetEntry {
+                label: name.clone(),
+                value: format!(
+                    "{} · {}{}",
+                    format_signed(unarmed_prof.bonus(LEVEL) + attr),
+                    damage,
+                    if str_ != 0 {
+                        format!(" ({})", format_signed(str_))
+                    } else {
+                        String::new()
+                    }
+                ),
+                detail: Some(format!(
+                    "{} {} + {} {} · {}",
+                    unarmed_prof.bonus(LEVEL),
+                    unarmed_prof.label(),
+                    attr,
+                    attr_name,
+                    traits.join(", ")
+                )),
+            });
+        }
+    }
+
+    for (id, _) in inventory(state, data) {
+        let Some(w) = data.equipment.weapons.iter().find(|r| r.id == id) else {
+            continue;
+        };
+        let Some(damage) = &w.damage else { continue }; // ammunition
+        let prof = prof_for(&w.category);
+        // A thrown weapon is a melee weapon you can also throw; only true
+        // ranged weapons (bows, slings) attack and damage with Dex rules.
+        let thrown = w.traits.iter().any(|t| t.starts_with("thrown"));
+        let is_ranged = w.range.is_some() && !thrown;
+        let finesse = w.traits.iter().any(|t| t == "finesse");
+        let propulsive = w.traits.iter().any(|t| t == "propulsive");
+        let (attr, attr_name) = if is_ranged || (finesse && dex > str_) {
+            (dex, "Dex")
+        } else {
+            (str_, "Str")
+        };
+        let bonus = prof.bonus(LEVEL) + attr;
+        let dmg_mod = if is_ranged {
+            if propulsive && str_ > 0 {
+                str_ / 2
+            } else if propulsive {
+                str_
+            } else {
+                0
+            }
+        } else {
+            str_
+        };
+        entries.push(SheetEntry {
+            label: w.name.clone(),
+            value: format!(
+                "{} · {}{}",
+                format_signed(bonus),
+                damage,
+                if dmg_mod != 0 {
+                    format_signed(dmg_mod)
+                } else {
+                    String::new()
+                }
+            ),
+            detail: Some(format!(
+                "{} {} ({}) + {} {}{}{}",
+                prof.bonus(LEVEL),
+                prof.label(),
+                w.category,
+                attr,
+                attr_name,
+                w.range
+                    .as_ref()
+                    .map(|r| format!(" · {r}"))
+                    .unwrap_or_default(),
+                if w.traits.is_empty() {
+                    String::new()
+                } else {
+                    format!(" · {}", w.traits.join(", "))
+                }
+            )),
+        });
+    }
+    entries
+}
+
+fn skill_entries(
+    state: &Pf2eState,
+    data: &RulesData,
+    class: &crate::data::ClassRecord,
+) -> Vec<SheetEntry> {
+    let resolution = state.skill_resolution();
+    let armor = worn_armor(state, data);
+    let str_mod = state.modifier(Attribute::Str);
+    let check_penalty = match armor {
+        Some(a) if str_mod < a.str_req => a.check_penalty,
+        _ => 0,
+    };
+    let _ = class;
+    data.skills
+        .iter()
+        .map(|skill| {
+            let trained_source = resolution
+                .trained
+                .iter()
+                .find(|(id, _)| *id == skill.id)
+                .map(|(_, source)| source.clone());
+            let prof = if trained_source.is_some() {
+                Proficiency::Trained
+            } else {
+                Proficiency::Untrained
+            };
+            let attr_mod = state.modifier(skill.attribute);
+            let physical = matches!(skill.attribute, Attribute::Str | Attribute::Dex);
+            let penalty = if physical { check_penalty } else { 0 };
+            let total = prof.bonus(LEVEL) + attr_mod + penalty;
+            let mut detail = format!(
+                "{} {} + {} {}",
+                prof.bonus(LEVEL),
+                prof.label(),
+                attr_mod,
+                skill.attribute.abbrev()
+            );
+            if penalty != 0 {
+                detail.push_str(&format!(" {penalty} armor check penalty"));
+            }
+            if let Some(source) = trained_source {
+                detail.push_str(&format!(" · from {source}"));
+            }
+            SheetEntry {
+                label: skill.name.clone(),
+                value: format_signed(total),
+                detail: Some(detail),
+            }
+        })
+        .collect()
+}
+
+// ---- Selection parsing and checklist helpers shared by kind modules ----
+
+use engine_core::ApplyError;
+use types::{ChecklistEntry, ChecklistSeverity, Selection, SlotId, StepId};
+
+pub fn sel_single(selection: &Selection) -> Result<&OptionId, ApplyError> {
+    match selection {
+        Selection::Option(id) => Ok(id),
+        _ => Err(ApplyError::new("expected a single option")),
+    }
+}
+
+pub fn sel_multi(selection: &Selection) -> Result<&[OptionId], ApplyError> {
+    match selection {
+        Selection::Options(ids) => Ok(ids),
+        _ => Err(ApplyError::new("expected a list of options")),
+    }
+}
+
+pub fn sel_text(selection: &Selection) -> Result<&str, ApplyError> {
+    match selection {
+        Selection::Text(t) => Ok(t),
+        _ => Err(ApplyError::new("expected text")),
+    }
+}
+
+pub fn sel_attribute(selection: &Selection) -> Result<Attribute, ApplyError> {
+    let id = sel_single(selection)?;
+    Attribute::from_option_id(id)
+        .ok_or_else(|| ApplyError::new(format!("'{id}' is not an attribute")))
+}
+
+pub fn sel_attributes(selection: &Selection) -> Result<Vec<Attribute>, ApplyError> {
+    sel_multi(selection)?
+        .iter()
+        .map(|id| {
+            Attribute::from_option_id(id)
+                .ok_or_else(|| ApplyError::new(format!("'{id}' is not an attribute")))
+        })
+        .collect()
+}
+
+pub fn incomplete(
+    slot: &str,
+    step: &str,
+    rule: &str,
+    message: &str,
+    source: &str,
+) -> ChecklistEntry {
+    ChecklistEntry {
+        severity: ChecklistSeverity::Incomplete,
+        slot: SlotId::new(slot),
+        step: StepId::new(step),
+        rule: rule.to_string(),
+        message: message.to_string(),
+        source: source.to_string(),
+    }
+}
+
+pub fn illegal(slot: &str, step: &str, rule: &str, message: &str, source: &str) -> ChecklistEntry {
+    ChecklistEntry {
+        severity: ChecklistSeverity::Illegal,
+        slot: SlotId::new(slot),
+        step: StepId::new(step),
+        rule: rule.to_string(),
+        message: message.to_string(),
+        source: source.to_string(),
+    }
+}
+
+/// Render-ready display name for any record or attribute option ID.
+pub fn display_name(data: &RulesData, id: &OptionId) -> String {
+    let s = id.as_str();
+    if let Some(attr) = Attribute::from_option_id(id) {
+        return attr.name().to_string();
+    }
+    data.ancestry(s)
+        .map(|r| r.name.clone())
+        .or_else(|| data.heritage(s).map(|r| r.name.clone()))
+        .or_else(|| data.ancestry_feat(s).map(|r| r.name.clone()))
+        .or_else(|| data.background(s).map(|r| r.name.clone()))
+        .or_else(|| data.class(s).map(|r| r.name.clone()))
+        .or_else(|| data.class_feat(s).map(|r| r.name.clone()))
+        .or_else(|| data.general_feat(s).map(|r| r.name.clone()))
+        .or_else(|| data.skill(s).map(|r| r.name.clone()))
+        .or_else(|| data.kit(s).map(|r| r.name.clone()))
+        .or_else(|| {
+            data.kit("kit.fighter").and_then(|k| {
+                k.options
+                    .iter()
+                    .find(|o| o.id == s)
+                    .map(|o| format!("{} — {}", k.name, o.name))
+            })
+        })
+        .unwrap_or_else(|| item_name(s, data))
+}
+
+/// A describe closure for slots whose selections are option IDs or text.
+pub fn describe_selection(data: &std::sync::Arc<RulesData>, selection: &Selection) -> String {
+    match selection {
+        Selection::Option(id) => display_name(data, id),
+        Selection::Options(ids) => ids
+            .iter()
+            .map(|id| display_name(data, id))
+            .collect::<Vec<_>>()
+            .join(", "),
+        Selection::Text(t) => {
+            let t = t.trim();
+            if t.chars().count() > 40 {
+                format!("\"{}…\"", t.chars().take(40).collect::<String>())
+            } else {
+                format!("\"{t}\"")
+            }
+        }
+    }
+}
+
+/// Attribute options for boost slots.
+pub fn attribute_options(
+    exclude_note: impl Fn(Attribute) -> Option<String>,
+) -> Vec<types::OptionView> {
+    ALL_ATTRIBUTES
+        .into_iter()
+        .map(|attr| {
+            let note = exclude_note(attr);
+            types::OptionView {
+                id: attr.option_id(),
+                label: attr.name().to_string(),
+                summary: String::new(),
+                details: vec![],
+                available: note.is_none(),
+                unavailable_reason: note,
+            }
+        })
+        .collect()
+}
+
+// ---- Slot and step identifiers ----
+// Single-sourced here so kind modules can wire dependents without
+// referencing each other (kinds -> mechanics -> engine-core).
+
+pub const STEP_CONCEPT: &str = "concept";
+pub const STEP_ANCESTRY: &str = "ancestry";
+pub const STEP_BACKGROUND: &str = "background";
+pub const STEP_CLASS: &str = "class";
+pub const STEP_BOOSTS: &str = "boosts";
+pub const STEP_EQUIPMENT: &str = "equipment";
+pub const STEP_DETAILS: &str = "details";
+
+pub const SLOT_CONCEPT: &str = "pf2e.concept";
+pub const SLOT_ANCESTRY: &str = "pf2e.ancestry";
+pub const SLOT_HERITAGE: &str = "pf2e.ancestry.heritage";
+pub const SLOT_ANCESTRY_FEAT: &str = "pf2e.ancestry.feat";
+pub const SLOT_ANCESTRY_FREE_BOOSTS: &str = "pf2e.boosts.ancestry-free";
+pub const SLOT_BACKGROUND: &str = "pf2e.background";
+pub const SLOT_BACKGROUND_BOOST_CHOICE: &str = "pf2e.boosts.background-choice";
+pub const SLOT_BACKGROUND_BOOST_FREE: &str = "pf2e.boosts.background-free";
+pub const SLOT_CLASS: &str = "pf2e.class";
+pub const SLOT_KEY_ATTRIBUTE: &str = "pf2e.class.key-attribute";
+pub const SLOT_CLASS_FEAT: &str = "pf2e.class.feat";
+pub const SLOT_CLASS_SKILL: &str = "pf2e.skills.class-choice";
+pub const SLOT_TRAINED_SKILLS: &str = "pf2e.skills.trained";
+pub const SLOT_HERITAGE_SKILLS: &str = "pf2e.skills.heritage-choice";
+pub const SLOT_FEAT_SKILLS: &str = "pf2e.skills.feat-choice";
+pub const SLOT_REPLACEMENT_1: &str = "pf2e.skills.replacement-1";
+pub const SLOT_REPLACEMENT_2: &str = "pf2e.skills.replacement-2";
+pub const SLOT_REPLACEMENT_3: &str = "pf2e.skills.replacement-3";
+pub const SLOT_HERITAGE_GENERAL_FEAT: &str = "pf2e.feats.general.heritage";
+pub const SLOT_FEAT_GENERAL_FEAT: &str = "pf2e.feats.general.ancestry-feat";
+pub const SLOT_NATURAL_AMBITION: &str = "pf2e.feats.class.natural-ambition";
+pub const SLOT_FREE_BOOSTS: &str = "pf2e.boosts.free";
+pub const SLOT_KIT: &str = "pf2e.equipment.kit";
+pub const SLOT_EXTRA_ITEMS: &str = "pf2e.equipment.extra";
+pub const SLOT_NAME: &str = "pf2e.details.name";
+pub const SLOT_DESCRIPTION: &str = "pf2e.details.description";
+
+pub fn capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
+        None => String::new(),
+    }
+}
