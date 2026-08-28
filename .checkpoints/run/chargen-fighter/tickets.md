@@ -1,5 +1,7 @@
 # chargen-fighter — ticket plan
 
+**Report accepted by Ben 2026-08-27** — mechanical tail (PR → CI → merge) authorized.
+
 Run state for the implement stage. Governing docs (do not diverge):
 - `.checkpoints/specs/chargen-fighter.md` (approved ba13d2a4498d)
 - `.checkpoints/architecture/chargen-fighter.md` (approved b4e01fd3e3b3)
