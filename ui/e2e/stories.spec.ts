@@ -246,6 +246,14 @@ test('a half-confirmed multi slot stays open and finishes in place', async ({ pa
   // Finish in place: two more picks, one Confirm — no clearing dialog.
   await card.locator('label:has-text("Religion") input').check();
   await card.locator('label:has-text("Crafting") input').check();
+  // The live preview must treat the tentative picks as REPLACING the
+  // partial decision, not stacking on it — no phantom "already trained"
+  // or over-count entries while editing.
+  await expect(card.getByTestId('meter-Chosen')).toContainText('Chosen 3 of 3');
+  await expect(page.getByTestId('checklist').getByText(/already trained/)).toHaveCount(0);
+  await expect(
+    page.getByTestId('checklist').getByText(/but only \d+ allowed/),
+  ).toHaveCount(0);
   await card.getByRole('button', { name: /confirm/i }).click();
   await expect(card.locator('.slot-confirmed-value')).toHaveText(
     'Survival, Religion, Crafting',

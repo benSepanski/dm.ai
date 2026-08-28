@@ -32,6 +32,15 @@ cascades deferred to level-up/retraining.
   and the ancestry-feat-before-class ordering needs deliberate design
   (lock-until-class vs select-and-revalidate).
 
+- [x] **5. (fixed) Live preview double-counted a partial slot's picks** —
+  editing a Partial slot folded the confirmed decision AND the tentative
+  replacement into the preview, producing phantom "6 skills selected" /
+  "already trained" entries (server state was always correct; regression
+  introduced by the amend round, found by Ben in the browser). Fix: the
+  hypothetical log replaces, not stacks, a pending slot's decision — amend
+  semantics client-side too. e2e now asserts no phantom entries while
+  finishing a partial slot.
+
 ## Answered without change
 
 - Details step ✓ at start: correct — the roster's working name is a real

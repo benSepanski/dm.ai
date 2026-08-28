@@ -86,7 +86,12 @@ export function Wizard({
       return draft.projection;
     }
     try {
-      const hypothetical: Decision[] = [...serverLog];
+      // A tentative selection REPLACES the slot's confirmed decision in the
+      // hypothetical (amend semantics) — keeping both would double-count a
+      // partial slot's picks.
+      const hypothetical: Decision[] = serverLog.filter(
+        (d) => pending[d.slot] === undefined,
+      );
       for (const [slot, selection] of entries) {
         hypothetical.push({
           id: `preview-${slot}`,

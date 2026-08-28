@@ -248,6 +248,14 @@ generalized change (full ledger: [review-notes.md](review-notes.md)):
    budget rule derives its violation entry from the same computation, so a
    violation without a visible gauge is unrepresentable.
 
+A follow-up regression Ben caught in the browser: the live preview
+double-counted a Partial slot's picks (confirmed + tentative folded
+together), showing phantom "already trained"/over-count entries while the
+server state stayed correct. Fixed by giving the client-side preview amend
+semantics (a tentative selection replaces the slot's decision in the
+hypothetical log), with e2e assertions that no phantom entries appear while
+finishing a partial slot.
+
 Guarding the class of bug: property-walk coherence invariants (every
 Partial/Illegal slot has a checklist entry; every entry targets a
 non-Complete slot; finalize-ready means nothing required is unfinished) run
