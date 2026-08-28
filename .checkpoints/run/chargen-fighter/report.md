@@ -137,7 +137,7 @@ green at 0e22ef4 (implementation f70b13e + review round):
 | Wire ≠ storage | [storage.rs](../../../crates/server/src/persistence/storage.rs) (`pub(crate)` max) + layering spot-check | compile-visibility + test |
 | Kind modules don't bleed | ruleset layout + module scan | test green over the real six kind modules |
 | TS strictness, no `any`, façade-only wasm access, no rules-data import | [tsconfig.json](../../../ui/tsconfig.json), [eslint.config.js](../../../ui/eslint.config.js) | `tsc --noEmit` + `eslint .` clean |
-| Bindings never stale | committed [pkg](../../../ui/src/engine/pkg) + CI regen-diff | local regen produced zero diff |
+| Bindings never stale | committed [pkg](../../../ui/src/engine/pkg) + CI regen-diff (TS surface byte-exact; the .wasm binary is environment-dependent, so its staleness is caught behaviorally by the parity smoke against native-kept fixtures) | regen diff clean; parity 3/3 |
 | Persistence contract (schema v1, newer-version refusal, quarantine, trash) | [persistence.rs](../../../checks/persistence.rs) | 5 tests incl. real second-instance refusal |
 | Crash safety under SIGKILL | [crash_harness.rs](../../../checks/crash_harness.rs) | 4 kill cycles/run against the real binary; asserts durable state = acked or acked+in-flight |
 | Confirm idempotency + stale-tab conflict | [confirm_idempotency.rs](../../../checks/confirm_idempotency.rs) | incl. the stale-version retry case |

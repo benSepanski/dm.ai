@@ -54,10 +54,17 @@ jobs:
           rm -f ui/src/engine/pkg/.gitignore
 
       - name: Generated bindings never stale
-        # porcelain (not diff) so UNTRACKED drift fails too — a plain
-        # `git diff --exit-code` cannot see files that were never committed.
+        # porcelain (not diff) so UNTRACKED drift fails too. The TS surface
+        # (.js/.d.ts) must match byte-for-byte — wasm-bindgen's version is
+        # locked, so it is deterministic. The .wasm binary embeds
+        # environment-dependent bytes (source paths, wasm-opt), so its
+        # staleness is enforced BEHAVIORALLY instead: the ui job's parity
+        # smoke runs the committed binary against fixture sheets the native
+        # engine keeps fresh — a stale binary fails there on any engine
+        # behavior change.
         run: |
           git status --porcelain -- ui/src/engine/pkg
+          git checkout -- ui/src/engine/pkg/wasm_bg.wasm
           test -z "$(git status --porcelain -- ui/src/engine/pkg)" 
 
       - name: Warm incremental rebuild budget (< 10 s)
