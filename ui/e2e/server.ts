@@ -26,8 +26,11 @@ export class TestServer {
     this.dataDir = mkdtempSync(join(tmpdir(), 'dmai-e2e-'));
   }
 
-  async start(): Promise<void> {
-    const child = spawn(serverBinary(), ['--data-dir', this.dataDir, '--port', '0'], {
+  /** The port the server is bound to (0 until started). */
+  port = 0;
+
+  async start(port = 0): Promise<void> {
+    const child = spawn(serverBinary(), ['--data-dir', this.dataDir, '--port', String(port)], {
       stdio: ['ignore', 'pipe', 'inherit'],
     });
     this.child = child;
@@ -43,6 +46,7 @@ export class TestServer {
       child.on('exit', (code) => reject(new Error(`server exited early (${code})`)));
       setTimeout(() => reject(new Error('server did not print its URL')), 10_000);
     });
+    this.port = Number(new URL(this.url).port);
   }
 
   /** SIGKILL — the crash story's kill -9. */

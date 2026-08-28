@@ -30,7 +30,7 @@ export function SlotCard({
   const gauges = (live ?? slot).meters;
   if (slot.status === 'locked') {
     return (
-      <section className="slot locked" data-slot={slot.id}>
+      <section className="slot locked status-locked" data-slot={slot.id}>
         <header>
           <h3>{slot.label}</h3>
         </header>

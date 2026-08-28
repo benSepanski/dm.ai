@@ -311,6 +311,55 @@ test('changing ancestry lists exactly what will be cleared, then reopens those s
   await expect(checklist.getByText('Choose an ancestry')).toBeVisible();
 });
 
+test('a stale tab conflicts instead of interleaving, and reloads itself', async ({
+  page,
+  context,
+}) => {
+  await createCharacter(page, 'TwoTabs');
+  const url = page.url();
+  const pageB = await context.newPage();
+  await pageB.goto(url);
+  await expect(pageB.locator('.wizard')).toBeVisible();
+
+  // Tab A confirms an ancestry; tab B still holds the old draft version.
+  await gotoStep(page, 'Ancestry');
+  await confirmOption(page, 'pf2e.ancestry', 'Dwarf');
+
+  // Tab B tries to confirm a different ancestry from its stale view.
+  await gotoStep(pageB, 'Ancestry');
+  const cardB = slot(pageB, 'pf2e.ancestry');
+  await cardB.locator('label:has-text("Elf") input').check();
+  await cardB.getByRole('button', { name: /confirm/i }).click();
+
+  // No silent interleave: B is told, and shows the reloaded truth (Dwarf).
+  await expect(pageB.locator('.notice')).toContainText('another tab');
+  await expect(cardB.locator('.slot-confirmed-value')).toHaveText('Dwarf');
+  await pageB.close();
+});
+
+test('a confirm while the server is down explains itself and retries cleanly', async ({
+  page,
+}) => {
+  await createCharacter(page, 'Offline');
+  await gotoStep(page, 'Ancestry');
+  const card = slot(page, 'pf2e.ancestry');
+  await card.locator('label:has-text("Dwarf") input').check();
+
+  const port = server.port;
+  server.killNine();
+
+  await card.getByRole('button', { name: /confirm/i }).click();
+  // The failure is explained where the user can see it, and the tentative
+  // pick survives.
+  await expect(page.locator('.notice')).toContainText('did not save');
+  await expect(card.locator('label:has-text("Dwarf") input')).toBeChecked();
+
+  // Server comes back on the same port; the same button now succeeds.
+  await server.start(port);
+  await card.getByRole('button', { name: /confirm/i }).click();
+  await expect(card.locator('.slot-confirmed-value')).toHaveText('Dwarf');
+});
+
 test('deleting a draft asks once, then the file sits in trash/', async ({ page }) => {
   await createCharacter(page, 'Doomed');
   await page.getByRole('button', { name: '← Roster' }).click();

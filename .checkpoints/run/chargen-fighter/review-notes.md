@@ -53,6 +53,15 @@ cascades deferred to level-up/retraining.
   Now: transient in-card "Saved — N left" acknowledgment + sticky notice bar
   so rejections/conflicts can't land off-viewport. e2e asserts the ack.
 
+- [x] **9. (fixed) e2e gaps for conflict + server-down** — closed under the
+  adopted testing strategy: e2e samples mechanisms (suite stays ~1:1 with
+  spec stories + one story per interaction mechanism), lower layers
+  enumerate. Added: SlotStatus x SlotViewKind rendering grid (40 combos,
+  jsdom — found and fixed a missing status class on locked cards on its
+  first run), dual-tab conflict story (notice + self-reload, no interleave),
+  server-down confirm story (explained failure, tentative preserved, clean
+  retry on same port). Model-based UI walk parked for Epoch 6.
+
 ## Answered without change
 
 - Details step ✓ at start: correct — the roster's working name is a real

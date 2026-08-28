@@ -256,6 +256,14 @@ semantics (a tentative selection replaces the slot's decision in the
 hypothetical log), with e2e assertions that no phantom entries appear while
 finishing a partial slot.
 
+The round also settled an e2e strategy: browser tests sample mechanisms
+(one story per spec scenario or interaction mechanism), enum grids and
+property walks enumerate. Concretely: a SlotStatus x SlotViewKind rendering
+grid (every semantic state must render decided and distinguishable — it
+caught a styling inconsistency on its first run) and two outcome stories
+(dual-tab conflict reloads instead of interleaving; a confirm against a
+dead server explains itself and retries cleanly after restart).
+
 Guarding the class of bug: property-walk coherence invariants (every
 Partial/Illegal slot has a checklist entry; every entry targets a
 non-Complete slot; finalize-ready means nothing required is unfinished) run
