@@ -84,12 +84,21 @@ Expect `DIVERGED … Defense / Hit Points: stored '99', replay '23'` and exit
 code 1; the app still loads the stored sheet.
 
 **5. Jumping ahead + change-ancestry.** On a fresh character go straight to
-Equipment: the kit slot explains its lock ("choose a class first — kits are
-class-specific"), the item list still works, Finalize is disabled and the
-checklist lists every gap. Then on a dwarf with heritage+feat chosen, hit
-"Change…" on Ancestry: the prompt must list exactly Ancestry, Heritage,
-Ancestry feat, and the ancestry free boost — nothing else — and clearing
-reopens those slots.
+Equipment: the step's sidebar badge is a hollow ○ ("waiting"), the kit slot
+explains its lock ("choose a class first — kits are class-specific"), the
+item list still works, Finalize is disabled and the checklist lists every
+gap. Then on a dwarf with heritage+feat chosen, hit "Change…" on Ancestry:
+the prompt must list exactly Ancestry, Heritage, Ancestry feat, and the
+ancestry free boost — nothing else — and clearing reopens those slots.
+
+**5b. Half-done slots and the budget gauge (review-round fixes).** On the
+Class step, confirm only one of your three trained skills: the slot stays
+open with the pick still checked, an amber edge, and a "Chosen 1 of 3 —
+keep picking" pill; check the other two and Confirm once — it finishes in
+place, no clearing dialog. Then on Equipment, watch the "Spent … of 15 gp"
+pill tick as you add items, and push past 15 gp: the pill goes red ("over
+the limit") before you confirm, the step badge shows !, and finalize stays
+blocked until you remove something.
 
 **6. Delete to trash.** Delete a draft from the roster (it asks once), then:
 
@@ -117,7 +126,7 @@ with anything, start the server: it walks to 8081 and prints the URL.
 ## Constraints now enforced
 
 Every row of the architecture table runs in the repo's own tooling; all
-green at [f70b13e](../../..):
+green at 0e22ef4 (implementation f70b13e + review round):
 
 | Rule | Lives at | Proof |
 |---|---|---|
