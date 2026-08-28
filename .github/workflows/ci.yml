@@ -73,18 +73,26 @@ jobs:
         # about the incremental loop, so turn it back on here.
         env:
           CARGO_INCREMENTAL: "1"
+        # Millisecond timing, best of two attempts: shared-runner scheduler
+        # noise can't fake a failure, and a real crate-bloat regression (the
+        # thing this budget attributes) shows up as multiples, not tenths.
         run: |
           cargo build -p server
-          touch crates/engine-core/src/lib.rs
-          start=$(date +%s)
-          cargo build -p server --timings
-          wasm-pack build crates/wasm --target web --out-dir ../../ui/src/engine/pkg --no-pack
-          rm -f ui/src/engine/pkg/.gitignore
-          end=$(date +%s)
-          elapsed=$((end - start))
-          echo "warm incremental rebuild: ${elapsed}s (budget 10s)"
+          best=9999999
+          for attempt in 1 2; do
+            touch crates/engine-core/src/lib.rs
+            start=$(date +%s%3N)
+            cargo build -p server --timings
+            wasm-pack build crates/wasm --target web --out-dir ../../ui/src/engine/pkg --no-pack
+            rm -f ui/src/engine/pkg/.gitignore
+            end=$(date +%s%3N)
+            ms=$((end - start))
+            echo "warm incremental rebuild attempt ${attempt}: ${ms}ms"
+            if [ "$ms" -lt "$best" ]; then best=$ms; fi
+          done
           git checkout -- ui/src/engine/pkg
-          test "$elapsed" -lt 10
+          echo "warm incremental rebuild best-of-2: ${best}ms (budget 10000ms)"
+          test "$best" -lt 10000
       - name: Upload build timings
         uses: actions/upload-artifact@v4
         with:
