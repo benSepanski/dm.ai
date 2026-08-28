@@ -98,6 +98,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 vec![]
             }
         }),
+        meters: Box::new(|_, _| vec![]),
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     });
 
@@ -156,6 +157,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 vec![]
             }
         }),
+        meters: Box::new(|_, _| vec![]),
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     });
 
@@ -232,6 +234,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             }
             out
         }),
+        meters: Box::new(|_, _| vec![]),
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     });
 

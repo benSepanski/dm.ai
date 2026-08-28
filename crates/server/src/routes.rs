@@ -39,6 +39,7 @@ pub(crate) fn router(app: SharedApp) -> Router {
             get(get_character).delete(delete_character),
         )
         .route("/api/characters/{id}/confirm", post(confirm))
+        .route("/api/characters/{id}/amend", post(amend))
         .route("/api/characters/{id}/clear", post(clear))
         .route("/api/characters/{id}/step", post(set_step))
         .route("/api/characters/{id}/finalize", post(finalize))
@@ -279,6 +280,62 @@ async fn confirm(
             };
             Ok(Json(ConfirmOutcome::Rejected {
                 reasons: vec![entry],
+                draft: draft_view(&app, &loaded)?,
+            }))
+        }
+    }
+}
+
+/// Replace a slot's decision atomically (cascade + append in one durable
+/// write). Same request/outcome shapes and idempotency rules as confirm.
+async fn amend(
+    State(app): State<SharedApp>,
+    AxumPath(id): AxumPath<String>,
+    Json(request): Json<ConfirmRequest>,
+) -> Result<Json<ConfirmOutcome>, Failure> {
+    let store = app.store.lock().await;
+    let mut loaded = store.load(&CharacterId::new(id))?;
+    if loaded.state == DocState::Finalized {
+        return Err(Failure::Unprocessable(
+            "character is finalized — build decisions are locked".into(),
+        ));
+    }
+    if loaded.log.iter().any(|d| d.id == request.decision.id) {
+        return Ok(Json(ConfirmOutcome::Confirmed {
+            draft: draft_view(&app, &loaded)?,
+        }));
+    }
+    if request.version != loaded.draft_version {
+        return Ok(Json(ConfirmOutcome::Conflict {
+            current: draft_view(&app, &loaded)?,
+        }));
+    }
+    let slot = request.decision.slot.clone();
+    match app.engine.amend(&loaded.log, request.decision) {
+        Ok(AppendOutcome::AlreadyPresent) => Ok(Json(ConfirmOutcome::Confirmed {
+            draft: draft_view(&app, &loaded)?,
+        })),
+        Ok(AppendOutcome::Appended(new_log)) => {
+            loaded.log = new_log;
+            loaded.sheet = app
+                .engine
+                .sheet(&loaded.log)
+                .map_err(|e| Failure::Internal(e.to_string()))?;
+            loaded.draft_version += 1;
+            store.save(&loaded)?;
+            Ok(Json(ConfirmOutcome::Confirmed {
+                draft: draft_view(&app, &loaded)?,
+            }))
+        }
+        Err(e) => {
+            let step = app
+                .engine
+                .steps()
+                .first()
+                .map(|(id, _)| id.clone())
+                .unwrap_or_else(|| StepId::new("concept"));
+            Ok(Json(ConfirmOutcome::Rejected {
+                reasons: vec![engine_error_entry(step, slot, e.to_string())],
                 draft: draft_view(&app, &loaded)?,
             }))
         }

@@ -83,6 +83,7 @@ fn toy_engine() -> Engine<ToyState> {
                     vec![]
                 }
             }),
+            meters: Box::new(|_, _| vec![]),
             describe: Box::new(|sel| format!("{sel:?}")),
         },
         SlotRegistration::<ToyState> {
@@ -127,6 +128,7 @@ fn toy_engine() -> Engine<ToyState> {
                     vec![]
                 }
             }),
+            meters: Box::new(|_, _| vec![]),
             describe: Box::new(|sel| format!("{sel:?}")),
         },
         SlotRegistration::<ToyState> {
@@ -176,6 +178,7 @@ fn toy_engine() -> Engine<ToyState> {
                 }
                 out
             }),
+            meters: Box::new(|_, _| vec![]),
             describe: Box::new(|sel| format!("{sel:?}")),
         },
         SlotRegistration::<ToyState> {
@@ -202,6 +205,7 @@ fn toy_engine() -> Engine<ToyState> {
                     vec![]
                 }
             }),
+            meters: Box::new(|_, _| vec![]),
             describe: Box::new(|sel| format!("{sel:?}")),
         },
         // Exists only when primary == b.
@@ -223,6 +227,7 @@ fn toy_engine() -> Engine<ToyState> {
                 Ok(())
             }),
             validate: Box::new(|_, _| vec![]),
+            meters: Box::new(|_, _| vec![]),
             describe: Box::new(|sel| format!("{sel:?}")),
         },
     ];
@@ -510,6 +515,193 @@ mod random_walk {
                 let p2 = engine.project(&log).unwrap();
                 prop_assert_eq!(&p1, &p2, "projection must be deterministic");
                 prop_assert_eq!(p1.can_finalize, p1.checklist.is_empty());
+                crate::tests::status_and_amend::assert_coherent(&p1);
+            }
+        }
+    }
+}
+
+mod status_and_amend {
+    use super::*;
+    use types::{MeterState, SlotStatus, StepStatus};
+
+    fn slot_view<'a>(p: &'a types::ProjectionView, id: &str) -> &'a types::SlotView {
+        p.steps
+            .iter()
+            .flat_map(|s| &s.slots)
+            .find(|s| s.id.as_str() == id)
+            .expect("slot present")
+    }
+
+    #[test]
+    fn statuses_track_the_slot_lifecycle() {
+        let engine = toy_engine();
+        let p = engine.project(&[]).unwrap();
+        assert_eq!(slot_view(&p, "primary").status, SlotStatus::Empty);
+        assert_eq!(slot_view(&p, "secondary").status, SlotStatus::Locked);
+
+        let log = append(&engine, &[], one("d1", "primary", "a"));
+        let p = engine.project(&log).unwrap();
+        assert_eq!(slot_view(&p, "primary").status, SlotStatus::Complete);
+        assert_eq!(slot_view(&p, "secondary").status, SlotStatus::Empty);
+
+        // One of two picks: Partial, and the auto count meter says so.
+        let log2 = append(
+            &engine,
+            &log,
+            input("d2", "picks", Selection::Options(vec![OptionId::new("x")])),
+        );
+        let p = engine.project(&log2).unwrap();
+        let picks = slot_view(&p, "picks");
+        assert_eq!(picks.status, SlotStatus::Partial);
+        let meter = &picks.meters[0];
+        assert_eq!(
+            (meter.current.as_str(), meter.limit.as_deref()),
+            ("1", Some("2"))
+        );
+        assert_eq!(meter.state, MeterState::Short);
+
+        // Duplicate picks: Illegal beats Partial.
+        let log3 = append(
+            &engine,
+            &log,
+            input(
+                "d3",
+                "picks",
+                Selection::Options(vec![OptionId::new("x"), OptionId::new("x")]),
+            ),
+        );
+        let p = engine.project(&log3).unwrap();
+        assert_eq!(slot_view(&p, "picks").status, SlotStatus::Illegal);
+    }
+
+    #[test]
+    fn step_status_folds_over_slot_statuses() {
+        let engine = toy_engine();
+        // Fresh log: step one has an actionable required slot -> Incomplete.
+        let p = engine.project(&[]).unwrap();
+        assert_eq!(p.steps[0].status, StepStatus::Incomplete);
+
+        // A step whose only required work is locked shows Waiting, not done:
+        // complete everything in step two except nothing — instead check the
+        // constructed case: primary confirmed makes secondary actionable.
+        let log = append(&engine, &[], one("w1", "primary", "a"));
+        let p = engine.project(&log).unwrap();
+        assert_eq!(p.steps[0].status, StepStatus::Incomplete); // secondary now empty
+    }
+
+    #[test]
+    fn amend_extends_a_partial_slot_atomically() {
+        let engine = toy_engine();
+        let log = append(
+            &engine,
+            &[],
+            input("a1", "picks", Selection::Options(vec![OptionId::new("x")])),
+        );
+        let out = engine
+            .amend(
+                &log,
+                input(
+                    "a2",
+                    "picks",
+                    Selection::Options(vec![OptionId::new("x"), OptionId::new("y")]),
+                ),
+            )
+            .unwrap();
+        let AppendOutcome::Appended(new_log) = out else {
+            panic!("expected append");
+        };
+        assert_eq!(new_log.len(), 1, "old decision replaced, not stacked");
+        assert_eq!(new_log[0].id.as_str(), "a2");
+        assert_eq!(new_log[0].order, 0);
+        let p = engine.project(&new_log).unwrap();
+        assert_eq!(slot_view(&p, "picks").status, SlotStatus::Complete);
+    }
+
+    #[test]
+    fn amend_is_idempotent_and_falls_back_to_append() {
+        let engine = toy_engine();
+        // Unoccupied slot: amend behaves as append.
+        let out = engine.amend(&[], one("f1", "primary", "b")).unwrap();
+        let AppendOutcome::Appended(log) = out else {
+            panic!("expected append");
+        };
+        // Replay of the same decision ID appends nothing.
+        assert_eq!(
+            engine.amend(&log, one("f1", "primary", "b")).unwrap(),
+            AppendOutcome::AlreadyPresent
+        );
+    }
+
+    #[test]
+    fn amend_cascades_dependents_like_clear() {
+        let engine = toy_engine();
+        let mut log = append(&engine, &[], one("c1", "primary", "b"));
+        log = append(&engine, &log, one("c2", "secondary", "b1"));
+        // Amending primary to "a" clears secondary (catalog changed).
+        let out = engine.amend(&log, one("c3", "primary", "a")).unwrap();
+        let AppendOutcome::Appended(new_log) = out else {
+            panic!("expected append");
+        };
+        assert_eq!(new_log.len(), 1);
+        assert_eq!(new_log[0].id.as_str(), "c3");
+    }
+
+    /// Coherence: every non-Complete slot explains itself, every entry
+    /// points at a non-Complete slot, and can_finalize means no required
+    /// slot is anything but Complete.
+    pub fn assert_coherent(p: &types::ProjectionView) {
+        for slot in p.steps.iter().flat_map(|s| &s.slots) {
+            match slot.status {
+                SlotStatus::Locked => {
+                    assert!(
+                        slot.locked_reason.is_some(),
+                        "{}: Locked without reason",
+                        slot.id
+                    );
+                }
+                SlotStatus::Partial | SlotStatus::Illegal => {
+                    assert!(
+                        p.checklist.iter().any(|e| e.slot == slot.id),
+                        "{}: {:?} without a checklist entry",
+                        slot.id,
+                        slot.status
+                    );
+                }
+                SlotStatus::Empty => {
+                    if slot.required {
+                        assert!(
+                            p.checklist.iter().any(|e| e.slot == slot.id),
+                            "{}: required Empty without a checklist entry",
+                            slot.id
+                        );
+                    }
+                }
+                SlotStatus::Complete => {}
+            }
+        }
+        for entry in &p.checklist {
+            let slot = p
+                .steps
+                .iter()
+                .flat_map(|s| &s.slots)
+                .find(|s| s.id == entry.slot)
+                .unwrap_or_else(|| panic!("entry for absent slot {}", entry.slot));
+            assert_ne!(
+                slot.status,
+                SlotStatus::Complete,
+                "{}: entry against a Complete slot",
+                entry.slot
+            );
+        }
+        if p.can_finalize {
+            for slot in p.steps.iter().flat_map(|s| &s.slots) {
+                assert!(
+                    !slot.required || slot.status == SlotStatus::Complete,
+                    "{}: can_finalize with required slot {:?}",
+                    slot.id,
+                    slot.status
+                );
             }
         }
     }

@@ -222,6 +222,55 @@ test('jumping ahead: equipment before class works, finalize blocks with every ga
   await expect(checklist.getByText('Choose an ancestry')).toBeVisible();
   await expect(checklist.getByText('Choose a background')).toBeVisible();
   await expect(checklist.getByText('Choose a class')).toBeVisible();
+
+  // "Nothing to do yet" is not "done": Equipment shows the hollow waiting
+  // badge, not a green check, while its required kit slot is locked.
+  await expect(page.locator('.step-link.status-waiting')).toContainText('6. Equipment');
+});
+
+test('a half-confirmed multi slot stays open and finishes in place', async ({ page }) => {
+  await createCharacter(page, 'Halfway');
+  await gotoStep(page, 'Class');
+  await confirmOption(page, 'pf2e.class', 'Fighter');
+  const card = slot(page, 'pf2e.skills.trained');
+  await card.scrollIntoViewIfNeeded();
+
+  // Confirm just one of the three required picks.
+  await card.locator('label:has-text("Survival") input').check();
+  await card.getByRole('button', { name: /confirm/i }).click();
+
+  // The slot stays editable, keeps the pick, and the meter says how short.
+  await expect(card.locator('label:has-text("Survival") input')).toBeChecked();
+  await expect(card.getByTestId('meter-Chosen')).toContainText('Chosen 1 of 3 — keep picking');
+
+  // Finish in place: two more picks, one Confirm — no clearing dialog.
+  await card.locator('label:has-text("Religion") input').check();
+  await card.locator('label:has-text("Crafting") input').check();
+  await card.getByRole('button', { name: /confirm/i }).click();
+  await expect(card.locator('.slot-confirmed-value')).toHaveText(
+    'Survival, Religion, Crafting',
+  );
+  await expect(card.getByTestId('meter-Chosen')).toContainText('Chosen 3 of 3');
+});
+
+test('the equipment budget meter is live and flips when overspent', async ({ page }) => {
+  await createCharacter(page, 'Spendthrift');
+  await gotoStep(page, 'Equipment');
+  const card = slot(page, 'pf2e.equipment.extra');
+  await card.scrollIntoViewIfNeeded();
+
+  await expect(card.getByTestId('meter-Spent')).toContainText('Spent 0 cp of 15 gp');
+
+  // Two breastplates (16 gp) cross the 15 gp line — the meter flips before
+  // anything is confirmed.
+  const addBreastplate = card.getByRole('button', { name: /^Breastplate 8 gp/ });
+  await addBreastplate.click();
+  await addBreastplate.click();
+  await expect(card.getByTestId('meter-Spent')).toContainText('over the limit');
+
+  // Removing one brings it back under.
+  await card.locator('.shopping-list').getByRole('button', { name: 'remove' }).first().click();
+  await expect(card.getByTestId('meter-Spent')).toContainText('Spent 8 gp of 15 gp');
 });
 
 test('changing ancestry lists exactly what will be cleared, then reopens those slots', async ({

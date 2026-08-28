@@ -22,10 +22,13 @@ pub struct ProjectionView {
 #[cfg_attr(feature = "ts", derive(tsify::Tsify))]
 #[serde(rename_all = "snake_case")]
 pub enum StepStatus {
-    /// Every slot in the step is resolved and legal.
+    /// Every required slot in the step is resolved and legal.
     Complete,
-    /// Unresolved slots remain (the badge case — never blocking).
+    /// Actionable work remains (the badge case — never blocking).
     Incomplete,
+    /// Nothing to do yet: required slots exist but are locked behind
+    /// choices made elsewhere ("nothing to do yet" is not "done").
+    Waiting,
     /// A confirmed choice in this step is illegal.
     Illegal,
 }
@@ -55,6 +58,49 @@ pub enum SlotViewKind {
     Text { multiline: bool },
 }
 
+/// The engine's verdict on one slot — delivered pre-joined so the UI never
+/// infers state from weaker signals (decision presence, entry absence).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+#[serde(rename_all = "snake_case")]
+pub enum SlotStatus {
+    /// Not selectable yet; `locked_reason` explains why.
+    Locked,
+    /// Open with nothing confirmed.
+    Empty,
+    /// Confirmed but unfinished (fewer picks than required) — the editor
+    /// stays open and confirming again amends.
+    Partial,
+    /// Resolved and legal.
+    Complete,
+    /// A confirmed state here breaks a rule (checklist explains).
+    Illegal,
+}
+
+/// A render-ready gauge attached to a slot — always present, not only on
+/// violation ("Spent 5 gp, 8 sp of 15 gp", "2 of 4 chosen").
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct MeterView {
+    pub label: String,
+    /// Render-ready current value.
+    pub current: String,
+    /// Render-ready bound, when one exists.
+    pub limit: Option<String>,
+    pub state: MeterState,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+#[serde(rename_all = "snake_case")]
+pub enum MeterState {
+    Ok,
+    /// Unfinished (under the required count).
+    Short,
+    /// Over a hard bound.
+    Exceeded,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(tsify::Tsify))]
 pub struct SlotView {
@@ -69,6 +115,10 @@ pub struct SlotView {
     pub locked_reason: Option<String>,
     /// Whether resolving this slot is required to finalize.
     pub required: bool,
+    /// The engine's verdict on this slot; the UI renders it, never infers it.
+    pub status: SlotStatus,
+    /// Always-on gauges (counts, budgets), live under previews.
+    pub meters: Vec<MeterView>,
     /// The confirmed decision currently occupying this slot, if any.
     pub decision: Option<Decision>,
     /// The catalog as of the current log (empty for text slots).

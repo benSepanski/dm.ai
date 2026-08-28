@@ -693,6 +693,34 @@ mod properties {
                 let p2 = engine.project(&log).unwrap();
                 prop_assert_eq!(&p1, &p2);
                 prop_assert_eq!(p1.can_finalize, p1.checklist.is_empty());
+                // Coherence: statuses, entries, and explanations agree.
+                for slot in p1.steps.iter().flat_map(|s| &s.slots) {
+                    match slot.status {
+                        types::SlotStatus::Locked => {
+                            prop_assert!(slot.locked_reason.is_some());
+                        }
+                        types::SlotStatus::Partial | types::SlotStatus::Illegal => {
+                            prop_assert!(
+                                p1.checklist.iter().any(|e| e.slot == slot.id),
+                                "{} is {:?} with no checklist entry",
+                                slot.id, slot.status
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+                for entry in &p1.checklist {
+                    let target = p1
+                        .steps
+                        .iter()
+                        .flat_map(|s| &s.slots)
+                        .find(|s| s.id == entry.slot);
+                    prop_assert!(target.is_some(), "entry for absent slot {}", entry.slot);
+                    prop_assert!(
+                        target.unwrap().status != types::SlotStatus::Complete,
+                        "entry against Complete slot {}", entry.slot
+                    );
+                }
             }
         }
     }

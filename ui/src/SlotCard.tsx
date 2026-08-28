@@ -2,12 +2,13 @@
 // change-with-dependent-clearing flow. Pure presentation — counts, legality,
 // and effects all come from the engine.
 import { useState } from 'react';
-import type { ClearPreview, Decision, OptionView, Selection, SlotView } from './engine';
+import type { ClearPreview, Decision, MeterView, OptionView, Selection, SlotView } from './engine';
 
 export type TentativeSelection = Selection | null;
 
 export function SlotCard({
   slot,
+  live,
   tentative,
   onTentative,
   onConfirm,
@@ -15,13 +16,16 @@ export function SlotCard({
   busy,
 }: {
   slot: SlotView;
+  /** The previewed twin of this slot (meters/status track tentative picks). */
+  live?: SlotView | undefined;
   tentative: TentativeSelection;
   onTentative: (selection: TentativeSelection) => void;
   onConfirm: (selection: Selection) => void;
   onRequestChange: () => void;
   busy: boolean;
 }) {
-  if (slot.locked_reason !== undefined && slot.locked_reason !== null) {
+  const gauges = (live ?? slot).meters;
+  if (slot.status === 'locked') {
     return (
       <section className="slot locked" data-slot={slot.id}>
         <header>
@@ -32,14 +36,22 @@ export function SlotCard({
     );
   }
   const confirmed = slot.decision ?? null;
+  // Partial slots stay editable: the editor opens preloaded with the
+  // confirmed picks, and Confirm amends in place.
+  const editing = confirmed === null || slot.status === 'partial';
+  const effectiveTentative =
+    tentative ?? (slot.status === 'partial' ? (confirmed?.selection ?? null) : null);
   return (
-    <section className={`slot ${confirmed !== null ? 'confirmed' : ''}`} data-slot={slot.id}>
+    <section
+      className={`slot status-${slot.status} ${confirmed !== null && !editing ? 'confirmed' : ''}`}
+      data-slot={slot.id}
+    >
       <header>
         <h3>
           {slot.label}
           {!slot.required && <span className="slot-optional"> (optional)</span>}
         </h3>
-        {confirmed !== null && (
+        {confirmed !== null && !editing && (
           <button
             type="button"
             className="slot-change"
@@ -50,18 +62,37 @@ export function SlotCard({
           </button>
         )}
       </header>
-      {confirmed !== null ? (
-        <ConfirmedSummary slot={slot} decision={confirmed} />
-      ) : (
+      <MetersRow meters={gauges} />
+      {editing ? (
         <SlotEditor
           slot={slot}
-          tentative={tentative}
+          tentative={effectiveTentative}
           onTentative={onTentative}
           onConfirm={onConfirm}
           busy={busy}
         />
+      ) : (
+        <ConfirmedSummary slot={slot} decision={confirmed} />
       )}
     </section>
+  );
+}
+
+function MetersRow({ meters }: { meters: MeterView[] }) {
+  if (meters.length === 0) {
+    return null;
+  }
+  return (
+    <p className="meters">
+      {meters.map((meter, i) => (
+        <span key={i} className={`meter meter-${meter.state}`} data-testid={`meter-${meter.label}`}>
+          {meter.label} {meter.current}
+          {meter.limit != null ? ` of ${meter.limit}` : ''}
+          {meter.state === 'exceeded' ? ' — over the limit' : ''}
+          {meter.state === 'short' ? ' — keep picking' : ''}
+        </span>
+      ))}
+    </p>
   );
 }
 

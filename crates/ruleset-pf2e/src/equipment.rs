@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use engine_core::{ApplyError, Availability, SlotRegistration};
-use types::{OptionId, OptionView, SlotId, SlotViewKind, StepId};
+use types::{MeterState, MeterView, OptionId, OptionView, SlotId, SlotViewKind, StepId};
 
 use crate::data::RulesData;
 use crate::mechanics::{
@@ -117,6 +117,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 vec![]
             }
         }),
+        meters: Box::new(|_, _| vec![]),
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     });
 
@@ -124,6 +125,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
     let d = data.clone();
     let d_apply = data.clone();
     let d_val = data.clone();
+    let d_meter = data.clone();
     let d_desc = data.clone();
     regs.push(SlotRegistration::<Pf2eState> {
         id: SlotId::new(SLOT_EXTRA_ITEMS),
@@ -195,6 +197,21 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             } else {
                 vec![]
             }
+        }),
+        // The always-on gauge the budget rule derives from: a violation
+        // without a visible meter is unrepresentable.
+        meters: Box::new(move |state, _| {
+            let spend = total_spend_cp(state, &d_meter);
+            vec![MeterView {
+                label: "Spent".into(),
+                current: format_cp(spend),
+                limit: Some("15 gp".into()),
+                state: if spend > STARTING_WEALTH_CP {
+                    MeterState::Exceeded
+                } else {
+                    MeterState::Ok
+                },
+            }]
         }),
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     });

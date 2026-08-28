@@ -3,6 +3,7 @@
 // change-confirmed-choice flow with its dependent-clearing prompt.
 import { useEffect, useMemo, useState } from 'react';
 import {
+  amendDecision,
   clearSlot,
   confirmDecision,
   finalizeCharacter,
@@ -32,6 +33,8 @@ function badge(status: StepStatus): string {
       return '!';
     case 'incomplete':
       return '•';
+    case 'waiting':
+      return '○';
   }
 }
 
@@ -126,7 +129,9 @@ export function Wizard({
     setBusy(true);
     setNotice(null);
     try {
-      const outcome = await confirmDecision(draft.id, draft.version, {
+      const occupied = serverLog.some((d) => d.slot === slot);
+      const send = occupied ? amendDecision : confirmDecision;
+      const outcome = await send(draft.id, draft.version, {
         id: newDecisionId(),
         slot,
         selection,
@@ -279,6 +284,9 @@ export function Wizard({
           <SlotCard
             key={slot.id}
             slot={slot}
+            live={displayed.steps
+              .flatMap((s) => s.slots)
+              .find((s) => s.id === slot.id)}
             tentative={pending[slot.id] ?? null}
             onTentative={(selection) =>
               setPending((p) => {

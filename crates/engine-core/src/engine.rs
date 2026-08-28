@@ -6,7 +6,8 @@ use std::collections::BTreeSet;
 
 use types::{
     ChecklistEntry, ChecklistSeverity, ClearPreview, ClearedDecision, Decision, DecisionInput,
-    ProjectionView, SheetView, SlotId, SlotView, StepId, StepStatus, StepView,
+    MeterState, MeterView, ProjectionView, Selection, SheetView, SlotId, SlotStatus, SlotView,
+    SlotViewKind, StepId, StepStatus, StepView,
 };
 
 use crate::{Availability, SlotRegistration};
@@ -129,12 +130,57 @@ impl<S> Engine<S> {
             }
             let decision = log.iter().rev().find(|d| d.slot == reg.id);
             let entries = (reg.validate)(&state, decision);
-            checklist.extend(entries);
 
             let locked_reason = match &availability {
                 Availability::Locked { reason } => Some(reason.clone()),
                 _ => None,
             };
+            // The engine's verdict, delivered pre-joined: the UI renders
+            // status, it never re-derives it from decisions or entries.
+            let status = if locked_reason.is_some() {
+                SlotStatus::Locked
+            } else if entries
+                .iter()
+                .any(|e| e.severity == ChecklistSeverity::Illegal)
+            {
+                SlotStatus::Illegal
+            } else if decision.is_none() {
+                SlotStatus::Empty
+            } else if entries
+                .iter()
+                .any(|e| e.severity == ChecklistSeverity::Incomplete)
+            {
+                SlotStatus::Partial
+            } else {
+                SlotStatus::Complete
+            };
+            checklist.extend(entries);
+
+            let kind = (reg.kind)(&state);
+            let mut meters = Vec::new();
+            // Auto count meter for every open Multi slot — the engine knows
+            // both numbers, so no ruleset should hand-roll these.
+            if locked_reason.is_none() {
+                if let SlotViewKind::Multi { count } = kind {
+                    let picked = match decision.map(|d| &d.selection) {
+                        Some(Selection::Options(ids)) => ids.len(),
+                        Some(_) => 1,
+                        None => 0,
+                    };
+                    meters.push(MeterView {
+                        label: "Chosen".to_string(),
+                        current: picked.to_string(),
+                        limit: Some(count.to_string()),
+                        state: match (picked as u64).cmp(&u64::from(count)) {
+                            std::cmp::Ordering::Less => MeterState::Short,
+                            std::cmp::Ordering::Equal => MeterState::Ok,
+                            std::cmp::Ordering::Greater => MeterState::Exceeded,
+                        },
+                    });
+                }
+                meters.extend((reg.meters)(&state, decision));
+            }
+
             let options = if locked_reason.is_none() {
                 (reg.options)(&state)
             } else {
@@ -145,10 +191,12 @@ impl<S> Engine<S> {
                 SlotView {
                     id: reg.id.clone(),
                     label: reg.label.clone(),
-                    kind: (reg.kind)(&state),
+                    kind,
                     presentation_hint: reg.presentation_hint.clone(),
                     locked_reason,
                     required: reg.required,
+                    status,
+                    meters,
                     decision: decision.cloned(),
                     options,
                 },
@@ -164,16 +212,21 @@ impl<S> Engine<S> {
                     .filter(|(step, _)| step == id)
                     .map(|(_, v)| v.clone())
                     .collect();
-                let illegal = checklist
-                    .iter()
-                    .any(|e| e.step == *id && e.severity == ChecklistSeverity::Illegal);
-                let incomplete = checklist
-                    .iter()
-                    .any(|e| e.step == *id && e.severity == ChecklistSeverity::Incomplete);
-                let status = if illegal {
+                // A pure fold over slot statuses: any Illegal wins; any
+                // required actionable gap shows Incomplete; required slots
+                // that exist but are locked mean Waiting — "nothing to do
+                // yet" is not "done".
+                let status = if slots.iter().any(|s| s.status == SlotStatus::Illegal) {
                     StepStatus::Illegal
-                } else if incomplete {
+                } else if slots.iter().any(|s| {
+                    s.required && matches!(s.status, SlotStatus::Empty | SlotStatus::Partial)
+                }) {
                     StepStatus::Incomplete
+                } else if slots
+                    .iter()
+                    .any(|s| s.required && s.status == SlotStatus::Locked)
+                {
+                    StepStatus::Waiting
                 } else {
                     StepStatus::Complete
                 };
@@ -267,6 +320,26 @@ impl<S> Engine<S> {
         // Structural validation is the fold accepting the new log.
         self.fold(&new_log)?;
         Ok(AppendOutcome::Appended(new_log))
+    }
+
+    /// Replace a slot's decision atomically: cascade-clear the old decision
+    /// (same dependents rule as `clear`), then append the new one — a single
+    /// engine step, one durable write at the persistence layer. Idempotent
+    /// under decision-ID replay; on an unoccupied slot it behaves as append.
+    pub fn amend(
+        &self,
+        log: &[Decision],
+        input: DecisionInput,
+    ) -> Result<AppendOutcome, EngineError> {
+        if log.iter().any(|d| d.id == input.id) {
+            return Ok(AppendOutcome::AlreadyPresent);
+        }
+        let base = if log.iter().any(|d| d.slot == input.slot) {
+            self.clear(log, &input.slot)?
+        } else {
+            log.to_vec()
+        };
+        self.append(&base, input)
     }
 
     /// What clearing `slot` would take with it (the confirmation prompt).

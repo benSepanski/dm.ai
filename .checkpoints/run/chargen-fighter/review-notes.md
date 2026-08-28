@@ -18,7 +18,7 @@ cascades deferred to level-up/retraining.
 
 ## Findings
 
-- [f] **1. Step badges: green ✓ on Equipment before a class exists** conflates
+- [x] **1. (fixed) Step badges: green ✓ on Equipment before a class exists** conflates
   "nothing to do yet" with "done" (Details' ✓ was legitimate — working name
   already confirmed). Proposed: fourth `Waiting` StepStatus rendered as a
   hollow badge (types + projection + UI + e2e + fixtures). Awaiting
@@ -39,3 +39,15 @@ cascades deferred to level-up/retraining.
 - Unconventional Weaponry / Adapted Cantrip / Ancient Elf / Otherworldly
   Magic are intentionally visible-but-unavailable with reasons (report
   decisions 2–3); un-greyed by future data slices, never selectable here.
+
+## Fix round outcome (2026-08-27)
+
+All three agreed findings landed in one commit, generalized rather than
+patched: per-slot `SlotStatus` + `Waiting` step badge (#1), Partial slots
+stay editable and Confirm amends atomically (#3), engine meters with the
+budget gauge deriving its own violation entry (#4). Coherence invariants
+(test-only, property-walk assertions) pin the class of bug going forward.
+New e2e stories: finish-partial-in-place, live budget meter. Full matrix
+green; suite 7s warm. Process note: agent started implementing while the
+design conversation was still open — Ben flagged it; future rounds hold
+until an explicit go.

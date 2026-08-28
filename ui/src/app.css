@@ -500,3 +500,36 @@ textarea {
   border: 1px solid var(--line);
   background: #fff;
 }
+
+.step-badge.status-waiting {
+  background: transparent;
+  border: 1.5px solid var(--ink-soft);
+  color: var(--ink-soft);
+}
+.slot.status-illegal {
+  border-left: 4px solid var(--bad);
+}
+.slot.status-partial {
+  border-left: 4px solid var(--warn);
+}
+.meters {
+  display: flex;
+  gap: 0.8rem;
+  margin: 0 0 0.5rem;
+  flex-wrap: wrap;
+}
+.meter {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border-radius: 999px;
+  padding: 0.1rem 0.7rem;
+}
+.meter-short {
+  color: var(--warn);
+}
+.meter-exceeded {
+  color: #fff;
+  background: var(--bad);
+}

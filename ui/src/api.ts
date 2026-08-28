@@ -65,6 +65,18 @@ export function confirmDecision(
   });
 }
 
+/** Replace a slot's existing decision atomically (finish a partial pick). */
+export function amendDecision(
+  id: string,
+  version: number,
+  decision: DecisionInput,
+): Promise<ConfirmOutcome> {
+  return request(`/api/characters/${encodeURIComponent(id)}/amend`, {
+    method: 'POST',
+    body: JSON.stringify({ version, decision }),
+  });
+}
+
 export function clearSlot(id: string, version: number, slot: SlotId): Promise<ClearOutcome> {
   return request(`/api/characters/${encodeURIComponent(id)}/clear`, {
     method: 'POST',

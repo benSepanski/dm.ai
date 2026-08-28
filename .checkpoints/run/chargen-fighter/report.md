@@ -220,6 +220,40 @@ green at [f70b13e](../../..):
   (2026-08-02 snapshot), with the two find-and-fix notes (Blacksmith→
   Artisan, no-prereq fighter feats) folded into the data.
 
+## Review round (2026-08-27, pre-acceptance)
+
+Ben's hands-on review surfaced three UX defects, fixed together as one
+generalized change (full ledger: [review-notes.md](review-notes.md)):
+
+1. **Step badges overclaimed** — a step whose required slots were merely
+   locked showed ✓. Now: per-slot `SlotStatus` (locked/empty/partial/
+   complete/illegal) computed by the engine, step badges a pure fold over
+   it, with a hollow `Waiting` badge for "nothing to do yet".
+2. **Half-confirmed multi slots looked done** — 2-of-4 skills rendered as a
+   closed card. Now: Partial slots keep their editor open, preloaded, and
+   Confirm amends via a new atomic engine op + `/amend` route (idempotent,
+   version-checked; cascades exactly like clear, dialog only when other
+   slots' decisions are actually taken along).
+3. **The equipment budget was invisible until violated** — now slots carry
+   always-on engine meters ("Spent 8 gp of 15 gp", "Chosen 2 of 4"); the
+   budget rule derives its violation entry from the same computation, so a
+   violation without a visible gauge is unrepresentable.
+
+Guarding the class of bug: property-walk coherence invariants (every
+Partial/Illegal slot has a checklist entry; every entry targets a
+non-Complete slot; finalize-ready means nothing required is unfinished) run
+in both the toy-ruleset and full-PF2e random walks; a component test
+asserts the five statuses render distinguishably. Two e2e stories added
+(finish-partial-in-place; live budget meter). Sheets are untouched, so all
+goldens, fixtures, and the parity smoke stand unchanged. Dropped by Ben:
+the Adapted Cantrip copy nit (future spellcasting slices supersede it).
+
+A harness complaint was logged this round (no channel for iterative
+review feedback; see complaints.jsonl). The original "Complaints logged"
+statement below still covers the implementation run itself.
+
 ## Complaints logged
 
-None — the gate, ACTIVE hook, and stage flow behaved throughout this run.
+None during implementation — the gate, ACTIVE hook, and stage flow behaved
+throughout the build. One complaint logged during report review (iterative
+feedback channel), recorded 2026-08-27 in complaints.jsonl.

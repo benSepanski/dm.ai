@@ -12,6 +12,8 @@ function boostSlot(): SlotView {
     presentation_hint: 'attribute-boosts',
     locked_reason: undefined,
     required: true,
+    status: 'empty',
+    meters: [],
     decision: undefined,
     options: ['str', 'dex', 'con', 'int', 'wis', 'cha'].map((attr) => ({
       id: `attr.${attr}`,
@@ -68,8 +70,81 @@ describe('SlotCard boost counter', () => {
     expect(screen.getByRole('button', { name: /confirm/i })).toBeDisabled();
   });
 
+  it('renders the five statuses distinguishably', () => {
+    const base = boostSlot();
+    const decision = {
+      id: 'd1',
+      slot: base.id,
+      selection: { kind: 'options' as const, value: ['attr.str'] },
+      source: 'player' as const,
+      order: 0,
+    };
+    const variants: SlotView[] = [
+      { ...base, status: 'locked', locked_reason: 'choose a class first' },
+      { ...base, status: 'empty' },
+      { ...base, status: 'partial', decision },
+      { ...base, status: 'complete', decision },
+      { ...base, status: 'illegal', decision },
+    ];
+    const rendered = variants.map((v) => {
+      const { container, unmount } = render(
+        <SlotCard
+          slot={v}
+          tentative={null}
+          onTentative={() => undefined}
+          onConfirm={() => undefined}
+          onRequestChange={() => undefined}
+          busy={false}
+        />,
+      );
+      const section = container.querySelector('section');
+      const signature = [
+        section?.className.match(/status-\w+/)?.[0],
+        section?.querySelector('.slot-locked-reason') !== null,
+        section?.querySelector('input, select') !== null,
+        section?.querySelector('.slot-confirmed-value') !== null,
+      ].join('|');
+      unmount();
+      return signature;
+    });
+    expect(new Set(rendered).size).toBe(rendered.length);
+    // Partial keeps the editor open with the confirmed pick preloaded.
+    render(
+      <SlotCard
+        slot={{ ...base, status: 'partial', decision }}
+        tentative={null}
+        onTentative={() => undefined}
+        onConfirm={() => undefined}
+        onRequestChange={() => undefined}
+        busy={false}
+      />,
+    );
+    expect(screen.getByLabelText('Boost 1')).toHaveValue('attr.str');
+  });
+
+  it('renders meters in both editing and confirmed states', () => {
+    const meter = {
+      label: 'Spent',
+      current: '16 gp',
+      limit: '15 gp',
+      state: 'exceeded' as const,
+    };
+    const base = boostSlot();
+    render(
+      <SlotCard
+        slot={{ ...base, meters: [meter] }}
+        tentative={null}
+        onTentative={() => undefined}
+        onConfirm={() => undefined}
+        onRequestChange={() => undefined}
+        busy={false}
+      />,
+    );
+    expect(screen.getByTestId('meter-Spent')).toHaveTextContent('Spent 16 gp of 15 gp — over the limit');
+  });
+
   it('locked slots explain themselves', () => {
-    const slot = { ...boostSlot(), locked_reason: 'choose an ancestry first' };
+    const slot: SlotView = { ...boostSlot(), status: 'locked', locked_reason: 'choose an ancestry first' };
     render(
       <SlotCard
         slot={slot}
