@@ -68,7 +68,11 @@ jobs:
           test -z "$(git status --porcelain -- ui/src/engine/pkg)" 
 
       - name: Warm incremental rebuild budget (< 10 s)
-        # Engine change -> new WASM + server binary, warm cache.
+        # Engine change -> new WASM + server binary, warm cache. rust-cache
+        # exports CARGO_INCREMENTAL=0 globally; this budget is specifically
+        # about the incremental loop, so turn it back on here.
+        env:
+          CARGO_INCREMENTAL: "1"
         run: |
           cargo build -p server
           touch crates/engine-core/src/lib.rs
