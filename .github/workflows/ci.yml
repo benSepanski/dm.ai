@@ -21,9 +21,10 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - name: Install wasm-pack and cargo-deny
-        run: |
-          curl -LsSf https://github.com/rustwasm/wasm-pack/releases/latest/download/wasm-pack-init.sh | sh || cargo install wasm-pack --locked
-          cargo install cargo-deny --locked
+        # Prebuilt binaries; a curl|sh pipeline can 404 and still exit 0.
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack,cargo-deny
 
       - name: Format
         run: cargo fmt --all -- --check
