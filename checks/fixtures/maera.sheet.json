@@ -1,0 +1,309 @@
+{
+  "name": "Maera",
+  "summary": [
+    "Dwarf (Aiuvarin) Fighter 1",
+    "Medium · Speed 20 feet · darkvision, low-light vision"
+  ],
+  "sections": [
+    {
+      "title": "Attributes",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "+4",
+          "detail": "+1 ancestry, +1 background, +1 class key attribute, +1 free boost"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+1",
+          "detail": "+1 free boost"
+        },
+        {
+          "label": "Constitution",
+          "value": "+3",
+          "detail": "+1 ancestry, +1 background, +1 free boost"
+        },
+        {
+          "label": "Intelligence",
+          "value": "+0",
+          "detail": null
+        },
+        {
+          "label": "Wisdom",
+          "value": "+2",
+          "detail": "+1 ancestry, +1 free boost"
+        },
+        {
+          "label": "Charisma",
+          "value": "-1",
+          "detail": "-1 ancestry flaw"
+        }
+      ]
+    },
+    {
+      "title": "Defense",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "23",
+          "detail": "10 ancestry + 10 class + 3 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "17",
+          "detail": "10 + 1 Dex (cap +2) + 3 Scale Mail + 3 trained armor prof"
+        },
+        {
+          "label": "Fortitude",
+          "value": "+8",
+          "detail": "5 expert + 3 Con"
+        },
+        {
+          "label": "Reflex",
+          "value": "+6",
+          "detail": "5 expert + 1 Dex"
+        },
+        {
+          "label": "Will",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis"
+        },
+        {
+          "label": "Perception",
+          "value": "+7",
+          "detail": "5 expert + 2 Wis (initiative)"
+        },
+        {
+          "label": "Class DC",
+          "value": "17",
+          "detail": "10 + 3 trained + 4 Str"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": [
+        {
+          "label": "Fist",
+          "value": "+9 · 1d4+4 B",
+          "detail": "5 expert + 4 Str · agile, finesse, nonlethal, unarmed"
+        },
+        {
+          "label": "Dagger",
+          "value": "+9 · 1d4 P+4",
+          "detail": "5 expert (simple) + 4 Str · thrown 10 ft. · agile, finesse, thrown 10 ft., versatile S"
+        },
+        {
+          "label": "Longsword",
+          "value": "+9 · 1d8 S+4",
+          "detail": "5 expert (martial) + 4 Str · versatile P"
+        },
+        {
+          "label": "Javelin",
+          "value": "+9 · 1d6 P+4",
+          "detail": "5 expert (simple) + 4 Str · thrown 30 ft. · thrown"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+1",
+          "detail": "0 untrained + 1 Dex"
+        },
+        {
+          "label": "Arcana",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Athletics",
+          "value": "+7",
+          "detail": "3 trained + 4 Str · from Fighter"
+        },
+        {
+          "label": "Crafting",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Deception",
+          "value": "-1",
+          "detail": "0 untrained + -1 Cha"
+        },
+        {
+          "label": "Diplomacy",
+          "value": "-1",
+          "detail": "0 untrained + -1 Cha"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+2",
+          "detail": "3 trained + -1 Cha · from Fighter"
+        },
+        {
+          "label": "Medicine",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis · from Fighter"
+        },
+        {
+          "label": "Nature",
+          "value": "+2",
+          "detail": "0 untrained + 2 Wis"
+        },
+        {
+          "label": "Occultism",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Performance",
+          "value": "+2",
+          "detail": "3 trained + -1 Cha · from Earned Glory"
+        },
+        {
+          "label": "Religion",
+          "value": "+2",
+          "detail": "0 untrained + 2 Wis"
+        },
+        {
+          "label": "Society",
+          "value": "+3",
+          "detail": "3 trained + 0 Int · from Fighter"
+        },
+        {
+          "label": "Stealth",
+          "value": "+1",
+          "detail": "0 untrained + 1 Dex"
+        },
+        {
+          "label": "Survival",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis · from Background: Bounty Hunter"
+        },
+        {
+          "label": "Thievery",
+          "value": "+1",
+          "detail": "0 untrained + 1 Dex"
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Darkvision",
+          "value": "Dwarf ancestry",
+          "detail": "You can see in darkness and dim light just as well as you can see in bright light, though your vision in darkness is in black and white."
+        },
+        {
+          "label": "Clan Dagger",
+          "value": "Dwarf ancestry",
+          "detail": "You get one clan dagger of your clan for free, as it was given to you at birth. Selling this dagger is considered a terrible taboo."
+        },
+        {
+          "label": "Aiuvarin",
+          "value": "heritage",
+          "detail": "You have elves, or possibly other aiuvarins, in your family tree, with pointed ears and other telltale signs of elf heritage. You gain the elf trait, the aiuvarin trait, and low-light vision (or darkvision, if your ancestry already has low-light vision). In addition, when you gain an ancestry feat, you can choose from aiuvarin and elf feats in addition to those from your ancestry."
+        },
+        {
+          "label": "Earned Glory",
+          "value": "ancestry feat",
+          "detail": "You are experienced at telling stories of your accomplishments to gain the respect of elves. You become trained in Performance (if you would automatically become trained in Performance, you instead become trained in a skill of your choice). You gain the Impressive Performance feat. When you attempt a Performance check to Make an Impression on an elf, if you roll a critical failure, you get a failure instead."
+        },
+        {
+          "label": "Reactive Strike",
+          "value": "Fighter feature",
+          "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+        },
+        {
+          "label": "Shield Block",
+          "value": "Fighter feature",
+          "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+        },
+        {
+          "label": "Sudden Charge",
+          "value": "class feat",
+          "detail": "With a quick sprint, you dash up to your foe and swing: Stride twice, and if you end your movement within melee reach of at least one enemy, make a melee Strike against that enemy. You can use Sudden Charge while Burrowing, Climbing, Flying, or Swimming instead of Striding if you have the corresponding movement type."
+        },
+        {
+          "label": "Experienced Tracker",
+          "value": "skill feat — Bounty Hunter",
+          "detail": "You tracked down fugitives for coin, learning to follow trails and work within the law's edges."
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Scale Mail",
+          "value": "2 Bulk",
+          "detail": "Fighter Kit; worn"
+        },
+        {
+          "label": "Dagger",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Adventurer's Pack",
+          "value": "1 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Grappling Hook",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Longsword",
+          "value": "1 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Steel Shield",
+          "value": "1 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Javelin",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Rope (50 feet)",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Coins",
+          "value": "5 gp, 6 sp",
+          "detail": "15 gp starting wealth - 9 gp, 4 sp spent"
+        },
+        {
+          "label": "Bulk",
+          "value": "5 Bulk, 4 L",
+          "detail": "encumbered above 9 Bulk, maximum 14 Bulk"
+        }
+      ]
+    },
+    {
+      "title": "Languages & Lore",
+      "entries": [
+        {
+          "label": "Languages",
+          "value": "Common, Dwarven",
+          "detail": null
+        },
+        {
+          "label": "Legal Lore",
+          "value": "trained",
+          "detail": "Background: Bounty Hunter"
+        }
+      ]
+    }
+  ]
+}

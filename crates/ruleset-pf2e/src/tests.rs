@@ -72,6 +72,13 @@ fn data_files() -> Vec<(&'static str, String)> {
             "name": "Woodland Elf", "text": "Forest-born.", "effects": [], "source": src()
         },
         {
+            "id": "heritage.elf.war-taught", "ancestry": "ancestry.elf",
+            "name": "War-Taught Elf", "text": "Trained for battle.",
+            "effects": [{ "type": "grant_skills", "skills": ["skill.athletics"],
+                          "source_label": "War-Taught Elf" }],
+            "source": src()
+        },
+        {
             // Versatile: ancestry null, feat catalog union, sense upgrade.
             "id": "heritage.versatile.aiuvarin", "ancestry": null,
             "name": "Aiuvarin", "text": "Elf-touched.",
@@ -1327,4 +1334,27 @@ fn languages_render_with_defaults_only_as_before() {
         sheet.entry("Languages & Lore", "Languages").unwrap().value,
         "Common, Elven"
     );
+}
+
+#[test]
+fn heritage_skill_grants_fold_into_training() {
+    let engine = engine();
+    let mut log = Vec::new();
+    confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.elf"));
+    confirm(
+        &engine,
+        &mut log,
+        SLOT_HERITAGE,
+        one("heritage.elf.war-taught"),
+    );
+    let state = engine.fold(&log).unwrap();
+    assert!(
+        state.is_trained("skill.athletics"),
+        "a heritage grant_skills effect must train the skill (Battle-Ready \
+         Orc regression)"
+    );
+    // The grant dies with the heritage.
+    let cleared_log: Vec<Decision> = engine.clear(&log, &SlotId::new(SLOT_HERITAGE)).unwrap();
+    let state = engine.fold(&cleared_log).unwrap();
+    assert!(!state.is_trained("skill.athletics"));
 }

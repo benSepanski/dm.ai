@@ -216,7 +216,29 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 )));
             }
             state.heritage = Some(record.id.clone());
-            state.effects.extend(record.effects.iter().cloned());
+            // Fold grant effects exactly as feat apply does — a heritage's
+            // skill/Lore grants (Battle-Ready Orc) train on the sheet and
+            // feed the same collision/replacement machinery.
+            for e in &record.effects {
+                match e {
+                    Effect::GrantSkills {
+                        skills,
+                        source_label,
+                    } => {
+                        for s in skills {
+                            state.skill_grants.push(crate::mechanics::SkillGrant {
+                                skill: s.clone(),
+                                source: source_label.clone(),
+                            });
+                        }
+                    }
+                    Effect::GrantLore { name } => {
+                        state.lores.push((name.clone(), record.name.clone()));
+                    }
+                    _ => {}
+                }
+                state.effects.push(e.clone());
+            }
             Ok(())
         }),
         validate: Box::new(|state, _| {

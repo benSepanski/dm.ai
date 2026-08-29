@@ -1,0 +1,203 @@
+[
+  {
+    "id": "golden-1",
+    "slot": "pf2e.ancestry",
+    "selection": {
+      "kind": "option",
+      "value": "ancestry.halfling"
+    },
+    "source": "player",
+    "order": 0
+  },
+  {
+    "id": "golden-2",
+    "slot": "pf2e.ancestry.heritage",
+    "selection": {
+      "kind": "option",
+      "value": "heritage.halfling.nomadic"
+    },
+    "source": "player",
+    "order": 1
+  },
+  {
+    "id": "golden-3",
+    "slot": "pf2e.ancestry.feat",
+    "selection": {
+      "kind": "option",
+      "value": "feat.ancestry.halfling.titan-slinger"
+    },
+    "source": "player",
+    "order": 2
+  },
+  {
+    "id": "golden-4",
+    "slot": "pf2e.boosts.ancestry-free",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "attr.con"
+      ]
+    },
+    "source": "player",
+    "order": 3
+  },
+  {
+    "id": "golden-5",
+    "slot": "pf2e.background",
+    "selection": {
+      "kind": "option",
+      "value": "background.nomad"
+    },
+    "source": "player",
+    "order": 4
+  },
+  {
+    "id": "golden-6",
+    "slot": "pf2e.background.lore",
+    "selection": {
+      "kind": "text",
+      "value": "Steppe"
+    },
+    "source": "player",
+    "order": 5
+  },
+  {
+    "id": "golden-7",
+    "slot": "pf2e.boosts.background-choice",
+    "selection": {
+      "kind": "option",
+      "value": "attr.wis"
+    },
+    "source": "player",
+    "order": 6
+  },
+  {
+    "id": "golden-8",
+    "slot": "pf2e.boosts.background-free",
+    "selection": {
+      "kind": "option",
+      "value": "attr.dex"
+    },
+    "source": "player",
+    "order": 7
+  },
+  {
+    "id": "golden-9",
+    "slot": "pf2e.class",
+    "selection": {
+      "kind": "option",
+      "value": "class.fighter"
+    },
+    "source": "player",
+    "order": 8
+  },
+  {
+    "id": "golden-10",
+    "slot": "pf2e.class.key-attribute",
+    "selection": {
+      "kind": "option",
+      "value": "attr.dex"
+    },
+    "source": "player",
+    "order": 9
+  },
+  {
+    "id": "golden-11",
+    "slot": "pf2e.class.feat",
+    "selection": {
+      "kind": "option",
+      "value": "feat.class.fighter.snagging-strike"
+    },
+    "source": "player",
+    "order": 10
+  },
+  {
+    "id": "golden-12",
+    "slot": "pf2e.skills.class-choice",
+    "selection": {
+      "kind": "option",
+      "value": "skill.acrobatics"
+    },
+    "source": "player",
+    "order": 11
+  },
+  {
+    "id": "golden-13",
+    "slot": "pf2e.skills.trained",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "skill.stealth",
+        "skill.nature",
+        "skill.medicine"
+      ]
+    },
+    "source": "player",
+    "order": 12
+  },
+  {
+    "id": "golden-14",
+    "slot": "pf2e.boosts.free",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "attr.dex",
+        "attr.con",
+        "attr.wis",
+        "attr.cha"
+      ]
+    },
+    "source": "player",
+    "order": 13
+  },
+  {
+    "id": "golden-15",
+    "slot": "pf2e.ancestry.languages",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "lang.dwarven",
+        "lang.goblin"
+      ]
+    },
+    "source": "player",
+    "order": 14
+  },
+  {
+    "id": "golden-16",
+    "slot": "pf2e.equipment.kit",
+    "selection": {
+      "kind": "option",
+      "value": "equipment.no-kit"
+    },
+    "source": "player",
+    "order": 15
+  },
+  {
+    "id": "golden-17",
+    "slot": "pf2e.equipment.extra",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "armor.leather",
+        "weapon.sling",
+        "weapon.sling-bullets",
+        "weapon.dagger",
+        "gear.adventurers-pack",
+        "gear.bedroll"
+      ]
+    },
+    "source": "player",
+    "order": 16
+  },
+  {
+    "id": "golden-18",
+    "slot": "pf2e.details.name",
+    "selection": {
+      "kind": "text",
+      "value": "Wenna"
+    },
+    "source": "player",
+    "order": 17
+  }
+]

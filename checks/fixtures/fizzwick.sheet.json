@@ -1,0 +1,289 @@
+{
+  "name": "Fizzwick",
+  "summary": [
+    "Gnome (Sensate Gnome) Fighter 1",
+    "Small · Speed 25 feet · low-light vision, scent (imprecise) 30 feet"
+  ],
+  "sections": [
+    {
+      "title": "Attributes",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "-1",
+          "detail": "-1 ancestry flaw"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+4",
+          "detail": "+1 ancestry, +1 background, +1 class key attribute, +1 free boost"
+        },
+        {
+          "label": "Constitution",
+          "value": "+3",
+          "detail": "+1 ancestry, +1 background, +1 free boost"
+        },
+        {
+          "label": "Intelligence",
+          "value": "+0",
+          "detail": null
+        },
+        {
+          "label": "Wisdom",
+          "value": "+1",
+          "detail": "+1 free boost"
+        },
+        {
+          "label": "Charisma",
+          "value": "+2",
+          "detail": "+1 ancestry, +1 free boost"
+        }
+      ]
+    },
+    {
+      "title": "Defense",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "21",
+          "detail": "8 ancestry + 10 class + 3 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "18",
+          "detail": "10 + 3 Dex (cap +3) + 2 Studded Leather Armor + 3 trained armor prof"
+        },
+        {
+          "label": "Fortitude",
+          "value": "+8",
+          "detail": "5 expert + 3 Con"
+        },
+        {
+          "label": "Reflex",
+          "value": "+9",
+          "detail": "5 expert + 4 Dex"
+        },
+        {
+          "label": "Will",
+          "value": "+4",
+          "detail": "3 trained + 1 Wis"
+        },
+        {
+          "label": "Perception",
+          "value": "+6",
+          "detail": "5 expert + 1 Wis (initiative)"
+        },
+        {
+          "label": "Class DC",
+          "value": "17",
+          "detail": "10 + 3 trained + 4 Dex"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": [
+        {
+          "label": "Fist",
+          "value": "+9 · 1d4-1 B",
+          "detail": "5 expert + 4 Dex · agile, finesse, nonlethal, unarmed"
+        },
+        {
+          "label": "Rapier",
+          "value": "+9 · 1d6 P-1",
+          "detail": "5 expert (martial) + 4 Dex · deadly d8, disarm, finesse"
+        },
+        {
+          "label": "Dagger",
+          "value": "+9 · 1d4 P-1",
+          "detail": "5 expert (simple) + 4 Dex · thrown 10 ft. · agile, finesse, thrown 10 ft., versatile S"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+6",
+          "detail": "3 trained + 4 Dex -1 armor check penalty · from Fighter"
+        },
+        {
+          "label": "Arcana",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Athletics",
+          "value": "-2",
+          "detail": "0 untrained + -1 Str -1 armor check penalty"
+        },
+        {
+          "label": "Crafting",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Deception",
+          "value": "+5",
+          "detail": "3 trained + 2 Cha · from Fighter"
+        },
+        {
+          "label": "Diplomacy",
+          "value": "+5",
+          "detail": "3 trained + 2 Cha · from Background: Barkeep"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+2",
+          "detail": "0 untrained + 2 Cha"
+        },
+        {
+          "label": "Medicine",
+          "value": "+1",
+          "detail": "0 untrained + 1 Wis"
+        },
+        {
+          "label": "Nature",
+          "value": "+1",
+          "detail": "0 untrained + 1 Wis"
+        },
+        {
+          "label": "Occultism",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Performance",
+          "value": "+2",
+          "detail": "0 untrained + 2 Cha"
+        },
+        {
+          "label": "Religion",
+          "value": "+1",
+          "detail": "0 untrained + 1 Wis"
+        },
+        {
+          "label": "Society",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Stealth",
+          "value": "+6",
+          "detail": "3 trained + 4 Dex -1 armor check penalty · from Fighter"
+        },
+        {
+          "label": "Survival",
+          "value": "+1",
+          "detail": "0 untrained + 1 Wis"
+        },
+        {
+          "label": "Thievery",
+          "value": "+6",
+          "detail": "3 trained + 4 Dex -1 armor check penalty · from Fighter"
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Low-Light Vision",
+          "value": "Gnome ancestry",
+          "detail": "You can see in dim light as though it were bright light, so you ignore the concealed condition due to dim light."
+        },
+        {
+          "label": "Sensate Gnome",
+          "value": "heritage",
+          "detail": "You see all colors as brighter, hear all sounds as richer, and smell all scents with incredible detail. You gain a special sense: imprecise scent with a range of 30 feet, letting you use your sense of smell to determine the exact location of a creature. You also gain a +2 circumstance bonus to Perception checks to locate an undetected creature within the range of your scent."
+        },
+        {
+          "label": "Gnome Obsession",
+          "value": "ancestry feat",
+          "detail": "You might have a flighty nature, but when a topic captures your attention, you dive into it headfirst. You gain the Additional Lore feat and the Assurance feat for the chosen Lore. As gnome obsessions can come and go quickly, you can retrain Gnome Obsession to a different Lore subcategory in 1 day of downtime."
+        },
+        {
+          "label": "Reactive Strike",
+          "value": "Fighter feature",
+          "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+        },
+        {
+          "label": "Shield Block",
+          "value": "Fighter feature",
+          "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+        },
+        {
+          "label": "Combat Assessment",
+          "value": "class feat",
+          "detail": "Make a melee Strike. On a hit, you immediately attempt a check to Recall Knowledge about the target (+2 circumstance bonus on a critical hit). The target is then temporarily immune to Combat Assessment for 1 day."
+        },
+        {
+          "label": "Hobnobber",
+          "value": "skill feat — Barkeep",
+          "detail": "You ran or tended a tavern, pouring drinks, breaking up brawls, and hearing everyone's stories."
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Studded Leather Armor",
+          "value": "1 Bulk",
+          "detail": "purchased; worn"
+        },
+        {
+          "label": "Rapier",
+          "value": "1 Bulk",
+          "detail": "purchased"
+        },
+        {
+          "label": "Dagger",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Adventurer's Pack",
+          "value": "1 Bulk",
+          "detail": "purchased"
+        },
+        {
+          "label": "Mug",
+          "value": "—",
+          "detail": "purchased"
+        },
+        {
+          "label": "Coins",
+          "value": "8 gp, 2 sp, 9 cp",
+          "detail": "15 gp starting wealth - 6 gp, 7 sp, 1 cp spent"
+        },
+        {
+          "label": "Bulk",
+          "value": "3 Bulk, 1 L",
+          "detail": "encumbered above 4 Bulk, maximum 9 Bulk"
+        }
+      ]
+    },
+    {
+      "title": "Languages & Lore",
+      "entries": [
+        {
+          "label": "Languages",
+          "value": "Common, Fey, Gnomish",
+          "detail": null
+        },
+        {
+          "label": "Clockwork Lore",
+          "value": "trained",
+          "detail": "Gnome Obsession"
+        },
+        {
+          "label": "Alcohol Lore",
+          "value": "trained",
+          "detail": "Background: Barkeep"
+        }
+      ]
+    }
+  ]
+}

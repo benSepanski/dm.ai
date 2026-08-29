@@ -1,0 +1,176 @@
+[
+  {
+    "id": "golden-1",
+    "slot": "pf2e.ancestry",
+    "selection": {
+      "kind": "option",
+      "value": "ancestry.dwarf"
+    },
+    "source": "player",
+    "order": 0
+  },
+  {
+    "id": "golden-2",
+    "slot": "pf2e.ancestry.heritage",
+    "selection": {
+      "kind": "option",
+      "value": "heritage.versatile.aiuvarin"
+    },
+    "source": "player",
+    "order": 1
+  },
+  {
+    "id": "golden-3",
+    "slot": "pf2e.ancestry.feat",
+    "selection": {
+      "kind": "option",
+      "value": "feat.ancestry.aiuvarin.earned-glory"
+    },
+    "source": "player",
+    "order": 2
+  },
+  {
+    "id": "golden-4",
+    "slot": "pf2e.boosts.ancestry-free",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "attr.str"
+      ]
+    },
+    "source": "player",
+    "order": 3
+  },
+  {
+    "id": "golden-5",
+    "slot": "pf2e.background",
+    "selection": {
+      "kind": "option",
+      "value": "background.bounty-hunter"
+    },
+    "source": "player",
+    "order": 4
+  },
+  {
+    "id": "golden-6",
+    "slot": "pf2e.boosts.background-choice",
+    "selection": {
+      "kind": "option",
+      "value": "attr.str"
+    },
+    "source": "player",
+    "order": 5
+  },
+  {
+    "id": "golden-7",
+    "slot": "pf2e.boosts.background-free",
+    "selection": {
+      "kind": "option",
+      "value": "attr.con"
+    },
+    "source": "player",
+    "order": 6
+  },
+  {
+    "id": "golden-8",
+    "slot": "pf2e.class",
+    "selection": {
+      "kind": "option",
+      "value": "class.fighter"
+    },
+    "source": "player",
+    "order": 7
+  },
+  {
+    "id": "golden-9",
+    "slot": "pf2e.class.key-attribute",
+    "selection": {
+      "kind": "option",
+      "value": "attr.str"
+    },
+    "source": "player",
+    "order": 8
+  },
+  {
+    "id": "golden-10",
+    "slot": "pf2e.class.feat",
+    "selection": {
+      "kind": "option",
+      "value": "feat.class.fighter.sudden-charge"
+    },
+    "source": "player",
+    "order": 9
+  },
+  {
+    "id": "golden-11",
+    "slot": "pf2e.skills.class-choice",
+    "selection": {
+      "kind": "option",
+      "value": "skill.athletics"
+    },
+    "source": "player",
+    "order": 10
+  },
+  {
+    "id": "golden-12",
+    "slot": "pf2e.skills.trained",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "skill.medicine",
+        "skill.society",
+        "skill.intimidation"
+      ]
+    },
+    "source": "player",
+    "order": 11
+  },
+  {
+    "id": "golden-13",
+    "slot": "pf2e.boosts.free",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "attr.str",
+        "attr.dex",
+        "attr.con",
+        "attr.wis"
+      ]
+    },
+    "source": "player",
+    "order": 12
+  },
+  {
+    "id": "golden-14",
+    "slot": "pf2e.equipment.kit",
+    "selection": {
+      "kind": "option",
+      "value": "kit.fighter.sword-and-board"
+    },
+    "source": "player",
+    "order": 13
+  },
+  {
+    "id": "golden-15",
+    "slot": "pf2e.equipment.extra",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "weapon.javelin",
+        "gear.rope"
+      ]
+    },
+    "source": "player",
+    "order": 14
+  },
+  {
+    "id": "golden-16",
+    "slot": "pf2e.details.name",
+    "selection": {
+      "kind": "text",
+      "value": "Maera"
+    },
+    "source": "player",
+    "order": 15
+  }
+]

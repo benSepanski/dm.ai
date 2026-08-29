@@ -1,0 +1,284 @@
+{
+  "name": "Caelith",
+  "summary": [
+    "Elf (Whisper Elf) Fighter 1",
+    "Medium · Speed 35 feet · low-light vision"
+  ],
+  "sections": [
+    {
+      "title": "Attributes",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "+4",
+          "detail": "+1 ancestry, +1 background, +1 class key attribute, +1 free boost"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+2",
+          "detail": "+1 ancestry, +1 free boost"
+        },
+        {
+          "label": "Constitution",
+          "value": "+0",
+          "detail": "+1 free boost, -1 ancestry flaw"
+        },
+        {
+          "label": "Intelligence",
+          "value": "+2",
+          "detail": "+1 ancestry, +1 background"
+        },
+        {
+          "label": "Wisdom",
+          "value": "+1",
+          "detail": "+1 free boost"
+        },
+        {
+          "label": "Charisma",
+          "value": "+0",
+          "detail": null
+        }
+      ]
+    },
+    {
+      "title": "Defense",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "16",
+          "detail": "6 ancestry + 10 class + 0 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "18",
+          "detail": "10 + 2 Dex (cap +2) + 3 Scale Mail + 3 trained armor prof"
+        },
+        {
+          "label": "Fortitude",
+          "value": "+5",
+          "detail": "5 expert + 0 Con"
+        },
+        {
+          "label": "Reflex",
+          "value": "+7",
+          "detail": "5 expert + 2 Dex"
+        },
+        {
+          "label": "Will",
+          "value": "+4",
+          "detail": "3 trained + 1 Wis"
+        },
+        {
+          "label": "Perception",
+          "value": "+6",
+          "detail": "5 expert + 1 Wis (initiative)"
+        },
+        {
+          "label": "Class DC",
+          "value": "17",
+          "detail": "10 + 3 trained + 4 Str"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": [
+        {
+          "label": "Fist",
+          "value": "+9 · 1d4+4 B",
+          "detail": "5 expert + 4 Str · agile, finesse, nonlethal, unarmed"
+        },
+        {
+          "label": "Dagger",
+          "value": "+9 · 1d4 P+4",
+          "detail": "5 expert (simple) + 4 Str · thrown 10 ft. · agile, finesse, thrown 10 ft., versatile S"
+        },
+        {
+          "label": "Greatsword",
+          "value": "+9 · 1d12 S+4",
+          "detail": "5 expert (martial) + 4 Str · versatile P"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+2",
+          "detail": "0 untrained + 2 Dex"
+        },
+        {
+          "label": "Arcana",
+          "value": "+5",
+          "detail": "3 trained + 2 Int · from Fighter"
+        },
+        {
+          "label": "Athletics",
+          "value": "+7",
+          "detail": "3 trained + 4 Str · from Fighter"
+        },
+        {
+          "label": "Crafting",
+          "value": "+5",
+          "detail": "3 trained + 2 Int · from Fighter"
+        },
+        {
+          "label": "Deception",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Diplomacy",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Medicine",
+          "value": "+4",
+          "detail": "3 trained + 1 Wis · from Fighter"
+        },
+        {
+          "label": "Nature",
+          "value": "+1",
+          "detail": "0 untrained + 1 Wis"
+        },
+        {
+          "label": "Occultism",
+          "value": "+5",
+          "detail": "3 trained + 2 Int · from Background: Scholar"
+        },
+        {
+          "label": "Performance",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Religion",
+          "value": "+4",
+          "detail": "3 trained + 1 Wis · from Fighter"
+        },
+        {
+          "label": "Society",
+          "value": "+2",
+          "detail": "0 untrained + 2 Int"
+        },
+        {
+          "label": "Stealth",
+          "value": "+2",
+          "detail": "0 untrained + 2 Dex"
+        },
+        {
+          "label": "Survival",
+          "value": "+4",
+          "detail": "3 trained + 1 Wis · from Fighter"
+        },
+        {
+          "label": "Thievery",
+          "value": "+2",
+          "detail": "0 untrained + 2 Dex"
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Low-Light Vision",
+          "value": "Elf ancestry",
+          "detail": "You can see in dim light as though it were bright light, so you ignore the concealed condition due to dim light."
+        },
+        {
+          "label": "Whisper Elf",
+          "value": "heritage",
+          "detail": "Your ears are finely tuned. When you Seek, you gain a +2 circumstance bonus to locate undetected creatures within 30 feet, and your flat check to target concealed or hidden creatures is easier when the condition is due to sound."
+        },
+        {
+          "label": "Nimble Elf",
+          "value": "ancestry feat",
+          "detail": "Your muscles are tightly honed. Your Speed increases by 5 feet."
+        },
+        {
+          "label": "Reactive Strike",
+          "value": "Fighter feature",
+          "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+        },
+        {
+          "label": "Shield Block",
+          "value": "Fighter feature",
+          "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+        },
+        {
+          "label": "Vicious Swing",
+          "value": "class feat",
+          "detail": "You unleash a particularly powerful attack. Make a melee Strike; it counts as two attacks for your multiple attack penalty. On a hit, deal one extra die of weapon damage."
+        },
+        {
+          "label": "Assurance (Occultism)",
+          "value": "skill feat — Scholar",
+          "detail": "You devoted yourself to intensive study in a library or academy, mastering a scholarly tradition."
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Scale Mail",
+          "value": "2 Bulk",
+          "detail": "Fighter Kit; worn"
+        },
+        {
+          "label": "Dagger",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Adventurer's Pack",
+          "value": "1 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Grappling Hook",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Greatsword",
+          "value": "2 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Coins",
+          "value": "7 gp, 2 sp",
+          "detail": "15 gp starting wealth - 7 gp, 8 sp spent"
+        },
+        {
+          "label": "Bulk",
+          "value": "5 Bulk, 2 L",
+          "detail": "encumbered above 9 Bulk, maximum 14 Bulk"
+        }
+      ]
+    },
+    {
+      "title": "Languages & Lore",
+      "entries": [
+        {
+          "label": "Languages",
+          "value": "Common, Elven, Draconic, Fey",
+          "detail": null
+        },
+        {
+          "label": "Academia Lore",
+          "value": "trained",
+          "detail": "Background: Scholar"
+        }
+      ]
+    }
+  ]
+}

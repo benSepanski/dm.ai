@@ -1,0 +1,289 @@
+{
+  "name": "Wenna",
+  "summary": [
+    "Halfling (Nomadic Halfling) Fighter 1",
+    "Small · Speed 25 feet"
+  ],
+  "sections": [
+    {
+      "title": "Attributes",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "-1",
+          "detail": "-1 ancestry flaw"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+4",
+          "detail": "+1 ancestry, +1 background, +1 class key attribute, +1 free boost"
+        },
+        {
+          "label": "Constitution",
+          "value": "+2",
+          "detail": "+1 ancestry, +1 free boost"
+        },
+        {
+          "label": "Intelligence",
+          "value": "+0",
+          "detail": null
+        },
+        {
+          "label": "Wisdom",
+          "value": "+3",
+          "detail": "+1 ancestry, +1 background, +1 free boost"
+        },
+        {
+          "label": "Charisma",
+          "value": "+1",
+          "detail": "+1 free boost"
+        }
+      ]
+    },
+    {
+      "title": "Defense",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "18",
+          "detail": "6 ancestry + 10 class + 2 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "18",
+          "detail": "10 + 4 Dex (cap +4) + 1 Leather Armor + 3 trained armor prof"
+        },
+        {
+          "label": "Fortitude",
+          "value": "+7",
+          "detail": "5 expert + 2 Con"
+        },
+        {
+          "label": "Reflex",
+          "value": "+9",
+          "detail": "5 expert + 4 Dex"
+        },
+        {
+          "label": "Will",
+          "value": "+6",
+          "detail": "3 trained + 3 Wis"
+        },
+        {
+          "label": "Perception",
+          "value": "+8",
+          "detail": "5 expert + 3 Wis (initiative)"
+        },
+        {
+          "label": "Class DC",
+          "value": "17",
+          "detail": "10 + 3 trained + 4 Dex"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": [
+        {
+          "label": "Fist",
+          "value": "+9 · 1d4-1 B",
+          "detail": "5 expert + 4 Dex · agile, finesse, nonlethal, unarmed"
+        },
+        {
+          "label": "Sling",
+          "value": "+9 · 1d6 B-1",
+          "detail": "5 expert (simple) + 4 Dex · 50 ft., reload 1 · propulsive"
+        },
+        {
+          "label": "Dagger",
+          "value": "+9 · 1d4 P-1",
+          "detail": "5 expert (simple) + 4 Dex · thrown 10 ft. · agile, finesse, thrown 10 ft., versatile S"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+6",
+          "detail": "3 trained + 4 Dex -1 armor check penalty · from Fighter"
+        },
+        {
+          "label": "Arcana",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Athletics",
+          "value": "-2",
+          "detail": "0 untrained + -1 Str -1 armor check penalty"
+        },
+        {
+          "label": "Crafting",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Deception",
+          "value": "+1",
+          "detail": "0 untrained + 1 Cha"
+        },
+        {
+          "label": "Diplomacy",
+          "value": "+1",
+          "detail": "0 untrained + 1 Cha"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+1",
+          "detail": "0 untrained + 1 Cha"
+        },
+        {
+          "label": "Medicine",
+          "value": "+6",
+          "detail": "3 trained + 3 Wis · from Fighter"
+        },
+        {
+          "label": "Nature",
+          "value": "+6",
+          "detail": "3 trained + 3 Wis · from Fighter"
+        },
+        {
+          "label": "Occultism",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Performance",
+          "value": "+1",
+          "detail": "0 untrained + 1 Cha"
+        },
+        {
+          "label": "Religion",
+          "value": "+3",
+          "detail": "0 untrained + 3 Wis"
+        },
+        {
+          "label": "Society",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Stealth",
+          "value": "+6",
+          "detail": "3 trained + 4 Dex -1 armor check penalty · from Fighter"
+        },
+        {
+          "label": "Survival",
+          "value": "+6",
+          "detail": "3 trained + 3 Wis · from Background: Nomad"
+        },
+        {
+          "label": "Thievery",
+          "value": "+3",
+          "detail": "0 untrained + 4 Dex -1 armor check penalty"
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Keen Eyes",
+          "value": "Halfling ancestry",
+          "detail": "Your eyes are sharp, allowing you to make out small details about concealed or even invisible creatures that others might miss. You gain a +2 circumstance bonus when using the Seek action to find hidden or undetected creatures within 30 feet of you. When you target an opponent that is concealed from you or hidden from you, reduce the DC of the flat check to 3 for a concealed target or 9 for a hidden one."
+        },
+        {
+          "label": "Nomadic Halfling",
+          "value": "heritage",
+          "detail": "Your ancestors have traveled from place to place for generations, never content to settle down. You gain two additional languages of your choice, chosen from among the languages available to you, and every time you take the Multilingual feat, you gain another new language."
+        },
+        {
+          "label": "Titan Slinger",
+          "value": "ancestry feat",
+          "detail": "You have learned how to use your sling to fell enormous creatures. When you hit on an attack with a weapon of the sling group against a Large or larger creature, increase the size of the weapon damage die by one step."
+        },
+        {
+          "label": "Reactive Strike",
+          "value": "Fighter feature",
+          "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+        },
+        {
+          "label": "Shield Block",
+          "value": "Fighter feature",
+          "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+        },
+        {
+          "label": "Snagging Strike",
+          "value": "class feat",
+          "detail": "Make a Strike while keeping one hand free to snag your opponent. On a hit, the target is off-guard until the start of your next turn or until it's no longer within reach of your free hand, whichever comes first."
+        },
+        {
+          "label": "Assurance (Survival)",
+          "value": "skill feat — Nomad",
+          "detail": "You wandered wide stretches of wilderness, at home wherever you set camp. Your Lore relates to one terrain you traveled in."
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Leather Armor",
+          "value": "1 Bulk",
+          "detail": "purchased; worn"
+        },
+        {
+          "label": "Sling",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Sling Bullets (10)",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Dagger",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Adventurer's Pack",
+          "value": "1 Bulk",
+          "detail": "purchased"
+        },
+        {
+          "label": "Bedroll",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Coins",
+          "value": "11 gp, 2 sp, 7 cp",
+          "detail": "15 gp starting wealth - 3 gp, 7 sp, 3 cp spent"
+        },
+        {
+          "label": "Bulk",
+          "value": "2 Bulk, 4 L",
+          "detail": "encumbered above 4 Bulk, maximum 9 Bulk"
+        }
+      ]
+    },
+    {
+      "title": "Languages & Lore",
+      "entries": [
+        {
+          "label": "Languages",
+          "value": "Common, Halfling, Dwarven, Goblin",
+          "detail": null
+        },
+        {
+          "label": "Steppe Lore",
+          "value": "trained",
+          "detail": "Background: Nomad"
+        }
+      ]
+    }
+  ]
+}

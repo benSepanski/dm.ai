@@ -744,8 +744,9 @@
     ],
     "effects": [
       {
-        "type": "sense",
-        "value": "low-light vision"
+        "type": "sense_upgrade",
+        "sense": "darkvision",
+        "otherwise": "low-light vision"
       }
     ],
     "source": {
@@ -767,8 +768,9 @@
     ],
     "effects": [
       {
-        "type": "sense",
-        "value": "low-light vision"
+        "type": "sense_upgrade",
+        "sense": "darkvision",
+        "otherwise": "low-light vision"
       }
     ],
     "source": {
