@@ -2007,3 +2007,455 @@ mod properties {
         }
     }
 }
+
+// ---- chargen-wizard goldens: the PF2e Wizard and the prep section ----
+
+fn scoped_one(slot: &str, option: &str) -> types::ScopedChoice {
+    types::ScopedChoice {
+        slot: SlotId::new(slot),
+        selection: one(option),
+    }
+}
+
+fn scoped_many(slot: &str, options: &[&str]) -> types::ScopedChoice {
+    types::ScopedChoice {
+        slot: SlotId::new(slot),
+        selection: many(options),
+    }
+}
+
+/// Sylvenne, an Arctic Elf Artisan Wizard of the School of Battle Magic.
+/// Hand-verified against Player Core: Elf pg. 56 (Dex+Int+free, Con flaw),
+/// Artisan pg. 84, Wizard pg. 192-199.
+fn sylvenne_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+    let mut log = Vec::new();
+    let n = &mut 0;
+    confirm(engine, &mut log, n, "pf2e.ancestry", one("ancestry.elf"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.heritage",
+        one("heritage.elf.arctic"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.feat",
+        one("feat.ancestry.elf.unwavering-mien"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.ancestry-free",
+        many(&["attr.wis"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.background",
+        one("background.artisan"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-choice",
+        one("attr.int"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-free",
+        one("attr.cha"),
+    );
+    confirm(engine, &mut log, n, "pf2e.class", one("class.wizard"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.key-attribute",
+        one("attr.int"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.thesis",
+        one("thesis.spell-substitution"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.school",
+        one("school.battle-magic"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.spellbook.cantrips",
+        many(&[
+            "spell.caustic-blast",
+            "spell.detect-magic",
+            "spell.electric-arc",
+            "spell.figment",
+            "spell.frostbite",
+            "spell.gouging-claw",
+            "spell.ignition",
+            "spell.light",
+            "spell.message",
+            "spell.shield",
+        ]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.spellbook.rank1",
+        many(&[
+            "spell.command",
+            "spell.fear",
+            "spell.grease",
+            "spell.jump",
+            "spell.sleep",
+        ]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.spellbook.curriculum",
+        many(&["spell.breathe-fire", "spell.force-barrage"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.class-choice",
+        one("skill.arcana"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.trained",
+        many(&[
+            "skill.society",
+            "skill.occultism",
+            "skill.nature",
+            "skill.stealth",
+            "skill.diplomacy",
+            "skill.deception",
+        ]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.free",
+        many(&["attr.int", "attr.dex", "attr.con", "attr.wis"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.languages",
+        many(&["lang.draconic", "lang.empyrean", "lang.fey", "lang.gnomish"]),
+    );
+    confirm(engine, &mut log, n, "pf2e.equipment.kit", one("kit.wizard"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.details.name",
+        Selection::Text("Sylvenne".into()),
+    );
+    log
+}
+
+/// Sylvenne's initial preparation. The school preparations come straight
+/// from the curriculum (no spellbook membership required — the printed
+/// rule), which Telekinetic Projectile and Mystic Armor deliberately
+/// exercise: neither is in her book.
+fn sylvenne_prep() -> Vec<types::ScopedChoice> {
+    vec![
+        scoped_many(
+            "pf2e.prep.cantrips",
+            &[
+                "spell.shield",
+                "spell.ignition",
+                "spell.electric-arc",
+                "spell.detect-magic",
+                "spell.light",
+            ],
+        ),
+        scoped_many("pf2e.prep.rank1", &["spell.fear", "spell.command"]),
+        scoped_one("pf2e.prep.school-cantrip", "spell.telekinetic-projectile"),
+        scoped_one("pf2e.prep.school-rank1", "spell.mystic-armor"),
+    ]
+}
+
+#[test]
+fn golden_sylvenne_elf_wizard_battle_magic() {
+    let engine = engine();
+    let log = sylvenne_log(&engine);
+    let prep = sylvenne_prep();
+    let projection = engine.project(&log, &prep).unwrap();
+    assert!(
+        projection.can_finalize,
+        "Sylvenne should be complete and legal: {:#?}",
+        projection.checklist
+    );
+    let sheet = &projection.sheet;
+    assert_eq!(sheet.name, "Sylvenne");
+    assert_eq!(sheet.summary[0], "Elf (Arctic Elf) Wizard 1");
+
+    // Modifiers: Dex +2 (elf, free), Con +0 (flaw + free), Int +4 (elf,
+    // background choice, class key, free), Wis +2 (ancestry free, free),
+    // Cha +1 (background free).
+    assert_entry(sheet, "Attributes", "Strength", "+0");
+    assert_entry(sheet, "Attributes", "Dexterity", "+2");
+    assert_entry(sheet, "Attributes", "Constitution", "+0");
+    assert_entry(sheet, "Attributes", "Intelligence", "+4");
+    assert_entry(sheet, "Attributes", "Wisdom", "+2");
+    assert_entry(sheet, "Attributes", "Charisma", "+1");
+
+    // HP 12 = 6 elf + 6 class + 0 Con. AC 15 = 10 + 2 Dex + 3 trained
+    // unarmored. Saves: Fort +3, Ref +5, Will +7 (expert 5 + Wis 2);
+    // Perception +5 (trained 3 + Wis 2); Class DC 17.
+    assert_entry(sheet, "Defense", "Hit Points", "12");
+    assert_entry(sheet, "Defense", "Armor Class", "15");
+    assert_entry(sheet, "Defense", "Fortitude", "+3");
+    assert_entry(sheet, "Defense", "Reflex", "+5");
+    assert_entry(sheet, "Defense", "Will", "+7");
+    assert_entry(sheet, "Defense", "Perception", "+5");
+    assert_entry(sheet, "Defense", "Class DC", "17");
+
+    // Spellcasting: attack +7 (trained 3 + Int 4), DC 17; 5+1 cantrips,
+    // 2+1 rank-1 slots; focus pool from the school.
+    assert_entry(sheet, "Spellcasting", "Tradition", "Arcane");
+    assert_entry(sheet, "Spellcasting", "Spell attack", "+7");
+    assert_entry(sheet, "Spellcasting", "Spell DC", "17");
+    assert_entry(sheet, "Spellcasting", "Cantrips", "6 prepared");
+    assert_entry(sheet, "Spellcasting", "Rank 1 slots", "3");
+    assert_entry(sheet, "Spellcasting", "Arcane thesis", "Spell Substitution");
+    assert_entry(
+        sheet,
+        "Spellcasting",
+        "Arcane school",
+        "School of Battle Magic",
+    );
+    assert_entry(sheet, "Spellcasting", "Focus pool", "1 Focus Point");
+    let focus = sheet.entry("Spellcasting", "Focus pool").unwrap();
+    assert!(
+        focus.detail.as_deref().unwrap().contains("Force Bolt"),
+        "the school grants Force Bolt: {focus:?}"
+    );
+
+    // Skills: Arcana +7 (class, trained 3 + Int 4), Crafting +7 (Artisan).
+    assert_entry(sheet, "Skills", "Arcana", "+7");
+    assert_entry(sheet, "Skills", "Crafting", "+7");
+
+    // The projection's displayed sheet carries the prepared section; the
+    // school preparations show curriculum spells not in her book.
+    let prepared = sheet
+        .sections
+        .iter()
+        .find(|s| s.title == "Prepared Spells")
+        .expect("displayed sheet carries the prepared section");
+    let entry = |label: &str| {
+        prepared
+            .entries
+            .iter()
+            .find(|e| e.label == label)
+            .unwrap_or_else(|| panic!("prepared section missing {label}"))
+    };
+    assert_eq!(
+        entry("Cantrips").value,
+        "Shield, Ignition, Electric Arc, Detect Magic, Light"
+    );
+    assert_eq!(entry("Rank 1").value, "Fear, Command");
+    assert_eq!(entry("School cantrip").value, "Telekinetic Projectile");
+    assert_eq!(entry("School slot (rank 1)").value, "Mystic Armor");
+}
+
+/// Replay purity: the materialized sheet is fold(log) alone — byte-for-byte
+/// identical whatever the prep section holds — and prep entries never
+/// enter the log.
+#[test]
+fn stored_sheet_is_pure_over_prep() {
+    let engine = engine();
+    let log = sylvenne_log(&engine);
+    let bare = engine.sheet(&log).unwrap();
+    assert!(
+        !bare.sections.iter().any(|s| s.title == "Prepared Spells"),
+        "the materialized sheet never contains scoped sections"
+    );
+    // Same log, different (or absent, or nonsense) prep: same sheet.
+    let json_bare = serde_json::to_string(&bare).unwrap();
+    for prep in [
+        Vec::new(),
+        sylvenne_prep(),
+        vec![scoped_one("pf2e.prep.cantrips", "spell.sleep")],
+        vec![scoped_one("nonsense.slot", "spell.sleep")],
+    ] {
+        let _ = engine.project(&log, &prep).unwrap();
+        let again = engine.sheet(&log).unwrap();
+        assert_eq!(serde_json::to_string(&again).unwrap(), json_bare);
+    }
+}
+
+/// Incomplete or illegal preparation blocks finalize through the same
+/// checklist as build gaps.
+#[test]
+fn prep_gaps_and_illegal_prep_block_finalize() {
+    let engine = engine();
+    let log = sylvenne_log(&engine);
+    // No prep at all: incomplete entries, no finalize.
+    let empty = engine.project(&log, &[]).unwrap();
+    assert!(!empty.can_finalize);
+    // A spell not in the book: Illegal entry.
+    let mut bad = sylvenne_prep();
+    bad[1] = scoped_many("pf2e.prep.rank1", &["spell.fear", "spell.grim-tendrils"]);
+    let p = engine.project(&log, &bad).unwrap();
+    assert!(!p.can_finalize);
+    assert!(p
+        .checklist
+        .iter()
+        .any(|e| e.severity == types::ChecklistSeverity::Illegal
+            && e.message.contains("not in your spellbook")));
+    // A non-curriculum spell in the school slot: Illegal entry.
+    let mut bad = sylvenne_prep();
+    bad[3] = scoped_one("pf2e.prep.school-rank1", "spell.sleep");
+    let p = engine.project(&log, &bad).unwrap();
+    assert!(p
+        .checklist
+        .iter()
+        .any(|e| e.severity == types::ChecklistSeverity::Illegal
+            && e.message.contains("curriculum")));
+    // Overfilled rank: Illegal entry.
+    let mut bad = sylvenne_prep();
+    bad[1] = scoped_many(
+        "pf2e.prep.rank1",
+        &["spell.fear", "spell.command", "spell.sleep"],
+    );
+    let p = engine.project(&log, &bad).unwrap();
+    assert!(p
+        .checklist
+        .iter()
+        .any(|e| e.severity == types::ChecklistSeverity::Illegal
+            && e.message.contains("only 2 can be prepared")));
+}
+
+/// The changed-school cascade: everything curriculum-derived clears — and
+/// ONLY what the preview listed — while school-independent preparation
+/// survives. (Preparing the same spell twice is also exercised here.)
+#[test]
+fn changing_school_cascades_exactly_as_previewed() {
+    let engine = engine();
+    let log = sylvenne_log(&engine);
+    let prep = sylvenne_prep();
+
+    let preview = engine
+        .clear_preview(&log, &prep, &SlotId::new("pf2e.class.school"))
+        .unwrap();
+    let mut previewed: Vec<String> = preview.cleared.iter().map(|c| c.slot.to_string()).collect();
+    previewed.sort();
+    assert_eq!(
+        previewed,
+        vec![
+            "pf2e.class.school",
+            "pf2e.class.spellbook.curriculum",
+            "pf2e.prep.rank1",
+            "pf2e.prep.school-cantrip",
+            "pf2e.prep.school-rank1",
+        ],
+        "the confirmation lists exactly the curriculum-derived decisions"
+    );
+
+    let (out, surviving) = engine
+        .amend(
+            &log,
+            &prep,
+            DecisionInput {
+                id: DecisionId::new("golden-school-swap"),
+                slot: SlotId::new("pf2e.class.school"),
+                selection: one("school.protean-form"),
+                source: DecisionSource::Player,
+            },
+        )
+        .unwrap();
+    let AppendOutcome::Appended(new_log) = out else {
+        panic!("school amend must append");
+    };
+    // Exactly the previewed prep slots cleared; the cantrip prep survived.
+    let surviving_slots: Vec<&str> = surviving.iter().map(|c| c.slot.as_str()).collect();
+    assert_eq!(surviving_slots, vec!["pf2e.prep.cantrips"]);
+    // The new state re-opens the curriculum slots under the new school.
+    let p = engine.project(&new_log, &surviving).unwrap();
+    assert!(!p.can_finalize);
+    let focus = p.sheet.entry("Spellcasting", "Focus pool").unwrap();
+    assert!(
+        focus.detail.as_deref().unwrap().contains("Scramble Body"),
+        "the new school grants its own focus spell: {focus:?}"
+    );
+
+    // Revised-prep fixture: refill under the new school and finalize again.
+    let refilled = vec![
+        surviving[0].clone(),
+        scoped_many("pf2e.prep.rank1", &["spell.fear", "spell.fear"]),
+        scoped_one("pf2e.prep.school-cantrip", "spell.gouging-claw"),
+        scoped_one("pf2e.prep.school-rank1", "spell.pest-form"),
+    ];
+    // The curriculum spellbook additions must be re-picked first.
+    let (out, refilled_prep) = engine
+        .amend(
+            &log_with(
+                &engine,
+                &new_log,
+                "pf2e.class.spellbook.curriculum",
+                many(&["spell.pest-form", "spell.spider-sting"]),
+            ),
+            &refilled,
+            DecisionInput {
+                id: DecisionId::new("golden-noop-name"),
+                slot: SlotId::new("pf2e.details.name"),
+                selection: Selection::Text("Sylvenne".into()),
+                source: DecisionSource::Player,
+            },
+        )
+        .unwrap();
+    let AppendOutcome::Appended(final_log) = out else {
+        panic!("name amend must append");
+    };
+    let p = engine.project(&final_log, &refilled_prep).unwrap();
+    assert!(
+        p.can_finalize,
+        "refilled Protean Sylvenne is legal: {:#?}",
+        p.checklist
+    );
+}
+
+fn log_with(
+    engine: &ruleset_pf2e::Pf2eEngine,
+    log: &[Decision],
+    slot: &str,
+    selection: Selection,
+) -> Vec<Decision> {
+    let input = DecisionInput {
+        id: DecisionId::new(format!("golden-extra-{slot}")),
+        slot: SlotId::new(slot),
+        selection,
+        source: DecisionSource::Player,
+    };
+    match engine.append(log, input) {
+        Ok(AppendOutcome::Appended(new_log)) => new_log,
+        other => panic!("append on '{slot}' rejected: {other:?}"),
+    }
+}

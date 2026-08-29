@@ -301,3 +301,91 @@ fn finalize_is_blocked_while_the_checklist_is_nonempty() {
         .unwrap();
     assert_eq!(character["state"], "draft");
 }
+
+// ---- chargen-wizard: server authority over the prep route ----
+
+#[path = "wizard_fixture.rs"]
+mod wizard_fixture;
+
+/// Raw prep requests bypassing the UI are re-validated natively and
+/// rejected — not-in-book, overfilled rank, non-curriculum in the school
+/// slot, and prep on a class with no prep slots — and each rejection
+/// changes nothing on disk.
+#[test]
+fn raw_illegal_prep_is_rejected_and_writes_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let client = wizard_fixture::client();
+    let server = TestServer::spawn(dir.path());
+    let built = wizard_fixture::build_sylvenne_finalized(&client, &server.url);
+    let path = dir.path().join(format!("characters/{}.json", built.id));
+    let bytes_before = std::fs::read(&path).unwrap();
+
+    let cases: Vec<(&str, Value)> = vec![
+        (
+            "not in the spellbook",
+            json!([{"slot": "pf2e.prep.rank1",
+                    "selection": {"kind": "options", "value": ["spell.grim-tendrils", "spell.fear"]}}]),
+        ),
+        (
+            "overfilled rank",
+            json!([{"slot": "pf2e.prep.rank1",
+                    "selection": {"kind": "options", "value": ["spell.fear", "spell.command", "spell.sleep"]}}]),
+        ),
+        (
+            "non-curriculum in the school slot",
+            json!([{"slot": "pf2e.prep.school-rank1",
+                    "selection": {"kind": "option", "value": "spell.sleep"}}]),
+        ),
+        (
+            "unknown scoped slot",
+            json!([{"slot": "pf2e.prep.rank9",
+                    "selection": {"kind": "option", "value": "spell.fear"}}]),
+        ),
+    ];
+    for (i, (label, choices)) in cases.iter().enumerate() {
+        let outcome = wizard_fixture::prep_save(
+            &client,
+            &server.url,
+            &built.id,
+            built.version,
+            &format!("raw-{i}"),
+            "finalized",
+            choices,
+        );
+        assert_eq!(outcome["outcome"], "rejected", "{label}: {outcome:#?}");
+        assert!(
+            !outcome["reasons"].as_array().unwrap().is_empty(),
+            "{label}: rejection names its rules"
+        );
+        assert_eq!(
+            std::fs::read(&path).unwrap(),
+            bytes_before,
+            "{label}: a rejection writes nothing"
+        );
+    }
+
+    // Prep on a class with no prep slots (a Fighter): rejected too.
+    let qb: Value = client
+        .post(format!("{}/api/characters/quick-build", server.url))
+        .json(&json!({"request_id": "authority-fighter", "name": "Garrek"}))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    let fid = qb["draft"]["id"].as_str().unwrap();
+    let fversion = qb["draft"]["version"].as_u64().unwrap();
+    let outcome = wizard_fixture::prep_save(
+        &client,
+        &server.url,
+        fid,
+        fversion,
+        "raw-fighter",
+        "draft",
+        &json!([{"slot": "pf2e.prep.cantrips",
+                 "selection": {"kind": "options", "value": ["spell.light"]}}]),
+    );
+    assert_eq!(
+        outcome["outcome"], "rejected",
+        "a Fighter has no preparation: {outcome:#?}"
+    );
+}
