@@ -1,0 +1,28 @@
+# Verification-only dev tool (architecture: chargen-content). Fetches a
+# pinned Foundry pf2e snapshot into a gitignored cache and writes
+# rules-data/attestation.json. Never shipped; nothing depends on it; CI
+# never invokes it (checks/attestation.rs scans for that).
+
+[package]
+name = "reference-check"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+# The layering allowlist (checks/crate_layering.rs) pins this crate's
+# internal edges to exactly {ruleset-pf2e, types}. The tool deliberately
+# parses rules-data as raw JSON (the attestation hashes the committed bytes,
+# not a typed projection), so these two stay declared-but-thin.
+types = { workspace = true }
+ruleset-pf2e = { workspace = true }
+serde_json = { workspace = true }
+# rustls so CI (offline, but it still *builds* the workspace) never needs a
+# system TLS stack; the network is only touched by the `fetch` subcommand.
+reqwest = { workspace = true, features = ["rustls-tls"] }
+sha2 = { workspace = true }
+flate2 = { workspace = true }
+tar = { workspace = true }
+
+[lints]
+workspace = true

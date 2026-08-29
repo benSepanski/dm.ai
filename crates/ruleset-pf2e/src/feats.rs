@@ -10,8 +10,9 @@ use types::{OptionId, OptionView, SlotId, SlotViewKind, StepId};
 
 use crate::data::{Effect, RulesData};
 use crate::mechanics::{
-    describe_selection, incomplete, sel_single, Pf2eState, SLOT_CLASS_FEAT, SLOT_FEAT_GENERAL_FEAT,
-    SLOT_HERITAGE_GENERAL_FEAT, SLOT_NATURAL_AMBITION,
+    describe_selection, incomplete, prereq_description, prereq_unavailable, sel_single, Pf2eState,
+    SLOT_CLASS_FEAT, SLOT_FEAT_GENERAL_FEAT, SLOT_FEAT_LORE, SLOT_HERITAGE_GENERAL_FEAT,
+    SLOT_NATURAL_AMBITION, SLOT_PROFICIENCY_CHOICE,
 };
 
 const STEP: &str = crate::mechanics::STEP_CLASS;
@@ -51,14 +52,22 @@ fn general_feat_options(data: &RulesData, state: &Pf2eState) -> Vec<OptionView> 
     data.general_feats
         .iter()
         .map(|f| {
-            let already = state.chosen_general_feats.contains(&f.id);
+            let unavailable = if state.chosen_general_feats.contains(&f.id) {
+                Some("already selected".to_string())
+            } else {
+                prereq_unavailable(data, &f.prerequisites, state)
+            };
+            let mut details = vec![f.text.clone()];
+            for p in &f.prerequisites {
+                details.push(format!("Prerequisite: {}", prereq_description(data, p)));
+            }
             OptionView {
                 id: OptionId::new(&f.id),
                 label: f.name.clone(),
                 summary: String::new(),
-                details: vec![f.text.clone()],
-                available: !already,
-                unavailable_reason: already.then(|| "already selected".to_string()),
+                details,
+                available: unavailable.is_none(),
+                unavailable_reason: unavailable,
             }
         })
         .collect()
@@ -90,6 +99,19 @@ fn feat_grants(data: &RulesData, state: &Pf2eState, catalog: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// The (targets, rank, source label) of a ChooseProficiencyOverride effect
+/// anywhere in the folded state (Canny Acumen), if any.
+fn proficiency_choice_grant(state: &Pf2eState) -> Option<(Vec<String>, String, String)> {
+    state.effects.iter().find_map(|e| match e {
+        Effect::ChooseProficiencyOverride {
+            targets,
+            rank,
+            source_label,
+        } => Some((targets.clone(), rank.clone(), source_label.clone())),
+        _ => None,
+    })
+}
+
 fn apply_general_feat(
     data: &RulesData,
     state: &mut Pf2eState,
@@ -99,6 +121,14 @@ fn apply_general_feat(
     let record = data
         .general_feat(id.as_str())
         .ok_or_else(|| ApplyError::new(format!("unknown general feat '{id}'")))?;
+    // Prerequisites are re-checked on apply — the server folds through
+    // this same path, so a raw request cannot skip the greying rule.
+    if let Some(reason) = prereq_unavailable(data, &record.prerequisites, state) {
+        return Err(ApplyError::new(format!(
+            "'{}' is not available: {reason}",
+            record.name
+        )));
+    }
     state.chosen_general_feats.push(record.id.clone());
     state.effects.extend(record.effects.iter().cloned());
     Ok(())
@@ -177,7 +207,12 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 Availability::Hidden
             }
         }),
-        dependents: vec![],
+        // A chosen general feat can carry a ChooseLore or proficiency-
+        // choice effect; those picks die with the feat.
+        dependents: vec![
+            SlotId::new(SLOT_FEAT_LORE),
+            SlotId::new(SLOT_PROFICIENCY_CHOICE),
+        ],
         options: Box::new(move |state| general_feat_options(&d, state)),
         apply: Box::new(move |state, decision| {
             apply_general_feat(&d_apply, state, &decision.selection)
@@ -219,7 +254,12 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 Availability::Hidden
             }
         }),
-        dependents: vec![],
+        // Same as the heritage-granted slot: a ChooseLore- or proficiency-
+        // choice-carrying feat's picks die with the feat.
+        dependents: vec![
+            SlotId::new(SLOT_FEAT_LORE),
+            SlotId::new(SLOT_PROFICIENCY_CHOICE),
+        ],
         options: Box::new(move |state| general_feat_options(&d, state)),
         apply: Box::new(move |state, decision| {
             apply_general_feat(&d_apply, state, &decision.selection)
@@ -235,6 +275,83 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 )]
             } else {
                 vec![]
+            }
+        }),
+        meters: Box::new(|_, _| vec![]),
+        describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
+    });
+
+    // --- Proficiency-override target (Canny Acumen) ---
+    let d_desc = data.clone();
+    regs.push(SlotRegistration::<Pf2eState> {
+        id: SlotId::new(SLOT_PROFICIENCY_CHOICE),
+        step: StepId::new(STEP_ANCESTRY),
+        label: "Proficiency choice".into(),
+        required: true,
+        presentation_hint: None,
+        kind: Box::new(|_| SlotViewKind::Single),
+        unlock: Box::new(move |state| {
+            if proficiency_choice_grant(state).is_some() {
+                Availability::Open
+            } else {
+                Availability::Hidden
+            }
+        }),
+        dependents: vec![],
+        options: Box::new(move |state| {
+            let Some((targets, rank, source)) = proficiency_choice_grant(state) else {
+                return vec![];
+            };
+            targets
+                .iter()
+                .map(|t| {
+                    let mut label = t.clone();
+                    if let Some(first) = label.get_mut(0..1) {
+                        first.make_ascii_uppercase();
+                    }
+                    OptionView {
+                        id: OptionId::new(format!("prof.{t}")),
+                        label,
+                        summary: format!("becomes {rank} · from {source}"),
+                        details: vec![],
+                        available: true,
+                        unavailable_reason: None,
+                    }
+                })
+                .collect()
+        }),
+        apply: Box::new(move |state, decision| {
+            let id = sel_single(&decision.selection)?;
+            let Some((targets, rank, _)) = proficiency_choice_grant(state) else {
+                return Err(ApplyError::new(
+                    "no feat granting a proficiency choice is selected",
+                ));
+            };
+            let target = id
+                .as_str()
+                .strip_prefix("prof.")
+                .ok_or_else(|| ApplyError::new(format!("unknown proficiency option '{id}'")))?;
+            if !targets.iter().any(|t| t == target) {
+                return Err(ApplyError::new(format!(
+                    "'{target}' is not one of the feat's proficiency choices"
+                )));
+            }
+            state.effects.push(Effect::ProficiencyOverride {
+                target: target.to_string(),
+                rank,
+            });
+            Ok(())
+        }),
+        validate: Box::new(move |state, decision| {
+            match (proficiency_choice_grant(state), decision) {
+                (Some((_, _, source)), None) => vec![incomplete(
+                    SLOT_PROFICIENCY_CHOICE,
+                    STEP_ANCESTRY,
+                    "General feat",
+                    &format!("Choose which proficiency {source} improves"),
+                    &format!("from {source}"),
+                )],
+                _ => vec![],
             }
         }),
         meters: Box::new(|_, _| vec![]),

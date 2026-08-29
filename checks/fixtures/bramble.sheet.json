@@ -1,0 +1,304 @@
+{
+  "name": "Bramble",
+  "summary": [
+    "Leshy (Root Leshy) Fighter 1",
+    "Small · Speed 25 feet · low-light vision"
+  ],
+  "sections": [
+    {
+      "title": "Attributes",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "+4",
+          "detail": "+1 ancestry, +1 background, +1 class key attribute, +1 free boost"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+1",
+          "detail": "+1 free boost"
+        },
+        {
+          "label": "Constitution",
+          "value": "+3",
+          "detail": "+1 ancestry, +1 background, +1 free boost"
+        },
+        {
+          "label": "Intelligence",
+          "value": "-1",
+          "detail": "-1 ancestry flaw"
+        },
+        {
+          "label": "Wisdom",
+          "value": "+2",
+          "detail": "+1 ancestry, +1 free boost"
+        },
+        {
+          "label": "Charisma",
+          "value": "+0",
+          "detail": null
+        }
+      ]
+    },
+    {
+      "title": "Defense",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "23",
+          "detail": "10 ancestry + 10 class + 3 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "17",
+          "detail": "10 + 1 Dex (cap +2) + 3 Scale Mail + 3 trained armor prof"
+        },
+        {
+          "label": "Fortitude",
+          "value": "+8",
+          "detail": "5 expert + 3 Con"
+        },
+        {
+          "label": "Reflex",
+          "value": "+6",
+          "detail": "5 expert + 1 Dex"
+        },
+        {
+          "label": "Will",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis"
+        },
+        {
+          "label": "Perception",
+          "value": "+7",
+          "detail": "5 expert + 2 Wis (initiative)"
+        },
+        {
+          "label": "Class DC",
+          "value": "17",
+          "detail": "10 + 3 trained + 4 Str"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": [
+        {
+          "label": "Fist",
+          "value": "+9 · 1d4+4 B",
+          "detail": "5 expert + 4 Str · agile, finesse, nonlethal, unarmed"
+        },
+        {
+          "label": "Seedpod",
+          "value": "+6 · 1d4 B",
+          "detail": "5 expert + 1 Dex · 30 ft. · unarmed"
+        },
+        {
+          "label": "Dagger",
+          "value": "+9 · 1d4 P+4",
+          "detail": "5 expert (simple) + 4 Str · thrown 10 ft. · agile, finesse, thrown 10 ft., versatile S"
+        },
+        {
+          "label": "Hatchet",
+          "value": "+9 · 1d6 S+4",
+          "detail": "5 expert (martial) + 4 Str · thrown 10 ft. · agile, sweep, thrown 10 ft."
+        },
+        {
+          "label": "Light Hammer",
+          "value": "+9 · 1d6 B+4",
+          "detail": "5 expert (martial) + 4 Str · thrown 20 ft. · agile, thrown 20 ft."
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+1",
+          "detail": "0 untrained + 1 Dex"
+        },
+        {
+          "label": "Arcana",
+          "value": "-1",
+          "detail": "0 untrained + -1 Int"
+        },
+        {
+          "label": "Athletics",
+          "value": "+7",
+          "detail": "3 trained + 4 Str · from Fighter"
+        },
+        {
+          "label": "Crafting",
+          "value": "-1",
+          "detail": "0 untrained + -1 Int"
+        },
+        {
+          "label": "Deception",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Diplomacy",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Medicine",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis · from Background: Field Medic"
+        },
+        {
+          "label": "Nature",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis · from Fighter"
+        },
+        {
+          "label": "Occultism",
+          "value": "-1",
+          "detail": "0 untrained + -1 Int"
+        },
+        {
+          "label": "Performance",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Religion",
+          "value": "+2",
+          "detail": "0 untrained + 2 Wis"
+        },
+        {
+          "label": "Society",
+          "value": "-1",
+          "detail": "0 untrained + -1 Int"
+        },
+        {
+          "label": "Stealth",
+          "value": "+4",
+          "detail": "3 trained + 1 Dex · from Fighter"
+        },
+        {
+          "label": "Survival",
+          "value": "+2",
+          "detail": "0 untrained + 2 Wis"
+        },
+        {
+          "label": "Thievery",
+          "value": "+1",
+          "detail": "0 untrained + 1 Dex"
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Low-Light Vision",
+          "value": "Leshy ancestry",
+          "detail": "You can see in dim light as though it were bright light, so you ignore the concealed condition due to dim light."
+        },
+        {
+          "label": "Plant Nourishment",
+          "value": "Leshy ancestry",
+          "detail": "You gain nourishment in the same way that the plants or fungi that match your body type normally do, through some combination of photosynthesis, absorbing minerals with your roots, or scavenging decaying matter. You typically do not need to pay for food. If you normally rely on photosynthesis and go without sunlight for 1 week, you begin to starve. You can derive nourishment from specially formulated bottles of sunlight instead of natural sunlight, but these bottles cost 10 times as much as standard rations."
+        },
+        {
+          "label": "Root Leshy",
+          "value": "heritage",
+          "detail": "Your body is made from hardy roots that attach you firmly to the ground. You gain 10 Hit Points from your ancestry instead of 8. You can go without sunlight for 2 weeks before you begin to starve. You gain a +2 circumstance bonus to your Fortitude or Reflex DC against attempts to Reposition, Shove, or Trip you, and to saving throws against spells or effects that attempt to move you or knock you prone."
+        },
+        {
+          "label": "Seedpod",
+          "value": "ancestry feat",
+          "detail": "Your body produces a nearly endless supply of hard seedpods. You gain a seedpod ranged unarmed attack with a range increment of 30 feet that deals 1d4 bludgeoning damage. On a critical hit, a seedpod bursts, imposing a -10-foot circumstance penalty on the target's Speed until the start of your next turn. Seedpods do not add critical specialization effects."
+        },
+        {
+          "label": "Reactive Strike",
+          "value": "Fighter feature",
+          "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+        },
+        {
+          "label": "Shield Block",
+          "value": "Fighter feature",
+          "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+        },
+        {
+          "label": "Double Slice",
+          "value": "class feat",
+          "detail": "Make two Strikes against the same target, one with each required weapon, at your current multiple attack penalty. The second Strike takes a –2 penalty if its weapon doesn't have the agile trait. If both hit, combine their damage. This counts as two attacks toward your multiple attack penalty."
+        },
+        {
+          "label": "Battle Medicine",
+          "value": "skill feat — Field Medic",
+          "detail": "In the chaos of battle, you learned to mend wounds while under fire."
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Scale Mail",
+          "value": "2 Bulk",
+          "detail": "Fighter Kit; worn"
+        },
+        {
+          "label": "Dagger",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Adventurer's Pack",
+          "value": "1 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Grappling Hook",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Hatchet",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Light Hammer",
+          "value": "1 L",
+          "detail": "purchased"
+        },
+        {
+          "label": "Coins",
+          "value": "8 gp, 5 sp",
+          "detail": "15 gp starting wealth - 6 gp, 5 sp spent"
+        },
+        {
+          "label": "Bulk",
+          "value": "3 Bulk, 4 L",
+          "detail": "encumbered above 9 Bulk, maximum 14 Bulk"
+        }
+      ]
+    },
+    {
+      "title": "Languages & Lore",
+      "entries": [
+        {
+          "label": "Languages",
+          "value": "Common, Fey",
+          "detail": null
+        },
+        {
+          "label": "Warfare Lore",
+          "value": "trained",
+          "detail": "Background: Field Medic"
+        }
+      ]
+    }
+  ]
+}

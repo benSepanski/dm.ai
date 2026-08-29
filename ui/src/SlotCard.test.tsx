@@ -173,3 +173,43 @@ describe('SlotCard boost counter', () => {
     expect(screen.getByText(/choose an ancestry first/)).toBeInTheDocument();
   });
 });
+
+describe('SlotCard suggested-provenance badge', () => {
+  function confirmedSlot(source: 'player' | 'suggested'): SlotView {
+    const base = boostSlot();
+    return {
+      ...base,
+      status: 'complete',
+      decision: {
+        id: 'd-sug',
+        slot: base.id,
+        selection: { kind: 'options', value: ['attr.str', 'attr.con', 'attr.dex', 'attr.wis'] },
+        source,
+        order: 0,
+      },
+    };
+  }
+
+  function renderConfirmed(source: 'player' | 'suggested') {
+    return render(
+      <SlotCard
+        slot={confirmedSlot(source)}
+        tentative={null}
+        onTentative={() => undefined}
+        onConfirm={() => undefined}
+        onRequestChange={() => undefined}
+        busy={false}
+      />,
+    );
+  }
+
+  it('badges a planner-filled decision as suggested', () => {
+    const { container } = renderConfirmed('suggested');
+    expect(container.querySelector('.badge-suggested')).toHaveTextContent('suggested');
+  });
+
+  it('shows no badge on a player decision (editing re-confirms as player)', () => {
+    const { container } = renderConfirmed('player');
+    expect(container.querySelector('.badge-suggested')).toBeNull();
+  });
+});

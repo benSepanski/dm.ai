@@ -24,6 +24,10 @@ const ALLOWED_INTERNAL_EDGES: &[(&str, &str)] = &[
     ("checks", "ruleset-pf2e"),
     ("checks", "types"),
     ("engine-core", "types"),
+    // Verification-only dev tool; nothing depends on it (the exact
+    // allowlist makes any inbound edge an unexpected-edge failure).
+    ("reference-check", "ruleset-pf2e"),
+    ("reference-check", "types"),
     ("ruleset-pf2e", "engine-core"),
     ("ruleset-pf2e", "types"),
     ("server", "engine-core"),

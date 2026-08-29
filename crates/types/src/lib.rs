@@ -16,6 +16,7 @@ mod engine_msg;
 mod ids;
 mod roster;
 mod sheet;
+mod version;
 mod wizard;
 
 pub use api::*;
@@ -25,4 +26,5 @@ pub use engine_msg::*;
 pub use ids::*;
 pub use roster::*;
 pub use sheet::*;
+pub use version::*;
 pub use wizard::*;

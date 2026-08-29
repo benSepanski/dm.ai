@@ -29,10 +29,21 @@ export class TestServer {
   /** The port the server is bound to (0 until started). */
   port = 0;
 
+  /**
+   * Extra CLI arguments for the next start (e.g. the hidden test-support
+   * flag `--extra-known-versions` the version-guard walk uses to fabricate
+   * a prior shipped data version).
+   */
+  extraArgs: string[] = [];
+
   async start(port = 0): Promise<void> {
-    const child = spawn(serverBinary(), ['--data-dir', this.dataDir, '--port', String(port)], {
-      stdio: ['ignore', 'pipe', 'inherit'],
-    });
+    const child = spawn(
+      serverBinary(),
+      ['--data-dir', this.dataDir, '--port', String(port), ...this.extraArgs],
+      {
+        stdio: ['ignore', 'pipe', 'inherit'],
+      },
+    );
     this.child = child;
     this.url = await new Promise<string>((resolve, reject) => {
       let buffer = '';

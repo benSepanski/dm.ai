@@ -7,6 +7,7 @@
 mod clock;
 mod persistence;
 mod routes;
+mod version;
 
 use std::net::{Ipv4Addr, SocketAddr, TcpListener};
 use std::path::PathBuf;
@@ -37,6 +38,10 @@ const RULES_CLASS_FEATS: &str = include_str!("../../../rules-data/class-feats.js
 const RULES_GENERAL_FEATS: &str = include_str!("../../../rules-data/general-feats.json");
 const RULES_SKILLS: &str = include_str!("../../../rules-data/skills.json");
 const RULES_EQUIPMENT: &str = include_str!("../../../rules-data/equipment.json");
+// The lineage record: ID sets of every shipped data version. The server
+// only needs its key set — a pin is "older known" when it appears in the
+// manifest's supersedes chain AND here.
+const RULES_SHIPPED_VERSIONS: &str = include_str!("../../../rules-data/shipped-versions.json");
 
 fn load_rules() -> Result<ruleset_pf2e::RulesData, String> {
     ruleset_pf2e::RulesData::parse(&ruleset_pf2e::RulesDataFiles {
@@ -63,6 +68,12 @@ struct Cli {
     /// Port to serve on; taken ports walk to the next free one. 0 = OS pick.
     #[arg(long, default_value_t = 8080)]
     port: u16,
+    /// TEST-SUPPORT ONLY (hidden): a JSON file of extra versions to treat
+    /// as older-known, same shape as rules-data/shipped-versions.json. The
+    /// checks suite uses it to fabricate a prior shipped version; nothing
+    /// in production passes it. Its use is announced on stderr.
+    #[arg(long, hide = true)]
+    extra_known_versions: Option<PathBuf>,
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -83,13 +94,25 @@ fn main() {
             std::process::exit(2);
         }
     };
+    let known = match version::KnownVersions::assemble(
+        ruleset_pf2e::rules_version(&rules),
+        &rules.manifest.supersedes,
+        RULES_SHIPPED_VERSIONS,
+        cli.extra_known_versions.as_deref(),
+    ) {
+        Ok(k) => k,
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(2);
+        }
+    };
     match cli.command {
-        Some(Command::Verify) => verify(cli.data_dir, rules),
-        None => serve(cli.data_dir, cli.port, rules),
+        Some(Command::Verify) => verify(cli.data_dir, rules, known),
+        None => serve(cli.data_dir, cli.port, rules, known),
     }
 }
 
-fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData) {
+fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData, known: version::KnownVersions) {
     let rules_version = ruleset_pf2e::rules_version(&rules).to_string();
     let engine = ruleset_pf2e::engine(Arc::new(rules));
     let store = match Store::open(&data_dir) {
@@ -113,11 +136,60 @@ fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData) {
     }
     for c in &load.characters {
         if c.rules_version != rules_version {
-            failures += 1;
-            println!(
-                "UNKNOWN   {}: pins rules-data version '{}' (this build ships '{}') — replay impossible; the materialized sheet still loads",
-                c.id, c.rules_version, rules_version
-            );
+            // Older-known pins replay against current data; unknown pins
+            // cannot. The version guard's load-time statuses, in print.
+            match version::status_for(&engine, &known, c) {
+                types::VersionStatus::KeptOld {
+                    pinned,
+                    evaluated_against,
+                } => {
+                    println!(
+                        "KEPT-OLD  {} ({}): pins older known version '{pinned}'; keeping the old derivation was recorded (evaluated against '{evaluated_against}') — not re-flagged",
+                        c.id, c.sheet.name
+                    );
+                }
+                types::VersionStatus::OlderKnown {
+                    pinned, outcome, ..
+                } => match outcome {
+                    types::ReplayOutcome::Identical => {
+                        println!(
+                            "OLD-IDENT {} ({}): pins older known version '{pinned}'; replay against current '{rules_version}' is identical — eligible for re-pin",
+                            c.id, c.sheet.name
+                        );
+                    }
+                    types::ReplayOutcome::Divergent { differences } => {
+                        failures += 1;
+                        println!(
+                            "OLD-DIVER {} ({}): pins older known version '{pinned}'; replay against current '{rules_version}' diverges — flagged for review, the stored sheet remains what the app loads",
+                            c.id, c.sheet.name
+                        );
+                        for d in &differences {
+                            println!(
+                                "          {} / {}: stored '{}', replay '{}'",
+                                d.section, d.label, d.old, d.new
+                            );
+                        }
+                    }
+                    types::ReplayOutcome::ReplayError {
+                        message,
+                        failing_decision,
+                        ..
+                    } => {
+                        failures += 1;
+                        println!(
+                            "OLD-BROKE {} ({}): pins older known version '{pinned}'; log does not replay against current '{rules_version}' (failing decision '{failing_decision}': {message}) — accept unavailable until resolved",
+                            c.id, c.sheet.name
+                        );
+                    }
+                },
+                _ => {
+                    failures += 1;
+                    println!(
+                        "UNKNOWN   {}: pins rules-data version '{}' (this build ships '{}') — not an older known version, replay impossible; the materialized sheet still loads",
+                        c.id, c.rules_version, rules_version
+                    );
+                }
+            }
             continue;
         }
         match engine.sheet(&c.log) {
@@ -163,7 +235,12 @@ fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData) {
     }
 }
 
-fn serve(data_dir: PathBuf, port: u16, rules: ruleset_pf2e::RulesData) {
+fn serve(
+    data_dir: PathBuf,
+    port: u16,
+    rules: ruleset_pf2e::RulesData,
+    known: version::KnownVersions,
+) {
     if let Err(e) = std::fs::create_dir_all(&data_dir) {
         eprintln!("cannot create data directory: {e}");
         std::process::exit(2);
@@ -186,6 +263,9 @@ fn serve(data_dir: PathBuf, port: u16, rules: ruleset_pf2e::RulesData) {
         notice.orc_notice, notice.attribution, notice.reserved
     );
     let rules_version = ruleset_pf2e::rules_version(&rules).to_string();
+    // Per-class suggested builds, resolved from the class records before the
+    // data moves into the engine.
+    let suggested = ruleset_pf2e::suggested_builds(&rules);
     let engine = ruleset_pf2e::engine(Arc::new(rules));
 
     // Bind: with the lock held, a taken port walks to the next free one
@@ -201,7 +281,9 @@ fn serve(data_dir: PathBuf, port: u16, rules: ruleset_pf2e::RulesData) {
         engine,
         store: Mutex::new(store),
         rules_version,
+        known,
         license_notice,
+        suggested,
     });
 
     println!("Serving at {url}");

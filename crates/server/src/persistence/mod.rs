@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 
 use types::{CharacterId, Decision, SheetView, StepId};
 
-pub(crate) use storage::DocState;
 use storage::{parse_doc, CharacterDoc, ParsedDoc, SCHEMA_VERSION};
+pub(crate) use storage::{DocState, KeepOldMarker, VersionEvent};
 
 use crate::clock;
 
@@ -35,6 +35,10 @@ pub(crate) struct Loaded {
     pub sheet: SheetView,
     pub log: Vec<Decision>,
     pub rules_version: String,
+    /// Recorded version-resolution actions; preserved by every save.
+    pub version_history: Vec<VersionEvent>,
+    /// Standing keep-old decision, if any; preserved by every save.
+    pub keep_old: Option<KeepOldMarker>,
 }
 
 impl From<CharacterDoc> for Loaded {
@@ -47,6 +51,8 @@ impl From<CharacterDoc> for Loaded {
             sheet: doc.sheet,
             log: doc.log,
             rules_version: doc.rules_version,
+            version_history: doc.version_history,
+            keep_old: doc.keep_old,
         }
     }
 }
@@ -168,7 +174,7 @@ impl Store {
         for path in self.character_files()? {
             match fs::read_to_string(&path) {
                 Ok(text) => match parse_doc(&text) {
-                    ParsedDoc::Ok(doc) => characters.push(doc.into()),
+                    ParsedDoc::Ok(doc) => characters.push((*doc).into()),
                     ParsedDoc::NewerSchema { version } => {
                         // Startup guard normally catches this; report it
                         // rather than quarantining a healthy future file.
@@ -197,7 +203,7 @@ impl Store {
         let path = self.character_path(id);
         let text = fs::read_to_string(&path).map_err(|_| StoreError::NotFound(id.clone()))?;
         match parse_doc(&text) {
-            ParsedDoc::Ok(doc) => Ok(doc.into()),
+            ParsedDoc::Ok(doc) => Ok((*doc).into()),
             ParsedDoc::NewerSchema { version } => Err(StoreError::Storage(format!(
                 "written by a newer dm.ai (schema {version})"
             ))),
@@ -217,6 +223,8 @@ impl Store {
             draft_version: loaded.draft_version,
             sheet: loaded.sheet.clone(),
             log: loaded.log.clone(),
+            version_history: loaded.version_history.clone(),
+            keep_old: loaded.keep_old.clone(),
         };
         let target = self.character_path(&loaded.id);
         let tmp = self

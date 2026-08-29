@@ -2,15 +2,19 @@
 // moves the file to trash), quarantine reports, and the ORC notice.
 import { useState } from 'react';
 import type { RosterView } from './engine';
+import { VersionBadge } from './VersionFlag';
 
 export function Roster({
   roster,
   onCreate,
+  onQuickBuild,
   onOpen,
   onDelete,
 }: {
   roster: RosterView;
   onCreate: (name: string | null) => void;
+  /** One tap: a draft filled with the app's suggested Fighter build. */
+  onQuickBuild: (name: string | null) => void;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -46,6 +50,7 @@ export function Roster({
                     ? `Resume creating (${entry.state.resume_label})`
                     : 'View sheet'}
                 </span>
+                <VersionBadge status={entry.version} />
               </button>
               {confirmingDelete === entry.id ? (
                 <span className="roster-delete-confirm">
@@ -88,6 +93,17 @@ export function Roster({
         />
         <button type="submit" className="confirm">
           Create character
+        </button>
+        <button
+          type="button"
+          className="quick-build"
+          title="Create a draft with every choice pre-filled by dm.ai's suggested build — review, tweak, and finalize"
+          onClick={() => {
+            onQuickBuild(name.trim() === '' ? null : name.trim());
+            setName('');
+          }}
+        >
+          Quick build a Fighter
         </button>
       </form>
 

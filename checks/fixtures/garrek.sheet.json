@@ -1,0 +1,284 @@
+{
+  "name": "Garrek Ironvale",
+  "summary": [
+    "Human (Skilled Human) Fighter 1",
+    "Medium · Speed 25 feet"
+  ],
+  "sections": [
+    {
+      "title": "Attributes",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "+4",
+          "detail": "+1 ancestry, +1 background, +1 class key attribute, +1 free boost"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+1",
+          "detail": "+1 free boost"
+        },
+        {
+          "label": "Constitution",
+          "value": "+2",
+          "detail": "+1 ancestry, +1 free boost"
+        },
+        {
+          "label": "Intelligence",
+          "value": "+0",
+          "detail": null
+        },
+        {
+          "label": "Wisdom",
+          "value": "+2",
+          "detail": "+1 background, +1 free boost"
+        },
+        {
+          "label": "Charisma",
+          "value": "+0",
+          "detail": null
+        }
+      ]
+    },
+    {
+      "title": "Defense",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "20",
+          "detail": "8 ancestry + 10 class + 2 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "17",
+          "detail": "10 + 1 Dex (cap +2) + 3 Scale Mail + 3 trained armor prof"
+        },
+        {
+          "label": "Fortitude",
+          "value": "+7",
+          "detail": "5 expert + 2 Con"
+        },
+        {
+          "label": "Reflex",
+          "value": "+6",
+          "detail": "5 expert + 1 Dex"
+        },
+        {
+          "label": "Will",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis"
+        },
+        {
+          "label": "Perception",
+          "value": "+7",
+          "detail": "5 expert + 2 Wis (initiative)"
+        },
+        {
+          "label": "Class DC",
+          "value": "17",
+          "detail": "10 + 3 trained + 4 Str"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": [
+        {
+          "label": "Fist",
+          "value": "+9 · 1d4+4 B",
+          "detail": "5 expert + 4 Str · agile, finesse, nonlethal, unarmed"
+        },
+        {
+          "label": "Dagger",
+          "value": "+9 · 1d4 P+4",
+          "detail": "5 expert (simple) + 4 Str · thrown 10 ft. · agile, finesse, thrown 10 ft., versatile S"
+        },
+        {
+          "label": "Longsword",
+          "value": "+9 · 1d8 S+4",
+          "detail": "5 expert (martial) + 4 Str · versatile P"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+4",
+          "detail": "3 trained + 1 Dex · from Fighter"
+        },
+        {
+          "label": "Arcana",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Athletics",
+          "value": "+7",
+          "detail": "3 trained + 4 Str · from Fighter"
+        },
+        {
+          "label": "Crafting",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Deception",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Diplomacy",
+          "value": "+3",
+          "detail": "3 trained + 0 Cha · from Skilled Human heritage"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+3",
+          "detail": "3 trained + 0 Cha · from Background: Warrior"
+        },
+        {
+          "label": "Medicine",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis · from Fighter"
+        },
+        {
+          "label": "Nature",
+          "value": "+2",
+          "detail": "0 untrained + 2 Wis"
+        },
+        {
+          "label": "Occultism",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Performance",
+          "value": "+0",
+          "detail": "0 untrained + 0 Cha"
+        },
+        {
+          "label": "Religion",
+          "value": "+2",
+          "detail": "0 untrained + 2 Wis"
+        },
+        {
+          "label": "Society",
+          "value": "+0",
+          "detail": "0 untrained + 0 Int"
+        },
+        {
+          "label": "Stealth",
+          "value": "+1",
+          "detail": "0 untrained + 1 Dex"
+        },
+        {
+          "label": "Survival",
+          "value": "+5",
+          "detail": "3 trained + 2 Wis · from Fighter"
+        },
+        {
+          "label": "Thievery",
+          "value": "+1",
+          "detail": "0 untrained + 1 Dex"
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Skilled Human",
+          "value": "heritage",
+          "detail": "You become trained in one skill of your choice. At 5th level, you become an expert in that skill."
+        },
+        {
+          "label": "Cooperative Nature",
+          "value": "ancestry feat",
+          "detail": "The short human life span lends perspective on teamwork. You gain a +4 circumstance bonus on checks to Aid."
+        },
+        {
+          "label": "Reactive Strike",
+          "value": "Fighter feature",
+          "detail": "Reaction. Trigger: a creature within your reach uses a manipulate action or a move action, makes a ranged attack, or leaves a square during a move action it's using. Make a melee Strike against the triggering creature. If your attack is a critical hit and the trigger was a manipulate action, you disrupt that action. This Strike doesn't count toward your multiple attack penalty, and your multiple attack penalty doesn't apply to it."
+        },
+        {
+          "label": "Shield Block",
+          "value": "Fighter feature",
+          "detail": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
+        },
+        {
+          "label": "Sudden Charge",
+          "value": "class feat",
+          "detail": "With a quick sprint, you dash up to your foe and swing: Stride twice, and if you end your movement within melee reach of at least one enemy, make a melee Strike against that enemy. You can use Sudden Charge while Burrowing, Climbing, Flying, or Swimming instead of Striding if you have the corresponding movement type."
+        },
+        {
+          "label": "Intimidating Glare",
+          "value": "skill feat — Warrior",
+          "detail": "You lived your life by the sword, either as a mercenary or a warrior defending your people."
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Scale Mail",
+          "value": "2 Bulk",
+          "detail": "Fighter Kit; worn"
+        },
+        {
+          "label": "Dagger",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Adventurer's Pack",
+          "value": "1 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Grappling Hook",
+          "value": "1 L",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Longsword",
+          "value": "1 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Steel Shield",
+          "value": "1 Bulk",
+          "detail": "Fighter Kit"
+        },
+        {
+          "label": "Coins",
+          "value": "6 gp, 2 sp",
+          "detail": "15 gp starting wealth - 8 gp, 8 sp spent"
+        },
+        {
+          "label": "Bulk",
+          "value": "5 Bulk, 2 L",
+          "detail": "encumbered above 9 Bulk, maximum 14 Bulk"
+        }
+      ]
+    },
+    {
+      "title": "Languages & Lore",
+      "entries": [
+        {
+          "label": "Languages",
+          "value": "Common",
+          "detail": null
+        },
+        {
+          "label": "Warfare Lore",
+          "value": "trained",
+          "detail": "Background: Warrior"
+        }
+      ]
+    }
+  ]
+}

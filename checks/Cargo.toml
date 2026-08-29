@@ -47,6 +47,18 @@ path = "no_rewrite_on_load.rs"
 name = "api_authority"
 path = "api_authority.rs"
 
+[[test]]
+name = "attestation"
+path = "attestation.rs"
+
+[[test]]
+name = "version_guard"
+path = "version_guard.rs"
+
+[[test]]
+name = "quick_build"
+path = "quick_build.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }
@@ -55,6 +67,7 @@ ruleset-pf2e = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+sha2 = { workspace = true }
 tempfile = { workspace = true }
 reqwest = { workspace = true }
 libc = { workspace = true }

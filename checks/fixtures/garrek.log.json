@@ -1,0 +1,174 @@
+[
+  {
+    "id": "qb.pf2e.details.name",
+    "slot": "pf2e.details.name",
+    "selection": {
+      "kind": "text",
+      "value": "Garrek Ironvale"
+    },
+    "source": "suggested",
+    "order": 0
+  },
+  {
+    "id": "qb.pf2e.ancestry",
+    "slot": "pf2e.ancestry",
+    "selection": {
+      "kind": "option",
+      "value": "ancestry.human"
+    },
+    "source": "suggested",
+    "order": 1
+  },
+  {
+    "id": "qb.pf2e.ancestry.heritage",
+    "slot": "pf2e.ancestry.heritage",
+    "selection": {
+      "kind": "option",
+      "value": "heritage.human.skilled"
+    },
+    "source": "suggested",
+    "order": 2
+  },
+  {
+    "id": "qb.pf2e.ancestry.feat",
+    "slot": "pf2e.ancestry.feat",
+    "selection": {
+      "kind": "option",
+      "value": "feat.ancestry.human.cooperative-nature"
+    },
+    "source": "suggested",
+    "order": 3
+  },
+  {
+    "id": "qb.pf2e.boosts.ancestry-free",
+    "slot": "pf2e.boosts.ancestry-free",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "attr.str",
+        "attr.con"
+      ]
+    },
+    "source": "suggested",
+    "order": 4
+  },
+  {
+    "id": "qb.pf2e.background",
+    "slot": "pf2e.background",
+    "selection": {
+      "kind": "option",
+      "value": "background.warrior"
+    },
+    "source": "suggested",
+    "order": 5
+  },
+  {
+    "id": "qb.pf2e.boosts.background-choice",
+    "slot": "pf2e.boosts.background-choice",
+    "selection": {
+      "kind": "option",
+      "value": "attr.str"
+    },
+    "source": "suggested",
+    "order": 6
+  },
+  {
+    "id": "qb.pf2e.boosts.background-free",
+    "slot": "pf2e.boosts.background-free",
+    "selection": {
+      "kind": "option",
+      "value": "attr.wis"
+    },
+    "source": "suggested",
+    "order": 7
+  },
+  {
+    "id": "qb.pf2e.class",
+    "slot": "pf2e.class",
+    "selection": {
+      "kind": "option",
+      "value": "class.fighter"
+    },
+    "source": "suggested",
+    "order": 8
+  },
+  {
+    "id": "qb.pf2e.class.key-attribute",
+    "slot": "pf2e.class.key-attribute",
+    "selection": {
+      "kind": "option",
+      "value": "attr.str"
+    },
+    "source": "suggested",
+    "order": 9
+  },
+  {
+    "id": "qb.pf2e.class.feat",
+    "slot": "pf2e.class.feat",
+    "selection": {
+      "kind": "option",
+      "value": "feat.class.fighter.sudden-charge"
+    },
+    "source": "suggested",
+    "order": 10
+  },
+  {
+    "id": "qb.pf2e.skills.class-choice",
+    "slot": "pf2e.skills.class-choice",
+    "selection": {
+      "kind": "option",
+      "value": "skill.athletics"
+    },
+    "source": "suggested",
+    "order": 11
+  },
+  {
+    "id": "qb.pf2e.skills.trained",
+    "slot": "pf2e.skills.trained",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "skill.acrobatics",
+        "skill.medicine",
+        "skill.survival"
+      ]
+    },
+    "source": "suggested",
+    "order": 12
+  },
+  {
+    "id": "qb.pf2e.skills.heritage-choice",
+    "slot": "pf2e.skills.heritage-choice",
+    "selection": {
+      "kind": "option",
+      "value": "skill.diplomacy"
+    },
+    "source": "suggested",
+    "order": 13
+  },
+  {
+    "id": "qb.pf2e.boosts.free",
+    "slot": "pf2e.boosts.free",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "attr.str",
+        "attr.dex",
+        "attr.con",
+        "attr.wis"
+      ]
+    },
+    "source": "suggested",
+    "order": 14
+  },
+  {
+    "id": "qb.pf2e.equipment.kit",
+    "slot": "pf2e.equipment.kit",
+    "selection": {
+      "kind": "option",
+      "value": "kit.fighter.sword-and-board"
+    },
+    "source": "suggested",
+    "order": 15
+  }
+]

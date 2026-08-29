@@ -6,6 +6,7 @@ import {
   amendDecision,
   clearSlot,
   confirmDecision,
+  fillRemaining,
   finalizeCharacter,
   setStep as apiSetStep,
 } from './api';
@@ -241,6 +242,33 @@ export function Wizard({
     }
   };
 
+  const fillWithSuggestions = async () => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const outcome = await fillRemaining(draft.id, draft.version);
+      if (outcome.outcome === 'filled') {
+        setDraft(outcome.draft);
+        setPending({});
+        setNotice(
+          outcome.unresolved.length === 0
+            ? 'Every open choice was filled with a suggestion — review the badges and finalize.'
+            : `Filled what was legal — ${outcome.unresolved.length} slot(s) still need you: ${outcome.unresolved
+                .map((u) => u.label)
+                .join(', ')}. The checklist has the details.`,
+        );
+      } else {
+        setDraft(outcome.current);
+        setPending({});
+        setNotice('This draft was changed from another tab — the latest state has been reloaded.');
+      }
+    } catch (error) {
+      setNotice(String(error instanceof Error ? error.message : error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const finalize = async () => {
     setBusy(true);
     setNotice(null);
@@ -290,6 +318,19 @@ export function Wizard({
             </li>
           ))}
         </ol>
+        <button
+          type="button"
+          className="fill-remaining"
+          disabled={displayed.can_finalize || busy}
+          onClick={() => void fillWithSuggestions()}
+          title={
+            displayed.can_finalize
+              ? 'Nothing left to fill'
+              : "Fill every open choice with dm.ai's suggested build — your confirmed choices never move"
+          }
+        >
+          Fill remaining with suggestions
+        </button>
         <button
           type="button"
           className="finalize confirm"

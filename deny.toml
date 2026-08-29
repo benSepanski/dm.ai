@@ -28,6 +28,10 @@ skip = [
     # proc-macro ecosystem is mid-migration from syn 2 to syn 3; both appear
     # only at build time (derive macros), never in shipped code.
     { crate = "syn", reason = "syn 2/3 split across derive-macro deps" },
+    # ring (rustls backend of the reference-check dev tool's fetcher) pins
+    # windows-sys 0.52 while clap uses 0.61; both are Windows-target-only
+    # stubs that never compile on our mac/linux targets or ship anywhere.
+    { crate = "windows-sys", reason = "ring pins 0.52; Windows-only, never built here" },
 ]
 skip-tree = []
 

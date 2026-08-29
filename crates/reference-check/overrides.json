@@ -1,0 +1,277 @@
+{
+  "doc": [
+    "reference-check matching config (see crates/reference-check/src/main.rs).",
+    "overrides: our-record ID -> Foundry pack path (relative to packs/pf2e/)",
+    "  for names the normalizer cannot bridge. Reviewed like code.",
+    "waivers: reviewed exemptions for records whose comparison legitimately",
+    "  differs from ground truth or has no counterpart. Each is bound to the",
+    "  state_hash of the exact mismatch it excuses (printed by `attest`);",
+    "  if the mismatch disappears or shifts, `attest` fails until the waiver",
+    "  is re-reviewed. No Foundry values appear here - reasons are our text."
+  ],
+  "overrides": {
+    "feat.ancestry.gnome.fey-world-magic": "feats/ancestry/gnome/level-1/first-world-magic.json",
+    "feat.ancestry.orc.tusks": "feats/ancestry/orc/level-1/tusks-orc.json",
+    "gear.barding-light-small-or-medium": "equipment/light-barding.json",
+    "gear.chalk": "equipment/chalk.json",
+    "gear.clothing-explorers": "equipment/explorers-clothing.json",
+    "gear.hearing-aid-magical": "equipment/magical-hearing-aid.json",
+    "gear.rations": "equipment/rations.json",
+    "gear.rope": "equipment/rope.json",
+    "gear.wheelchair-chair-storage": "equipment/chair-storage.json",
+    "gear.wheelchair-travelers-chair": "equipment/travelers-chair.json",
+    "weapon.arrows": "equipment/arrows.json",
+    "weapon.blowgun-darts": "equipment/blowgun-darts.json",
+    "weapon.bolts": "equipment/bolts.json",
+    "weapon.sling-bullets": "equipment/sling-bullets.json"
+  },
+  "spec_exclusions": [
+    {
+      "category": "backgrounds",
+      "name": "Raised by Belief",
+      "reason": "Excluded by name in spec req 1 [call]: its mechanics are parameterized on a deity catalog whose canonical names are ORC-reserved. The spec ships 39 of 40 backgrounds; full breadth deliberately excludes this one."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Angelkin",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Bestial Manifestation",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Brine May",
+      "reason": "Changeling heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Callow May",
+      "reason": "Changeling heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Changeling Lore",
+      "reason": "Changeling heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Dream May",
+      "reason": "Changeling heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Grimspawn",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Hag Claws",
+      "reason": "Changeling heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Hag's Sight",
+      "reason": "Changeling heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Halo",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Hellspawn",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Lawbringer",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Musetouched",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Nephilim Eyes",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Nephilim Lore",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Nimble Hooves",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Pitborn",
+      "reason": "Nephilim heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    },
+    {
+      "category": "ancestry_feats_l1",
+      "name": "Slag May",
+      "reason": "Changeling heritage feat: the Changeling and Nephilim versatile heritages are uncommon and excluded by name from the common-only scope (data-scope brief), so their heritage-gated feats are excluded with them even where the ground truth marks the feat itself common."
+    }
+  ],
+  "waivers": [
+    {
+      "id": "kit.fighter",
+      "reason": "Class kits exist only in the book; Foundry ships no class-kit pack. Contents and price semantics hand-verified against AoN (slice-1 dossier section 8.6).",
+      "state_hash": "c5ff5742b46791734a43c68b86ea441021f05472d741157d5f8331ddf211d27b"
+    },
+    {
+      "id": "background.street-urchin",
+      "reason": "The book parameterizes this background's Lore on the character's home settlement, naming a Golarion city as its example; we ship the generic 'City Lore' per the req-5 ORC scrub, and Foundry encodes no fixed lore for it at all.",
+      "state_hash": "89b5cfdbf2fb2fb18b51048db751a2669cc1b279407dd5c9c0bc1c2024d911fc"
+    },
+    {
+      "id": "background.entertainer",
+      "reason": "The book and AoN print this background's Lore as 'Theater Lore' (Player Core pg. 86); Foundry spells the same Lore with a regional spelling variant. Our record follows the book.",
+      "state_hash": "fe15e321652fb48b03642b516ad8994d78e1ce5f4ef413fa8dfa4d260c0a934e"
+    },
+    {
+      "id": "background.gladiator",
+      "reason": "The book and AoN print this background's Lore as 'Gladiatorial Lore' (Player Core pg. 86); Foundry's record carries a misspelled variant of the same Lore. Our record follows the book.",
+      "state_hash": "26dbf6b18d86360ebff79c07f52f73c0d9ad4b98bdcece1440aaee468bb07232"
+    },
+    {
+      "id": "weapon.shield-bash",
+      "reason": "A real PC1 martial-weapons table row (AoN Weapons.aspx?ID=395, Player Core pg. 278): the attack statistics for Striking with a shield. Foundry models shield attacks on the shield records themselves and ships no standalone weapon record, so there is no counterpart.",
+      "state_hash": "60cdfccb5a5a22099dedb1f596260e1b81b4bccd78b62ab98e2a3f43a83a7264"
+    },
+    {
+      "id": "weapon.blowgun-darts",
+      "reason": "Foundry attaches its systemic 'consumable' handling trait to every ammunition record and encodes this bundle as negligible bulk; the book's ammunition entry carries no trait line and Bulk L (AoN Weapons.aspx?ID=440, Player Core pg. 280). Our record follows the book on both fields.",
+      "state_hash": "38b127f4834c351bc9b8c193ec5d816830a4f6b692e8696ecd288c69f4799b98"
+    },
+    {
+      "id": "weapon.bolts",
+      "reason": "Foundry attaches its systemic 'consumable' handling trait to every ammunition record; the book's ammunition entries carry no trait line (PC1 p.280). Trait sets otherwise agree.",
+      "state_hash": "42fb924d66f4789c2b5e9f45f42690201f6762b153a057f681372533cd31bc68"
+    },
+    {
+      "id": "gear.barding-light-large",
+      "reason": "The book's Barding table (AoN Equipment.aspx?ID=2778, Player Core pg. 295) prices light barding per size band; Foundry collapses light barding into a single armor-typed record carrying the Small-or-Medium row (matched by gear.barding-light-small-or-medium via the override map) and ships no Large-size counterpart.",
+      "state_hash": "38678df9514ecab3f74781845cc4dd1668cd9bde2868ddbbd3839283c02ccedf"
+    },
+    {
+      "id": "gear.disguise-kit-replacement-cosmetics",
+      "reason": "AoN indexes this refill row with Bulk L (Equipment.aspx?ID=2720, Player Core pg. 288); Foundry encodes it as negligible bulk. Our record follows AoN/the book.",
+      "state_hash": "0d8e8b60870bea0ca68da8a550f34541e260a9cc9eb2d14a1590d8a3c1cf0683"
+    },
+    {
+      "id": "gear.tack",
+      "reason": "AoN and the book list Tack at Bulk 1 (Equipment.aspx?ID=2755, Player Core pg. 292); Foundry encodes a heavier bulk. Our record follows the book.",
+      "state_hash": "4516c71b6afff6077a525ef3b1eed973bec26bda18afa97fbef1130233d494a0"
+    },
+    {
+      "id": "gear.thieves-toolkit-replacement-picks",
+      "reason": "AoN indexes this refill row with Bulk L (Equipment.aspx?ID=2758, Player Core pg. 292); Foundry encodes it as negligible bulk. Our record follows AoN/the book.",
+      "state_hash": "7ffa71a6f00bad6c17330de8caf2ee10462e798a1ffb26e763f1c4a451bc728f"
+    },
+    {
+      "id": "gear.writing-set-extra-ink-and-paper",
+      "reason": "AoN indexes this refill row with Bulk L (Equipment.aspx?ID=2762, Player Core pg. 292); Foundry encodes it as negligible bulk. Our record follows AoN/the book.",
+      "state_hash": "c22b7d9c68663f425704a13adf1a90ac51d93edbe5877b097b92de067a8103c8"
+    },
+    {
+      "id": "weapon.arrows",
+      "reason": "Foundry attaches its systemic 'consumable' handling trait to every ammunition record; the book's ammunition entries carry no trait line (PC1 p.280). Trait sets otherwise agree.",
+      "state_hash": "bc4eaa93b13d8e26a135b01bc12a82d56f73f105797db735c5fbc0c7ef115a83"
+    },
+    {
+      "id": "weapon.sling-bullets",
+      "reason": "Foundry attaches its systemic 'consumable' handling trait to every ammunition record; the book's ammunition entries carry no trait line (PC1 p.280). Trait sets otherwise agree.",
+      "state_hash": "ad0a332400ad830841cc710a96a296e6c980008c701aac830dbc104281b3f170"
+    },
+    {
+      "id": "skill.acrobatics",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "e3d72ab03abbf3b2656a46a246315a201822df885f1230939a5a6238b8cbc777"
+    },
+    {
+      "id": "skill.arcana",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "a39ea06826c36b84c00bd4ebbdcf2cb0236911aabb0f974bd69de9a1a7b2b346"
+    },
+    {
+      "id": "skill.athletics",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "0c38df0bc4796f3129afbb446f956c458d9803ccfc7c0bed691bdaba4a8adbac"
+    },
+    {
+      "id": "skill.crafting",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "9b9840bc296e2b05f55d0f3cb9ea9cc140a6d5d0c686ba3b7cc3c1a4ce9dade5"
+    },
+    {
+      "id": "skill.deception",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "587d2de90d35af373af4cfd68632c8b6332e2c4cf300d59084ab639711e047b9"
+    },
+    {
+      "id": "skill.diplomacy",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "12ad299b28af9813ba5d05c17903988996f8a8a8835a024ffa9fd95d727baa67"
+    },
+    {
+      "id": "skill.intimidation",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "0421caac9929000fd97cc853d853e28f76235c9ba68abc13d7288b161b9243e9"
+    },
+    {
+      "id": "skill.medicine",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "0b0ad62f8de4f04ecfcf4d90baa0d3a8bcad22ad863ee7f5b12acabe9101ee1b"
+    },
+    {
+      "id": "skill.nature",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "107d6c83c352a2b4eb48a5bfef9443196e799651021cc5ea4214077a169adb1a"
+    },
+    {
+      "id": "skill.occultism",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "fd3d5f3d5cf1190651ca0e7c792d3870f893875b437c6dfbf00eb53e7c97952f"
+    },
+    {
+      "id": "skill.performance",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "37105bd8819879faccf677789db990392269a6c4bf0d3ad908206a4a9d4074b3"
+    },
+    {
+      "id": "skill.religion",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "7777eb0b0896ae09f13b7499e70f7b283ef6abf54eb7f4158042d48763be2eef"
+    },
+    {
+      "id": "skill.society",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "41a7c5edfed9cb80d88c4baa1c3095b7e49a8c44572a2f72267e80b4af62e608"
+    },
+    {
+      "id": "skill.stealth",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "0cf9c4ad5f27304607d635f4dbcdf7dc2593b79f9cc038c25f36296d24f295ce"
+    },
+    {
+      "id": "skill.survival",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "b0e7f555b25dadfe43c27ec3966d0eeadc06bed04718bb50f7345d6978a46b97"
+    },
+    {
+      "id": "skill.thievery",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "c1696d69869d6ea99abef75e5ae7042a5c85ddaacdf0cb1671491f7ece863d7d"
+    }
+  ]
+}

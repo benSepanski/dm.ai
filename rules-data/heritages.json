@@ -5,7 +5,13 @@
     "name": "Ancient-Blooded Dwarf",
     "text": "You gain the Call on Ancient Blood reaction: when you attempt a saving throw against a magical effect, gain a +1 circumstance bonus to the save.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=234", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 43,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=234",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.dwarf.death-warden",
@@ -13,7 +19,13 @@
     "name": "Death Warden Dwarf",
     "text": "When you roll a success on a saving throw against an effect with the void trait or one created by an undead creature, you get a critical success instead.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=235", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 43,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=235",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.dwarf.forge",
@@ -21,7 +33,13 @@
     "name": "Forge Dwarf",
     "text": "You gain fire resistance equal to half your level (minimum 1), and you treat environmental heat effects as if they were one step less extreme.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=236", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 43,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=236",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.dwarf.rock",
@@ -29,7 +47,13 @@
     "name": "Rock Dwarf",
     "text": "Your feet are firmly planted. You gain a +2 circumstance bonus to your Fortitude or Reflex DC against attempts to Reposition, Shove, or Trip you, and to saving throws against spells or effects that would force you to move or knock you prone. If any effect would force you to move 10 feet or more, you are moved only half the distance.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=237", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 43,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=237",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.dwarf.strong-blooded",
@@ -37,15 +61,33 @@
     "name": "Strong-Blooded Dwarf",
     "text": "You gain poison resistance equal to half your level (minimum 1), and each successful save against a poison reduces its stage by 2 (1 for a virulent poison); critical successes reduce it by 3 (2 for virulent).",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 43, "url": "https://2e.aonprd.com/Heritages.aspx?ID=238", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 43,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=238",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.elf.ancient",
     "ancestry": "ancestry.elf",
     "name": "Ancient Elf",
     "text": "In your long life you have dabbled in many paths. Choose a class other than your own; you gain that class's multiclass dedication feat, ignoring its level prerequisite.",
-    "effects": [{ "type": "choose_from_catalog", "catalog": "multiclass_dedications", "count": 1 }],
-    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=239", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "effects": [
+      {
+        "type": "choose_from_catalog",
+        "catalog": "multiclass_dedications",
+        "count": 1
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 47,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=239",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.elf.arctic",
@@ -53,15 +95,32 @@
     "name": "Arctic Elf",
     "text": "You gain cold resistance equal to half your level (minimum 1), and you treat environmental cold effects as if they were one step less extreme.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=240", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 47,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=240",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.elf.cavern",
     "ancestry": "ancestry.elf",
     "name": "Cavern Elf",
     "text": "You gain darkvision.",
-    "effects": [{ "type": "sense", "value": "darkvision" }],
-    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=241", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "effects": [
+      {
+        "type": "sense",
+        "value": "darkvision"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 47,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=241",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.elf.seer",
@@ -69,7 +128,13 @@
     "name": "Seer Elf",
     "text": "You can cast the detect magic cantrip as an arcane innate spell at will, and you gain a +1 circumstance bonus to checks to Identify Magic and to Decipher Writing of a magical nature.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=242", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 47,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=242",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.elf.whisper",
@@ -77,7 +142,13 @@
     "name": "Whisper Elf",
     "text": "Your ears are finely tuned. When you Seek, you gain a +2 circumstance bonus to locate undetected creatures within 30 feet, and your flat check to target concealed or hidden creatures is easier when the condition is due to sound.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=243", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 47,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=243",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.elf.woodland",
@@ -85,7 +156,13 @@
     "name": "Woodland Elf",
     "text": "When Climbing trees, vines, and other foliage, you move at half your Speed on a success and full Speed on a critical success. You can always use the Take Cover action in forest terrain.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 47, "url": "https://2e.aonprd.com/Heritages.aspx?ID=244", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 47,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=244",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.goblin.charhide",
@@ -93,7 +170,13 @@
     "name": "Charhide Goblin",
     "text": "You gain fire resistance equal to half your level (minimum 1). Your flat check to remove persistent fire damage is DC 10 (DC 5 with appropriate assistance).",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=250", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 55,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=250",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.goblin.irongut",
@@ -101,15 +184,37 @@
     "name": "Irongut Goblin",
     "text": "You can subsist on garbage and can eat and drink while sickened. You gain a +2 circumstance bonus to saving throws against afflictions and the sickened condition from ingestion; successes on such Fortitude saves become critical successes.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=251", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 55,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=251",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.goblin.razortooth",
     "ancestry": "ancestry.goblin",
     "name": "Razortooth Goblin",
     "text": "Your jaws are a natural weapon: you gain a jaws unarmed attack that deals 1d6 piercing damage, is in the brawling group, and has the finesse and unarmed traits.",
-    "effects": [{ "type": "unarmed_attack", "name": "Jaws", "damage": "1d6 P", "traits": ["finesse", "unarmed"] }],
-    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=252", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "effects": [
+      {
+        "type": "unarmed_attack",
+        "name": "Jaws",
+        "damage": "1d6 P",
+        "traits": [
+          "finesse",
+          "unarmed"
+        ]
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 55,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=252",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.goblin.snow",
@@ -117,30 +222,563 @@
     "name": "Snow Goblin",
     "text": "You gain cold resistance equal to half your level (minimum 1), and you treat environmental cold effects as if they were one step less extreme.",
     "effects": [],
-    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=253", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 55,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=253",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.goblin.unbreakable",
     "ancestry": "ancestry.goblin",
     "name": "Unbreakable Goblin",
     "text": "You're able to bounce back from injuries easily. Your maximum HP from your ancestry is 10 instead of 6. When you fall, reduce the falling damage as though you had fallen half the distance.",
-    "effects": [{ "type": "ancestry_hp_override", "value": 10 }],
-    "source": { "book": "Pathfinder Player Core", "page": 55, "url": "https://2e.aonprd.com/Heritages.aspx?ID=254", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "effects": [
+      {
+        "type": "ancestry_hp_override",
+        "value": 10
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 55,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=254",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.human.skilled",
     "ancestry": "ancestry.human",
     "name": "Skilled Human",
     "text": "You become trained in one skill of your choice. At 5th level, you become an expert in that skill.",
-    "effects": [{ "type": "choose_skills", "count": 1, "source_label": "Skilled Human heritage" }],
-    "source": { "book": "Pathfinder Player Core", "page": 63, "url": "https://2e.aonprd.com/Heritages.aspx?ID=261", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "effects": [
+      {
+        "type": "choose_skills",
+        "count": 1,
+        "source_label": "Skilled Human heritage"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 63,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=261",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "heritage.human.versatile",
     "ancestry": "ancestry.human",
     "name": "Versatile Human",
     "text": "You gain a general feat of your choice (you must meet its prerequisites).",
-    "effects": [{ "type": "choose_from_catalog", "catalog": "general_feats", "count": 1 }],
-    "source": { "book": "Pathfinder Player Core", "page": 63, "url": "https://2e.aonprd.com/Heritages.aspx?ID=262", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "effects": [
+      {
+        "type": "choose_from_catalog",
+        "catalog": "general_feats",
+        "count": 1
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 63,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=262",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.gnome.chameleon",
+    "ancestry": "ancestry.gnome",
+    "name": "Chameleon Gnome",
+    "text": "The color of your hair and skin is mutable, possibly due to latent fey magic or lingering illusion effects. You can slowly change the vibrancy and exact color of your coloration: minor localized shifts take a single action, and dramatic shifts throughout your body take up to an hour. When your coloration is roughly similar to your environment, you can use a single action to make minor shifts to blend in, gaining a +2 circumstance bonus to Stealth checks until your surroundings shift in coloration or pattern.",
+    "scrubbed": true,
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 51,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=245",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.gnome.fey-touched",
+    "ancestry": "ancestry.gnome",
+    "name": "Fey-touched Gnome",
+    "text": "The blood of the fey flows through your veins, making you truly one of them. You gain the fey trait, in addition to the gnome and humanoid traits. Choose one cantrip from the primal spell list; you can cast it as a primal innate spell at will, heightened to a spell rank equal to half your level rounded up. You can change this cantrip to a different one from the same list once per day by meditating to realign yourself with the fey realm; this is a 10-minute activity that has the concentrate trait.",
+    "scrubbed": true,
+    "effects": [
+      {
+        "type": "choose_from_catalog",
+        "catalog": "primal_cantrips",
+        "count": 1
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 51,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=246",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.gnome.sensate",
+    "ancestry": "ancestry.gnome",
+    "name": "Sensate Gnome",
+    "text": "You see all colors as brighter, hear all sounds as richer, and smell all scents with incredible detail. You gain a special sense: imprecise scent with a range of 30 feet, letting you use your sense of smell to determine the exact location of a creature. You also gain a +2 circumstance bonus to Perception checks to locate an undetected creature within the range of your scent.",
+    "effects": [
+      {
+        "type": "sense",
+        "value": "scent (imprecise) 30 feet"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 51,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=247",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.gnome.umbral",
+    "ancestry": "ancestry.gnome",
+    "name": "Umbral Gnome",
+    "text": "Whether from a connection to dark or shadowy fey, from underground gnomes, or from another source, you can see in complete darkness. You gain darkvision.",
+    "effects": [
+      {
+        "type": "sense",
+        "value": "darkvision"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 51,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=248",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.gnome.wellspring",
+    "ancestry": "ancestry.gnome",
+    "name": "Wellspring Gnome",
+    "text": "Some other source of magic has a greater hold on you than the primal magic of your fey lineage does. Choose arcane, divine, or occult. You gain one cantrip from that magical tradition's spell list; you can cast it as an innate spell at will, as a spell of your chosen tradition, heightened to a spell rank equal to half your level rounded up. Whenever you gain a primal innate spell from a gnome ancestry feat, change its tradition from primal to your chosen tradition.",
+    "effects": [
+      {
+        "type": "choose_from_catalog",
+        "catalog": "wellspring_cantrips",
+        "count": 1
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 51,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=249",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.halfling.gutsy",
+    "ancestry": "ancestry.halfling",
+    "name": "Gutsy Halfling",
+    "text": "Your family line is known for keeping a level head and staving off fear when the chips are down. When you roll a success on a saving throw against an emotion effect, you get a critical success instead.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 59,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=255",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.halfling.hillock",
+    "ancestry": "ancestry.halfling",
+    "name": "Hillock Halfling",
+    "text": "Accustomed to a calm life in the hills, your people find rest especially replenishing. When you regain Hit Points overnight, add your level to the Hit Points regained. When anyone uses the Medicine skill to Treat your Wounds, you can eat a snack to add your level to the Hit Points you regain from their treatment.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 59,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=256",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.halfling.nomadic",
+    "ancestry": "ancestry.halfling",
+    "name": "Nomadic Halfling",
+    "text": "Your ancestors have traveled from place to place for generations, never content to settle down. You gain two additional languages of your choice, chosen from among the languages available to you, and every time you take the Multilingual feat, you gain another new language.",
+    "effects": [
+      {
+        "type": "bonus_languages",
+        "count": 2
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 59,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=258",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.halfling.twilight",
+    "ancestry": "ancestry.halfling",
+    "name": "Twilight Halfling",
+    "text": "Your ancestors performed many secret acts under the concealing cover of dusk, and over time they developed the ability to see in twilight beyond even the usual keen sight of halflings. You gain low-light vision.",
+    "effects": [
+      {
+        "type": "sense",
+        "value": "low-light vision"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 59,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=259",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.halfling.wildwood",
+    "ancestry": "ancestry.halfling",
+    "name": "Wildwood Halfling",
+    "text": "You hail from deep within a jungle or forest, and you've learned how to use your small size to wriggle through undergrowth and other obstacles. You ignore any difficult terrain caused by plants and fungi, such as bushes, vines, and undergrowth.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 59,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=260",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.leshy.cactus",
+    "ancestry": "ancestry.leshy",
+    "name": "Cactus Leshy",
+    "text": "Spines cover your body. You gain a spine unarmed attack that deals 1d6 piercing damage, is in the brawling group, and has the finesse and unarmed traits.",
+    "effects": [
+      {
+        "type": "unarmed_attack",
+        "name": "Spine",
+        "damage": "1d6 P",
+        "traits": [
+          "finesse",
+          "unarmed"
+        ]
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 67,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=263",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.leshy.fruit",
+    "ancestry": "ancestry.leshy",
+    "name": "Fruit Leshy",
+    "text": "Your body continually produces small fruits imbued with primal magic. At dawn each day, a new fruit ripens; you or an ally can remove it with an Interact action. If a living creature that can derive sustenance from fruit consumes it as an Interact action within the next hour, they regain 1d8 Hit Points, plus an additional 1d8 Hit Points for every 2 of your levels beyond 1st. This effect has the healing and vitality traits.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 67,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=264",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.leshy.fungus",
+    "ancestry": "ancestry.leshy",
+    "name": "Fungus Leshy",
+    "text": "Your body was made from fungi that grows in the shade of caves and trees, and you are at home in dark caverns and warrens. You gain darkvision. You lose the plant trait and gain the fungus trait.",
+    "effects": [
+      {
+        "type": "sense",
+        "value": "darkvision"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 67,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=265",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.leshy.gourd",
+    "ancestry": "ancestry.leshy",
+    "name": "Gourd Leshy",
+    "text": "You have a large gourd for a skull, and you can use the space inside your head to store a collection of up to 1 Bulk of objects. The DC of checks to Steal objects from inside your head increases by 4. Additionally, if you store only one object within your head, you can draw it effortlessly into your hand as part of another action to use the object; drawing the item grants that action the manipulate trait.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 67,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=266",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.leshy.leaf",
+    "ancestry": "ancestry.leshy",
+    "name": "Leaf Leshy",
+    "text": "Your body is made mostly from natural foliage, and like a leaf tumbling from a tree, you land from falls with particular grace. You take no damage from falling, regardless of the distance you fall.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 67,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=267",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.leshy.lotus",
+    "ancestry": "ancestry.leshy",
+    "name": "Lotus Leshy",
+    "text": "You effortlessly float on the surface of water. You can walk on the surface of still water and other non-damaging liquids, moving at half your normal Speed. You can also attempt to Balance to move across the surface of flowing water, using the DC of a Swim check; you can't move faster than half your Speed, and if you fail or critically fail, you fall into the water.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 67,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=268",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.leshy.root",
+    "ancestry": "ancestry.leshy",
+    "name": "Root Leshy",
+    "text": "Your body is made from hardy roots that attach you firmly to the ground. You gain 10 Hit Points from your ancestry instead of 8. You can go without sunlight for 2 weeks before you begin to starve. You gain a +2 circumstance bonus to your Fortitude or Reflex DC against attempts to Reposition, Shove, or Trip you, and to saving throws against spells or effects that attempt to move you or knock you prone.",
+    "effects": [
+      {
+        "type": "ancestry_hp_override",
+        "value": 10
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 67,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=269",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.leshy.seaweed",
+    "ancestry": "ancestry.leshy",
+    "name": "Seaweed Leshy",
+    "text": "Your body is made from woven seaweed, and you're just as comfortable underwater as on land. You gain a swim Speed of 20 feet, and you can always breathe underwater. However, your land Speed is reduced by 5 feet (to 20 feet for most seaweed leshies).",
+    "effects": [
+      {
+        "type": "speed_bonus",
+        "value": -5
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 67,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=270",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.leshy.vine",
+    "ancestry": "ancestry.leshy",
+    "name": "Vine Leshy",
+    "text": "Your prehensile vines grant you unmatched skill at climbing. You do not need to have any hands free to Climb. Additionally, if you roll a success on an Athletics check to Climb, you get a critical success instead.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 68,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=271",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.orc.badlands",
+    "ancestry": "ancestry.orc",
+    "name": "Badlands Orc",
+    "text": "You come from sun-scorched badlands, where long legs and an ability to withstand the elements helped you thrive. You can Hustle twice as long while exploring before you have to stop, and you treat environmental heat effects as if they were one step less extreme.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 71,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=272",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.orc.battle-ready",
+    "ancestry": "ancestry.orc",
+    "name": "Battle-Ready Orc",
+    "text": "You descend from a line of terrifying battlefield commanders. You become trained in Intimidation, and you gain the Intimidating Glare skill feat.",
+    "effects": [
+      {
+        "type": "grant_skills",
+        "skills": [
+          "skill.intimidation"
+        ],
+        "source_label": "Battle-Ready Orc"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 71,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=273",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.orc.deep",
+    "ancestry": "ancestry.orc",
+    "name": "Deep Orc",
+    "text": "Your calloused hands and red eyes speak to a life spent in the deep darkness of mountain caverns, where you learned to battle on rocky cliffs and survive with minimal resources. You gain the Terrain Expertise skill feat for underground terrain and the Combat Climber skill feat.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 71,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=274",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.orc.grave",
+    "ancestry": "ancestry.orc",
+    "name": "Grave Orc",
+    "text": "You were exposed to powerful necromantic energies that should have killed you—but you survived. Your skin is cold, clammy, and gray. You gain resistance to void damage equal to half your level (minimum 1), and a +1 circumstance bonus to saving throws against effects with the death or void trait.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 71,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=275",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.orc.hold-scarred",
+    "ancestry": "ancestry.orc",
+    "name": "Hold-Scarred Orc",
+    "text": "You are part of an orc community that participates in ritual scarification or tattooing, and the marks on your skin show your exceptional hardiness and vitality. You gain 12 Hit Points from your ancestry instead of 10. You also gain the Diehard feat.",
+    "effects": [
+      {
+        "type": "ancestry_hp_override",
+        "value": 12
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 71,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=276",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.orc.rainfall",
+    "ancestry": "ancestry.orc",
+    "name": "Rainfall Orc",
+    "text": "You were born in a rain forest and have learned to move adeptly through jungle terrain and resist the ailments common in humid environs. You gain a +2 circumstance bonus to Athletics checks to Climb or Swim, and a +1 circumstance bonus to saving throws against diseases.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 71,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=277",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.orc.winter",
+    "ancestry": "ancestry.orc",
+    "name": "Winter Orc",
+    "text": "Your ancestors survived in cold climates. You become trained in Survival, and you treat environmental cold effects as if they were one step less extreme.",
+    "effects": [
+      {
+        "type": "grant_skills",
+        "skills": [
+          "skill.survival"
+        ],
+        "source_label": "Winter Orc"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 71,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=278",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.versatile.aiuvarin",
+    "ancestry": null,
+    "name": "Aiuvarin",
+    "text": "You have elves, or possibly other aiuvarins, in your family tree, with pointed ears and other telltale signs of elf heritage. You gain the elf trait, the aiuvarin trait, and low-light vision (or darkvision, if your ancestry already has low-light vision). In addition, when you gain an ancestry feat, you can choose from aiuvarin and elf feats in addition to those from your ancestry.",
+    "feat_ancestries": [
+      "aiuvarin",
+      "ancestry.elf"
+    ],
+    "effects": [
+      {
+        "type": "sense_upgrade",
+        "sense": "darkvision",
+        "otherwise": "low-light vision"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 82,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=281",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "heritage.versatile.dromaar",
+    "ancestry": null,
+    "name": "Dromaar",
+    "text": "Orcish strength emboldens your bloodline. You have a green tinge to your skin and other indicators of orc heritage. You gain the orc trait, the dromaar trait, and low-light vision (or darkvision, if your ancestry already has low-light vision). When you gain an ancestry feat, you can choose from dromaar and orc feats in addition to those from your ancestry.",
+    "feat_ancestries": [
+      "dromaar",
+      "ancestry.orc"
+    ],
+    "effects": [
+      {
+        "type": "sense_upgrade",
+        "sense": "darkvision",
+        "otherwise": "low-light vision"
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 83,
+      "url": "https://2e.aonprd.com/Heritages.aspx?ID=282",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   }
 ]

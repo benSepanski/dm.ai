@@ -1,6 +1,15 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * 409 body when a wizard write is refused because the draft pins a
+ * rules-data version that is not current and unresolved.
+ */
+export interface VersionFlaggedError {
+    message: string;
+    status: VersionStatus;
+}
+
+/**
  * A character (draft or finalized); also its filename stem in the data dir.
  */
 export type CharacterId = string;
@@ -39,6 +48,12 @@ export interface DraftView {
      * The rules-data version this draft is built against.
      */
     rules_version: string;
+    /**
+     * Where that pin stands against the shipped data (always `Current`
+     * here: a draft with an unresolved older pin arrives as
+     * `CharacterView::FlaggedDraft` instead, never with a projection).
+     */
+    version_status: VersionStatus;
 }
 
 /**
@@ -69,6 +84,17 @@ export interface MeterView {
 }
 
 /**
+ * A required slot the suggestion planner could not fill, with the reason —
+ * the "cannot complete" half of a quick-build/fill response. The same
+ * slots also appear on the ordinary checklist.
+ */
+export interface UnresolvedSuggestion {
+    slot: SlotId;
+    label: string;
+    reason: string;
+}
+
+/**
  * A ruleset-defined choice slot, e.g. `pf2e.ancestry` or `pf2e.boosts.free`.
  */
 export type SlotId = string;
@@ -76,7 +102,7 @@ export type SlotId = string;
 /**
  * A single character as fetched by ID.
  */
-export type CharacterView = ({ state: "draft" } & DraftView) | { state: "finalized"; id: CharacterId; sheet: SheetView };
+export type CharacterView = ({ state: "draft" } & DraftView) | { state: "finalized"; id: CharacterId; sheet: SheetView; version_status: VersionStatus; version: number } | { state: "flagged_draft"; id: CharacterId; name: string; sheet: SheetView; version: number; status: VersionStatus };
 
 /**
  * A stable rules-data record ID, e.g. `ancestry.dwarf`.
@@ -108,16 +134,70 @@ export interface ProjectionView {
 }
 
 /**
+ * Fill only the open required slots of an existing draft with suggestions.
+ * Carries the draft version like every wizard write; `request_id` makes the
+ * expansion idempotent under retry.
+ */
+export interface FillRemainingRequest {
+    request_id: string;
+    version: number;
+}
+
+/**
  * How a slot collects its selection. Presentation-mechanical only — the
  * meaning of the options is the ruleset's business.
  */
 export type SlotViewKind = { kind: "single" } | { kind: "multi"; count: number } | { kind: "list" } | { kind: "text"; multiline: boolean };
 
 /**
+ * One sheet value that would change under current data, old → new.
+ */
+export interface SheetDiff {
+    section: string;
+    label: string;
+    /**
+     * The stored value ("(absent)" when the entry did not exist).
+     */
+    old: string;
+    /**
+     * The value current data derives ("(absent)" when it no longer exists).
+     */
+    new: string;
+}
+
+/**
+ * One-tap quick build: create a draft and fill every required slot from
+ * the class's suggested build. `request_id` is client-generated and makes
+ * the request idempotent: a retry after a crash between save and ack
+ * returns the already-saved draft and appends nothing.
+ */
+export interface QuickBuildRequest {
+    request_id: string;
+    /**
+     * Optional working name; seeds the name slot as a player decision (the
+     * planner never overwrites it).
+     */
+    name: string | undefined;
+}
+
+/**
  * Outcome of a confirm. `Conflict` carries the current draft so a stale
  * tab can reload; `Rejected` is the server refusing an illegal confirm.
  */
 export type ConfirmOutcome = { outcome: "confirmed"; draft: DraftView } | { outcome: "conflict"; current: DraftView } | { outcome: "rejected"; reasons: ChecklistEntry[]; draft: DraftView };
+
+/**
+ * Outcome of a version-resolution route.
+ */
+export type VersionResolutionOutcome = { outcome: "resolved"; character: CharacterView } | { outcome: "conflict"; character: CharacterView } | { outcome: "refused"; message: string; status: VersionStatus };
+
+/**
+ * Request body for the version-resolution routes (re-pin / accept /
+ * keep-old / resolve-errors). Carries the draft version like every write.
+ */
+export interface VersionActionRequest {
+    version: number;
+}
 
 /**
  * The HTTP wire types aren't referenced by the engine boundary, but the UI
@@ -137,6 +217,13 @@ export interface WireTypeExports {
     finalize_request: FinalizeRequest;
     finalize_outcome: FinalizeOutcome;
     api_error: ApiError;
+    version_action_request: VersionActionRequest;
+    version_resolution_outcome: VersionResolutionOutcome;
+    version_flagged_error: VersionFlaggedError;
+    quick_build_request: QuickBuildRequest;
+    quick_build_result: QuickBuildResult;
+    fill_remaining_request: FillRemainingRequest;
+    fill_remaining_outcome: FillRemainingOutcome;
 }
 
 /**
@@ -144,6 +231,21 @@ export interface WireTypeExports {
  * infers state from weaker signals (decision presence, entry absence).
  */
 export type SlotStatus = "locked" | "empty" | "partial" | "complete" | "illegal";
+
+/**
+ * The quick-build response: a normal draft view (review state, NOT
+ * finalized) plus any slots the suggested build could not fill.
+ */
+export interface QuickBuildResult {
+    draft: DraftView;
+    unresolved: UnresolvedSuggestion[];
+}
+
+/**
+ * The result of replaying an older-known character's log against current
+ * rules data.
+ */
+export type ReplayOutcome = { kind: "identical" } | { kind: "divergent"; differences: SheetDiff[] } | { kind: "replay_error"; message: string; failing_decision: DecisionId; slot: SlotId; would_reopen?: ClearedDecision[] };
 
 /**
  * Uniform error body for everything that is not a typed outcome.
@@ -173,10 +275,16 @@ export interface ClearPreview {
 export type Selection = { kind: "option"; value: OptionId } | { kind: "options"; value: OptionId[] } | { kind: "text"; value: string };
 
 /**
- * Who (or what) made a decision. One variant today; DM exceptions and
- * auto-mode arrive in later epochs as new variants.
+ * Where a character's pinned rules-data version stands relative to the
+ * version this build ships. Computed fresh on every load.
  */
-export type DecisionSource = "player";
+export type VersionStatus = { status: "current" } | { status: "older_known"; pinned: string; current: string; outcome: ReplayOutcome } | { status: "kept_old"; pinned: string; evaluated_against: string } | { status: "unknown"; pinned: string; current: string };
+
+/**
+ * Who (or what) made a decision. DM exceptions and auto-mode arrive in
+ * later epochs as new variants.
+ */
+export type DecisionSource = "player" | "suggested";
 
 export interface ChecklistEntry {
     severity: ChecklistSeverity;
@@ -266,6 +374,10 @@ export interface RosterEntry {
      */
     summary: string;
     state: RosterCharacterState;
+    /**
+     * Rules-data version flag — computed at load, never written by it.
+     */
+    version: VersionStatus;
 }
 
 export interface RosterProblem {
@@ -373,6 +485,8 @@ export type ClearOutcome = { outcome: "cleared"; draft: DraftView; preview: Clea
 export type EngineRequest = { request: "project"; log: Decision[] } | { request: "preview"; log: Decision[]; candidate: DecisionInput } | { request: "clear_preview"; log: Decision[]; slot: SlotId };
 
 export type EngineResponse = { response: "projection"; projection: ProjectionView } | { response: "clear_preview"; preview: ClearPreview } | { response: "error"; message: string };
+
+export type FillRemainingOutcome = { outcome: "filled"; draft: DraftView; unresolved: UnresolvedSuggestion[] } | { outcome: "conflict"; current: DraftView };
 
 export type FinalizeOutcome = { outcome: "finalized"; sheet: SheetView } | { outcome: "blocked"; reasons: ChecklistEntry[] } | { outcome: "conflict"; current: DraftView };
 

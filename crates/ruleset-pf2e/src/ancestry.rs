@@ -6,11 +6,12 @@ use std::sync::Arc;
 use engine_core::{ApplyError, Availability, SlotRegistration};
 use types::{OptionId, OptionView, SlotId, SlotViewKind, StepId};
 
-use crate::data::{Effect, RulesData};
+use crate::data::{AncestryFeatRecord, Effect, RulesData};
 use crate::mechanics::{
-    attribute_options, describe_selection, illegal, incomplete, sel_attributes, sel_single,
-    Pf2eState, SLOT_ANCESTRY, SLOT_ANCESTRY_FEAT, SLOT_ANCESTRY_FREE_BOOSTS,
-    SLOT_FEAT_GENERAL_FEAT, SLOT_FEAT_SKILLS, SLOT_HERITAGE, SLOT_HERITAGE_GENERAL_FEAT,
+    attribute_options, describe_selection, illegal, incomplete, lang_option_id, prereq_description,
+    prereq_unavailable, sel_attributes, sel_multi, sel_single, Pf2eState, SLOT_ANCESTRY,
+    SLOT_ANCESTRY_FEAT, SLOT_ANCESTRY_FREE_BOOSTS, SLOT_ANCESTRY_LANGUAGES, SLOT_FEAT_GENERAL_FEAT,
+    SLOT_FEAT_LORE, SLOT_FEAT_SKILLS, SLOT_HERITAGE, SLOT_HERITAGE_GENERAL_FEAT,
     SLOT_HERITAGE_SKILLS, SLOT_NATURAL_AMBITION, SLOT_REPLACEMENT_1, SLOT_REPLACEMENT_2,
     SLOT_REPLACEMENT_3,
 };
@@ -37,16 +38,22 @@ fn chooser_unavailable(data: &RulesData, effects: &[Effect]) -> Option<String> {
     None
 }
 
-/// Prerequisites: evaluable kinds gate availability; the rest annotate.
-fn prereq_unavailable(prereqs: &[crate::data::Prerequisite], state: &Pf2eState) -> Option<String> {
-    let _ = state;
-    for p in prereqs {
-        if p.kind == "spellcasting" {
-            // No class in this data version has a spellcasting feature.
-            return Some(p.text.clone());
-        }
+/// Ancestry-feat catalog membership under the union rule: a feat is in
+/// the catalog when its key names the chosen ancestry, or the chosen
+/// heritage lists the key in feat_ancestries (versatile-heritage union).
+fn feat_in_catalog(data: &RulesData, state: &Pf2eState, feat: &AncestryFeatRecord) -> bool {
+    let Some(ancestry) = &state.ancestry else {
+        return false;
+    };
+    if &feat.ancestry == ancestry {
+        return true;
     }
-    None
+    state
+        .heritage
+        .as_ref()
+        .and_then(|id| data.heritage(id))
+        .map(|h| h.feat_ancestries.contains(&feat.ancestry))
+        .unwrap_or(false)
 }
 
 pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> {
@@ -68,6 +75,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             SlotId::new(SLOT_HERITAGE),
             SlotId::new(SLOT_ANCESTRY_FEAT),
             SlotId::new(SLOT_ANCESTRY_FREE_BOOSTS),
+            SlotId::new(SLOT_ANCESTRY_LANGUAGES),
         ],
         options: Box::new(move |_| {
             d.ancestries
@@ -161,14 +169,20 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         dependents: vec![
             SlotId::new(SLOT_HERITAGE_SKILLS),
             SlotId::new(SLOT_HERITAGE_GENERAL_FEAT),
+            // The ancestry-feat catalog derives from the heritage too
+            // (versatile-heritage union), so a heritage change clears it.
+            SlotId::new(SLOT_ANCESTRY_FEAT),
+            SlotId::new(SLOT_FEAT_LORE),
         ],
         options: Box::new(move |state| {
             let Some(ancestry) = &state.ancestry else {
                 return vec![];
             };
+            // The chosen ancestry's own heritages ∪ the versatile ones
+            // (ancestry: null), selectable under any ancestry.
             d.heritages
                 .iter()
-                .filter(|h| &h.ancestry == ancestry)
+                .filter(|h| h.ancestry.as_ref() == Some(ancestry) || h.is_versatile())
                 .map(|h| {
                     let unavailable = chooser_unavailable(&d, &h.effects);
                     OptionView {
@@ -187,7 +201,9 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             let record = d_apply
                 .heritage(id.as_str())
                 .ok_or_else(|| ApplyError::new(format!("unknown heritage '{id}'")))?;
-            if state.ancestry.as_deref() != Some(record.ancestry.as_str()) {
+            // A versatile heritage applies under any ancestry; a bound one
+            // only under its own.
+            if !record.is_versatile() && state.ancestry != record.ancestry {
                 return Err(ApplyError::new(format!(
                     "heritage '{}' does not belong to the chosen ancestry",
                     record.name
@@ -200,7 +216,29 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 )));
             }
             state.heritage = Some(record.id.clone());
-            state.effects.extend(record.effects.iter().cloned());
+            // Fold grant effects exactly as feat apply does — a heritage's
+            // skill/Lore grants (Battle-Ready Orc) train on the sheet and
+            // feed the same collision/replacement machinery.
+            for e in &record.effects {
+                match e {
+                    Effect::GrantSkills {
+                        skills,
+                        source_label,
+                    } => {
+                        for s in skills {
+                            state.skill_grants.push(crate::mechanics::SkillGrant {
+                                skill: s.clone(),
+                                source: source_label.clone(),
+                            });
+                        }
+                    }
+                    Effect::GrantLore { name } => {
+                        state.lores.push((name.clone(), record.name.clone()));
+                    }
+                    _ => {}
+                }
+                state.effects.push(e.clone());
+            }
             Ok(())
         }),
         validate: Box::new(|state, _| {
@@ -241,23 +279,24 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             SlotId::new(SLOT_FEAT_SKILLS),
             SlotId::new(SLOT_FEAT_GENERAL_FEAT),
             SlotId::new(SLOT_NATURAL_AMBITION),
+            SlotId::new(SLOT_FEAT_LORE),
             SlotId::new(SLOT_REPLACEMENT_1),
             SlotId::new(SLOT_REPLACEMENT_2),
             SlotId::new(SLOT_REPLACEMENT_3),
         ],
         options: Box::new(move |state| {
-            let Some(ancestry) = &state.ancestry else {
+            if state.ancestry.is_none() {
                 return vec![];
             };
             d.ancestry_feats
                 .iter()
-                .filter(|f| &f.ancestry == ancestry && f.level == 1)
+                .filter(|f| f.level == 1 && feat_in_catalog(&d, state, f))
                 .map(|f| {
-                    let unavailable = prereq_unavailable(&f.prerequisites, state)
+                    let unavailable = prereq_unavailable(&d, &f.prerequisites, state)
                         .or_else(|| chooser_unavailable(&d, &f.effects));
                     let mut details = vec![f.text.clone()];
                     for p in &f.prerequisites {
-                        details.push(format!("Prerequisite: {}", p.text));
+                        details.push(format!("Prerequisite: {}", prereq_description(&d, p)));
                     }
                     OptionView {
                         id: OptionId::new(&f.id),
@@ -275,13 +314,14 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             let record = d_apply
                 .ancestry_feat(id.as_str())
                 .ok_or_else(|| ApplyError::new(format!("unknown ancestry feat '{id}'")))?;
-            if state.ancestry.as_deref() != Some(record.ancestry.as_str()) {
+            if !feat_in_catalog(&d_apply, state, record) {
                 return Err(ApplyError::new(format!(
-                    "feat '{}' does not belong to the chosen ancestry",
+                    "feat '{}' is not in the feat catalog for the chosen \
+                     ancestry and heritage",
                     record.name
                 )));
             }
-            if let Some(reason) = prereq_unavailable(&record.prerequisites, state)
+            if let Some(reason) = prereq_unavailable(&d_apply, &record.prerequisites, state)
                 .or_else(|| chooser_unavailable(&d_apply, &record.effects))
             {
                 return Err(ApplyError::new(format!(
@@ -417,6 +457,124 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     STEP,
                     "Attribute boosts",
                     "Boosts gained at the same time must go to different attributes",
+                    "from Ancestry",
+                ));
+            }
+            out
+        }),
+        meters: Box::new(|_, _| vec![]),
+        describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
+    });
+
+    // --- Additional languages ---
+    // Multi-select from the ancestry's additional_languages list; the count
+    // is dynamic — max(0, Int modifier) + bonus-language effects — and
+    // recomputed on every projection, like the trained-skills count. With
+    // no list, or a count of zero and nothing picked, the slot is absent
+    // (never blocks finalize); it stays visible while stale picks exist so
+    // the over-pick flag can point at them.
+    let d = data.clone();
+    let d_opts = data.clone();
+    let d_apply = data.clone();
+    let d_desc = data.clone();
+    regs.push(SlotRegistration::<Pf2eState> {
+        id: SlotId::new(SLOT_ANCESTRY_LANGUAGES),
+        step: StepId::new(STEP),
+        label: "Additional languages".into(),
+        required: true,
+        presentation_hint: None,
+        kind: Box::new(move |state| SlotViewKind::Multi {
+            count: state.language_count(),
+        }),
+        unlock: Box::new(move |state| {
+            let list_present = state
+                .ancestry
+                .as_ref()
+                .and_then(|id| d.ancestry(id))
+                .map(|a| !a.additional_languages.is_empty())
+                .unwrap_or(false);
+            if list_present && (state.language_count() > 0 || !state.chosen_languages.is_empty()) {
+                Availability::Open
+            } else {
+                Availability::Hidden
+            }
+        }),
+        dependents: vec![],
+        options: Box::new(move |state| {
+            let Some(a) = state.ancestry.as_ref().and_then(|id| d_opts.ancestry(id)) else {
+                return vec![];
+            };
+            a.additional_languages
+                .iter()
+                .map(|lang| OptionView {
+                    id: OptionId::new(lang_option_id(lang)),
+                    label: lang.clone(),
+                    summary: String::new(),
+                    details: vec![],
+                    available: true,
+                    unavailable_reason: None,
+                })
+                .collect()
+        }),
+        apply: Box::new(move |state, decision| {
+            let ids = sel_multi(&decision.selection)?;
+            let Some(a) = state.ancestry.as_ref().and_then(|id| d_apply.ancestry(id)) else {
+                return Err(ApplyError::new("choose an ancestry first"));
+            };
+            let mut chosen = Vec::new();
+            for id in ids {
+                let lang = a
+                    .additional_languages
+                    .iter()
+                    .find(|lang| lang_option_id(lang) == id.as_str())
+                    .ok_or_else(|| {
+                        ApplyError::new(format!(
+                            "'{id}' is not in this ancestry's additional languages"
+                        ))
+                    })?;
+                chosen.push(lang.clone());
+            }
+            state.chosen_languages = chosen;
+            Ok(())
+        }),
+        validate: Box::new(move |state, decision| {
+            let expected = state.language_count() as usize;
+            let picked = state.chosen_languages.len();
+            let mut out = Vec::new();
+            if expected > 0 && (decision.is_none() || picked < expected) {
+                out.push(incomplete(
+                    SLOT_ANCESTRY_LANGUAGES,
+                    STEP,
+                    "Languages",
+                    &format!(
+                        "{} additional language choice(s) left",
+                        expected - picked.min(expected)
+                    ),
+                    "from Ancestry",
+                ));
+            }
+            if picked > expected {
+                out.push(illegal(
+                    SLOT_ANCESTRY_LANGUAGES,
+                    STEP,
+                    "Languages",
+                    &format!(
+                        "{picked} languages selected but only {expected} allowed \
+                         (did Intelligence change?)"
+                    ),
+                    "from Ancestry",
+                ));
+            }
+            let mut sorted = state.chosen_languages.clone();
+            sorted.sort();
+            let mut deduped = sorted.clone();
+            deduped.dedup();
+            if sorted.len() != deduped.len() {
+                out.push(illegal(
+                    SLOT_ANCESTRY_LANGUAGES,
+                    STEP,
+                    "Languages",
+                    "Each additional language must be different",
                     "from Ancestry",
                 ));
             }

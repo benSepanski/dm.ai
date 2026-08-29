@@ -3,3 +3,6 @@ node_modules/
 ui/test-results/
 ui/playwright-report/
 .DS_Store
+
+# reference-check ground-truth cache: fetched at tool-time, never committed
+.reference-cache/

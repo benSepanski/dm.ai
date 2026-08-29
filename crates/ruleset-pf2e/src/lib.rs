@@ -17,6 +17,8 @@ mod equipment;
 mod feats;
 mod mechanics;
 mod skills;
+#[cfg(test)]
+mod tests;
 
 use std::sync::Arc;
 
@@ -74,4 +76,41 @@ pub fn engine(data: Arc<RulesData>) -> Pf2eEngine {
 /// The manifest version string ("pf2e-pc.0.1.0") — what characters pin.
 pub fn rules_version(data: &RulesData) -> &str {
     &data.manifest.version
+}
+
+/// The class-selection slot ID — lets the server steer fill-remaining to
+/// the chosen class's suggested build without hardcoding game vocabulary.
+pub use mechanics::SLOT_CLASS as CLASS_SLOT_ID;
+
+/// Every class's suggested build, resolved into the planner's shape:
+/// (class record ID, slot → suggestion). The planner interprets the class
+/// record's ordered-candidate block directly (architecture: no per-slot
+/// suggest hook); this is the one translation from content to the
+/// engine-core vocabulary.
+pub fn suggested_builds(
+    data: &RulesData,
+) -> Vec<(
+    String,
+    std::collections::BTreeMap<types::SlotId, engine_core::SlotSuggestion>,
+)> {
+    data.classes
+        .iter()
+        .filter_map(|class| {
+            let block = class.suggested_build.as_ref()?;
+            let map = block
+                .entries
+                .iter()
+                .map(|entry| {
+                    let suggestion = match &entry.text {
+                        Some(text) => engine_core::SlotSuggestion::Text(text.clone()),
+                        None => engine_core::SlotSuggestion::Candidates(
+                            entry.candidates.iter().map(types::OptionId::new).collect(),
+                        ),
+                    };
+                    (types::SlotId::new(&entry.slot), suggestion)
+                })
+                .collect();
+            Some((class.id.clone(), map))
+        })
+        .collect()
 }

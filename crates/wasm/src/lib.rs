@@ -100,6 +100,13 @@ pub struct WireTypeExports {
     pub finalize_request: types::FinalizeRequest,
     pub finalize_outcome: types::FinalizeOutcome,
     pub api_error: types::ApiError,
+    pub version_action_request: types::VersionActionRequest,
+    pub version_resolution_outcome: types::VersionResolutionOutcome,
+    pub version_flagged_error: types::VersionFlaggedError,
+    pub quick_build_request: types::QuickBuildRequest,
+    pub quick_build_result: types::QuickBuildResult,
+    pub fill_remaining_request: types::FillRemainingRequest,
+    pub fill_remaining_outcome: types::FillRemainingOutcome,
 }
 
 #[wasm_bindgen]

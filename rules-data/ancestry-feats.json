@@ -309,5 +309,386 @@
     "text": "You've familiarized yourself with a particular weapon. Choose an uncommon simple or martial weapon; you gain access to it and treat it as one proficiency category simpler if it's from another culture's tradition.",
     "effects": [{ "type": "choose_from_catalog", "catalog": "uncommon_weapons", "count": 1 }],
     "source": { "book": "Pathfinder Player Core", "page": 64, "url": "https://2e.aonprd.com/Feats.aspx?ID=4480", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.gnome.animal-accomplice",
+    "ancestry": "ancestry.gnome",
+    "level": 1,
+    "name": "Animal Accomplice",
+    "prerequisites": [],
+    "text": "You build a rapport with an animal, which becomes magically bonded to you. You gain a familiar. The type of animal is up to you, but most gnomes choose animals with a burrow Speed.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 52, "url": "https://2e.aonprd.com/Feats.aspx?ID=4422", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.gnome.animal-elocutionist",
+    "ancestry": "ancestry.gnome",
+    "level": 1,
+    "name": "Animal Elocutionist",
+    "prerequisites": [],
+    "text": "You hear animal sounds as conversations instead of unintelligent noise, and you can respond in turn. You can ask questions of, receive answers from, and use the Diplomacy skill with animals. You gain a +1 circumstance bonus to Make an Impression on animals.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 52, "url": "https://2e.aonprd.com/Feats.aspx?ID=4423", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.gnome.fey-fellowship",
+    "ancestry": "ancestry.gnome",
+    "level": 1,
+    "name": "Fey Fellowship",
+    "prerequisites": [],
+    "text": "Your enhanced fey connection affords you a warmer reception from creatures of the fey realm as well as tools to foil their tricks or withstand their magic. You gain a +2 circumstance bonus to both Perception checks and saving throws against fey. Whenever you meet a fey creature in a social situation, you can immediately attempt a Diplomacy check to Make an Impression on it rather than needing to converse for 1 minute, taking a -5 penalty to the check; on a failure, you can engage in 1 minute of conversation and attempt a new check instead.",
+    "scrubbed": true,
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 52, "url": "https://2e.aonprd.com/Feats.aspx?ID=4424", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.gnome.fey-world-magic",
+    "ancestry": "ancestry.gnome",
+    "level": 1,
+    "name": "Fey World Magic",
+    "prerequisites": [],
+    "text": "Your connection to the fey realm grants you a primal innate spell, much like those of the fey. Choose one cantrip from the primal spell list. You can cast this spell as a primal innate spell at will. A cantrip is heightened to a spell rank equal to half your level rounded up.",
+    "scrubbed": true,
+    "effects": [{ "type": "choose_from_catalog", "catalog": "primal_cantrips", "count": 1 }],
+    "source": { "book": "Pathfinder Player Core", "page": 52, "url": "https://2e.aonprd.com/Feats.aspx?ID=4425", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.gnome.gnome-obsession",
+    "ancestry": "ancestry.gnome",
+    "level": 1,
+    "name": "Gnome Obsession",
+    "prerequisites": [],
+    "text": "You might have a flighty nature, but when a topic captures your attention, you dive into it headfirst. You gain the Additional Lore feat and the Assurance feat for the chosen Lore. As gnome obsessions can come and go quickly, you can retrain Gnome Obsession to a different Lore subcategory in 1 day of downtime.",
+    "effects": [{ "type": "choose_lore", "source_label": "Gnome Obsession" }],
+    "source": { "book": "Pathfinder Player Core", "page": 52, "url": "https://2e.aonprd.com/Feats.aspx?ID=4426", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.gnome.gnome-weapon-familiarity",
+    "ancestry": "ancestry.gnome",
+    "level": 1,
+    "name": "Gnome Weapon Familiarity",
+    "prerequisites": [],
+    "text": "You favor unusual weapons tied to your people. You gain access to kukris and all uncommon weapons with the gnome trait. You treat weapons with the gnome trait, plus the glaive and kukri, as one proficiency category simpler (martial as simple, advanced as martial). At 5th level you gain critical specialization effects with these weapons.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 52, "url": "https://2e.aonprd.com/Feats.aspx?ID=4427", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.gnome.illusion-sense",
+    "ancestry": "ancestry.gnome",
+    "level": 1,
+    "name": "Illusion Sense",
+    "prerequisites": [],
+    "text": "Sensing illusion magic is second nature to you. You gain a +1 circumstance bonus to both Perception checks and Will saves against illusions. When you come within 10 feet of an illusion that can be disbelieved, the GM rolls a secret check for you to disbelieve it, even if you didn't spend an action to Interact with the illusion.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 52, "url": "https://2e.aonprd.com/Feats.aspx?ID=4428", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.gnome.razzle-dazzle",
+    "ancestry": "ancestry.gnome",
+    "level": 1,
+    "name": "Razzle-Dazzle",
+    "prerequisites": [],
+    "text": "Free action, once per hour. Trigger: you blind or dazzle a creature. You've practiced the manipulation of light. Extend the duration of the blinded or dazzled condition you give the target by 1 round.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 52, "url": "https://2e.aonprd.com/Feats.aspx?ID=4429", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.distracting-shadows",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Distracting Shadows",
+    "prerequisites": [],
+    "text": "You have learned to remain hidden by using larger folk as a distraction. You can use creatures that are at least one size larger than you (usually Medium or larger) as cover for the Hide and Sneak actions, though you still can't use such creatures as cover for other uses, such as the Take Cover action.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4455", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.folksy-patter",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Folksy Patter",
+    "prerequisites": [],
+    "text": "You are adept at disguising coded messages as folksy idioms. Using slang, jokes, and halfling loanwords, you convey a simple message consisting of three basic words. Your intended listener can attempt a DC 20 Perception check to discern the message (reduced by 5 if the listener is a halfling or has Folksy Patter, or by 10 if both apply). Eavesdroppers can attempt a Perception check against your Deception DC to discern your meaning.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4456", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.halfling-lore",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Halfling Lore",
+    "prerequisites": [],
+    "text": "You've dutifully learned skills passed down through generations of halfling tradition. You become trained in Acrobatics and Stealth (if you were already trained, you become trained in a skill of your choice instead). You also gain the Additional Lore feat for Halfling Lore.",
+    "effects": [
+      { "type": "grant_skills", "skills": ["skill.acrobatics", "skill.stealth"], "source_label": "Halfling Lore" },
+      { "type": "grant_lore", "name": "Halfling Lore" }
+    ],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4457", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.halfling-luck",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Halfling Luck",
+    "prerequisites": [],
+    "text": "Free action, once per day. Trigger: you fail a skill check or saving throw. Your happy-go-lucky nature makes it seem like misfortune avoids you. You can reroll the triggering check, but you must use the new result, even if it's worse.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4458", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.halfling-weapon-familiarity",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Halfling Weapon Familiarity",
+    "prerequisites": [],
+    "text": "You favor traditional halfling weapons. You gain access to all uncommon weapons with the halfling trait. You treat weapons with the halfling trait, plus the sling and shortsword, as one proficiency category simpler (martial as simple, advanced as martial). At 5th level you gain critical specialization effects with these weapons.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4459", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.prairie-rider",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Prairie Rider",
+    "prerequisites": [],
+    "text": "You grew up riding your clan's shaggy ponies and riding dogs. You become trained in Nature (if you were already trained, you become trained in a skill of your choice instead). You also get a +1 circumstance bonus to Command an Animal if the target is a traditional halfling mount, such as a pony or riding dog.",
+    "effects": [{ "type": "grant_skills", "skills": ["skill.nature"], "source_label": "Prairie Rider" }],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4460", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.sure-feet",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Sure Feet",
+    "prerequisites": [],
+    "text": "Whether keeping your balance or climbing, your feet easily find purchase. If you roll a success on an Acrobatics check to Balance or an Athletics check to Climb, you get a critical success instead. You're not off-guard when you attempt to Balance or Climb.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4461", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.titan-slinger",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Titan Slinger",
+    "prerequisites": [],
+    "text": "You have learned how to use your sling to fell enormous creatures. When you hit on an attack with a weapon of the sling group against a Large or larger creature, increase the size of the weapon damage die by one step.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4462", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.unfettered-halfling",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Unfettered Halfling",
+    "prerequisites": [],
+    "text": "You have trained to ensure you'll never be caught or held again. Whenever you roll a success on a check to Escape or a saving throw against an effect that would impose the grabbed, immobilized, or restrained condition on you, you get a critical success instead. Whenever a creature rolls a failure on a check to Grapple you, it gets a critical failure instead.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4463", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.halfling.watchful-halfling",
+    "ancestry": "ancestry.halfling",
+    "level": 1,
+    "name": "Watchful Halfling",
+    "prerequisites": [],
+    "text": "You pay close attention to the people around you, noticing when they act out of character. You gain a +2 circumstance bonus to Perception checks when using Sense Motive to notice enchanted or possessed characters; if you aren't actively using Sense Motive, the GM rolls a secret check without the bonus for you to notice anyway. You can also use the Aid basic action to grant a bonus to another creature's check to overcome enchantment or possession.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 60, "url": "https://2e.aonprd.com/Feats.aspx?ID=4464", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.leshy.grasping-reach",
+    "ancestry": "ancestry.leshy",
+    "level": 1,
+    "name": "Grasping Reach",
+    "prerequisites": [],
+    "text": "You can extend a tangle of vines or tendrils to support your arms and extend your reach. When you wield a melee weapon that requires two hands, doesn't have reach, and deals at least 1d6 damage, you can change between a typical two-handed grip and an extended two-handed grasp using an Interact action. Weapons wielded in your extended grasp gain reach of 10 feet, but this grasp is less stable and powerful, reducing the weapon's damage die by 1 step.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 68, "url": "https://2e.aonprd.com/Feats.aspx?ID=4493", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.leshy.harmlessly-cute",
+    "ancestry": "ancestry.leshy",
+    "level": 1,
+    "name": "Harmlessly Cute",
+    "prerequisites": [],
+    "text": "Your size and demeanor make it easy to convince others that you mean no harm. You gain the Shameless Request skill feat. Additionally, you gain a +1 circumstance bonus to initiative checks when you roll Deception for initiative.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 68, "url": "https://2e.aonprd.com/Feats.aspx?ID=4494", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.leshy.leshy-lore",
+    "ancestry": "ancestry.leshy",
+    "level": 1,
+    "name": "Leshy Lore",
+    "prerequisites": [],
+    "text": "You deeply understand your people's cultural traditions and innate strengths. You become trained in Nature and Stealth (if you were already trained, you become trained in a skill of your choice instead). You also gain the Additional Lore feat for Leshy Lore.",
+    "effects": [
+      { "type": "grant_skills", "skills": ["skill.nature", "skill.stealth"], "source_label": "Leshy Lore" },
+      { "type": "grant_lore", "name": "Leshy Lore" }
+    ],
+    "source": { "book": "Pathfinder Player Core", "page": 68, "url": "https://2e.aonprd.com/Feats.aspx?ID=4495", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.leshy.leshy-superstition",
+    "ancestry": "ancestry.leshy",
+    "level": 1,
+    "name": "Leshy Superstition",
+    "prerequisites": [],
+    "text": "Reaction. Trigger: you attempt a saving throw against a spell or magical effect, but haven't rolled yet. You focus on the power of a lucky object, granting you a +1 circumstance bonus to your saving throw against the triggering effect.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 68, "url": "https://2e.aonprd.com/Feats.aspx?ID=4496", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.leshy.seedpod",
+    "ancestry": "ancestry.leshy",
+    "level": 1,
+    "name": "Seedpod",
+    "prerequisites": [],
+    "text": "Your body produces a nearly endless supply of hard seedpods. You gain a seedpod ranged unarmed attack with a range increment of 30 feet that deals 1d4 bludgeoning damage. On a critical hit, a seedpod bursts, imposing a -10-foot circumstance penalty on the target's Speed until the start of your next turn. Seedpods do not add critical specialization effects.",
+    "effects": [{ "type": "unarmed_attack", "name": "Seedpod", "damage": "1d4 B", "traits": ["unarmed"], "range": "30 ft." }],
+    "source": { "book": "Pathfinder Player Core", "page": 68, "url": "https://2e.aonprd.com/Feats.aspx?ID=4497", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.leshy.shadow-of-the-wilds",
+    "ancestry": "ancestry.leshy",
+    "level": 1,
+    "name": "Shadow of the Wilds",
+    "prerequisites": [],
+    "text": "It's difficult to notice your passage through wild areas. As long as you're not in an urban environment, you're always considered to be Covering Tracks, even if you chose a different activity in exploration mode.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 68, "url": "https://2e.aonprd.com/Feats.aspx?ID=4498", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.leshy.undaunted",
+    "ancestry": "ancestry.leshy",
+    "level": 1,
+    "name": "Undaunted",
+    "prerequisites": [],
+    "text": "Your spirit has endured many challenges over its long existence. You gain a +1 circumstance bonus to saves against emotion effects. If you roll a success on a saving throw against an emotion effect, you get a critical success instead.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 68, "url": "https://2e.aonprd.com/Feats.aspx?ID=4499", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.orc.beast-trainer",
+    "ancestry": "ancestry.orc",
+    "level": 1,
+    "name": "Beast Trainer",
+    "prerequisites": [],
+    "text": "You have an impressive innate ability to tame and command ferocious beasts. You become trained in the Nature skill (if you were already trained, you become trained in a skill of your choice instead) and gain your choice of the Pet general feat or the Train Animal skill feat.",
+    "effects": [{ "type": "grant_skills", "skills": ["skill.nature"], "source_label": "Beast Trainer" }],
+    "source": { "book": "Pathfinder Player Core", "page": 72, "url": "https://2e.aonprd.com/Feats.aspx?ID=4512", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.orc.hold-mark",
+    "ancestry": "ancestry.orc",
+    "level": 1,
+    "name": "Hold Mark",
+    "prerequisites": [],
+    "text": "You bear scars or tattoos enhanced by the mark of your community's prowess. Choose one emblem: Burning Sun (Diplomacy, arcane), Death's Head (Survival, primal), Defiled Corpse (Religion, divine), or Empty Hand (Intimidation, occult). You become trained in the listed skill and gain a +1 status bonus to saves against spells from the listed tradition.",
+    "effects": [{ "type": "choose_skills", "count": 1, "source_label": "Hold Mark", "from": ["skill.diplomacy", "skill.survival", "skill.religion", "skill.intimidation"] }],
+    "source": { "book": "Pathfinder Player Core", "page": 72, "url": "https://2e.aonprd.com/Feats.aspx?ID=4517", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.orc.iron-fists",
+    "ancestry": "ancestry.orc",
+    "level": 1,
+    "name": "Iron Fists",
+    "prerequisites": [],
+    "text": "Your fists have been forged by battle, your naturally tough skin and dense bone further hardened by conflict. Your fist unarmed attacks no longer have the nonlethal trait and gain the shove weapon trait.",
+    "effects": [{ "type": "unarmed_attack", "name": "Fist", "damage": "1d4 B", "traits": ["agile", "finesse", "shove", "unarmed"], "replaces_fist": true }],
+    "source": { "book": "Pathfinder Player Core", "page": 72, "url": "https://2e.aonprd.com/Feats.aspx?ID=4513", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.orc.orc-ferocity",
+    "ancestry": "ancestry.orc",
+    "level": 1,
+    "name": "Orc Ferocity",
+    "prerequisites": [],
+    "text": "Reaction, once per day. Trigger: you would be reduced to 0 Hit Points but not immediately killed. You refuse to fall from your injuries: you avoid being knocked out and remain at 1 Hit Point, and your wounded condition increases by 1.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 72, "url": "https://2e.aonprd.com/Feats.aspx?ID=4514", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.orc.orc-lore",
+    "ancestry": "ancestry.orc",
+    "level": 1,
+    "name": "Orc Lore",
+    "prerequisites": [],
+    "text": "The hold elders taught you your people's histories and shared the hardships your ancestors endured. You become trained in Athletics and Survival (if you were already trained, you become trained in a skill of your choice instead). You also gain the Additional Lore feat for Orc Lore.",
+    "effects": [
+      { "type": "grant_skills", "skills": ["skill.athletics", "skill.survival"], "source_label": "Orc Lore" },
+      { "type": "grant_lore", "name": "Orc Lore" }
+    ],
+    "source": { "book": "Pathfinder Player Core", "page": 72, "url": "https://2e.aonprd.com/Feats.aspx?ID=4515", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.orc.orc-superstition",
+    "ancestry": "ancestry.orc",
+    "level": 1,
+    "name": "Orc Superstition",
+    "prerequisites": [],
+    "text": "Reaction. Trigger: you attempt a saving throw against a spell or magical effect, and have not yet rolled. You defend yourself against magic by relying on techniques derived from orc cultural superstitions, gaining a +1 circumstance bonus to your saving throw against the triggering spell or magical effect.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 72, "url": "https://2e.aonprd.com/Feats.aspx?ID=4516", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.orc.orc-weapon-familiarity",
+    "ancestry": "ancestry.orc",
+    "level": 1,
+    "name": "Orc Weapon Familiarity",
+    "prerequisites": [],
+    "text": "In combat, you favor the brutal weapons that are traditional for your orc ancestors. You gain access to all uncommon weapons with the orc trait. You treat weapons with the orc trait, plus the falchion and greataxe, as one proficiency category simpler (martial as simple, advanced as martial). At 5th level you gain critical specialization effects with these weapons.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 72, "url": "https://2e.aonprd.com/Feats.aspx?ID=4518", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.orc.tusks",
+    "ancestry": "ancestry.orc",
+    "level": 1,
+    "name": "Tusks",
+    "prerequisites": [],
+    "text": "You have particularly long, jagged tusks perfect for tearing meat from bone. You gain a tusks unarmed attack that deals 1d6 piercing damage. Your tusks are in the brawling group and have the finesse and unarmed traits. Special: you can take this feat only at 1st level, and you can retrain out of it only through drastic measures.",
+    "effects": [{ "type": "unarmed_attack", "name": "Tusks", "damage": "1d6 P", "traits": ["finesse", "unarmed"] }],
+    "source": { "book": "Pathfinder Player Core", "page": 72, "url": "https://2e.aonprd.com/Feats.aspx?ID=4519", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.aiuvarin.earned-glory",
+    "ancestry": "aiuvarin",
+    "level": 1,
+    "name": "Earned Glory",
+    "prerequisites": [],
+    "text": "You are experienced at telling stories of your accomplishments to gain the respect of elves. You become trained in Performance (if you would automatically become trained in Performance, you instead become trained in a skill of your choice). You gain the Impressive Performance feat. When you attempt a Performance check to Make an Impression on an elf, if you roll a critical failure, you get a failure instead.",
+    "effects": [{ "type": "grant_skills", "skills": ["skill.performance"], "source_label": "Earned Glory" }],
+    "source": { "book": "Pathfinder Player Core", "page": 82, "url": "https://2e.aonprd.com/Feats.aspx?ID=4567", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.aiuvarin.elf-atavism",
+    "ancestry": "aiuvarin",
+    "level": 1,
+    "name": "Elf Atavism",
+    "prerequisites": [],
+    "text": "Your elven blood runs particularly strong. You gain the benefits of the elf heritage of your elven parent or ancestors. You typically can't select a heritage that depends on or improves an elven feature you don't have. Special: you can take this feat only at 1st level, and you can't retrain out of this feat or into this feat.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 82, "url": "https://2e.aonprd.com/Feats.aspx?ID=4568", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.dromaar.monstrous-peacemaker",
+    "ancestry": "dromaar",
+    "level": 1,
+    "name": "Monstrous Peacemaker",
+    "prerequisites": [],
+    "text": "Your dual nature has given you a unique perspective, allowing you to bridge the gap between humans and the many intelligent creatures that humans consider monsters. You gain a +1 circumstance bonus to Diplomacy checks against non-humanoid intelligent creatures and against humanoids that are marginalized in human society, and on Perception checks to Sense the Motives of such creatures.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 83, "url": "https://2e.aonprd.com/Feats.aspx?ID=4571", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.ancestry.dromaar.orc-sight",
+    "ancestry": "dromaar",
+    "level": 1,
+    "name": "Orc Sight",
+    "prerequisites": [{ "kind": "special", "text": "low-light vision" }],
+    "text": "Your orc blood grants you the keen vision of your forebears. You gain darkvision, allowing you to see in darkness and dim light just as well as you can in bright light; in darkness, you see in black and white only. Special: you can take this feat only at 1st level, and you can't retrain out of this feat or into this feat.",
+    "effects": [{ "type": "sense", "value": "darkvision" }],
+    "source": { "book": "Pathfinder Player Core", "page": 83, "url": "https://2e.aonprd.com/Feats.aspx?ID=4572", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
   }
 ]

@@ -83,7 +83,11 @@ jobs:
             touch crates/engine-core/src/lib.rs
             start=$(date +%s%3N)
             cargo build -p server --timings
-            wasm-pack build crates/wasm --target web --out-dir ../../ui/src/engine/pkg --no-pack
+            # Warm-loop lever 1 (chargen-content architecture): wasm-opt is
+            # skipped in the developer-iteration measurement only; release
+            # and bindings-freshness builds keep it, and the .wasm binary's
+            # correctness is enforced behaviorally by the ui parity tests.
+            wasm-pack build crates/wasm --target web --out-dir ../../ui/src/engine/pkg --no-pack --no-opt
             rm -f ui/src/engine/pkg/.gitignore
             end=$(date +%s%3N)
             ms=$((end - start))

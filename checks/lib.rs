@@ -73,10 +73,17 @@ pub struct TestServer {
 impl TestServer {
     /// Spawn on an OS-assigned port and wait for the printed URL.
     pub fn spawn(data_dir: &std::path::Path) -> TestServer {
+        Self::spawn_with_args(data_dir, &[])
+    }
+
+    /// Spawn with extra CLI arguments (e.g. the version-guard tests pass the
+    /// hidden test-support flag `--extra-known-versions <file>`).
+    pub fn spawn_with_args(data_dir: &std::path::Path, extra_args: &[&str]) -> TestServer {
         let mut child = Command::new(server_binary())
             .args(["--data-dir"])
             .arg(data_dir)
             .args(["--port", "0"])
+            .args(extra_args)
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .spawn()
@@ -114,6 +121,22 @@ impl TestServer {
         (
             output.status.code().unwrap_or(-1),
             String::from_utf8_lossy(&output.stderr).to_string(),
+        )
+    }
+
+    /// Run the `verify` subcommand over a data directory; returns the exit
+    /// code and combined stdout.
+    pub fn run_verify(data_dir: &std::path::Path, extra_args: &[&str]) -> (i32, String) {
+        let output = Command::new(server_binary())
+            .args(["--data-dir"])
+            .arg(data_dir)
+            .args(extra_args)
+            .arg("verify")
+            .output()
+            .expect("run server verify");
+        (
+            output.status.code().unwrap_or(-1),
+            String::from_utf8_lossy(&output.stdout).to_string(),
         )
     }
 

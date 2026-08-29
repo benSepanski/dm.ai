@@ -236,6 +236,16 @@ fn elyse_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
         "pf2e.boosts.free",
         many(&["attr.dex", "attr.con", "attr.wis", "attr.int"]),
     );
+    // Int +1 grants one bonus language from the human list (chargen-content:
+    // the language chooser opened once ancestries carried additional
+    // languages; hand-verified addition to the golden).
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.languages",
+        many(&["lang.elven"]),
+    );
     confirm(
         engine,
         &mut log,
@@ -374,6 +384,767 @@ fn krivvy_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
         Selection::Text("Krivvy".into()),
     );
     log
+}
+
+/// Caelith, a Whisper Elf Scholar exercising the background skill
+/// sub-choice (Scholar trains a chosen skill, and the skill feat follows
+/// the choice), Nimble Elf's speed bonus, and the Int-driven language
+/// chooser (Int +2 buys two extra trained skills and two languages).
+/// Values hand-verified against Pathfinder Player Core: Elf pg. 46-48,
+/// Scholar pg. 88, greatsword pg. 280, scale mail pg. 273.
+fn caelith_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+    let mut log = Vec::new();
+    let n = &mut 0;
+    confirm(engine, &mut log, n, "pf2e.ancestry", one("ancestry.elf"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.heritage",
+        one("heritage.elf.whisper"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.feat",
+        one("feat.ancestry.elf.nimble-elf"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.ancestry-free",
+        many(&["attr.str"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.background",
+        one("background.scholar"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.background.skill",
+        one("skill.occultism"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-choice",
+        one("attr.int"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-free",
+        one("attr.str"),
+    );
+    confirm(engine, &mut log, n, "pf2e.class", one("class.fighter"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.key-attribute",
+        one("attr.str"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.feat",
+        one("feat.class.fighter.vicious-swing"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.class-choice",
+        one("skill.athletics"),
+    );
+    // 3 + Int 2 = 5 trained picks (elf Int boost + Scholar's Int boost).
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.trained",
+        many(&[
+            "skill.survival",
+            "skill.arcana",
+            "skill.crafting",
+            "skill.medicine",
+            "skill.religion",
+        ]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.free",
+        many(&["attr.str", "attr.dex", "attr.con", "attr.wis"]),
+    );
+    // Int +2 grants two bonus languages from the elf list.
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.languages",
+        many(&["lang.draconic", "lang.fey"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.kit",
+        one("kit.fighter.greatsword"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.details.name",
+        Selection::Text("Caelith".into()),
+    );
+    log
+}
+
+/// Fizzwick, a Sensate Gnome barkeep exercising Gnome Obsession's
+/// player-named Lore (the feat-lore text slot) and a Dex build whose
+/// Strength -1 fails the studded leather requirement (armor check penalty)
+/// and lands negative Strength on damage. Player Core: Gnome pg. 50-52,
+/// Barkeep pg. 84, studded leather pg. 273, rapier pg. 278.
+fn fizzwick_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+    let mut log = Vec::new();
+    let n = &mut 0;
+    confirm(engine, &mut log, n, "pf2e.ancestry", one("ancestry.gnome"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.heritage",
+        one("heritage.gnome.sensate"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.feat",
+        one("feat.ancestry.gnome.gnome-obsession"),
+    );
+    // Gnome Obsession's ChooseLore opens the feat-lore text slot.
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.feat-lore",
+        Selection::Text("Clockwork".into()),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.ancestry-free",
+        many(&["attr.dex"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.background",
+        one("background.barkeep"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-choice",
+        one("attr.con"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-free",
+        one("attr.dex"),
+    );
+    confirm(engine, &mut log, n, "pf2e.class", one("class.fighter"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.key-attribute",
+        one("attr.dex"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.feat",
+        one("feat.class.fighter.combat-assessment"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.class-choice",
+        one("skill.acrobatics"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.trained",
+        many(&["skill.stealth", "skill.thievery", "skill.deception"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.free",
+        many(&["attr.dex", "attr.con", "attr.wis", "attr.cha"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.kit",
+        one("equipment.no-kit"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.extra",
+        many(&[
+            "armor.studded-leather",
+            "weapon.rapier",
+            "weapon.dagger",
+            "gear.adventurers-pack",
+            "gear.mug",
+        ]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.details.name",
+        Selection::Text("Fizzwick".into()),
+    );
+    log
+}
+
+/// Wenna, a Nomadic Halfling nomad exercising the heritage's two bonus
+/// languages at Int +0 (the chooser opens on the bonus-language effect
+/// alone) and the Nomad background's player-named Lore, slinging with
+/// negative Strength through propulsive. Player Core: Halfling pg. 58-60,
+/// Nomad pg. 88, sling pg. 279, leather armor pg. 273.
+fn wenna_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+    let mut log = Vec::new();
+    let n = &mut 0;
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry",
+        one("ancestry.halfling"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.heritage",
+        one("heritage.halfling.nomadic"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.feat",
+        one("feat.ancestry.halfling.titan-slinger"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.ancestry-free",
+        many(&["attr.con"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.background",
+        one("background.nomad"),
+    );
+    // Nomad's Lore is player-named.
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.background.lore",
+        Selection::Text("Steppe".into()),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-choice",
+        one("attr.wis"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-free",
+        one("attr.dex"),
+    );
+    confirm(engine, &mut log, n, "pf2e.class", one("class.fighter"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.key-attribute",
+        one("attr.dex"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.feat",
+        one("feat.class.fighter.snagging-strike"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.class-choice",
+        one("skill.acrobatics"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.trained",
+        many(&["skill.stealth", "skill.nature", "skill.medicine"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.free",
+        many(&["attr.dex", "attr.con", "attr.wis", "attr.cha"]),
+    );
+    // Int +0: both picks come from Nomadic Halfling's bonus languages.
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.languages",
+        many(&["lang.dwarven", "lang.goblin"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.kit",
+        one("equipment.no-kit"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.extra",
+        many(&[
+            "armor.leather",
+            "weapon.sling",
+            "weapon.sling-bullets",
+            "weapon.dagger",
+            "gear.adventurers-pack",
+            "gear.bedroll",
+        ]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.details.name",
+        Selection::Text("Wenna".into()),
+    );
+    log
+}
+
+/// Bramble, a Root Leshy field medic exercising the ancestry-HP override
+/// (10 instead of 8), Seedpod's ranged unarmed attack, and Int -1
+/// shrinking the trained-skill count to 2. Player Core: Leshy pg. 66-68,
+/// Field Medic pg. 86, hatchet/light hammer pg. 278.
+fn bramble_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+    let mut log = Vec::new();
+    let n = &mut 0;
+    confirm(engine, &mut log, n, "pf2e.ancestry", one("ancestry.leshy"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.heritage",
+        one("heritage.leshy.root"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.feat",
+        one("feat.ancestry.leshy.seedpod"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.ancestry-free",
+        many(&["attr.str"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.background",
+        one("background.field-medic"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-choice",
+        one("attr.con"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-free",
+        one("attr.str"),
+    );
+    confirm(engine, &mut log, n, "pf2e.class", one("class.fighter"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.key-attribute",
+        one("attr.str"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.feat",
+        one("feat.class.fighter.double-slice"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.class-choice",
+        one("skill.athletics"),
+    );
+    // 3 + Int (-1) = 2 trained picks.
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.trained",
+        many(&["skill.nature", "skill.stealth"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.free",
+        many(&["attr.str", "attr.dex", "attr.con", "attr.wis"]),
+    );
+    // Base kit (no option) plus a purchased twin-weapon set.
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.kit",
+        one("kit.fighter"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.extra",
+        many(&["weapon.hatchet", "weapon.light-hammer"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.details.name",
+        Selection::Text("Bramble".into()),
+    );
+    log
+}
+
+/// Grashk, a Hold-Scarred Orc miner exercising the 12-HP ancestry
+/// override and Iron Fists' replaces-fist unarmed attack, in hide armor
+/// whose Strength requirement is met (check/speed penalties waived).
+/// Player Core: Orc pg. 70-72, Miner pg. 87, hide armor pg. 273,
+/// warhammer pg. 278.
+fn grashk_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+    let mut log = Vec::new();
+    let n = &mut 0;
+    confirm(engine, &mut log, n, "pf2e.ancestry", one("ancestry.orc"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.heritage",
+        one("heritage.orc.hold-scarred"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.feat",
+        one("feat.ancestry.orc.iron-fists"),
+    );
+    // Orc has no fixed boosts: two free ancestry boosts.
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.ancestry-free",
+        many(&["attr.str", "attr.con"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.background",
+        one("background.miner"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-choice",
+        one("attr.str"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-free",
+        one("attr.con"),
+    );
+    confirm(engine, &mut log, n, "pf2e.class", one("class.fighter"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.key-attribute",
+        one("attr.str"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.feat",
+        one("feat.class.fighter.reactive-shield"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.class-choice",
+        one("skill.athletics"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.trained",
+        many(&["skill.intimidation", "skill.nature", "skill.religion"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.free",
+        many(&["attr.str", "attr.dex", "attr.con", "attr.wis"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.kit",
+        one("equipment.no-kit"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.extra",
+        many(&[
+            "armor.hide",
+            "weapon.warhammer",
+            "shield.steel",
+            "weapon.javelin",
+            "gear.adventurers-pack",
+            "gear.torch",
+        ]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.details.name",
+        Selection::Text("Grashk".into()),
+    );
+    log
+}
+
+/// Maera, a Dwarf with the Aiuvarin versatile heritage taking an aiuvarin
+/// feat (Earned Glory) through the feat-catalog union, stacking the
+/// heritage's low-light vision next to dwarven darkvision. Player Core:
+/// Dwarf pg. 42-44, Aiuvarin pg. 82, Bounty Hunter pg. 85.
+fn maera_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+    let mut log = Vec::new();
+    let n = &mut 0;
+    confirm(engine, &mut log, n, "pf2e.ancestry", one("ancestry.dwarf"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.heritage",
+        one("heritage.versatile.aiuvarin"),
+    );
+    // An aiuvarin-keyed feat, legal only through the union rule.
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.feat",
+        one("feat.ancestry.aiuvarin.earned-glory"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.ancestry-free",
+        many(&["attr.str"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.background",
+        one("background.bounty-hunter"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-choice",
+        one("attr.str"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.background-free",
+        one("attr.con"),
+    );
+    confirm(engine, &mut log, n, "pf2e.class", one("class.fighter"));
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.key-attribute",
+        one("attr.str"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.class.feat",
+        one("feat.class.fighter.sudden-charge"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.class-choice",
+        one("skill.athletics"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.skills.trained",
+        many(&["skill.medicine", "skill.society", "skill.intimidation"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.boosts.free",
+        many(&["attr.str", "attr.dex", "attr.con", "attr.wis"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.kit",
+        one("kit.fighter.sword-and-board"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.equipment.extra",
+        many(&["weapon.javelin", "gear.rope"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.details.name",
+        Selection::Text("Maera".into()),
+    );
+    log
+}
+
+/// Garrek Ironvale, the shipped fighter suggested build, expanded on an
+/// empty log through the engine's own planner. This pins the
+/// dm.ai-authored suggested_build block: any change to its candidates
+/// shows up as a golden/fixture diff.
+fn garrek_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+    let data = checks::load_rules_data();
+    let builds = ruleset_pf2e::suggested_builds(&data);
+    let (_, map) = builds
+        .into_iter()
+        .find(|(id, _)| id == "class.fighter")
+        .expect("class.fighter ships a suggested build");
+    let plan = engine
+        .expand_suggestions(
+            &[],
+            &|slot| map.get(slot).cloned(),
+            &|slot| DecisionId::new(format!("qb.{slot}")),
+            types::DecisionSource::Suggested,
+        )
+        .expect("the shipped suggested build expands on an empty log");
+    assert!(
+        plan.unresolved.is_empty(),
+        "the shipped suggested build left slots unresolved: {:#?}",
+        plan.unresolved
+    );
+    plan.log
 }
 
 fn assert_entry(sheet: &types::SheetView, section: &str, label: &str, value: &str) {
@@ -521,6 +1292,500 @@ fn golden_krivvy_goblin_replacement() {
     assert_entry(sheet, "Equipment", "Bulk", "2 Bulk, 3 L");
 }
 
+#[test]
+fn golden_caelith_elf_scholar_sub_choice() {
+    let engine = engine();
+    let log = caelith_log(&engine);
+    let projection = engine.project(&log).unwrap();
+    assert!(
+        projection.can_finalize,
+        "Caelith should be complete and legal: {:#?}",
+        projection.checklist
+    );
+    let sheet = &projection.sheet;
+    assert_eq!(sheet.name, "Caelith");
+    assert_eq!(sheet.summary[0], "Elf (Whisper Elf) Fighter 1");
+
+    // Str +4 (ancestry free, background free, class key, free boost),
+    // Dex +2 (ancestry fixed, free), Con 0 (elf flaw + free boost),
+    // Int +2 (ancestry fixed, background choice), Wis +1 (free), Cha +0.
+    assert_entry(sheet, "Attributes", "Strength", "+4");
+    assert_entry(sheet, "Attributes", "Dexterity", "+2");
+    assert_entry(sheet, "Attributes", "Constitution", "+0");
+    assert_entry(sheet, "Attributes", "Intelligence", "+2");
+    assert_entry(sheet, "Attributes", "Wisdom", "+1");
+    assert_entry(sheet, "Attributes", "Charisma", "+0");
+
+    // HP 16 = 6 elf + 10 class + 0 Con.
+    assert_entry(sheet, "Defense", "Hit Points", "16");
+    // AC 18 = 10 + 2 Dex (scale mail cap +2) + 3 item + 3 trained.
+    assert_entry(sheet, "Defense", "Armor Class", "18");
+    // Fort +5 (expert 5 + 0), Ref +7 (5 + 2), Will +4 (trained 3 + 1),
+    // Perception +6 (expert 5 + 1).
+    assert_entry(sheet, "Defense", "Fortitude", "+5");
+    assert_entry(sheet, "Defense", "Reflex", "+7");
+    assert_entry(sheet, "Defense", "Will", "+4");
+    assert_entry(sheet, "Defense", "Perception", "+6");
+    assert_entry(sheet, "Defense", "Class DC", "17");
+
+    // Greatsword +9 (martial expert 5 + Str 4), 1d12 S + 4.
+    assert_entry(sheet, "Attacks", "Greatsword", "+9 · 1d12 S+4");
+    assert_entry(sheet, "Attacks", "Dagger", "+9 · 1d4 P+4");
+
+    // Str +4 meets scale mail's +2 requirement: no check penalty.
+    assert_entry(sheet, "Skills", "Athletics", "+7");
+    // Occultism trained by the Scholar sub-choice: 3 + Int 2.
+    assert_entry(sheet, "Skills", "Occultism", "+5");
+    assert_entry(sheet, "Skills", "Arcana", "+5");
+    assert_entry(sheet, "Skills", "Crafting", "+5");
+    assert_entry(sheet, "Skills", "Medicine", "+4");
+    assert_entry(sheet, "Skills", "Religion", "+4");
+    assert_entry(sheet, "Skills", "Survival", "+4");
+    // Untrained Acrobatics is bare Dex.
+    assert_entry(sheet, "Skills", "Acrobatics", "+2");
+
+    // The skill feat follows the sub-choice pick: Assurance (Occultism).
+    assert_entry(
+        sheet,
+        "Features",
+        "Assurance (Occultism)",
+        "skill feat — Scholar",
+    );
+    assert_entry(sheet, "Languages & Lore", "Academia Lore", "trained");
+    // Elf defaults first, then the two Int-bought picks in pick order.
+    assert_entry(
+        sheet,
+        "Languages & Lore",
+        "Languages",
+        "Common, Elven, Draconic, Fey",
+    );
+
+    // Coins: 15 gp - 5 gp 8 sp kit - 2 gp greatsword option = 7 gp 2 sp.
+    assert_entry(sheet, "Equipment", "Coins", "7 gp, 2 sp");
+    // Bulk: scale mail 2 (worn) + greatsword 2 + pack 1 + dagger L +
+    // grappling hook L.
+    assert_entry(sheet, "Equipment", "Bulk", "5 Bulk, 2 L");
+
+    // Speed 35 = elf 30 + Nimble Elf 5; scale mail penalty waived (Str
+    // meets the requirement).
+    assert!(
+        sheet.summary[1].contains("Speed 35 feet"),
+        "summary: {:?}",
+        sheet.summary
+    );
+    assert!(sheet.summary[1].contains("low-light vision"));
+}
+
+#[test]
+fn golden_fizzwick_gnome_obsession_lore() {
+    let engine = engine();
+    let log = fizzwick_log(&engine);
+    let projection = engine.project(&log).unwrap();
+    assert!(
+        projection.can_finalize,
+        "Fizzwick should be complete and legal: {:#?}",
+        projection.checklist
+    );
+    let sheet = &projection.sheet;
+    assert_eq!(sheet.summary[0], "Gnome (Sensate Gnome) Fighter 1");
+
+    // Str -1 (gnome flaw), Dex +4 (ancestry free, background free, class
+    // key, free), Con +3 (ancestry fixed, background choice, free),
+    // Int +0, Wis +1 (free), Cha +2 (ancestry fixed, free).
+    assert_entry(sheet, "Attributes", "Strength", "-1");
+    assert_entry(sheet, "Attributes", "Dexterity", "+4");
+    assert_entry(sheet, "Attributes", "Constitution", "+3");
+    assert_entry(sheet, "Attributes", "Charisma", "+2");
+
+    // HP 21 = 8 gnome + 10 class + 3 Con.
+    assert_entry(sheet, "Defense", "Hit Points", "21");
+    // AC 18 = 10 + 3 Dex (studded leather cap +3) + 2 item + 3 trained.
+    assert_entry(sheet, "Defense", "Armor Class", "18");
+    assert_entry(sheet, "Defense", "Fortitude", "+8");
+    assert_entry(sheet, "Defense", "Reflex", "+9");
+    assert_entry(sheet, "Defense", "Will", "+4");
+    assert_entry(sheet, "Defense", "Perception", "+6");
+    assert_entry(sheet, "Defense", "Class DC", "17");
+
+    // Finesse rapier rides Dex to hit (+9 = expert 5 + Dex 4) but Str -1
+    // still applies to damage.
+    assert_entry(sheet, "Attacks", "Rapier", "+9 · 1d6 P-1");
+    assert_entry(sheet, "Attacks", "Dagger", "+9 · 1d4 P-1");
+
+    // Str -1 misses studded leather's +1 requirement: -1 check penalty on
+    // Str/Dex skills. Acrobatics 3 trained + 4 Dex - 1 armor.
+    assert_entry(sheet, "Skills", "Acrobatics", "+6");
+    assert_entry(sheet, "Skills", "Stealth", "+6");
+    assert_entry(sheet, "Skills", "Thievery", "+6");
+    assert_entry(sheet, "Skills", "Deception", "+5");
+    assert_entry(sheet, "Skills", "Diplomacy", "+5");
+    // Untrained Athletics: 0 - 1 Str - 1 armor check penalty.
+    assert_entry(sheet, "Skills", "Athletics", "-2");
+
+    // Gnome Obsession's Lore carries the player-typed name.
+    assert_entry(sheet, "Languages & Lore", "Clockwork Lore", "trained");
+    assert_entry(sheet, "Languages & Lore", "Alcohol Lore", "trained");
+    assert_entry(
+        sheet,
+        "Languages & Lore",
+        "Languages",
+        "Common, Fey, Gnomish",
+    );
+    assert_entry(sheet, "Features", "Hobnobber", "skill feat — Barkeep");
+
+    // Coins: 15 gp - (3 gp + 2 gp + 2 sp + 1 gp 5 sp + 1 cp itemized)
+    // = 8 gp 2 sp 9 cp.
+    assert_entry(sheet, "Equipment", "Coins", "8 gp, 2 sp, 9 cp");
+    // Bulk: studded leather 1 (worn) + rapier 1 + pack 1 + dagger L
+    // (mug is negligible).
+    assert_entry(sheet, "Equipment", "Bulk", "3 Bulk, 1 L");
+
+    assert!(sheet.summary[1].starts_with("Small"), "{:?}", sheet.summary);
+    assert!(sheet.summary[1].contains("Speed 25 feet"));
+    assert!(sheet.summary[1].contains("scent (imprecise) 30 feet"));
+}
+
+#[test]
+fn golden_wenna_halfling_nomadic_languages() {
+    let engine = engine();
+    let log = wenna_log(&engine);
+    let projection = engine.project(&log).unwrap();
+    assert!(
+        projection.can_finalize,
+        "Wenna should be complete and legal: {:#?}",
+        projection.checklist
+    );
+    let sheet = &projection.sheet;
+    assert_eq!(sheet.summary[0], "Halfling (Nomadic Halfling) Fighter 1");
+
+    // Str -1 (halfling flaw), Dex +4, Con +2, Int +0, Wis +3, Cha +1.
+    assert_entry(sheet, "Attributes", "Strength", "-1");
+    assert_entry(sheet, "Attributes", "Dexterity", "+4");
+    assert_entry(sheet, "Attributes", "Constitution", "+2");
+    assert_entry(sheet, "Attributes", "Intelligence", "+0");
+    assert_entry(sheet, "Attributes", "Wisdom", "+3");
+
+    // HP 18 = 6 halfling + 10 class + 2 Con.
+    assert_entry(sheet, "Defense", "Hit Points", "18");
+    // AC 18 = 10 + 4 Dex (leather cap +4) + 1 item + 3 trained.
+    assert_entry(sheet, "Defense", "Armor Class", "18");
+    assert_entry(sheet, "Defense", "Fortitude", "+7");
+    assert_entry(sheet, "Defense", "Reflex", "+9");
+    assert_entry(sheet, "Defense", "Will", "+6");
+    assert_entry(sheet, "Defense", "Perception", "+8");
+
+    // Sling +9 (simple expert 5 + Dex 4); propulsive adds the full
+    // negative Str (-1) to damage.
+    assert_entry(sheet, "Attacks", "Sling", "+9 · 1d6 B-1");
+    assert_entry(sheet, "Attacks", "Dagger", "+9 · 1d4 P-1");
+
+    // Str -1 misses even leather's +0 requirement: -1 check penalty.
+    assert_entry(sheet, "Skills", "Acrobatics", "+6");
+    assert_entry(sheet, "Skills", "Stealth", "+6");
+    assert_entry(sheet, "Skills", "Nature", "+6");
+    assert_entry(sheet, "Skills", "Medicine", "+6");
+    assert_entry(sheet, "Skills", "Survival", "+6");
+    assert_entry(sheet, "Skills", "Athletics", "-2");
+
+    // Nomadic Halfling: two bonus languages despite Int +0, from the
+    // halfling additional-language list; Nomad's Lore is player-named.
+    assert_entry(
+        sheet,
+        "Languages & Lore",
+        "Languages",
+        "Common, Halfling, Dwarven, Goblin",
+    );
+    assert_entry(sheet, "Languages & Lore", "Steppe Lore", "trained");
+    assert_entry(
+        sheet,
+        "Features",
+        "Assurance (Survival)",
+        "skill feat — Nomad",
+    );
+
+    // Coins: 15 gp - (2 gp + 1 cp + 2 sp + 1 gp 5 sp + 2 cp itemized;
+    // the sling is free) = 11 gp 2 sp 7 cp.
+    assert_entry(sheet, "Equipment", "Coins", "11 gp, 2 sp, 7 cp");
+    // Bulk: leather 1 (worn) + pack 1 + sling L + bullets L + dagger L +
+    // bedroll L.
+    assert_entry(sheet, "Equipment", "Bulk", "2 Bulk, 4 L");
+
+    assert!(sheet.summary[1].starts_with("Small"), "{:?}", sheet.summary);
+    assert!(sheet.summary[1].contains("Speed 25 feet"));
+}
+
+#[test]
+fn golden_bramble_leshy_root_hp_override() {
+    let engine = engine();
+    let log = bramble_log(&engine);
+    let projection = engine.project(&log).unwrap();
+    assert!(
+        projection.can_finalize,
+        "Bramble should be complete and legal: {:#?}",
+        projection.checklist
+    );
+    let sheet = &projection.sheet;
+    assert_eq!(sheet.summary[0], "Leshy (Root Leshy) Fighter 1");
+
+    // Str +4, Dex +1, Con +3, Int -1 (leshy flaw), Wis +2, Cha +0.
+    assert_entry(sheet, "Attributes", "Strength", "+4");
+    assert_entry(sheet, "Attributes", "Constitution", "+3");
+    assert_entry(sheet, "Attributes", "Intelligence", "-1");
+    assert_entry(sheet, "Attributes", "Wisdom", "+2");
+
+    // Root Leshy: ancestry HP 10 instead of 8 -> 10 + 10 class + 3 Con.
+    assert_entry(sheet, "Defense", "Hit Points", "23");
+    // AC 17 = 10 + 1 Dex (scale mail cap +2) + 3 item + 3 trained.
+    assert_entry(sheet, "Defense", "Armor Class", "17");
+    assert_entry(sheet, "Defense", "Fortitude", "+8");
+    assert_entry(sheet, "Defense", "Reflex", "+6");
+    assert_entry(sheet, "Defense", "Will", "+5");
+    assert_entry(sheet, "Defense", "Perception", "+7");
+
+    // Seedpod is a true ranged unarmed attack: Dex to hit (expert 5 + 1),
+    // no attribute to damage.
+    assert_entry(sheet, "Attacks", "Seedpod", "+6 · 1d4 B");
+    // The double-slice pair: both melee on Str.
+    assert_entry(sheet, "Attacks", "Hatchet", "+9 · 1d6 S+4");
+    assert_entry(sheet, "Attacks", "Light Hammer", "+9 · 1d6 B+4");
+
+    // Int -1 cuts the fighter's additional skills to 2 (3 + Int, min 0).
+    assert_entry(sheet, "Skills", "Athletics", "+7");
+    assert_entry(sheet, "Skills", "Nature", "+5");
+    assert_entry(sheet, "Skills", "Stealth", "+4");
+    assert_entry(sheet, "Skills", "Medicine", "+5");
+    // Untrained Int skill carries the flaw.
+    assert_entry(sheet, "Skills", "Arcana", "-1");
+
+    assert_entry(sheet, "Languages & Lore", "Warfare Lore", "trained");
+    // Int -1: no language chooser, ancestry defaults only.
+    assert_entry(sheet, "Languages & Lore", "Languages", "Common, Fey");
+    assert_entry(
+        sheet,
+        "Features",
+        "Battle Medicine",
+        "skill feat — Field Medic",
+    );
+
+    // Coins: 15 gp - 5 gp 8 sp kit - 4 sp hatchet - 3 sp light hammer
+    // = 8 gp 5 sp.
+    assert_entry(sheet, "Equipment", "Coins", "8 gp, 5 sp");
+    // Bulk: scale mail 2 (worn) + pack 1 + dagger L + grappling hook L +
+    // hatchet L + light hammer L.
+    assert_entry(sheet, "Equipment", "Bulk", "3 Bulk, 4 L");
+
+    assert!(sheet.summary[1].starts_with("Small"), "{:?}", sheet.summary);
+    assert!(sheet.summary[1].contains("Speed 25 feet"));
+    assert!(sheet.summary[1].contains("low-light vision"));
+}
+
+#[test]
+fn golden_grashk_orc_iron_fists() {
+    let engine = engine();
+    let log = grashk_log(&engine);
+    let projection = engine.project(&log).unwrap();
+    assert!(
+        projection.can_finalize,
+        "Grashk should be complete and legal: {:#?}",
+        projection.checklist
+    );
+    let sheet = &projection.sheet;
+    assert_eq!(sheet.summary[0], "Orc (Hold-Scarred Orc) Fighter 1");
+
+    // Str +4, Dex +1, Con +3, Int +0, Wis +1, Cha +0 (orc: two free
+    // ancestry boosts, no fixed, no flaw).
+    assert_entry(sheet, "Attributes", "Strength", "+4");
+    assert_entry(sheet, "Attributes", "Dexterity", "+1");
+    assert_entry(sheet, "Attributes", "Constitution", "+3");
+    assert_entry(sheet, "Attributes", "Charisma", "+0");
+
+    // Hold-Scarred Orc: ancestry HP 12 instead of 10 -> 12 + 10 + 3 Con.
+    assert_entry(sheet, "Defense", "Hit Points", "25");
+    // AC 17 = 10 + 1 Dex (hide cap +2) + 3 item + 3 trained.
+    assert_entry(sheet, "Defense", "Armor Class", "17");
+    assert_entry(sheet, "Defense", "Fortitude", "+8");
+    assert_entry(sheet, "Defense", "Reflex", "+6");
+    assert_entry(sheet, "Defense", "Will", "+4");
+    assert_entry(sheet, "Defense", "Perception", "+6");
+    assert_entry(sheet, "Defense", "Class DC", "17");
+
+    // Iron Fists replaces the default fist: same 1d4 B on Str (finesse but
+    // Dex +1 < Str +4), rendered as an effect-granted unarmed attack.
+    assert_entry(sheet, "Attacks", "Fist", "+9 · 1d4 B (+4)");
+    assert_entry(sheet, "Attacks", "Warhammer", "+9 · 1d8 B+4");
+    // Thrown weapons stay on melee (Str) rules.
+    assert_entry(sheet, "Attacks", "Javelin", "+9 · 1d6 P+4");
+
+    // Str +4 meets hide's +2 requirement: no check penalty, and the -5
+    // speed penalty is reduced to 0.
+    assert_entry(sheet, "Skills", "Athletics", "+7");
+    assert_entry(sheet, "Skills", "Intimidation", "+3");
+    assert_entry(sheet, "Skills", "Nature", "+4");
+    assert_entry(sheet, "Skills", "Religion", "+4");
+    assert_entry(sheet, "Skills", "Survival", "+4");
+
+    assert_entry(sheet, "Languages & Lore", "Mining Lore", "trained");
+    assert_entry(sheet, "Languages & Lore", "Languages", "Common, Orcish");
+    assert_entry(
+        sheet,
+        "Features",
+        "Terrain Expertise (Underground)",
+        "skill feat — Miner",
+    );
+
+    // Coins: 15 gp - (2 gp + 1 gp + 2 gp + 1 sp + 1 gp 5 sp + 1 cp
+    // itemized) = 8 gp 3 sp 9 cp.
+    assert_entry(sheet, "Equipment", "Coins", "8 gp, 3 sp, 9 cp");
+    // Bulk: hide 2 (worn) + warhammer 1 + steel shield 1 + pack 1 +
+    // javelin L + torch L.
+    assert_entry(sheet, "Equipment", "Bulk", "5 Bulk, 2 L");
+
+    assert!(
+        sheet.summary[1].contains("Speed 25 feet"),
+        "hide's speed penalty must be waived at Str +4: {:?}",
+        sheet.summary
+    );
+    assert!(sheet.summary[1].contains("darkvision"));
+}
+
+#[test]
+fn golden_maera_dwarf_aiuvarin_union() {
+    let engine = engine();
+    let log = maera_log(&engine);
+    let projection = engine.project(&log).unwrap();
+    assert!(
+        projection.can_finalize,
+        "Maera should be complete and legal: {:#?}",
+        projection.checklist
+    );
+    let sheet = &projection.sheet;
+    // The versatile heritage renders in the identity line like any other.
+    assert_eq!(sheet.summary[0], "Dwarf (Aiuvarin) Fighter 1");
+
+    // Str +4, Dex +1, Con +3, Int +0, Wis +2, Cha -1 (dwarf flaw).
+    assert_entry(sheet, "Attributes", "Strength", "+4");
+    assert_entry(sheet, "Attributes", "Constitution", "+3");
+    assert_entry(sheet, "Attributes", "Wisdom", "+2");
+    assert_entry(sheet, "Attributes", "Charisma", "-1");
+
+    // HP 23 = 10 dwarf + 10 class + 3 Con (versatile heritage: no
+    // override, dwarf HP stands).
+    assert_entry(sheet, "Defense", "Hit Points", "23");
+    assert_entry(sheet, "Defense", "Armor Class", "17");
+    assert_entry(sheet, "Defense", "Fortitude", "+8");
+    assert_entry(sheet, "Defense", "Reflex", "+6");
+    assert_entry(sheet, "Defense", "Will", "+5");
+    assert_entry(sheet, "Defense", "Perception", "+7");
+
+    assert_entry(sheet, "Attacks", "Longsword", "+9 · 1d8 S+4");
+    assert_entry(sheet, "Attacks", "Javelin", "+9 · 1d6 P+4");
+
+    // Earned Glory (an aiuvarin feat taken through the union) trains
+    // Performance: 3 trained + Cha -1.
+    assert_entry(sheet, "Skills", "Performance", "+2");
+    assert_entry(sheet, "Skills", "Athletics", "+7");
+    assert_entry(sheet, "Skills", "Survival", "+5");
+    assert_entry(sheet, "Skills", "Medicine", "+5");
+    assert_entry(sheet, "Skills", "Society", "+3");
+    assert_entry(sheet, "Skills", "Intimidation", "+2");
+
+    assert_entry(sheet, "Languages & Lore", "Legal Lore", "trained");
+    assert_entry(sheet, "Languages & Lore", "Languages", "Common, Dwarven");
+    assert_entry(
+        sheet,
+        "Features",
+        "Experienced Tracker",
+        "skill feat — Bounty Hunter",
+    );
+
+    // Coins: 15 gp - 5 gp 8 sp kit - 3 gp option - 1 sp javelin -
+    // 5 sp rope = 5 gp 6 sp.
+    assert_entry(sheet, "Equipment", "Coins", "5 gp, 6 sp");
+    // Bulk: scale mail 2 (worn) + longsword 1 + shield 1 + pack 1 +
+    // dagger L + hook L + javelin L + rope L.
+    assert_entry(sheet, "Equipment", "Bulk", "5 Bulk, 4 L");
+
+    // Dwarf darkvision stands; the heritage's low-light vision lists
+    // alongside it. Speed 20 (dwarf), armor penalty waived.
+    assert!(
+        sheet.summary[1].contains("Speed 20 feet"),
+        "summary: {:?}",
+        sheet.summary
+    );
+    assert!(sheet.summary[1].contains("darkvision"));
+    assert!(sheet.summary[1].contains("low-light vision"));
+}
+
+#[test]
+fn golden_garrek_quick_build() {
+    let engine = engine();
+    let log = garrek_log(&engine);
+    // Every decision carries the suggested provenance.
+    assert!(
+        log.iter()
+            .all(|d| d.source == types::DecisionSource::Suggested),
+        "quick-build decisions must carry the Suggested source"
+    );
+    let projection = engine.project(&log).unwrap();
+    assert!(
+        projection.can_finalize,
+        "the expanded suggested build must be review-ready: {:#?}",
+        projection.checklist
+    );
+    let sheet = &projection.sheet;
+    assert_eq!(sheet.name, "Garrek Ironvale");
+    assert_eq!(sheet.summary[0], "Human (Skilled Human) Fighter 1");
+
+    // The planner takes the first legal candidates: ancestry-free
+    // [str, con], background choice str + free wis, class key str, free
+    // boosts [str, dex, con, wis] -> Str +4, Dex +1, Con +2, Int +0,
+    // Wis +2, Cha +0.
+    assert_entry(sheet, "Attributes", "Strength", "+4");
+    assert_entry(sheet, "Attributes", "Dexterity", "+1");
+    assert_entry(sheet, "Attributes", "Constitution", "+2");
+    assert_entry(sheet, "Attributes", "Intelligence", "+0");
+    assert_entry(sheet, "Attributes", "Wisdom", "+2");
+    assert_entry(sheet, "Attributes", "Charisma", "+0");
+
+    // HP 20 = 8 human + 10 class + 2 Con.
+    assert_entry(sheet, "Defense", "Hit Points", "20");
+    // AC 17 = 10 + 1 Dex (scale mail cap +2) + 3 item + 3 trained.
+    assert_entry(sheet, "Defense", "Armor Class", "17");
+    assert_entry(sheet, "Defense", "Fortitude", "+7");
+    assert_entry(sheet, "Defense", "Reflex", "+6");
+    assert_entry(sheet, "Defense", "Will", "+5");
+    assert_entry(sheet, "Defense", "Perception", "+7");
+    assert_entry(sheet, "Defense", "Class DC", "17");
+
+    // Sword-and-board: longsword +9 (expert 5 + Str 4), 1d8 S + 4.
+    assert_entry(sheet, "Attacks", "Longsword", "+9 · 1d8 S+4");
+    assert_entry(sheet, "Attacks", "Dagger", "+9 · 1d4 P+4");
+
+    // Class choice Athletics; Skilled Human takes the first legal
+    // heritage candidate (Diplomacy); Warrior trains Intimidation; the
+    // trained picks resolve to Acrobatics, Medicine, Survival.
+    assert_entry(sheet, "Skills", "Athletics", "+7");
+    assert_entry(sheet, "Skills", "Diplomacy", "+3");
+    assert_entry(sheet, "Skills", "Intimidation", "+3");
+    assert_entry(sheet, "Skills", "Acrobatics", "+4");
+    assert_entry(sheet, "Skills", "Medicine", "+5");
+    assert_entry(sheet, "Skills", "Survival", "+5");
+
+    assert_entry(sheet, "Languages & Lore", "Warfare Lore", "trained");
+    // Int +0: the suggested language candidates never fire.
+    assert_entry(sheet, "Languages & Lore", "Languages", "Common");
+
+    // Coins: 15 gp - 5 gp 8 sp kit - 3 gp option = 6 gp 2 sp.
+    assert_entry(sheet, "Equipment", "Coins", "6 gp, 2 sp");
+    assert_entry(sheet, "Equipment", "Bulk", "5 Bulk, 2 L");
+
+    assert!(
+        sheet.summary[1].contains("Speed 25 feet"),
+        "summary: {:?}",
+        sheet.summary
+    );
+}
+
 /// The committed fixture logs must stay in sync with the golden builders —
 /// they are the shared input for the WASM/native parity smoke.
 #[test]
@@ -530,6 +1795,13 @@ fn fixture_logs_match_golden_builders() {
         ("torvald", torvald_log(&engine)),
         ("elyse", elyse_log(&engine)),
         ("krivvy", krivvy_log(&engine)),
+        ("caelith", caelith_log(&engine)),
+        ("fizzwick", fizzwick_log(&engine)),
+        ("wenna", wenna_log(&engine)),
+        ("bramble", bramble_log(&engine)),
+        ("grashk", grashk_log(&engine)),
+        ("maera", maera_log(&engine)),
+        ("garrek", garrek_log(&engine)),
     ] {
         let path = checks::workspace_root().join(format!("checks/fixtures/{name}.log.json"));
         let on_disk = std::fs::read_to_string(&path)
@@ -556,6 +1828,13 @@ fn regen_fixtures() {
         ("torvald", torvald_log(&engine)),
         ("elyse", elyse_log(&engine)),
         ("krivvy", krivvy_log(&engine)),
+        ("caelith", caelith_log(&engine)),
+        ("fizzwick", fizzwick_log(&engine)),
+        ("wenna", wenna_log(&engine)),
+        ("bramble", bramble_log(&engine)),
+        ("grashk", grashk_log(&engine)),
+        ("maera", maera_log(&engine)),
+        ("garrek", garrek_log(&engine)),
     ] {
         let path = dir.join(format!("{name}.log.json"));
         std::fs::write(&path, serde_json::to_string_pretty(&log).unwrap()).unwrap();
@@ -570,7 +1849,10 @@ fn regen_fixtures() {
 #[test]
 fn fixture_sheets_match_replay() {
     let engine = engine();
-    for name in ["torvald", "elyse", "krivvy"] {
+    for name in [
+        "torvald", "elyse", "krivvy", "caelith", "fizzwick", "wenna", "bramble", "grashk", "maera",
+        "garrek",
+    ] {
         let dir = checks::workspace_root().join("checks/fixtures");
         let log: Vec<Decision> = serde_json::from_str(
             &std::fs::read_to_string(dir.join(format!("{name}.log.json"))).unwrap(),

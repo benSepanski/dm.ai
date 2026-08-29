@@ -22,6 +22,11 @@ pub struct Manifest {
     pub version: String,
     pub system: String,
     pub description: String,
+    /// Prior shipped data versions this one supersedes, oldest first. Every
+    /// entry must have its ID set recorded in rules-data/shipped-versions.json
+    /// (lint-enforced); the server treats these as "older known" versions.
+    #[serde(default)]
+    pub supersedes: Vec<String>,
     pub license_notice: LicenseNotice,
 }
 
@@ -43,6 +48,13 @@ pub struct AncestryRecord {
     pub free_boosts: u32,
     pub flaws: Vec<Attribute>,
     pub languages: Vec<String>,
+    /// Languages a character of this ancestry may pick as bonus languages
+    /// (the "additional languages" list under each Player Core ancestry).
+    /// The chooser slot grants max(0, Int modifier) + bonus-language effects
+    /// picks from this list; an empty list means no chooser exists for the
+    /// ancestry. Entries must not repeat `languages` (integrity-checked).
+    #[serde(default)]
+    pub additional_languages: Vec<String>,
     pub traits: Vec<String>,
     pub senses: Vec<String>,
     pub specials: Vec<SpecialAbility>,
@@ -55,26 +67,78 @@ pub struct SpecialAbility {
     pub text: String,
 }
 
+/// Feat catalog keys — the namespace shared by `AncestryFeatRecord.ancestry`
+/// and `HeritageRecord.feat_ancestries`. Convention (integrity-enforced):
+/// a key is either a full ancestry record ID (`"ancestry.elf"`, exactly as
+/// base ancestry feats already use) or a versatile heritage's *short key* —
+/// the last dot-segment of the heritage's record ID
+/// (`"heritage.versatile.aiuvarin"` → `"aiuvarin"`). Versatile-heritage
+/// feats set `ancestry` to that short key; a versatile heritage lists in
+/// `feat_ancestries` its own short key plus any full ancestry IDs whose
+/// feat catalogs it opens (e.g. Aiuvarin → `["aiuvarin", "ancestry.elf"]`).
 #[derive(Debug, Clone, Deserialize)]
 pub struct HeritageRecord {
     pub id: String,
-    pub ancestry: String,
+    /// The ancestry this heritage belongs to, or `null` for a versatile
+    /// heritage — selectable at the heritage step under *any* ancestry.
+    /// Data files write `"ancestry": null` explicitly for readability.
+    #[serde(default)]
+    pub ancestry: Option<String>,
     pub name: String,
     pub text: String,
+    /// Extra ancestry-feat catalog keys unioned into the ancestry-feat
+    /// options while this heritage is chosen (see the catalog-key
+    /// convention above). The base ancestry's own feats are always in the
+    /// union and need not be listed.
+    #[serde(default)]
+    pub feat_ancestries: Vec<String>,
     #[serde(default)]
     pub effects: Vec<Effect>,
     pub source: SourceRef,
 }
 
+impl HeritageRecord {
+    /// Versatile heritages are the ones unbound from an ancestry.
+    pub fn is_versatile(&self) -> bool {
+        self.ancestry.is_none()
+    }
+    /// The short key versatile-heritage feats use as their catalog key:
+    /// the last dot-segment of the heritage's record ID.
+    pub fn short_key(&self) -> &str {
+        self.id.rsplit('.').next().unwrap_or(&self.id)
+    }
+}
+
+/// One prerequisite on a feat. `kind` selects how (and whether) it is
+/// evaluated; the extra fields carry that kind's data:
+/// - `{"kind": "spellcasting", "text": "requires a spellcasting class
+///   feature"}` — never satisfiable in this data version; always greys.
+/// - `{"kind": "attribute", "attribute": "con", "value": 2}` — the folded
+///   attribute modifier must be >= `value`.
+/// - `{"kind": "trained_skill", "skill": "skill.acrobatics"}` — the folded
+///   state must be trained (or better) in that skill.
+///
+/// Unknown kinds are annotations only: shown, never evaluated. `text` is
+/// optional; when absent, a human-readable description is generated from
+/// the kind's fields.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Prerequisite {
     pub kind: String,
+    #[serde(default)]
     pub text: String,
+    #[serde(default)]
+    pub attribute: Option<Attribute>,
+    #[serde(default)]
+    pub value: Option<i32>,
+    #[serde(default)]
+    pub skill: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AncestryFeatRecord {
     pub id: String,
+    /// Feat catalog key: a full ancestry ID, or a versatile heritage's
+    /// short key (see the convention on [`HeritageRecord`]).
     pub ancestry: String,
     pub level: u32,
     pub name: String,
@@ -92,10 +156,75 @@ pub struct BackgroundRecord {
     pub name: String,
     pub text: String,
     pub boost_choice: Vec<Attribute>,
+    /// The fixed trained-skill grant. May be empty ("") when the
+    /// background trains a chosen skill instead (`skill_choice`).
     pub skill: String,
+    /// When non-empty, the background opens a sub-choice slot
+    /// ("pf2e.background.skill") to pick exactly one of these skill IDs;
+    /// the pick feeds the same collision/replacement machinery as the
+    /// fixed grant. A background must have `skill` or `skill_choice`.
+    #[serde(default)]
+    pub skill_choice: Vec<String>,
+    /// The fixed Lore grant. Empty when `lore_player_named` is true.
     pub lore: String,
+    /// When true, the background opens a text slot
+    /// ("pf2e.background.lore") where the player names the Lore; it lands
+    /// trained on the sheet as "<Typed> Lore".
+    #[serde(default)]
+    pub lore_player_named: bool,
+    /// The fixed skill-feat grant, as a general-feat ID (e.g.
+    /// "feat.skill.battle-medicine"; integrity-checked to resolve in
+    /// `general_feats`). May be empty when the feat follows the skill
+    /// sub-choice (`skill_feat_by_choice`). The sheet renders the
+    /// referenced feat record's name unless `skill_feat_display`
+    /// overrides it.
     pub skill_feat: String,
+    /// Display override for a parameterized fixed grant (Nomad's
+    /// "Assurance (Survival)"): rendered instead of the referenced feat
+    /// record's name. Empty means no override; only meaningful alongside
+    /// a non-empty `skill_feat` (integrity-checked).
+    #[serde(default)]
+    pub skill_feat_display: String,
+    /// Choice-dependent skill feat: skill ID (must appear in
+    /// `skill_choice`) → general-feat ID (integrity-checked to resolve in
+    /// `general_feats`). When non-empty, the sheet's background
+    /// skill-feat entry follows the chosen skill.
+    #[serde(default)]
+    pub skill_feat_by_choice: std::collections::BTreeMap<String, String>,
+    /// Display overrides for parameterized choice-dependent grants
+    /// (Scholar's "Assurance (Arcana)"): skill ID → rendered label. Keys
+    /// must be a subset of `skill_feat_by_choice` keys
+    /// (integrity-checked); a missing key renders the referenced feat
+    /// record's name.
+    #[serde(default)]
+    pub skill_feat_display_by_choice: std::collections::BTreeMap<String, String>,
     pub source: SourceRef,
+}
+
+impl BackgroundRecord {
+    /// The rendered label of the fixed skill-feat grant: the display
+    /// override when present, else the referenced feat record's name.
+    /// None when there is no fixed grant (`skill_feat` empty) or the ID
+    /// dangles (shipped data cannot dangle — integrity rejects it).
+    pub fn skill_feat_label(&self, data: &RulesData) -> Option<String> {
+        if self.skill_feat.is_empty() {
+            return None;
+        }
+        if !self.skill_feat_display.is_empty() {
+            return Some(self.skill_feat_display.clone());
+        }
+        data.general_feat(&self.skill_feat).map(|f| f.name.clone())
+    }
+
+    /// The rendered label of the choice-dependent skill-feat grant under
+    /// the chosen `skill`, with the same override-then-name fallback.
+    pub fn skill_feat_label_for_choice(&self, data: &RulesData, skill: &str) -> Option<String> {
+        if let Some(display) = self.skill_feat_display_by_choice.get(skill) {
+            return Some(display.clone());
+        }
+        let id = self.skill_feat_by_choice.get(skill)?;
+        data.general_feat(id).map(|f| f.name.clone())
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -109,7 +238,45 @@ pub struct ClassRecord {
     pub class_skill_choice: Vec<String>,
     pub additional_skills_base: u32,
     pub features: Vec<SpecialAbility>,
+    /// The app-authored suggested build the quick-build planner interprets
+    /// directly (no per-slot suggest hook). Integrity requires every
+    /// shipped class to carry one. See [`SuggestedBuild`].
+    #[serde(default)]
+    pub suggested_build: Option<SuggestedBuild>,
     pub source: SourceRef,
+}
+
+/// The suggested-build block: dm.ai-curated choices (spec req 7 **[call]**
+/// — PF2e publishes only the class kit and key attribute as quick-build
+/// anchors, so everything else here is app-authored content, never
+/// presented as Paizo-published). One entry per slot the build fills.
+///
+/// Design rule for authoring: prefer options that open no chooser chains;
+/// when a chosen option does open a sub-slot (Skilled Human's skill
+/// chooser), the block MUST carry a candidates entry for that sub-slot so
+/// the expansion stays deterministic and complete. A slot the block cannot
+/// parameterize simply stays open on the checklist.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SuggestedBuild {
+    /// One-line intent note for hand-inspection; not rendered.
+    #[serde(default)]
+    pub description: String,
+    pub entries: Vec<SuggestedBuildEntry>,
+}
+
+/// One slot's suggestion: ordered candidate option IDs (the planner takes
+/// the first legal one, or the first legal N for a state-dependent
+/// multi-pick — author the list longer than needed), or free text for a
+/// text slot. Exactly one of the two forms (integrity-checked); an empty
+/// candidates list is legal (a multi slot whose count may be zero, or a
+/// deliberately-empty list slot).
+#[derive(Debug, Clone, Deserialize)]
+pub struct SuggestedBuildEntry {
+    pub slot: String,
+    #[serde(default)]
+    pub candidates: Vec<String>,
+    #[serde(default)]
+    pub text: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -261,11 +428,27 @@ pub enum Effect {
     IgnoreArmorSpeedPenalty,
     /// Gain a sense (Cavern Elf darkvision).
     Sense { value: String },
-    /// An extra unarmed attack (Razortooth Goblin jaws).
+    /// Conditional sense upgrade (the Aiuvarin/Dromaar rule). Semantics:
+    /// grants `otherwise` normally; when the base ancestry's own senses
+    /// already include `otherwise`, grants `sense` instead; when they
+    /// already include `sense`, grants nothing new. E.g. Dromaar's
+    /// low-light vision is `{ "type": "sense_upgrade", "sense":
+    /// "darkvision", "otherwise": "low-light vision" }`. Only the
+    /// ancestry's *base* senses are consulted, never other effects.
+    SenseUpgrade { sense: String, otherwise: String },
+    /// An unarmed attack (Razortooth Goblin jaws). With `range` set it is
+    /// a *ranged* unarmed attack (Seedpod): the attack roll uses Dex and
+    /// no attribute is added to damage (it is not a thrown weapon). With
+    /// `replaces_fist` it replaces the built-in Fist entry on the sheet
+    /// instead of adding a new one (Iron Fists).
     UnarmedAttack {
         name: String,
         damage: String,
         traits: Vec<String>,
+        #[serde(default)]
+        range: Option<String>,
+        #[serde(default)]
+        replaces_fist: bool,
     },
     /// Become trained in these specific skills; collisions with existing
     /// training open replacement-skill slots (the PF2e replacement rule).
@@ -276,11 +459,39 @@ pub enum Effect {
     /// Gain a Lore skill.
     GrantLore { name: String },
     /// Become trained in N skills of your choice (opens a chooser slot).
-    ChooseSkills { count: u32, source_label: String },
+    /// A non-empty `from` restricts the choice to those skill IDs (the
+    /// Hold Mark pattern); empty means any skill.
+    ChooseSkills {
+        count: u32,
+        source_label: String,
+        #[serde(default)]
+        from: Vec<String>,
+    },
+    /// Gain a Lore skill the player names (the Gnome Obsession pattern):
+    /// opens the text slot "pf2e.skills.feat-lore"; the typed name lands
+    /// trained on the sheet as "<Typed> Lore" with `source_label` as its
+    /// source. At most one record in a build may carry this effect.
+    ChooseLore { source_label: String },
     /// Choose N entries from a named catalog (opens a chooser slot). An
     /// empty catalog in this data version makes the carrying option
     /// unavailable, with an explanation.
     ChooseFromCatalog { catalog: String, count: u32 },
+    /// Set a save or Perception to a named proficiency rank at level 1
+    /// (Canny Acumen → expert). `target` is one of "fortitude", "reflex",
+    /// "will", "perception"; sheet derivation takes max(class rank,
+    /// override) — an override never lowers a rank.
+    ProficiencyOverride { target: String, rank: String },
+    /// Choice-in-a-feat proficiency override (Canny Acumen): the record
+    /// opens a chooser over `targets`; the pick folds as a concrete
+    /// `ProficiencyOverride` at `rank`.
+    ChooseProficiencyOverride {
+        targets: Vec<String>,
+        rank: String,
+        source_label: String,
+    },
+    /// Extra bonus-language picks (Nomadic Halfling's +2, Multilingual):
+    /// raises the "pf2e.ancestry.languages" chooser's count.
+    BonusLanguages { count: u32 },
 }
 
 /// The raw JSON file contents, as shipped.
@@ -374,27 +585,129 @@ impl RulesData {
             }
         }
 
+        // Feat catalog keys (see the convention on HeritageRecord): a key
+        // is valid iff it is a full ancestry ID or a versatile heritage's
+        // short key.
+        let valid_catalog_key = |key: &str| {
+            self.ancestries.iter().any(|a| a.id == key)
+                || self
+                    .heritages
+                    .iter()
+                    .any(|h| h.is_versatile() && h.short_key() == key)
+        };
         for h in &self.heritages {
-            if !self.ancestries.iter().any(|a| a.id == h.ancestry) {
-                return Err(DataError::Integrity(format!(
-                    "heritage '{}' references unknown ancestry '{}'",
-                    h.id, h.ancestry
-                )));
+            // `ancestry: null` marks a versatile heritage — legal; a named
+            // ancestry must resolve.
+            if let Some(ancestry) = &h.ancestry {
+                if !self.ancestries.iter().any(|a| &a.id == ancestry) {
+                    return Err(DataError::Integrity(format!(
+                        "heritage '{}' references unknown ancestry '{ancestry}'",
+                        h.id
+                    )));
+                }
+            }
+            for key in &h.feat_ancestries {
+                if !valid_catalog_key(key) {
+                    return Err(DataError::Integrity(format!(
+                        "heritage '{}' feat_ancestries key '{key}' is neither an \
+                         ancestry ID nor a versatile heritage's short key",
+                        h.id
+                    )));
+                }
             }
         }
         for f in &self.ancestry_feats {
-            if !self.ancestries.iter().any(|a| a.id == f.ancestry) {
+            if !valid_catalog_key(&f.ancestry) {
                 return Err(DataError::Integrity(format!(
-                    "ancestry feat '{}' references unknown ancestry '{}'",
+                    "ancestry feat '{}' catalog key '{}' is neither an ancestry \
+                     ID nor a versatile heritage's short key",
                     f.id, f.ancestry
                 )));
             }
         }
+        for a in &self.ancestries {
+            for lang in &a.additional_languages {
+                if lang.trim().is_empty() {
+                    return Err(DataError::Integrity(format!(
+                        "ancestry '{}' has an empty additional language",
+                        a.id
+                    )));
+                }
+                if a.languages.contains(lang) {
+                    return Err(DataError::Integrity(format!(
+                        "ancestry '{}' lists '{lang}' both as a starting and an \
+                         additional language",
+                        a.id
+                    )));
+                }
+            }
+        }
         for b in &self.backgrounds {
-            if !self.skills.iter().any(|s| s.id == b.skill) {
+            if b.skill.is_empty() && b.skill_choice.is_empty() {
+                return Err(DataError::Integrity(format!(
+                    "background '{}' has neither a fixed skill nor a skill choice",
+                    b.id
+                )));
+            }
+            if !b.skill.is_empty() && !self.skills.iter().any(|s| s.id == b.skill) {
                 return Err(DataError::Integrity(format!(
                     "background '{}' references unknown skill '{}'",
                     b.id, b.skill
+                )));
+            }
+            for s in &b.skill_choice {
+                if !self.skills.iter().any(|sk| sk.id == *s) {
+                    return Err(DataError::Integrity(format!(
+                        "background '{}' skill_choice references unknown skill '{s}'",
+                        b.id
+                    )));
+                }
+            }
+            let feat_resolves = |id: &str| self.general_feats.iter().any(|f| f.id == id);
+            if !b.skill_feat.is_empty() && !feat_resolves(&b.skill_feat) {
+                return Err(DataError::Integrity(format!(
+                    "background '{}' skill_feat '{}' does not resolve in \
+                     general_feats",
+                    b.id, b.skill_feat
+                )));
+            }
+            if !b.skill_feat_display.is_empty() && b.skill_feat.is_empty() {
+                return Err(DataError::Integrity(format!(
+                    "background '{}' carries skill_feat_display without a \
+                     skill_feat to display",
+                    b.id
+                )));
+            }
+            for (key, feat) in &b.skill_feat_by_choice {
+                if !b.skill_choice.contains(key) {
+                    return Err(DataError::Integrity(format!(
+                        "background '{}' skill_feat_by_choice key '{key}' is not \
+                         in its skill_choice list",
+                        b.id
+                    )));
+                }
+                if !feat_resolves(feat) {
+                    return Err(DataError::Integrity(format!(
+                        "background '{}' skill_feat_by_choice feat '{feat}' does \
+                         not resolve in general_feats",
+                        b.id
+                    )));
+                }
+            }
+            for key in b.skill_feat_display_by_choice.keys() {
+                if !b.skill_feat_by_choice.contains_key(key) {
+                    return Err(DataError::Integrity(format!(
+                        "background '{}' skill_feat_display_by_choice key '{key}' \
+                         has no matching skill_feat_by_choice entry",
+                        b.id
+                    )));
+                }
+            }
+            if b.lore_player_named && !b.lore.is_empty() {
+                return Err(DataError::Integrity(format!(
+                    "background '{}' is lore_player_named but also carries a \
+                     fixed lore '{}'",
+                    b.id, b.lore
                 )));
             }
         }
@@ -407,6 +720,7 @@ impl RulesData {
                     )));
                 }
             }
+            self.check_suggested_build(c)?;
         }
         for f in &self.class_feats {
             if !self.classes.iter().any(|c| c.id == f.class) {
@@ -416,16 +730,51 @@ impl RulesData {
                 )));
             }
         }
-        for feat in &self.ancestry_feats {
-            for e in &feat.effects {
-                if let Effect::GrantSkills { skills, .. } = e {
-                    for s in skills {
-                        if !self.skills.iter().any(|sk| sk.id == *s) {
+        let effect_carriers = self
+            .heritages
+            .iter()
+            .map(|h| (h.id.as_str(), &h.effects))
+            .chain(
+                self.ancestry_feats
+                    .iter()
+                    .map(|f| (f.id.as_str(), &f.effects)),
+            )
+            .chain(
+                self.general_feats
+                    .iter()
+                    .map(|f| (f.id.as_str(), &f.effects)),
+            );
+        for (id, effects) in effect_carriers {
+            for e in effects {
+                let skill_refs: &[String] = match e {
+                    Effect::GrantSkills { skills, .. } => skills,
+                    Effect::ChooseSkills { from, .. } => from,
+                    _ => &[],
+                };
+                for s in skill_refs {
+                    if !self.skills.iter().any(|sk| sk.id == *s) {
+                        return Err(DataError::Integrity(format!(
+                            "record '{id}' effect references unknown skill '{s}'"
+                        )));
+                    }
+                }
+                let prof_targets: &[String] = match e {
+                    Effect::ProficiencyOverride { target, .. } => std::slice::from_ref(target),
+                    Effect::ChooseProficiencyOverride { targets, .. } => {
+                        if targets.is_empty() {
                             return Err(DataError::Integrity(format!(
-                                "feat '{}' grants unknown skill '{s}'",
-                                feat.id
+                                "record '{id}' choose_proficiency_override has no targets"
                             )));
                         }
+                        targets
+                    }
+                    _ => &[],
+                };
+                for t in prof_targets {
+                    if !matches!(t.as_str(), "fortitude" | "reflex" | "will" | "perception") {
+                        return Err(DataError::Integrity(format!(
+                            "record '{id}' proficiency override names unknown target '{t}'"
+                        )));
                     }
                 }
             }
@@ -457,6 +806,118 @@ impl RulesData {
             }
         }
         Ok(())
+    }
+
+    /// Suggested-build integrity: every class ships a block, every entry
+    /// names a known slot, every candidate ID resolves (records, kit
+    /// options, attribute/proficiency/language option IDs), and each entry
+    /// is either candidates or text, never both. A dangling reference is a
+    /// build-time refusal — runtime never discovers it.
+    fn check_suggested_build(&self, c: &ClassRecord) -> Result<(), DataError> {
+        let Some(block) = &c.suggested_build else {
+            return Err(DataError::Integrity(format!(
+                "class '{}' has no suggested_build block — every shipped class \
+                 must carry one (quick build, spec req 7)",
+                c.id
+            )));
+        };
+        if block.entries.is_empty() {
+            return Err(DataError::Integrity(format!(
+                "class '{}' suggested_build has no entries",
+                c.id
+            )));
+        }
+        let known_slots = crate::mechanics::known_slot_ids();
+        let mut seen_slots: BTreeSet<&str> = BTreeSet::new();
+        for entry in &block.entries {
+            if !known_slots.contains(&entry.slot.as_str()) {
+                return Err(DataError::Integrity(format!(
+                    "class '{}' suggested_build references unknown slot '{}'",
+                    c.id, entry.slot
+                )));
+            }
+            if !seen_slots.insert(&entry.slot) {
+                return Err(DataError::Integrity(format!(
+                    "class '{}' suggested_build has two entries for slot '{}'",
+                    c.id, entry.slot
+                )));
+            }
+            match &entry.text {
+                Some(text) => {
+                    if !entry.candidates.is_empty() {
+                        return Err(DataError::Integrity(format!(
+                            "class '{}' suggested_build entry for '{}' carries \
+                             both text and candidates",
+                            c.id, entry.slot
+                        )));
+                    }
+                    if text.trim().is_empty() {
+                        return Err(DataError::Integrity(format!(
+                            "class '{}' suggested_build entry for '{}' has empty text",
+                            c.id, entry.slot
+                        )));
+                    }
+                }
+                None => {
+                    for candidate in &entry.candidates {
+                        if !self.suggested_candidate_resolves(candidate) {
+                            return Err(DataError::Integrity(format!(
+                                "class '{}' suggested_build candidate '{candidate}' \
+                                 (slot '{}') does not resolve to any shipped \
+                                 record or option",
+                                c.id, entry.slot
+                            )));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether a suggested-build candidate ID resolves in shipped content:
+    /// a record ID, a kit-option ID, the no-kit sentinel, an attribute
+    /// option (`attr.*`), a proficiency-target option (`prof.*`), or a
+    /// language option (`lang.*`, name-derived from an ancestry's lists).
+    fn suggested_candidate_resolves(&self, candidate: &str) -> bool {
+        if candidate.starts_with("attr.") {
+            return crate::mechanics::ALL_ATTRIBUTES
+                .into_iter()
+                .any(|a| a.option_id().as_str() == candidate);
+        }
+        if let Some(target) = candidate.strip_prefix("prof.") {
+            return matches!(target, "fortitude" | "reflex" | "will" | "perception");
+        }
+        if candidate.starts_with("lang.") {
+            return self.ancestries.iter().any(|a| {
+                a.languages
+                    .iter()
+                    .chain(a.additional_languages.iter())
+                    .any(|lang| crate::mechanics::lang_option_id(lang) == candidate)
+            });
+        }
+        if candidate == "equipment.no-kit" {
+            return true;
+        }
+        self.ancestries.iter().any(|r| r.id == candidate)
+            || self.heritages.iter().any(|r| r.id == candidate)
+            || self.ancestry_feats.iter().any(|r| r.id == candidate)
+            || self.backgrounds.iter().any(|r| r.id == candidate)
+            || self.classes.iter().any(|r| r.id == candidate)
+            || self.class_feats.iter().any(|r| r.id == candidate)
+            || self.general_feats.iter().any(|r| r.id == candidate)
+            || self.skills.iter().any(|r| r.id == candidate)
+            || self.equipment.weapons.iter().any(|r| r.id == candidate)
+            || self.equipment.armor.iter().any(|r| r.id == candidate)
+            || self.equipment.shields.iter().any(|r| r.id == candidate)
+            || self.equipment.gear.iter().any(|r| r.id == candidate)
+            || self.equipment.kits.iter().any(|r| r.id == candidate)
+            || self
+                .equipment
+                .kits
+                .iter()
+                .flat_map(|k| k.options.iter())
+                .any(|o| o.id == candidate)
     }
 
     pub fn ancestry(&self, id: &str) -> Option<&AncestryRecord> {
