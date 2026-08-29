@@ -46,40 +46,131 @@ First, the one-command insurance:
 cp -R campaign campaign.backup-pre-0.2.0
 ```
 
-Then start the server and follow the spec's ten walks
-([What Ben checks](../../specs/chargen-content.md)):
+Then start the server and open the URL it prints (usually
+`http://localhost:8000`). Leave it running for all the walks.
 
 ```bash
 cargo run --release -p server -- --data-dir ./campaign
 ```
 
-1. **Walk 9 first — the bump on your real roster.** Open the roster: your
-   slice-1 characters show version flags or quiet re-pin states. Read a
-   diff, accept one, keep-old another; open the character files afterward
-   and confirm prior values are recorded, nothing lost.
-2. **Walk 1 — linear breadth.** Leshy Fighter, Nomad with a typed "Steppe"
-   Lore, languages, filtered gear, finalize; hand-verify against AoN.
-3. **Walks 2–5** — backwards Gnome with Scholar's in-background skill
-   pick; the Halfling→Orc cascade; Dwarf + Aiuvarin's widened feat list;
-   Versatile Human → Canny Acumen showing expert on the sheet and a
-   trained-gated skill feat greying with its rule.
-4. **Walks 6–8 — quick build.** Roster tap → read badges → swap one →
-   rename → finalize (the five-minute-player test); half-build by hand
-   then "fill remaining"; confirm a Dex key attribute survives a fill.
-5. **Walk 10 — the greyed shelf.** Fey-touched/Wellspring Gnome and
-   Unconventional Weaponry: judge whether the reasons tell the truth.
-6. **The attestation, as a skeptic.** Open
-   [rules-data/attestation.json](../../../rules-data/attestation.json):
-   pick three records, see what was checked vs waived; spot-check the
-   scrubbed gnome records (Fey World Magic née First World Magic) against
-   AoN — mechanics intact, nouns gone. Replay-verify everything:
+**Walk 9 — the bump, on your real roster (do this first).**
+1. The roster loads with your slice-1 characters. Each one now carries a
+   version note: either an amber review flag ("Rules data changed" /
+   "Review: replay failed") or the quiet "Data updated — re-pin
+   available".
+2. Click a *flagged* character. A panel shows every changed value as an
+   old → new row. Read it, then click **Accept new values**. The sheet
+   updates; nothing else changes.
+3. If you have a second flagged character, open it and click **Keep old
+   derivation** instead — the flag clears, the sheet stays as it was.
+4. If a character shows the quiet state, open it and click **Re-pin to
+   pf2e-pc.0.2.0** (its replay was identical; this just records the pin).
+5. Open the character files in an editor (`campaign/characters/*.json`):
+   each action you took is recorded under `version_history`, with the
+   superseded values preserved on any accept. Nothing was lost.
+6. If you had a half-finished draft, click its "Resume creating…" entry:
+   it explains the data changed and walks you through resolving before
+   the wizard continues; anything now illegal reopens on the checklist.
+
+**Walk 1 — linear breadth (Leshy, front to back).**
+1. Type a name, click **Create character**. Go in step order.
+2. Ancestry step: eight ancestries now. Pick **Leshy**, then a heritage
+   (try **Root Leshy**), then an ancestry feat, then assign the boosts.
+3. Background step: 39 entries — type in the filter box to find
+   **Nomad**. Confirm it, then in the Lore box it opens, type `Steppe` —
+   the sheet's skill list shows **Steppe Lore (trained)**, your word.
+4. If your Int is positive, a "Languages" chooser appears on the ancestry
+   step — pick from the leshy list and watch the sheet's Languages line.
+5. Class → Fighter, key attribute, class feat, skills as usual.
+6. Equipment: the shop is grouped (Weapons / Armor / Shields / Gear) with
+   one filter across all groups. Buy a couple of items by filtering.
+7. Finalize. Hand-verify the sheet against Archives of Nethys: Root Leshy
+   HP is 10 (so total 20 + Con), Small size, low-light vision, speed 25,
+   the typed Lore, the Languages line, Bulk.
+
+**Walk 2 — backwards (Gnome, checklist-driven).**
+1. Create a character and jump straight to the **equipment** step (the
+   step tabs are all clickable). Buy something. Jump to **details**, name
+   them.
+2. Now let the checklist drive: click each red/amber entry — it jumps you
+   to the right step. Pick class Fighter, then background **Scholar**:
+   inside the background a skill picker opens (Arcana / Nature /
+   Occultism / Religion). Pick one and watch **Assurance** follow that
+   choice on the sheet.
+3. Finish boosts and ancestry last. The moment the final checklist entry
+   clears, Finalize unblocks.
+
+**Walk 3 — the cascade (Halfling → Orc).**
+1. Create a character; take **Halfling**, a heritage, a feat, boosts.
+2. Go back to the ancestry step and change ancestry to **Orc**. A
+   confirmation lists exactly which decisions will be cleared.
+3. Confirm it: those slots reopen on the checklist; re-pick them and
+   check nothing halfling-flavored survived on the sheet.
+
+**Walk 4 — versatile heritage (Dwarf + Aiuvarin).**
+1. Create a **Dwarf**; at the heritage step, **Aiuvarin** appears
+   alongside the dwarf heritages. Pick it.
+2. Open the ancestry-feat list: it is now the union — dwarf feats plus
+   aiuvarin and elf feats (filter for "Earned Glory" or an elf feat name
+   to see both sides).
+
+**Walk 5 — the chooser chain (Canny Acumen).**
+1. Create a **Human**, heritage **Versatile Human**. A "General feat"
+   slot opens with the full 67-entry catalog — use the filter.
+2. Notice a skill feat you lack the training for (e.g. **Battle
+   Medicine** before training Medicine) is greyed with the rule named.
+3. Pick **Canny Acumen**. A "Proficiency choice" slot opens: choose
+   **Will**. The sheet's Will save jumps to expert (+5 at level 1).
+
+**Walk 6 — quick build.**
+1. Back on the roster, click **Quick build a Fighter** (name optional).
+2. You land on a completed wizard: every slot filled, each decision
+   badged *suggested*, checklist empty.
+3. Swap one suggestion (e.g. change the class feat) — the badge on that
+   slot flips to a normal player decision.
+4. Rename if you like, Finalize. Ask yourself: would you hand this to a
+   player whose session starts in five minutes?
+
+**Walk 7 — fill the rest.**
+1. Create a character by hand: pick only ancestry and background.
+2. Click **Fill remaining with suggestions** (in the wizard header).
+3. Confirm your two hand-picked choices did not move (no *suggested*
+   badge on them); everything else filled in. Finish and finalize.
+
+**Walk 8 — the stubborn draft.**
+1. Create a character; confirm class Fighter and key attribute
+   **Dexterity** first, nothing else.
+2. Click **Fill remaining with suggestions**: the fill adapts around your
+   Dex choice where legal; anything it could not resolve stays on the
+   checklist. Your Dex decision is untouched.
+
+**Walk 10 — the greyed shelf.**
+1. Create a **Gnome**; at the heritage step find **Fey-touched** and
+   **Wellspring** — visible but unpickable, each explaining that cantrip
+   choices arrive with the spellcaster slice.
+2. Filter the general/ancestry lists for **Unconventional Weaponry** —
+   same pattern (uncommon weapons not shipped). Judge whether each reason
+   tells a player the truth.
+
+**The attestation, as a skeptic.**
+1. Open [rules-data/attestation.json](../../../rules-data/attestation.json).
+   Pick three record IDs at random; each shows which fields were
+   machine-checked against the Foundry snapshot, or a waiver with a
+   reason.
+2. Spot-check the scrubbed records against AoN: search AoN for "First
+   World Magic" and compare it to our **Fey World Magic** — same
+   mechanics, reserved nouns gone. Same for the Fey-touched Gnome text.
+3. Replay-verify every character on disk:
 
 ```bash
 cargo run --release -p server -- --data-dir ./campaign verify
 ```
 
-7. **Intent check:** is "a table can build any common Player Core Fighter
-   without the book open" now true?
+   Characters you re-pinned or accepted report clean; anything you left
+   on keep-old reports as pinned to the older known version.
+
+**Intent check.** After the walks: is the sentence "a table can build any
+common Player Core Fighter without the book open" now true?
 
 ## Constraints now enforced
 
