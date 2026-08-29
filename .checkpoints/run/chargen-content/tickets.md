@@ -67,7 +67,7 @@ commit this file with the work. States: [ ] open, [~] in progress, [x] done.
   equipment step category grouping + filterable shop; badge/greying
   affordances verified at 39-background/53-skill-feat/full-gear scale;
   Playwright scenarios for the spec's Walks 1–10 where automatable.
-- [ ] **T10 — goldens + budgets + report.** One hand-verified golden per
+- [x] **T10 — goldens + budgets + report.** One hand-verified golden per
   ancestry + versatile-heritage + background-sub-choice + quick-build
   goldens; fold/suite/warm-rebuild budgets green (levers per architecture
   if needed, ceiling 12s pre-authorized); measure + record suite/rebuild/
