@@ -3,7 +3,10 @@
     "id": "class.fighter",
     "name": "Fighter",
     "text": "Fighting for honor, greed, loyalty, or simply the thrill of battle, you are an undisputed master of weaponry and combat techniques.",
-    "key_attribute_choice": ["str", "dex"],
+    "key_attribute_choice": [
+      "str",
+      "dex"
+    ],
     "hp_per_level": 10,
     "proficiencies": {
       "perception": "expert",
@@ -18,7 +21,10 @@
       "unarmored_defense": "trained",
       "class_dc": "trained"
     },
-    "class_skill_choice": ["skill.acrobatics", "skill.athletics"],
+    "class_skill_choice": [
+      "skill.acrobatics",
+      "skill.athletics"
+    ],
     "additional_skills_base": 3,
     "features": [
       {
@@ -33,26 +39,212 @@
     "suggested_build": {
       "description": "dm.ai suggested build (app-authored; anchored on the published class kit and key attribute): a classic sword-and-board human fighter. Candidate lists are ordered; the planner takes the first legal pick(s) against the folded draft, so lists run longer than needed.",
       "entries": [
-        { "slot": "pf2e.ancestry", "candidates": ["ancestry.human"] },
-        { "slot": "pf2e.ancestry.heritage", "candidates": ["heritage.human.skilled"] },
-        { "slot": "pf2e.skills.heritage-choice", "candidates": ["skill.diplomacy", "skill.society", "skill.stealth"] },
-        { "slot": "pf2e.ancestry.feat", "candidates": ["feat.ancestry.human.cooperative-nature", "feat.ancestry.human.haughty-obstinacy"] },
-        { "slot": "pf2e.boosts.ancestry-free", "candidates": ["attr.str", "attr.con", "attr.wis", "attr.dex"] },
-        { "slot": "pf2e.ancestry.languages", "candidates": ["lang.dwarven", "lang.orcish", "lang.goblin", "lang.jotun"] },
-        { "slot": "pf2e.background", "candidates": ["background.warrior"] },
-        { "slot": "pf2e.boosts.background-choice", "candidates": ["attr.str", "attr.con"] },
-        { "slot": "pf2e.boosts.background-free", "candidates": ["attr.wis", "attr.con", "attr.dex"] },
-        { "slot": "pf2e.class", "candidates": ["class.fighter"] },
-        { "slot": "pf2e.class.key-attribute", "candidates": ["attr.str"] },
-        { "slot": "pf2e.class.feat", "candidates": ["feat.class.fighter.sudden-charge", "feat.class.fighter.reactive-shield"] },
-        { "slot": "pf2e.skills.class-choice", "candidates": ["skill.athletics", "skill.acrobatics"] },
-        { "slot": "pf2e.skills.trained", "candidates": ["skill.acrobatics", "skill.medicine", "skill.survival", "skill.society", "skill.stealth", "skill.crafting", "skill.nature"] },
-        { "slot": "pf2e.boosts.free", "candidates": ["attr.str", "attr.dex", "attr.con", "attr.wis", "attr.cha", "attr.int"] },
-        { "slot": "pf2e.equipment.kit", "candidates": ["kit.fighter.sword-and-board", "kit.fighter"] },
-        { "slot": "pf2e.equipment.extra", "candidates": [] },
-        { "slot": "pf2e.details.name", "text": "Garrek Ironvale" }
+        {
+          "slot": "pf2e.ancestry",
+          "candidates": [
+            "ancestry.human"
+          ]
+        },
+        {
+          "slot": "pf2e.ancestry.heritage",
+          "candidates": [
+            "heritage.human.skilled"
+          ]
+        },
+        {
+          "slot": "pf2e.skills.heritage-choice",
+          "candidates": [
+            "skill.diplomacy",
+            "skill.society",
+            "skill.stealth"
+          ]
+        },
+        {
+          "slot": "pf2e.ancestry.feat",
+          "candidates": [
+            "feat.ancestry.human.cooperative-nature",
+            "feat.ancestry.human.haughty-obstinacy"
+          ]
+        },
+        {
+          "slot": "pf2e.boosts.ancestry-free",
+          "candidates": [
+            "attr.str",
+            "attr.con",
+            "attr.wis",
+            "attr.dex"
+          ]
+        },
+        {
+          "slot": "pf2e.ancestry.languages",
+          "candidates": [
+            "lang.dwarven",
+            "lang.orcish",
+            "lang.goblin",
+            "lang.jotun"
+          ]
+        },
+        {
+          "slot": "pf2e.background",
+          "candidates": [
+            "background.warrior"
+          ]
+        },
+        {
+          "slot": "pf2e.boosts.background-choice",
+          "candidates": [
+            "attr.str",
+            "attr.con"
+          ]
+        },
+        {
+          "slot": "pf2e.boosts.background-free",
+          "candidates": [
+            "attr.wis",
+            "attr.con",
+            "attr.dex"
+          ]
+        },
+        {
+          "slot": "pf2e.class",
+          "candidates": [
+            "class.fighter"
+          ]
+        },
+        {
+          "slot": "pf2e.class.key-attribute",
+          "candidates": [
+            "attr.str"
+          ]
+        },
+        {
+          "slot": "pf2e.class.feat",
+          "candidates": [
+            "feat.class.fighter.sudden-charge",
+            "feat.class.fighter.reactive-shield"
+          ]
+        },
+        {
+          "slot": "pf2e.skills.class-choice",
+          "candidates": [
+            "skill.athletics",
+            "skill.acrobatics"
+          ]
+        },
+        {
+          "slot": "pf2e.skills.trained",
+          "candidates": [
+            "skill.acrobatics",
+            "skill.medicine",
+            "skill.survival",
+            "skill.society",
+            "skill.stealth",
+            "skill.crafting",
+            "skill.nature"
+          ]
+        },
+        {
+          "slot": "pf2e.boosts.free",
+          "candidates": [
+            "attr.str",
+            "attr.dex",
+            "attr.con",
+            "attr.wis",
+            "attr.cha",
+            "attr.int"
+          ]
+        },
+        {
+          "slot": "pf2e.equipment.kit",
+          "candidates": [
+            "kit.fighter.sword-and-board",
+            "kit.fighter"
+          ]
+        },
+        {
+          "slot": "pf2e.equipment.extra",
+          "candidates": []
+        },
+        {
+          "slot": "pf2e.details.name",
+          "text": "Garrek Ironvale"
+        }
       ]
     },
-    "source": { "book": "Pathfinder Player Core", "page": 136, "url": "https://2e.aonprd.com/Classes.aspx?ID=35", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 136,
+      "url": "https://2e.aonprd.com/Classes.aspx?ID=35",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "class.wizard",
+    "name": "Wizard",
+    "text": "You are an eternal student of the secrets of the universe, treating magic like a science and casting powerful arcane spells learned through rigorous study.",
+    "key_attribute_choice": [
+      "int"
+    ],
+    "hp_per_level": 6,
+    "proficiencies": {
+      "perception": "trained",
+      "fortitude": "trained",
+      "reflex": "trained",
+      "will": "expert",
+      "simple_weapons": "trained",
+      "martial_weapons": "untrained",
+      "advanced_weapons": "untrained",
+      "unarmed_attacks": "trained",
+      "armor": "untrained",
+      "unarmored_defense": "trained",
+      "class_dc": "trained"
+    },
+    "class_skill_choice": [
+      "skill.arcana"
+    ],
+    "additional_skills_base": 2,
+    "features": [
+      {
+        "name": "Arcane Spellcasting",
+        "text": "You cast spells of the arcane tradition using the Cast a Spell activity. At 1st level you can prepare two 1st-rank spells and five cantrips each morning from your spellbook, plus one extra curriculum cantrip and one extra curriculum spell of each rank you can cast from your arcane school."
+      },
+      {
+        "name": "Arcane Thesis",
+        "text": "During your studies you produced a thesis of unique magical research; you gain a special benefit depending on its topic."
+      },
+      {
+        "name": "Arcane School",
+        "text": "You choose the arcane school where you learned your magic; it grants a school spell (a focus spell you cast with your pool of 1 Focus Point) and extra curriculum spells and slots."
+      },
+      {
+        "name": "Arcane Bond",
+        "text": "You place some of your magical power in a bonded item, designated each day during preparations; you gain the Drain Bonded Item free action to recover an expended spell once per day."
+      },
+      {
+        "name": "Spellbook",
+        "text": "Your spellbook contains your choice of 10 arcane cantrips and five 1st-rank arcane spells, plus two more 1st-rank spells added from your school's curriculum."
+      }
+    ],
+    "level1_class_feat": false,
+    "spellcasting": {
+      "tradition": "arcane",
+      "attack_proficiency": "trained",
+      "dc_proficiency": "trained",
+      "cantrips_prepared": 5,
+      "rank1_slots": 2,
+      "spellbook_cantrips": 10,
+      "spellbook_rank1": 5,
+      "spellbook_curriculum_rank1": 2,
+      "school_extra_slot": true
+    },
+    "quick_build_deferred": true,
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 192,
+      "url": "https://2e.aonprd.com/Classes.aspx?ID=38",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   }
 ]

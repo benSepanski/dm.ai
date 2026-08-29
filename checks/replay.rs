@@ -1162,7 +1162,7 @@ fn assert_entry(sheet: &types::SheetView, section: &str, label: &str, value: &st
 fn golden_torvald_dwarf_fighter() {
     let engine = engine();
     let log = torvald_log(&engine);
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "Torvald should be complete and legal: {:#?}",
@@ -1224,7 +1224,7 @@ fn golden_torvald_dwarf_fighter() {
 fn golden_elyse_human_archer() {
     let engine = engine();
     let log = elyse_log(&engine);
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "Elyse should be complete and legal: {:#?}",
@@ -1263,7 +1263,7 @@ fn golden_elyse_human_archer() {
 fn golden_krivvy_goblin_replacement() {
     let engine = engine();
     let log = krivvy_log(&engine);
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "Krivvy should be complete and legal: {:#?}",
@@ -1296,7 +1296,7 @@ fn golden_krivvy_goblin_replacement() {
 fn golden_caelith_elf_scholar_sub_choice() {
     let engine = engine();
     let log = caelith_log(&engine);
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "Caelith should be complete and legal: {:#?}",
@@ -1380,7 +1380,7 @@ fn golden_caelith_elf_scholar_sub_choice() {
 fn golden_fizzwick_gnome_obsession_lore() {
     let engine = engine();
     let log = fizzwick_log(&engine);
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "Fizzwick should be complete and legal: {:#?}",
@@ -1449,7 +1449,7 @@ fn golden_fizzwick_gnome_obsession_lore() {
 fn golden_wenna_halfling_nomadic_languages() {
     let engine = engine();
     let log = wenna_log(&engine);
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "Wenna should be complete and legal: {:#?}",
@@ -1518,7 +1518,7 @@ fn golden_wenna_halfling_nomadic_languages() {
 fn golden_bramble_leshy_root_hp_override() {
     let engine = engine();
     let log = bramble_log(&engine);
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "Bramble should be complete and legal: {:#?}",
@@ -1583,7 +1583,7 @@ fn golden_bramble_leshy_root_hp_override() {
 fn golden_grashk_orc_iron_fists() {
     let engine = engine();
     let log = grashk_log(&engine);
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "Grashk should be complete and legal: {:#?}",
@@ -1652,7 +1652,7 @@ fn golden_grashk_orc_iron_fists() {
 fn golden_maera_dwarf_aiuvarin_union() {
     let engine = engine();
     let log = maera_log(&engine);
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "Maera should be complete and legal: {:#?}",
@@ -1726,7 +1726,7 @@ fn golden_garrek_quick_build() {
             .all(|d| d.source == types::DecisionSource::Suggested),
         "quick-build decisions must carry the Suggested source"
     );
-    let projection = engine.project(&log).unwrap();
+    let projection = engine.project(&log, &[]).unwrap();
     assert!(
         projection.can_finalize,
         "the expanded suggested build must be review-ready: {:#?}",
@@ -1902,7 +1902,7 @@ mod properties {
             let mut log: Vec<Decision> = vec![];
             let mut n = 0u32;
             for op in ops {
-                let projection = engine.project(&log).unwrap();
+                let projection = engine.project(&log, &[]).unwrap();
                 let open_slots: Vec<_> = projection
                     .steps
                     .iter()
@@ -1959,7 +1959,7 @@ mod properties {
                         if slot_view.decision.is_none() {
                             continue;
                         }
-                        if let Ok(new_log) = engine.clear(&log, &slot_view.id) {
+                        if let Ok((new_log, _)) = engine.clear(&log, &[], &slot_view.id) {
                             log = new_log;
                         }
                     }
@@ -1971,8 +1971,8 @@ mod properties {
                 for d in &log {
                     prop_assert!(seen.insert(d.slot.clone()));
                 }
-                let p1 = engine.project(&log).unwrap();
-                let p2 = engine.project(&log).unwrap();
+                let p1 = engine.project(&log, &[]).unwrap();
+                let p2 = engine.project(&log, &[]).unwrap();
                 prop_assert_eq!(&p1, &p2);
                 prop_assert_eq!(p1.can_finalize, p1.checklist.is_empty());
                 // Coherence: statuses, entries, and explanations agree.

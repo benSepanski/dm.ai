@@ -1,0 +1,1161 @@
+{
+  "spells": [
+    {
+      "id": "spell.caustic-blast",
+      "name": "Caustic Blast",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "acid",
+        "cantrip",
+        "concentrate",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": "basic Reflex",
+      "range": "30 feet",
+      "area": "5-foot burst",
+      "targets": null,
+      "duration": null,
+      "text": "You fling a glob of acid that detonates on arrival. Creatures in the burst take 1d8 acid damage with a basic Reflex save; on a critical failure they also take 1 persistent acid damage.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 2,
+          "text": "The initial damage increases by 1d8, and the persistent damage on a critical failure increases by 1."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 319,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1461",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.detect-magic",
+      "name": "Detect Magic",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult",
+        "primal",
+        "elemental"
+      ],
+      "traits": [
+        "cantrip",
+        "concentrate",
+        "detection",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": null,
+      "area": "30-foot emanation",
+      "targets": null,
+      "duration": null,
+      "text": "You send out a pulse that registers the presence or absence of magic in the area, with no further information. You can ignore magic you are already fully aware of.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 3,
+          "text": "You learn the rank or level of the most powerful magical effect the spell detects."
+        },
+        {
+          "kind": "fixed",
+          "rank": 4,
+          "text": "As 3rd rank, and you pinpoint the source of the highest-rank magic in the area."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 323,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1485",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.electric-arc",
+      "name": "Electric Arc",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "cantrip",
+        "concentrate",
+        "electricity",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": "basic Reflex",
+      "range": "30 feet",
+      "area": null,
+      "targets": "1 or 2 creatures",
+      "duration": null,
+      "text": "An arc of lightning leaps between two targets, dealing 1d4 electricity damage with a basic Reflex save.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 1,
+          "text": "The damage increases by 1d4."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 328,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1509",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.figment",
+      "name": "Figment",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "occult"
+      ],
+      "traits": [
+        "cantrip",
+        "concentrate",
+        "illusion",
+        "manipulate",
+        "subtle"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "30 feet",
+      "area": null,
+      "targets": null,
+      "duration": "sustained",
+      "text": "You create a simple illusory sound or crude vision no larger than a 5-foot cube. Sustaining the spell lets you continue or move it, and you can use it to Create a Diversion with a +2 circumstance bonus.",
+      "heightening": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 331,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1528",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.frostbite",
+      "name": "Frostbite",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "cantrip",
+        "cold",
+        "concentrate",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": "basic Fortitude",
+      "range": "60 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "An orb of biting cold coalesces around the target, dealing 2d4 cold damage with a basic Fortitude save. On a critical failure the target also gains weakness 1 to bludgeoning until the start of your next turn.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 1,
+          "text": "The damage increases by 1d4 and the weakness on a critical failure increases by 1."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 332,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1539",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.gouging-claw",
+      "name": "Gouging Claw",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "attack",
+        "cantrip",
+        "concentrate",
+        "manipulate",
+        "morph"
+      ],
+      "actions": "2",
+      "defense": "AC",
+      "range": "touch",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "You momentarily morph a limb into a claw and rake it across a touched target: make a melee spell attack for 2d6 slashing damage, plus 2 persistent bleed damage on a critical hit.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 1,
+          "text": "The damage increases by 1d6 and the persistent bleed damage increases by 1."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 333,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1546",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.ignition",
+      "name": "Ignition",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "attack",
+        "cantrip",
+        "concentrate",
+        "fire",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": "AC",
+      "range": "30 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "You snap your fingers and fling a hot spark: make a spell attack for 2d4 fire damage, or 2d6 if the target is within your melee reach. On a critical hit the target also takes 1d4 persistent fire damage.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 1,
+          "text": "The initial damage increases by 1d4 and the persistent fire damage on a critical hit increases by 1d4."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 336,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1565",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.light",
+      "name": "Light",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult",
+        "primal",
+        "elemental"
+      ],
+      "traits": [
+        "cantrip",
+        "concentrate",
+        "light",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "120 feet",
+      "area": null,
+      "targets": null,
+      "duration": "until your next daily preparations",
+      "text": "You create an orb of light in a color you choose that sheds bright light in a 20-foot radius (dim light for another 20 feet). You can attach it to a willing creature and Sustain to move it.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 4,
+          "text": "The orb sheds bright light in a 60-foot radius (dim light for another 60 feet)."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 340,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1585",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.message",
+      "name": "Message",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult",
+        "elemental"
+      ],
+      "traits": [
+        "auditory",
+        "cantrip",
+        "concentrate",
+        "illusion",
+        "linguistic",
+        "mental",
+        "subtle"
+      ],
+      "actions": "1",
+      "defense": null,
+      "range": "120 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": "see below",
+      "text": "You mouth words delivered directly to the target's ears; the target can whisper a brief reply back if it can see you and is in range.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 3,
+          "text": "The spell's range increases to 500 feet."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 343,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1598",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.prestidigitation",
+      "name": "Prestidigitation",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult",
+        "primal",
+        "elemental"
+      ],
+      "traits": [
+        "cantrip",
+        "concentrate",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "10 feet",
+      "area": null,
+      "targets": "1 object (cook, lift, or tidy only)",
+      "duration": "sustained",
+      "text": "The simplest magic does your bidding while you Sustain the spell: cook (flavor or warm 1 pound of material), lift (slowly raise a light object 1 foot), make (a crude, fragile temporary object), or tidy (clean or soil a light object).",
+      "heightening": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 351,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1639",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.shield",
+      "name": "Shield",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult",
+        "elemental"
+      ],
+      "traits": [
+        "cantrip",
+        "concentrate",
+        "force"
+      ],
+      "actions": "1",
+      "defense": null,
+      "range": null,
+      "area": null,
+      "targets": null,
+      "duration": "until the start of your next turn",
+      "text": "You raise a magical shield of force, gaining a +1 circumstance bonus to AC until the start of your next turn without needing a hand free. You can Shield Block with it (Hardness 5), even against non-physical spell damage; after blocking, the spell ends and cannot be cast again for 10 minutes.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 2,
+          "text": "The shield's Hardness increases by 5."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 356,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1671",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.sigil",
+      "name": "Sigil",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult",
+        "primal",
+        "elemental"
+      ],
+      "traits": [
+        "cantrip",
+        "concentrate",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "touch",
+      "area": null,
+      "targets": "1 creature or object",
+      "duration": "unlimited",
+      "text": "You harmlessly inscribe your unique magical mark, about 1 square inch, on the touched creature or object. It can be visible or invisible, can be scrubbed off with 5 minutes of work, and fades from a creature after a week.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 3,
+          "text": "The sigil instead fades after 1 month."
+        },
+        {
+          "kind": "fixed",
+          "rank": 5,
+          "text": "The sigil instead fades after 1 year."
+        },
+        {
+          "kind": "fixed",
+          "rank": 7,
+          "text": "The sigil never fades."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 357,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1673",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.tangle-vine",
+      "name": "Tangle Vine",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "attack",
+        "cantrip",
+        "concentrate",
+        "manipulate",
+        "plant",
+        "wood"
+      ],
+      "actions": "2",
+      "defense": "AC",
+      "range": "30 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "A vine appears from thin air and lashes itself to the target: make a spell attack. On a hit the target takes a -10-foot circumstance penalty to its Speeds for 1 round (and is immobilized on a critical hit); it can Escape against your spell DC.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 2,
+          "text": "The effects last for 2 rounds."
+        },
+        {
+          "kind": "fixed",
+          "rank": 4,
+          "text": "The effects last for 1 minute."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 362,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1713",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.telekinetic-projectile",
+      "name": "Telekinetic Projectile",
+      "rank": 0,
+      "traditions": [
+        "arcane",
+        "occult"
+      ],
+      "traits": [
+        "attack",
+        "cantrip",
+        "concentrate",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": "AC",
+      "range": "30 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "You hurl a loose, unattended object at the target: make a spell attack for 2d6 bludgeoning, piercing, or slashing damage as appropriate to the object.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 1,
+          "text": "The damage increases by 1d6."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 363,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1718",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.breathe-fire",
+      "name": "Breathe Fire",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "concentrate",
+        "fire",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": "basic Reflex",
+      "range": null,
+      "area": "15-foot cone",
+      "targets": null,
+      "duration": null,
+      "text": "A gout of flame sweeps from your mouth, dealing 2d6 fire damage to creatures in the cone with a basic Reflex save.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 1,
+          "text": "The damage increases by 2d6."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 319,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1457",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.command",
+      "name": "Command",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult"
+      ],
+      "traits": [
+        "auditory",
+        "concentrate",
+        "linguistic",
+        "manipulate",
+        "mental"
+      ],
+      "actions": "2",
+      "defense": "Will",
+      "range": "30 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": "until the end of the target's next turn",
+      "text": "You shout a command the target finds hard to ignore: approach you, run away, release what it holds, drop prone, or stand in place. On a failed Will save it must obey with its first action next turn; on a critical failure it must use all its actions to obey.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 5,
+          "text": "You can target up to 10 creatures."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 321,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1470",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.fear",
+      "name": "Fear",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult",
+        "primal"
+      ],
+      "traits": [
+        "concentrate",
+        "emotion",
+        "fear",
+        "manipulate",
+        "mental"
+      ],
+      "actions": "2",
+      "defense": "Will",
+      "range": "30 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "You plant fear in the target: on a failed Will save it becomes frightened 2 (frightened 1 on a success; on a critical failure, frightened 3 and fleeing for 1 round).",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 3,
+          "text": "You can target up to five creatures."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 331,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1524",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.force-barrage",
+      "name": "Force Barrage",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "occult"
+      ],
+      "traits": [
+        "concentrate",
+        "force",
+        "manipulate"
+      ],
+      "actions": "1 to 3",
+      "defense": null,
+      "range": "120 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "You fire a shard of solidified magic that automatically hits for 1d4+1 force damage. Each additional action you spend Casting the Spell fires one more shard (up to three); you choose each shard's target individually.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 2,
+          "text": "You fire one additional shard with each action you spend."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 332,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1536",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.grease",
+      "name": "Grease",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "concentrate",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "30 feet",
+      "area": "4 contiguous 5-foot squares",
+      "targets": "1 object of Bulk 1 or less",
+      "duration": "1 minute",
+      "text": "You conjure grease over four contiguous 5-foot squares of ground (creatures on or entering it must succeed at a Reflex save or Acrobatics check or fall prone) or over one object of 1 Bulk or less (making it hard to hold or pick up).",
+      "heightening": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 333,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1547",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.grim-tendrils",
+      "name": "Grim Tendrils",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "occult"
+      ],
+      "traits": [
+        "concentrate",
+        "manipulate",
+        "void"
+      ],
+      "actions": "2",
+      "defense": "Fortitude",
+      "range": null,
+      "area": "30-foot line",
+      "targets": null,
+      "duration": null,
+      "text": "Tendrils of darkness curl out from your fingers in a line, dealing 2d4 void damage and 1 persistent bleed damage to living creatures, with a Fortitude save (half damage and no bleed on a success).",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 1,
+          "text": "The void damage increases by 2d4, and the persistent bleed damage increases by 1."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 334,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1548",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.illusory-disguise",
+      "name": "Illusory Disguise",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "occult"
+      ],
+      "traits": [
+        "concentrate",
+        "illusion",
+        "manipulate",
+        "visual"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "30 feet",
+      "area": null,
+      "targets": "1 willing creature",
+      "duration": "1 hour",
+      "text": "You cloak the target in an illusion that makes it look and sound like a different creature of its size, disguising it and its gear for the duration.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 3,
+          "text": "The target can appear as any creature of the same size, even a specific individual."
+        },
+        {
+          "kind": "fixed",
+          "rank": 4,
+          "text": "You can target up to 10 willing creatures."
+        },
+        {
+          "kind": "fixed",
+          "rank": 7,
+          "text": "As 4th rank, and the disguises can impersonate specific individuals."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 337,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1568",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.illusory-object",
+      "name": "Illusory Object",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "occult"
+      ],
+      "traits": [
+        "concentrate",
+        "illusion",
+        "manipulate",
+        "visual"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "500 feet",
+      "area": "20-foot burst",
+      "targets": null,
+      "duration": "10 minutes",
+      "text": "You create a stationary illusory visual object no larger than a 20-foot burst; it holds up to visual inspection but not to touch.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 2,
+          "text": "The image also makes appropriate sounds, smells, and feels right to the touch."
+        },
+        {
+          "kind": "fixed",
+          "rank": 5,
+          "text": "As the 2nd-rank version, but the duration is unlimited."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 337,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1569",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.jump",
+      "name": "Jump",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "manipulate",
+        "move"
+      ],
+      "actions": "1",
+      "defense": null,
+      "range": null,
+      "area": null,
+      "targets": null,
+      "duration": null,
+      "text": "Your legs surge with strength: you jump 30 feet in any direction without touching the ground, and must land on solid ground within that distance or fall after your next action.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 3,
+          "text": "The range becomes touch, the target becomes one touched creature, and the duration becomes 1 minute, letting the target jump this way whenever it takes the action."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 340,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1580",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.mystic-armor",
+      "name": "Mystic Armor",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult",
+        "primal",
+        "elemental"
+      ],
+      "traits": [
+        "concentrate",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": null,
+      "area": null,
+      "targets": null,
+      "duration": "until your next daily preparations",
+      "text": "You ward yourself with shimmering magical energy, gaining a +1 item bonus to AC with a maximum Dexterity modifier of +5, using your unarmored proficiency.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 4,
+          "text": "You gain a +1 item bonus to saving throws."
+        },
+        {
+          "kind": "fixed",
+          "rank": 6,
+          "text": "The item bonus to AC increases to +2, and you gain a +1 item bonus to saving throws."
+        },
+        {
+          "kind": "fixed",
+          "rank": 8,
+          "text": "The item bonus to AC increases to +2, and you gain a +2 item bonus to saving throws."
+        },
+        {
+          "kind": "fixed",
+          "rank": 10,
+          "text": "The item bonus to AC increases to +3, and you gain a +3 item bonus to saving throws."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 346,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1611",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.pest-form",
+      "name": "Pest Form",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "concentrate",
+        "manipulate",
+        "polymorph"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": null,
+      "area": null,
+      "targets": null,
+      "duration": "10 minutes",
+      "text": "You transform into the battle form of a Tiny harmless animal: AC 15 + your level, Speed 20 feet, weakness 5 to physical damage, low-light vision and imprecise scent, and you cannot make Strikes.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 4,
+          "text": "You can turn into a flying creature such as a bird, gaining a fly Speed of 20 feet."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 348,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1626",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.sleep",
+      "name": "Sleep",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "occult"
+      ],
+      "traits": [
+        "concentrate",
+        "incapacitation",
+        "manipulate",
+        "mental",
+        "sleep"
+      ],
+      "actions": "2",
+      "defense": "Will",
+      "range": "30 feet",
+      "area": "5-foot burst",
+      "targets": null,
+      "duration": null,
+      "text": "Creatures in the burst become drowsy: on a failed Will save a creature falls unconscious (waking automatically after 1 minute, or 1 hour on a critical failure); on a success it takes a -1 status penalty to Perception for 1 round.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 4,
+          "text": "The creatures fall unconscious for 1 round on a failure (1 minute on a critical failure) even if damaged, then fall prone and release what they hold."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 357,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1675",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.spider-sting",
+      "name": "Spider Sting",
+      "rank": 1,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "concentrate",
+        "manipulate",
+        "poison"
+      ],
+      "actions": "2",
+      "defense": "Fortitude",
+      "range": "touch",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "You magically duplicate a spider's venomous sting: the touched creature takes 1d4 piercing damage and must save against spider venom, which deals poison damage and enfeebles over its stages.",
+      "heightening": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 358,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1684",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.force-bolt",
+      "name": "Force Bolt",
+      "rank": 1,
+      "focus": true,
+      "traditions": [
+        "arcane"
+      ],
+      "traits": [
+        "focus",
+        "force",
+        "manipulate",
+        "uncommon",
+        "wizard"
+      ],
+      "actions": "1",
+      "defense": null,
+      "range": "30 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "An unerring dart of force springs from your hand, automatically hitting for 1d4+1 force damage.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 2,
+          "text": "The damage increases by 1d4+1."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 387,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1896",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.scramble-body",
+      "name": "Scramble Body",
+      "rank": 1,
+      "focus": true,
+      "traditions": [
+        "arcane"
+      ],
+      "traits": [
+        "concentrate",
+        "focus",
+        "manipulate",
+        "uncommon",
+        "wizard"
+      ],
+      "actions": "2",
+      "defense": "Fortitude",
+      "range": "30 feet",
+      "area": null,
+      "targets": "1 living creature",
+      "duration": null,
+      "text": "Your magic throws the target's biology into disarray, inducing nausea and fever: on a failed Fortitude save it becomes sickened 1 (on a critical failure, sickened 2 and slowed 1 as long as it is sickened).",
+      "heightening": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 388,
+        "url": "https://2e.aonprd.com/Spells.aspx?ID=1904",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    }
+  ],
+  "theses": [
+    {
+      "id": "thesis.spell-blending",
+      "name": "Spell Blending",
+      "text": "You theorize that spell slots are shorthand for an underlying energy. During your daily preparations you can trade two spell slots of the same rank for one bonus slot up to 2 ranks higher (of a rank you can cast), each bonus slot of a different rank; you can also trade slots for extra cantrips.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 195,
+        "url": "https://2e.aonprd.com/ArcaneThesis.aspx?ID=6",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "thesis.spell-substitution",
+      "name": "Spell Substitution",
+      "text": "You have uncovered a shortcut around fixed preparations: you can spend 10 minutes to empty one prepared spell slot and prepare a different spell from your spellbook in its place. If interrupted, the original spell stays prepared and you can start over later.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 195,
+        "url": "https://2e.aonprd.com/ArcaneThesis.aspx?ID=8",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    }
+  ],
+  "schools": [
+    {
+      "id": "school.battle-magic",
+      "name": "School of Battle Magic",
+      "text": "Magic as the art of war: you studied whirling energies that lay waste to soldiers and armies, alongside arcane countermeasures and battlefield defenses.",
+      "curriculum_cantrips": [
+        "spell.shield",
+        "spell.telekinetic-projectile"
+      ],
+      "curriculum_rank1": [
+        "spell.breathe-fire",
+        "spell.force-barrage",
+        "spell.mystic-armor"
+      ],
+      "focus_spell": "spell.force-bolt",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 199,
+        "url": "https://2e.aonprd.com/ArcaneSchool.aspx?ID=25",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "school.protean-form",
+      "name": "School of Protean Form",
+      "text": "Your school taught the relationship between magic and the body: convincing living matter into another shape for a time, from seed to vine or human to beast.",
+      "curriculum_cantrips": [
+        "spell.gouging-claw",
+        "spell.tangle-vine"
+      ],
+      "curriculum_rank1": [
+        "spell.jump",
+        "spell.pest-form",
+        "spell.spider-sting"
+      ],
+      "focus_spell": "spell.scramble-body",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 200,
+        "url": "https://2e.aonprd.com/ArcaneSchool.aspx?ID=28",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    }
+  ]
+}

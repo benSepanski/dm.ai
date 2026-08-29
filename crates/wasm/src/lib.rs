@@ -23,6 +23,7 @@ const RULES_CLASS_FEATS: &str = include_str!("../../../rules-data/class-feats.js
 const RULES_GENERAL_FEATS: &str = include_str!("../../../rules-data/general-feats.json");
 const RULES_SKILLS: &str = include_str!("../../../rules-data/skills.json");
 const RULES_EQUIPMENT: &str = include_str!("../../../rules-data/equipment.json");
+const RULES_SPELLS: &str = include_str!("../../../rules-data/spells.json");
 
 fn engine() -> &'static Pf2eEngine {
     static ENGINE: OnceLock<Pf2eEngine> = OnceLock::new();
@@ -38,6 +39,7 @@ fn engine() -> &'static Pf2eEngine {
             general_feats: RULES_GENERAL_FEATS,
             skills: RULES_SKILLS,
             equipment: RULES_EQUIPMENT,
+            spells: RULES_SPELLS,
         })
         .expect("embedded rules data parses (asserted at build by checks)");
         ruleset_pf2e::engine(Arc::new(data))
@@ -62,24 +64,36 @@ pub fn engine_request(request: Ts<EngineRequest>) -> Result<Ts<EngineResponse>, 
 
 fn handle(request: EngineRequest) -> EngineResponse {
     match request {
-        EngineRequest::Project { log } => match engine().project(&log) {
+        EngineRequest::Project { log, prep } => match engine().project(&log, &prep) {
             Ok(projection) => EngineResponse::Projection { projection },
             Err(e) => EngineResponse::Error {
                 message: e.to_string(),
             },
         },
-        EngineRequest::Preview { log, candidate } => match engine().preview(&log, &candidate) {
+        EngineRequest::Preview {
+            log,
+            candidate,
+            prep,
+        } => match engine().preview(&log, &candidate, &prep) {
             Ok(projection) => EngineResponse::Projection { projection },
             Err(e) => EngineResponse::Error {
                 message: e.to_string(),
             },
         },
-        EngineRequest::ClearPreview { log, slot } => match engine().clear_preview(&log, &slot) {
-            Ok(preview) => EngineResponse::ClearPreview { preview },
+        EngineRequest::PreviewPrep { log, prep } => match engine().project(&log, &prep) {
+            Ok(projection) => EngineResponse::Projection { projection },
             Err(e) => EngineResponse::Error {
                 message: e.to_string(),
             },
         },
+        EngineRequest::ClearPreview { log, slot, prep } => {
+            match engine().clear_preview(&log, &prep, &slot) {
+                Ok(preview) => EngineResponse::ClearPreview { preview },
+                Err(e) => EngineResponse::Error {
+                    message: e.to_string(),
+                },
+            }
+        }
     }
 }
 
@@ -107,6 +121,8 @@ pub struct WireTypeExports {
     pub quick_build_result: types::QuickBuildResult,
     pub fill_remaining_request: types::FillRemainingRequest,
     pub fill_remaining_outcome: types::FillRemainingOutcome,
+    pub prep_save_request: types::PrepSaveRequest,
+    pub prep_save_outcome: types::PrepSaveOutcome,
 }
 
 #[wasm_bindgen]

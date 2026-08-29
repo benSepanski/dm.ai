@@ -1,9 +1,10 @@
 {
-  "version": "pf2e-pc.0.2.0",
+  "version": "pf2e-pc.0.3.0",
   "system": "pf2e",
-  "description": "Pathfinder 2e Player Core (Remaster) — full common Player Core breadth for the Fighter wizard (chargen-content slice). Records verified against Archives of Nethys index aon-20260802-141253 and the pinned Foundry pf2e-8.4.1 snapshot (see rules-data/attestation.json).",
+  "description": "Pathfinder 2e Player Core (Remaster) — full common Player Core breadth for the Fighter wizard plus the Wizard class representative subset (chargen-wizard slice): two arcane theses, two schools with curricula and focus spells, and a spell catalog covering every level-1 spellcasting mechanism. Records verified against Archives of Nethys and the pinned Foundry pf2e-8.4.1 snapshot (see rules-data/attestation.json).",
   "supersedes": [
-    "pf2e-pc.0.1.0"
+    "pf2e-pc.0.1.0",
+    "pf2e-pc.0.2.0"
   ],
   "license_notice": {
     "orc_notice": "This application is licensed under the ORC License held in the Library of Congress at TX 9-307-067 and available online at various locations including paizo.com/orclicense and others. All warranties are disclaimed as set forth therein.",

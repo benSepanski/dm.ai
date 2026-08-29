@@ -188,6 +188,18 @@ pub struct Pf2eState {
     pub key_attribute: Option<Attribute>,
     pub class_feat: Option<String>,
 
+    /// Spellcasting build choices (the Wizard). The preparation section is
+    /// deliberately NOT here: prepared spells are scoped choices beside the
+    /// log, so the fold — and therefore the materialized sheet — never
+    /// sees them.
+    pub thesis: Option<String>,
+    pub school: Option<String>,
+    pub spellbook_cantrips: Vec<String>,
+    pub spellbook_rank1: Vec<String>,
+    /// The rank-1 curriculum spells added to the spellbook from the school
+    /// (the printed "you also add two 1st-rank spells from the curriculum").
+    pub spellbook_curriculum: Vec<String>,
+
     /// Boosts by batch; duplicates within a batch are recorded as picked
     /// (validators flag them) but count once toward the modifier.
     pub boost_batches: BTreeMap<String, Vec<Attribute>>,
@@ -816,6 +828,126 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         });
     }
 
+    // Spellcasting (prepared casters). Every value derived from the
+    // class's printed spellcasting entry and the folded build choices;
+    // prepared spells are scoped choices and never appear here — the
+    // scoped sheet sections carry them on *displayed* sheets only.
+    if let Some((c, sc)) = class.and_then(|c| c.spellcasting.as_ref().map(|sc| (c, sc))) {
+        let attr = state
+            .key_attribute
+            .or_else(|| c.key_attribute_choice.first().copied());
+        let m = attr.map(|a| state.modifier(a)).unwrap_or(0);
+        let attr_label = attr.map(|a| a.abbrev()).unwrap_or("—");
+        let attack = Proficiency::parse(&sc.attack_proficiency);
+        let dc = Proficiency::parse(&sc.dc_proficiency);
+        let mut entries = vec![
+            SheetEntry {
+                label: "Tradition".into(),
+                value: capitalize(&sc.tradition),
+                detail: None,
+            },
+            SheetEntry {
+                label: "Spell attack".into(),
+                value: format_signed(attack.bonus(LEVEL) + m),
+                detail: Some(format!(
+                    "{} {} + {m} {attr_label}",
+                    attack.bonus(LEVEL),
+                    attack.label()
+                )),
+            },
+            SheetEntry {
+                label: "Spell DC".into(),
+                value: (10 + dc.bonus(LEVEL) + m).to_string(),
+                detail: Some(format!(
+                    "10 + {} {} + {m} {attr_label}",
+                    dc.bonus(LEVEL),
+                    dc.label()
+                )),
+            },
+        ];
+        let school = state.school.as_ref().and_then(|id| data.school(id));
+        let extra = if sc.school_extra_slot && school.is_some() {
+            1
+        } else {
+            0
+        };
+        entries.push(SheetEntry {
+            label: "Cantrips".into(),
+            value: format!("{} prepared", sc.cantrips_prepared + extra),
+            detail: Some(format!(
+                "heightened to rank {} (half level, rounded up){}",
+                (LEVEL + 1) / 2,
+                school
+                    .filter(|_| extra > 0)
+                    .map(|s| format!(" · includes 1 school cantrip ({} curriculum)", s.name))
+                    .unwrap_or_default()
+            )),
+        });
+        entries.push(SheetEntry {
+            label: "Rank 1 slots".into(),
+            value: (sc.rank1_slots + extra).to_string(),
+            detail: school
+                .filter(|_| extra > 0)
+                .map(|s| format!("includes 1 school slot ({} curriculum only)", s.name)),
+        });
+        if let Some(t) = state.thesis.as_ref().and_then(|id| data.thesis(id)) {
+            entries.push(SheetEntry {
+                label: "Arcane thesis".into(),
+                value: t.name.clone(),
+                detail: None,
+            });
+        }
+        if let Some(s) = school {
+            entries.push(SheetEntry {
+                label: "Arcane school".into(),
+                value: s.name.clone(),
+                detail: None,
+            });
+            if let Some(f) = data.spell(&s.focus_spell) {
+                entries.push(SheetEntry {
+                    label: "Focus pool".into(),
+                    value: "1 Focus Point".into(),
+                    detail: Some(format!("focus spell: {} (from {})", f.name, s.name)),
+                });
+            }
+        }
+        let book_names = |ids: &[String]| -> String {
+            if ids.is_empty() {
+                "none chosen yet".to_string()
+            } else {
+                ids.iter()
+                    .map(|id| {
+                        data.spell(id)
+                            .map(|s| s.name.clone())
+                            .unwrap_or_else(|| id.clone())
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            }
+        };
+        entries.push(SheetEntry {
+            label: "Spellbook (cantrips)".into(),
+            value: book_names(&state.spellbook_cantrips),
+            detail: None,
+        });
+        entries.push(SheetEntry {
+            label: "Spellbook (rank 1)".into(),
+            value: book_names(&state.spellbook_rank1),
+            detail: None,
+        });
+        if school.is_some() || !state.spellbook_curriculum.is_empty() {
+            entries.push(SheetEntry {
+                label: "Spellbook (curriculum)".into(),
+                value: book_names(&state.spellbook_curriculum),
+                detail: school.map(|s| format!("added from the {} curriculum", s.name)),
+            });
+        }
+        sections.push(SheetSection {
+            title: "Spellcasting".to_string(),
+            entries,
+        });
+    }
+
     // Languages and lore. The value keeps the ancestry defaults first, in
     // record order, then chosen additional languages in pick order — with
     // nothing chosen it renders exactly as before.
@@ -851,6 +983,77 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         summary,
         sections,
     }
+}
+
+/// The scoped sheet sections: prepared spells, rendered onto *displayed*
+/// sheets only (the engine appends these; the materialized sheet never
+/// contains them). Pure over (state, choices, data).
+pub fn derive_scoped_sections(
+    state: &Pf2eState,
+    prep: &[types::ScopedChoice],
+    data: &RulesData,
+) -> Vec<SheetSection> {
+    let Some(sc) = state
+        .class
+        .as_ref()
+        .and_then(|id| data.class(id))
+        .and_then(|c| c.spellcasting.as_ref())
+    else {
+        return Vec::new();
+    };
+    let names = |slot: &str| -> String {
+        let ids: Vec<&OptionId> = prep
+            .iter()
+            .filter(|c| c.slot.as_str() == slot)
+            .flat_map(|c| match &c.selection {
+                Selection::Option(id) => std::slice::from_ref(id).iter().collect::<Vec<_>>(),
+                Selection::Options(ids) => ids.iter().collect(),
+                Selection::Text(_) => Vec::new(),
+            })
+            .collect();
+        if ids.is_empty() {
+            "none prepared".to_string()
+        } else {
+            ids.iter()
+                .map(|id| {
+                    data.spell(id.as_str())
+                        .map(|s| s.name.clone())
+                        .unwrap_or_else(|| id.as_str().to_string())
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        }
+    };
+    let mut entries = vec![
+        SheetEntry {
+            label: "Cantrips".into(),
+            value: names(SLOT_PREP_CANTRIPS),
+            detail: Some(format!("{} prepared each day", sc.cantrips_prepared)),
+        },
+        SheetEntry {
+            label: "Rank 1".into(),
+            value: names(SLOT_PREP_RANK1),
+            detail: Some(format!("{} slot(s)", sc.rank1_slots)),
+        },
+    ];
+    if sc.school_extra_slot {
+        if let Some(school) = state.school.as_ref().and_then(|id| data.school(id)) {
+            entries.push(SheetEntry {
+                label: "School cantrip".into(),
+                value: names(SLOT_PREP_SCHOOL_CANTRIP),
+                detail: Some(format!("{} curriculum only", school.name)),
+            });
+            entries.push(SheetEntry {
+                label: "School slot (rank 1)".into(),
+                value: names(SLOT_PREP_SCHOOL),
+                detail: Some(format!("{} curriculum only", school.name)),
+            });
+        }
+    }
+    vec![SheetSection {
+        title: "Prepared Spells".to_string(),
+        entries,
+    }]
 }
 
 impl crate::data::AncestryRecord {
@@ -1343,6 +1546,9 @@ pub fn display_name(data: &RulesData, id: &OptionId) -> String {
     }
     data.ancestry(s)
         .map(|r| r.name.clone())
+        .or_else(|| data.spell(s).map(|r| r.name.clone()))
+        .or_else(|| data.thesis(s).map(|r| r.name.clone()))
+        .or_else(|| data.school(s).map(|r| r.name.clone()))
         .or_else(|| data.heritage(s).map(|r| r.name.clone()))
         .or_else(|| data.ancestry_feat(s).map(|r| r.name.clone()))
         .or_else(|| data.background(s).map(|r| r.name.clone()))
@@ -1445,6 +1651,21 @@ pub const SLOT_KIT: &str = "pf2e.equipment.kit";
 pub const SLOT_EXTRA_ITEMS: &str = "pf2e.equipment.extra";
 pub const SLOT_NAME: &str = "pf2e.details.name";
 pub const SLOT_DESCRIPTION: &str = "pf2e.details.description";
+pub const SLOT_THESIS: &str = "pf2e.class.thesis";
+pub const SLOT_SCHOOL: &str = "pf2e.class.school";
+pub const SLOT_SPELLBOOK_CANTRIPS: &str = "pf2e.class.spellbook.cantrips";
+pub const SLOT_SPELLBOOK_RANK1: &str = "pf2e.class.spellbook.rank1";
+/// The two rank-1 curriculum spells the printed spellbook rule adds from
+/// the chosen school.
+pub const SLOT_SPELLBOOK_CURRICULUM: &str = "pf2e.class.spellbook.curriculum";
+// Scoped slots (the preparation section) — registered through the engine's
+// scoped set, never confirmable into the log. The school slots prepare
+// directly from the curriculum (the printed "as well as … from your arcane
+// school"), not from the spellbook.
+pub const SLOT_PREP_CANTRIPS: &str = "pf2e.prep.cantrips";
+pub const SLOT_PREP_RANK1: &str = "pf2e.prep.rank1";
+pub const SLOT_PREP_SCHOOL_CANTRIP: &str = "pf2e.prep.school-cantrip";
+pub const SLOT_PREP_SCHOOL: &str = "pf2e.prep.school-rank1";
 
 /// Every registered slot ID — the namespace suggested-build entries are
 /// integrity-checked against. Keep in lockstep with the SLOT_* constants
@@ -1483,6 +1704,24 @@ pub fn known_slot_ids() -> &'static [&'static str] {
         SLOT_EXTRA_ITEMS,
         SLOT_NAME,
         SLOT_DESCRIPTION,
+        SLOT_THESIS,
+        SLOT_SCHOOL,
+        SLOT_SPELLBOOK_CANTRIPS,
+        SLOT_SPELLBOOK_RANK1,
+        SLOT_SPELLBOOK_CURRICULUM,
+    ]
+}
+
+/// The scoped (preparation) slot IDs — beside `known_slot_ids` because a
+/// suggested build cannot parameterize a scoped slot (the planner fills
+/// the log only; `wizard-content` extends it when the Wizard's quick
+/// build ships).
+pub fn scoped_slot_ids() -> &'static [&'static str] {
+    &[
+        SLOT_PREP_CANTRIPS,
+        SLOT_PREP_RANK1,
+        SLOT_PREP_SCHOOL_CANTRIP,
+        SLOT_PREP_SCHOOL,
     ]
 }
 

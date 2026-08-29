@@ -4,13 +4,16 @@
 //! and spot-checked by checks/crate_layering.rs).
 
 use serde::{Deserialize, Serialize};
-use types::{Decision, SheetDiff, SheetView, StepId};
+use types::{Decision, ScopedChoice, SheetDiff, SheetView, StepId};
 
-/// Current schema, stamped on every write. v2 = v1 plus the `suggested`
-/// decision source (quick build); structurally identical otherwise.
-pub(crate) const SCHEMA_VERSION: u32 = 2;
-/// Oldest schema this binary still reads. v1 files are accepted on load,
-/// never rewritten by loading, and upgraded on their next ordinary write.
+/// Current schema, stamped on every write. v3 = v2 plus the optional
+/// scoped `prep` section (prepared spells); absence is the valid state for
+/// non-preparing classes and every pre-slice file. v2 = v1 plus the
+/// `suggested` decision source (quick build).
+pub(crate) const SCHEMA_VERSION: u32 = 3;
+/// Oldest schema this binary still reads. Older files are accepted on
+/// load, never rewritten by loading, and upgraded on their next ordinary
+/// write.
 pub(crate) const MIN_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +43,71 @@ pub(crate) struct CharacterDoc {
     /// `evaluated_against` again. Cleared by a later re-pin or accept.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) keep_old: Option<KeepOldMarker>,
+    /// The scoped preparation section, stored as raw JSON so it parses
+    /// independently of the rest of the file: a hand-mangled prep section
+    /// degrades (reported, replaceable) instead of quarantining a file
+    /// whose log and sheet are intact. Absent = no preparation (valid).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) prep: Option<serde_json::Value>,
+}
+
+/// The parsed shape of the prep section. `last_request_id` is the durable
+/// idempotency marker: a retried save with the same request ID returns the
+/// saved result and changes nothing.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct PrepDoc {
+    pub(crate) choices: Vec<ScopedChoice>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) last_request_id: Option<String>,
+}
+
+/// The prep section as loaded: absent, parsed, or structurally broken
+/// (carried verbatim so unrelated saves never discard hand-edited bytes).
+#[derive(Debug, Clone)]
+pub(crate) enum PrepState {
+    None,
+    Ok(PrepDoc),
+    Broken {
+        raw: serde_json::Value,
+        message: String,
+    },
+}
+
+impl PrepState {
+    pub(crate) fn parse(value: Option<serde_json::Value>) -> PrepState {
+        match value {
+            None => PrepState::None,
+            Some(raw) => match serde_json::from_value::<PrepDoc>(raw.clone()) {
+                Ok(doc) => PrepState::Ok(doc),
+                Err(e) => PrepState::Broken {
+                    raw,
+                    message: format!("preparation section could not be read: {e}"),
+                },
+            },
+        }
+    }
+
+    pub(crate) fn to_value(&self) -> Option<serde_json::Value> {
+        match self {
+            PrepState::None => None,
+            PrepState::Ok(doc) => Some(serde_json::to_value(doc).expect("prep doc serializes")),
+            PrepState::Broken { raw, .. } => Some(raw.clone()),
+        }
+    }
+
+    pub(crate) fn choices(&self) -> &[ScopedChoice] {
+        match self {
+            PrepState::Ok(doc) => &doc.choices,
+            _ => &[],
+        }
+    }
+
+    pub(crate) fn broken_message(&self) -> Option<&str> {
+        match self {
+            PrepState::Broken { message, .. } => Some(message),
+            _ => None,
+        }
+    }
 }
 
 /// One recorded version-resolution action.

@@ -226,7 +226,7 @@ pub fn repair_replay(engine: &Pf2eEngine, log: &[Decision]) -> ReplayRepair {
             EngineError::InvalidDecision { slot, .. } => {
                 // The slot is registered (the fold found it): the engine's
                 // own cascade preview names everything it takes with it.
-                match engine.clear_preview(&current, slot) {
+                match engine.clear_preview(&current, &[], slot) {
                     Ok(preview) => {
                         let slots = preview.cleared.iter().map(|c| c.slot.clone()).collect();
                         cleared.extend(preview.cleared);

@@ -38,6 +38,7 @@ const RULES_CLASS_FEATS: &str = include_str!("../../../rules-data/class-feats.js
 const RULES_GENERAL_FEATS: &str = include_str!("../../../rules-data/general-feats.json");
 const RULES_SKILLS: &str = include_str!("../../../rules-data/skills.json");
 const RULES_EQUIPMENT: &str = include_str!("../../../rules-data/equipment.json");
+const RULES_SPELLS: &str = include_str!("../../../rules-data/spells.json");
 // The lineage record: ID sets of every shipped data version. The server
 // only needs its key set — a pin is "older known" when it appears in the
 // manifest's supersedes chain AND here.
@@ -55,6 +56,7 @@ fn load_rules() -> Result<ruleset_pf2e::RulesData, String> {
         general_feats: RULES_GENERAL_FEATS,
         skills: RULES_SKILLS,
         equipment: RULES_EQUIPMENT,
+        spells: RULES_SPELLS,
     })
     .map_err(|e| format!("rules data is corrupt — refusing to start: {e}"))
 }
@@ -190,7 +192,44 @@ fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData, known: version::Kno
                     );
                 }
             }
+            if !c.prep.choices().is_empty() || c.prep.broken_message().is_some() {
+                println!(
+                    "          {}: preparation not evaluable under a non-current pin — resolve the version flag first",
+                    c.id
+                );
+            }
             continue;
+        }
+        // Prep re-validation (current-pin characters only — replay above
+        // handles the log; prep is validated state, not replayed history).
+        // Absent prep is silent; a broken or illegal section is reported
+        // the way sheet divergence is, and never blocks loading.
+        let mut prep_problems: Vec<String> = Vec::new();
+        if let Some(message) = c.prep.broken_message() {
+            prep_problems.push(message.to_string());
+        } else {
+            let choices = c.prep.choices();
+            if !choices.is_empty() {
+                match engine.scoped_projection(&c.log, choices) {
+                    Ok(scoped) => {
+                        for entry in scoped
+                            .checklist
+                            .iter()
+                            .filter(|e| e.severity == types::ChecklistSeverity::Illegal)
+                        {
+                            prep_problems.push(format!("{}: {}", entry.rule, entry.message));
+                        }
+                    }
+                    Err(e) => prep_problems.push(format!("prep not evaluable: {e}")),
+                }
+            }
+        }
+        for p in &prep_problems {
+            failures += 1;
+            println!(
+                "PREP-BAD  {} ({}): preparation section is not legal — {p}. The sheet still loads; fix it from the prep editor (or by hand).",
+                c.id, c.sheet.name
+            );
         }
         match engine.sheet(&c.log) {
             Ok(replayed) if replayed == c.sheet => {

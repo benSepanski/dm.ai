@@ -148,11 +148,19 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         required: true,
         presentation_hint: None,
         kind: Box::new(|_| SlotViewKind::Single),
-        unlock: Box::new(|state| match state.class {
-            Some(_) => Availability::Open,
-            None => Availability::Locked {
-                reason: "choose a class first".into(),
-            },
+        unlock: Box::new({
+            let d = data.clone();
+            move |state| match &state.class {
+                // A class whose advancement table grants no level-1 class
+                // feat (the Wizard) hides the slot entirely.
+                Some(id) => match d.class(id) {
+                    Some(c) if !c.level1_class_feat => Availability::Hidden,
+                    _ => Availability::Open,
+                },
+                None => Availability::Locked {
+                    reason: "choose a class first".into(),
+                },
+            }
         }),
         dependents: vec![],
         options: Box::new(move |state| class_feat_options(&d, state, &[])),

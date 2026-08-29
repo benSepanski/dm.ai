@@ -284,6 +284,10 @@ fn data_files() -> Vec<(&'static str, String)> {
         ("general_feats", general_feats.to_string()),
         ("skills", skills.to_string()),
         ("equipment", equipment.to_string()),
+        (
+            "spells",
+            r#"{"spells": [], "theses": [], "schools": []}"#.to_string(),
+        ),
     ]
 }
 
@@ -301,6 +305,7 @@ fn data() -> RulesData {
         general_feats: get("general_feats"),
         skills: get("skills"),
         equipment: get("equipment"),
+        spells: get("spells"),
     })
     .expect("synthetic dataset parses and passes integrity")
 }
@@ -473,7 +478,7 @@ fn versatile_heritage_offered_under_any_ancestry() {
     let engine = engine();
     let mut log = Vec::new();
     confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.human"));
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let heritage = slot_view(&p, SLOT_HERITAGE).unwrap();
     let labels = option_labels(heritage);
     assert!(labels.contains(&"Aiuvarin"), "{labels:?}");
@@ -481,7 +486,7 @@ fn versatile_heritage_offered_under_any_ancestry() {
 
     let mut log = Vec::new();
     confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.elf"));
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let labels = option_labels(slot_view(&p, SLOT_HERITAGE).unwrap());
     assert!(labels.contains(&"Aiuvarin") && labels.contains(&"Woodland Elf"));
 }
@@ -519,7 +524,7 @@ fn ancestry_feat_catalog_becomes_the_union() {
 
     // Without the heritage: base-ancestry feats only, and a versatile-key
     // feat is rejected on apply.
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let labels = option_labels(slot_view(&p, SLOT_ANCESTRY_FEAT).unwrap());
     assert!(labels.contains(&"Adapted Ways"));
     assert!(!labels.contains(&"Earned Glory") && !labels.contains(&"Otherworldly Acuity"));
@@ -540,7 +545,7 @@ fn ancestry_feat_catalog_becomes_the_union() {
         SLOT_HERITAGE,
         one("heritage.versatile.aiuvarin"),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let labels = option_labels(slot_view(&p, SLOT_ANCESTRY_FEAT).unwrap());
     assert!(
         labels.contains(&"Adapted Ways")
@@ -573,7 +578,9 @@ fn heritage_change_cascades_the_ancestry_feat() {
         SLOT_ANCESTRY_FEAT,
         one("feat.ancestry.aiuvarin.earned-glory"),
     );
-    let cleared = engine.clear(&log, &SlotId::new(SLOT_HERITAGE)).unwrap();
+    let (cleared, _) = engine
+        .clear(&log, &[], &SlotId::new(SLOT_HERITAGE))
+        .unwrap();
     assert!(
         !cleared
             .iter()
@@ -630,7 +637,7 @@ fn background_skill_subchoice_opens_only_when_offered() {
         SLOT_BACKGROUND,
         one("background.field-medic"),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     assert!(slot_view(&p, SLOT_BACKGROUND_SKILL).is_none());
     assert!(slot_view(&p, SLOT_BACKGROUND_LORE).is_none());
 
@@ -641,7 +648,7 @@ fn background_skill_subchoice_opens_only_when_offered() {
         SLOT_BACKGROUND,
         one("background.scholar"),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let sub = slot_view(&p, SLOT_BACKGROUND_SKILL).expect("sub-choice slot open");
     assert_eq!(option_labels(sub), vec!["Arcana", "Nature", "Religion"]);
     assert!(p
@@ -716,7 +723,9 @@ fn background_subchoice_clears_with_the_background() {
         SLOT_BACKGROUND_SKILL,
         one("skill.arcana"),
     );
-    let cleared = engine.clear(&log, &SlotId::new(SLOT_BACKGROUND)).unwrap();
+    let (cleared, _) = engine
+        .clear(&log, &[], &SlotId::new(SLOT_BACKGROUND))
+        .unwrap();
     assert!(cleared.is_empty(), "cascade must take the sub-choice too");
     let state = engine.fold(&cleared).unwrap();
     assert!(state.background_skill_choice.is_none());
@@ -747,7 +756,7 @@ fn background_subchoice_feeds_the_replacement_machinery() {
         SLOT_BACKGROUND_SKILL,
         one("skill.religion"),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let replacement = slot_view(&p, SLOT_REPLACEMENT_1).expect("collision opens a replacement");
     assert!(replacement.locked_reason.is_none());
     assert!(p.checklist.iter().any(|e| {
@@ -760,7 +769,7 @@ fn player_named_background_lore_lands_trained() {
     let engine = engine();
     let mut log = Vec::new();
     confirm(&engine, &mut log, SLOT_BACKGROUND, one("background.nomad"));
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let lore_slot = slot_view(&p, SLOT_BACKGROUND_LORE).expect("lore slot open");
     assert!(matches!(
         lore_slot.kind,
@@ -874,7 +883,7 @@ fn choose_skills_from_subset_restricts_catalog_and_apply() {
         SLOT_ANCESTRY_FEAT,
         one("feat.ancestry.human.hold-mark"),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let chooser = slot_view(&p, SLOT_FEAT_SKILLS).expect("chooser open");
     assert_eq!(
         option_labels(chooser),
@@ -898,7 +907,7 @@ fn choose_lore_feat_opens_the_named_lore_slot() {
     let engine = engine();
     let mut log = Vec::new();
     confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.human"));
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     assert!(slot_view(&p, SLOT_FEAT_LORE).is_none());
     confirm(
         &engine,
@@ -906,7 +915,7 @@ fn choose_lore_feat_opens_the_named_lore_slot() {
         SLOT_ANCESTRY_FEAT,
         one("feat.ancestry.human.obsession"),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     assert!(slot_view(&p, SLOT_FEAT_LORE).is_some());
     assert!(p.checklist.iter().any(|e| {
         e.slot.as_str() == SLOT_FEAT_LORE && e.message.contains("Consuming Obsession")
@@ -919,9 +928,9 @@ fn choose_lore_feat_opens_the_named_lore_slot() {
     );
     // The named Lore dies with the feat.
     let cleared = engine
-        .clear(&log, &SlotId::new(SLOT_ANCESTRY_FEAT))
+        .clear(&log, &[], &SlotId::new(SLOT_ANCESTRY_FEAT))
         .unwrap();
-    assert!(!cleared.iter().any(|d| d.slot.as_str() == SLOT_FEAT_LORE));
+    assert!(!cleared.0.iter().any(|d| d.slot.as_str() == SLOT_FEAT_LORE));
 }
 
 #[test]
@@ -943,7 +952,7 @@ fn attribute_prerequisite_greys_and_gates_apply() {
     let engine = engine();
     let mut log = Vec::new();
     confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.human"));
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let feat_slot = slot_view(&p, SLOT_ANCESTRY_FEAT).unwrap();
     let gated = find_option(feat_slot, "feat.ancestry.human.attr-gate");
     assert!(!gated.available);
@@ -986,7 +995,7 @@ fn attribute_prerequisite_greys_and_gates_apply() {
         SLOT_FREE_BOOSTS,
         many(&["attr.con", "attr.str", "attr.dex", "attr.wis"]),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let gated = find_option(
         slot_view(&p, SLOT_ANCESTRY_FEAT).unwrap(),
         "feat.ancestry.human.attr-gate",
@@ -1005,7 +1014,7 @@ fn trained_skill_prerequisite_greys_and_gates_apply() {
     let engine = engine();
     let mut log = Vec::new();
     confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.human"));
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let gated = find_option(
         slot_view(&p, SLOT_ANCESTRY_FEAT).unwrap(),
         "feat.ancestry.human.skill-gate",
@@ -1018,7 +1027,7 @@ fn trained_skill_prerequisite_greys_and_gates_apply() {
 
     confirm(&engine, &mut log, SLOT_CLASS, one("class.fighter"));
     confirm(&engine, &mut log, SLOT_CLASS_SKILL, one("skill.acrobatics"));
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let gated = find_option(
         slot_view(&p, SLOT_ANCESTRY_FEAT).unwrap(),
         "feat.ancestry.human.skill-gate",
@@ -1043,7 +1052,7 @@ fn general_feat_prerequisites_grey_and_gate_apply() {
         SLOT_HERITAGE,
         one("heritage.human.versatile"),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let general = slot_view(&p, SLOT_HERITAGE_GENERAL_FEAT).expect("general feat slot open");
     let gated = find_option(general, "feat.general.assurance-gate");
     assert!(!gated.available);
@@ -1081,7 +1090,7 @@ fn canny_acumen_chooser_folds_the_picked_override() {
         one("heritage.human.versatile"),
     );
     // No chooser until a proficiency-choice feat is picked.
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     assert!(slot_view(&p, crate::mechanics::SLOT_PROFICIENCY_CHOICE).is_none());
 
     confirm(
@@ -1090,7 +1099,7 @@ fn canny_acumen_chooser_folds_the_picked_override() {
         SLOT_HERITAGE_GENERAL_FEAT,
         one("feat.general.canny"),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let chooser = slot_view(&p, crate::mechanics::SLOT_PROFICIENCY_CHOICE)
         .expect("proficiency chooser opens");
     assert_eq!(chooser.options.len(), 4);
@@ -1125,8 +1134,8 @@ fn canny_acumen_chooser_folds_the_picked_override() {
     assert!(will.detail.as_deref().unwrap().contains("expert"));
 
     // The pick dies with the feat.
-    let cleared = engine
-        .clear(&log, &SlotId::new(SLOT_HERITAGE_GENERAL_FEAT))
+    let (cleared, _) = engine
+        .clear(&log, &[], &SlotId::new(SLOT_HERITAGE_GENERAL_FEAT))
         .unwrap();
     assert!(!cleared
         .iter()
@@ -1220,13 +1229,13 @@ fn language_slot_absent_without_list_or_count() {
     // Human: no additional_languages list — never a slot.
     let mut log = Vec::new();
     confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.human"));
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     assert!(slot_view(&p, SLOT_ANCESTRY_LANGUAGES).is_none());
     // Elf with Int +0: a list exists but the count is zero — absent, and
     // nothing blocks finalize on its account.
     let mut log = Vec::new();
     confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.elf"));
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     assert!(slot_view(&p, SLOT_ANCESTRY_LANGUAGES).is_none());
     assert!(!p
         .checklist
@@ -1245,7 +1254,7 @@ fn language_count_tracks_int_and_bonuses() {
         SLOT_FREE_BOOSTS,
         many(&["attr.int", "attr.str", "attr.con", "attr.wis"]),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let langs = slot_view(&p, SLOT_ANCESTRY_LANGUAGES).expect("Int +1 opens the chooser");
     assert!(matches!(
         langs.kind,
@@ -1262,7 +1271,7 @@ fn language_count_tracks_int_and_bonuses() {
         SLOT_ANCESTRY_FEAT,
         one("feat.ancestry.elf.polyglot"),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     let langs = slot_view(&p, SLOT_ANCESTRY_LANGUAGES).unwrap();
     assert!(matches!(
         langs.kind,
@@ -1285,7 +1294,7 @@ fn language_count_tracks_int_and_bonuses() {
         SLOT_ANCESTRY_LANGUAGES,
         many(&["lang.sylvan", "lang.draconic", "lang.ancient-elvish"]),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     assert!(!p
         .checklist
         .iter()
@@ -1316,7 +1325,7 @@ fn language_overpick_is_flagged_not_silently_kept() {
         SLOT_ANCESTRY_LANGUAGES,
         many(&["lang.sylvan", "lang.draconic"]),
     );
-    let p = engine.project(&log).unwrap();
+    let p = engine.project(&log, &[]).unwrap();
     assert!(p.checklist.iter().any(|e| {
         e.slot.as_str() == SLOT_ANCESTRY_LANGUAGES
             && e.message.contains("only 1 allowed")
@@ -1354,7 +1363,9 @@ fn heritage_skill_grants_fold_into_training() {
          Orc regression)"
     );
     // The grant dies with the heritage.
-    let cleared_log: Vec<Decision> = engine.clear(&log, &SlotId::new(SLOT_HERITAGE)).unwrap();
+    let (cleared_log, _) = engine
+        .clear(&log, &[], &SlotId::new(SLOT_HERITAGE))
+        .unwrap();
     let state = engine.fold(&cleared_log).unwrap();
     assert!(!state.is_trained("skill.athletics"));
 }

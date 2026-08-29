@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use types::{CharacterId, Decision, SheetView, StepId};
 
 use storage::{parse_doc, CharacterDoc, ParsedDoc, SCHEMA_VERSION};
-pub(crate) use storage::{DocState, KeepOldMarker, VersionEvent};
+pub(crate) use storage::{DocState, KeepOldMarker, PrepDoc, PrepState, VersionEvent};
 
 use crate::clock;
 
@@ -39,6 +39,23 @@ pub(crate) struct Loaded {
     pub version_history: Vec<VersionEvent>,
     /// Standing keep-old decision, if any; preserved by every save.
     pub keep_old: Option<KeepOldMarker>,
+    /// The scoped preparation section. A broken section is carried
+    /// verbatim (never dropped by unrelated saves) and reported.
+    pub prep: PrepState,
+}
+
+impl Loaded {
+    /// Replace the prep choices after a cascade (clear/amend across the
+    /// scope boundary). A parsed section keeps its idempotency marker; an
+    /// absent section stays absent (the cascade had nothing to clear); a
+    /// broken section is never touched by unrelated writes — its bytes
+    /// belong to the human who edited them.
+    pub fn set_prep_choices(&mut self, choices: Vec<types::ScopedChoice>) {
+        match &mut self.prep {
+            PrepState::Ok(doc) => doc.choices = choices,
+            PrepState::None | PrepState::Broken { .. } => {}
+        }
+    }
 }
 
 impl From<CharacterDoc> for Loaded {
@@ -53,6 +70,7 @@ impl From<CharacterDoc> for Loaded {
             rules_version: doc.rules_version,
             version_history: doc.version_history,
             keep_old: doc.keep_old,
+            prep: PrepState::parse(doc.prep),
         }
     }
 }
@@ -225,6 +243,7 @@ impl Store {
             log: loaded.log.clone(),
             version_history: loaded.version_history.clone(),
             keep_old: loaded.keep_old.clone(),
+            prep: loaded.prep.to_value(),
         };
         let target = self.character_path(&loaded.id);
         let tmp = self

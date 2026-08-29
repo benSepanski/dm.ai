@@ -27,6 +27,7 @@ pub fn load_rules_data() -> ruleset_pf2e::RulesData {
     let general_feats = read("general-feats.json");
     let skills = read("skills.json");
     let equipment = read("equipment.json");
+    let spells = read("spells.json");
     ruleset_pf2e::RulesData::parse(&ruleset_pf2e::RulesDataFiles {
         manifest: &manifest,
         ancestries: &ancestries,
@@ -38,6 +39,7 @@ pub fn load_rules_data() -> ruleset_pf2e::RulesData {
         general_feats: &general_feats,
         skills: &skills,
         equipment: &equipment,
+        spells: &spells,
     })
     .expect("rules data parses and passes integrity checks")
 }
