@@ -35,8 +35,10 @@ build (PF2e publishes none): one roster tap yields a complete, legal,
 reviewable — not auto-finalized — sword-and-board human Fighter, every
 choice badged as suggested until you edit it; "fill remaining" completes a
 stalled draft without moving anything confirmed. Long option lists gained
-a text filter and the shop is category-grouped; ten Playwright scenarios
-automate the spec's ten walks.
+a text filter, the shop is category-grouped, and purchased items show
+their per-item price and Bulk so an over-budget basket can be trimmed
+smartly (review revision); ten Playwright scenarios automate the spec's
+ten walks.
 
 ## How to verify
 
@@ -83,7 +85,10 @@ cargo run --release -p server -- --data-dir ./campaign
    step — pick from the leshy list and watch the sheet's Languages line.
 5. Class → Fighter, key attribute, class feat, skills as usual.
 6. Equipment: the shop is grouped (Weapons / Armor / Shields / Gear) with
-   one filter across all groups. Buy a couple of items by filtering.
+   one filter across all groups. Buy a couple of items by filtering. Each
+   purchased row shows its own price and Bulk next to "remove" — overspend
+   on purpose and confirm the coins meter flags it and the per-item costs
+   let you trim the right things.
 7. Finalize. Hand-verify the sheet against Archives of Nethys: Root Leshy
    HP is 10 (so total 20 + Con), Small size, low-light vision, speed 25,
    the typed Lore, the Languages line, Bulk.
