@@ -38,6 +38,10 @@ fn every_record_carries_license_metadata() {
     }
 }
 
+/// The only book records may cite. Any new book is a deliberate edit here
+/// AND a manifest-attribution extension in the same change (spec req 5).
+const ALLOWED_SOURCE_BOOKS: &[&str] = &["Pathfinder Player Core"];
+
 fn assert_license(record: &serde_json::Value, file: &str) {
     let id = record["id"].as_str().unwrap_or("<no id>");
     let source = record
@@ -53,6 +57,13 @@ fn assert_license(record: &serde_json::Value, file: &str) {
         source["license"].as_str(),
         Some("ORC"),
         "{file}: record '{id}' must carry the ORC license tag"
+    );
+    let book = source["book"].as_str().unwrap_or("<no book>");
+    assert!(
+        ALLOWED_SOURCE_BOOKS.contains(&book),
+        "{file}: record '{id}' cites book '{book}' — outside the allowlist; \
+         adding a book requires extending the manifest attribution in the \
+         same change"
     );
 }
 
@@ -72,4 +83,160 @@ fn manifest_carries_the_orc_notice() {
         notice.reserved.contains("Reserved Material"),
         "reserved-material statement missing"
     );
+}
+
+/// Every rules-data file holding records (manifest, denylist, and
+/// shipped-versions are config/meta, not records).
+const RECORD_FILES: &[&str] = &[
+    "ancestries.json",
+    "heritages.json",
+    "ancestry-feats.json",
+    "backgrounds.json",
+    "classes.json",
+    "class-feats.json",
+    "general-feats.json",
+    "skills.json",
+    "equipment.json",
+];
+
+/// Collect (record id, full record JSON) from every record file.
+fn all_records() -> Vec<(String, serde_json::Value)> {
+    let root = checks::workspace_root().join("rules-data");
+    let mut out = Vec::new();
+    for file in RECORD_FILES {
+        let text = std::fs::read_to_string(root.join(file)).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let records: Vec<serde_json::Value> = if *file == "equipment.json" {
+            value
+                .as_object()
+                .unwrap()
+                .values()
+                .flat_map(|arr| arr.as_array().unwrap().clone())
+                .collect()
+        } else {
+            value.as_array().unwrap().clone()
+        };
+        for record in records {
+            let id = record["id"].as_str().unwrap_or("<no id>").to_string();
+            out.push((id, record));
+        }
+    }
+    out
+}
+
+/// Reserved-noun scrub (spec req 5): no denylisted proper noun in any
+/// shipped record's name or text. The denylist itself and attestation
+/// waivers are repo tooling, exempt from this scan by construction (only
+/// record files are scanned). Exceptions carry a per-record reason.
+#[test]
+fn no_reserved_proper_nouns_in_records() {
+    let root = checks::workspace_root().join("rules-data");
+    let denylist: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(root.join("denylist.json")).unwrap())
+            .unwrap();
+    let terms: Vec<String> = denylist["terms"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t.as_str().unwrap().to_lowercase())
+        .collect();
+    assert!(!terms.is_empty(), "denylist.json has no terms");
+    let exceptions: std::collections::BTreeMap<String, String> = denylist["exceptions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| {
+            let reason = e["reason"].as_str().unwrap_or("");
+            assert!(
+                !reason.is_empty(),
+                "denylist exception for '{}' must carry a reason",
+                e["id"]
+            );
+            (e["id"].as_str().unwrap().to_string(), reason.to_string())
+        })
+        .collect();
+
+    for (id, record) in all_records() {
+        if exceptions.contains_key(&id) {
+            continue;
+        }
+        let mut haystacks: Vec<(String, String)> = Vec::new();
+        collect_strings(&record, "", &mut haystacks);
+        for (path, text) in haystacks {
+            // The url field legitimately encodes original names (renamed
+            // records keep their AoN url pointing at the original).
+            if path.ends_with("url") {
+                continue;
+            }
+            let lower = text.to_lowercase();
+            for term in &terms {
+                assert!(
+                    !lower.contains(term.as_str()),
+                    "record '{id}' field '{path}' contains reserved noun \
+                     '{term}': scrub it per the ORC AxE deletion pattern, or \
+                     add a reasoned exception in rules-data/denylist.json"
+                );
+            }
+        }
+    }
+}
+
+fn collect_strings(value: &serde_json::Value, path: &str, out: &mut Vec<(String, String)>) {
+    match value {
+        serde_json::Value::String(s) => out.push((path.to_string(), s.clone())),
+        serde_json::Value::Array(items) => {
+            for (i, item) in items.iter().enumerate() {
+                collect_strings(item, &format!("{path}[{i}]"), out);
+            }
+        }
+        serde_json::Value::Object(map) => {
+            for (key, item) in map {
+                let child = if path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{path}.{key}")
+                };
+                collect_strings(item, &child, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// ID immutability + version lineage, one artifact (architecture table):
+/// every version in the manifest's `supersedes` list has its ID set
+/// recorded in shipped-versions.json, and every recorded ID of every
+/// shipped version still resolves in current data (wrong records are
+/// deprecated, never deleted).
+#[test]
+fn shipped_ids_are_immutable_and_lineage_is_recorded() {
+    let root = checks::workspace_root().join("rules-data");
+    let shipped: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(root.join("shipped-versions.json")).unwrap())
+            .unwrap();
+    let versions = shipped["versions"].as_object().unwrap();
+    let data = checks::load_rules_data();
+
+    for superseded in &data.manifest.supersedes {
+        assert!(
+            versions.contains_key(superseded),
+            "manifest supersedes '{superseded}' but shipped-versions.json has \
+             no ID set for it — append the superseded version's IDs at bump \
+             time"
+        );
+    }
+
+    let current: std::collections::BTreeSet<String> =
+        all_records().into_iter().map(|(id, _)| id).collect();
+    for (version, ids) in versions {
+        for id in ids.as_array().unwrap() {
+            let id = id.as_str().unwrap();
+            assert!(
+                current.contains(id),
+                "record '{id}' (shipped in {version}) is missing from current \
+                 data: shipped IDs are never deleted — deprecate the record \
+                 (unselectable in new drafts, still resolvable) instead"
+            );
+        }
+    }
 }

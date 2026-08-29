@@ -6,6 +6,7 @@ members = [
     "crates/ruleset-pf2e",
     "crates/wasm",
     "crates/server",
+    "crates/reference-check",
     "checks",
 ]
 

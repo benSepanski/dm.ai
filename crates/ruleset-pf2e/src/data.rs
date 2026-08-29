@@ -22,6 +22,11 @@ pub struct Manifest {
     pub version: String,
     pub system: String,
     pub description: String,
+    /// Prior shipped data versions this one supersedes, oldest first. Every
+    /// entry must have its ID set recorded in rules-data/shipped-versions.json
+    /// (lint-enforced); the server treats these as "older known" versions.
+    #[serde(default)]
+    pub supersedes: Vec<String>,
     pub license_notice: LicenseNotice,
 }
 

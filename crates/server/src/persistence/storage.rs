@@ -6,7 +6,12 @@
 use serde::{Deserialize, Serialize};
 use types::{Decision, SheetView, StepId};
 
-pub(crate) const SCHEMA_VERSION: u32 = 1;
+/// Current schema, stamped on every write. v2 = v1 plus the `suggested`
+/// decision source (quick build); structurally identical otherwise.
+pub(crate) const SCHEMA_VERSION: u32 = 2;
+/// Oldest schema this binary still reads. v1 files are accepted on load,
+/// never rewritten by loading, and upgraded on their next ordinary write.
+pub(crate) const MIN_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct CharacterDoc {
@@ -67,7 +72,9 @@ pub(crate) fn parse_doc(text: &str) -> ParsedDoc {
         return ParsedDoc::NewerSchema { version };
     }
     match serde_json::from_value::<CharacterDoc>(value) {
-        Ok(doc) if doc.schema_version == SCHEMA_VERSION => ParsedDoc::Ok(doc),
+        Ok(doc) if (MIN_SCHEMA_VERSION..=SCHEMA_VERSION).contains(&doc.schema_version) => {
+            ParsedDoc::Ok(doc)
+        }
         Ok(doc) => ParsedDoc::Corrupt {
             message: format!("unsupported schema version {}", doc.schema_version),
         },

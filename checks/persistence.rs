@@ -69,7 +69,7 @@ fn documents_round_trip_a_versioned_schema() {
     // The document on disk carries the schema version and parses.
     let path = dir.path().join(format!("characters/{id}.json"));
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(doc["schema_version"], 1);
+    assert_eq!(doc["schema_version"], 2);
     assert_eq!(doc["rules_version"], "pf2e-pc.0.1.0");
     assert_eq!(doc["log"].as_array().unwrap().len(), 2); // name + ancestry
 
@@ -82,6 +82,63 @@ fn documents_round_trip_a_versioned_schema() {
         .json()
         .unwrap();
     assert_eq!(character["state"], "draft");
+}
+
+/// Storage schema v2 (architecture: chargen-content): a v1 file reads, is
+/// never rewritten by loading, and upgrades to v2 on its first ordinary
+/// write.
+#[test]
+fn v1_documents_read_untouched_and_upgrade_on_first_write() {
+    let dir = tempfile::tempdir().unwrap();
+    let client = client();
+    let id;
+    {
+        let server = TestServer::spawn(dir.path());
+        let draft = create_character(&client, &server.url, "Elder");
+        id = draft["id"].as_str().unwrap().to_string();
+    }
+
+    // Rewind the on-disk document to schema v1 (v2 is structurally v1 plus
+    // the `suggested` source value, which this file doesn't use).
+    let path = dir.path().join(format!("characters/{id}.json"));
+    let mut doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    doc["schema_version"] = Value::from(1);
+    std::fs::write(&path, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+    let v1_bytes = std::fs::read(&path).unwrap();
+
+    // Loading the roster and the character rewrites nothing.
+    {
+        let server = TestServer::spawn(dir.path());
+        let character: Value = client
+            .get(format!("{}/api/characters/{id}", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(character["state"], "draft", "v1 file must load");
+        assert_eq!(
+            std::fs::read(&path).unwrap(),
+            v1_bytes,
+            "loading a v1 file must not rewrite it"
+        );
+
+        // First ordinary write upgrades the stored document to v2.
+        let outcome = confirm(
+            &client,
+            &server.url,
+            &id,
+            1,
+            "d-upgrade",
+            "pf2e.ancestry",
+            json!({"kind": "option", "value": "ancestry.dwarf"}),
+        );
+        assert_eq!(outcome["outcome"], "confirmed");
+    }
+    let upgraded: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(
+        upgraded["schema_version"], 2,
+        "first write after load upgrades v1 to the current schema"
+    );
 }
 
 #[test]

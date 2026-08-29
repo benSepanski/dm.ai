@@ -47,6 +47,10 @@ path = "no_rewrite_on_load.rs"
 name = "api_authority"
 path = "api_authority.rs"
 
+[[test]]
+name = "attestation"
+path = "attestation.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }

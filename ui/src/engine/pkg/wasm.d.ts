@@ -173,10 +173,10 @@ export interface ClearPreview {
 export type Selection = { kind: "option"; value: OptionId } | { kind: "options"; value: OptionId[] } | { kind: "text"; value: string };
 
 /**
- * Who (or what) made a decision. One variant today; DM exceptions and
- * auto-mode arrive in later epochs as new variants.
+ * Who (or what) made a decision. DM exceptions and auto-mode arrive in
+ * later epochs as new variants.
  */
-export type DecisionSource = "player";
+export type DecisionSource = "player" | "suggested";
 
 export interface ChecklistEntry {
     severity: ChecklistSeverity;
