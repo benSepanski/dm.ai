@@ -68,6 +68,7 @@ pub fn server_binary() -> PathBuf {
 pub struct TestServer {
     child: Child,
     pub url: String,
+    data_dir: std::path::PathBuf,
 }
 
 impl TestServer {
@@ -107,7 +108,11 @@ impl TestServer {
                 sink.clear();
             }
         });
-        TestServer { child, url }
+        TestServer {
+            child,
+            url,
+            data_dir: data_dir.to_path_buf(),
+        }
     }
 
     /// Try to spawn where startup is expected to fail; returns stderr.
@@ -144,10 +149,19 @@ impl TestServer {
         self.child.id()
     }
 
-    /// SIGKILL — the crash-harness path; also used by Drop.
+    /// SIGKILL — the crash-harness path; also used by Drop. The lockfile is
+    /// renamed aside afterward (renames, never unlinks — the workspace
+    /// no-unlink lint applies here too): this harness owns the dir's only
+    /// server, so once the child is dead the lock is stale by construction,
+    /// and leaving it in place would make a restart on the same dir depend
+    /// on the guard's pid-liveness probe not colliding with a reused pid
+    /// (a real CI flake). Production stale-lock recovery stays covered by
+    /// the dedicated persistence test.
     pub fn kill(&mut self) {
         let _ = self.child.kill();
         let _ = self.child.wait();
+        let lock = self.data_dir.join("server.lock");
+        let _ = std::fs::rename(&lock, self.data_dir.join("server.lock.stale"));
     }
 }
 
