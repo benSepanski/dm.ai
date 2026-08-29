@@ -17,6 +17,8 @@
 //! `consumable` trait on ammunition) stays a mismatch and needs a reviewed
 //! waiver.
 
+use std::collections::BTreeMap;
+
 use serde_json::Value;
 
 use crate::foundry::FoundryRecord;
@@ -27,6 +29,14 @@ pub struct Outcome {
     pub mismatches: Vec<&'static str>,
 }
 
+/// Cross-record context the comparators need: background `skill_feat`
+/// fields hold shipped feat IDs, so comparing against Foundry's granted
+/// feat names requires the shipped id -> name mapping. Our data only —
+/// no ground-truth content.
+pub struct Ctx {
+    pub feat_names: BTreeMap<String, String>,
+}
+
 pub fn fields_for_missing(kind: Kind) -> Outcome {
     let _ = kind;
     Outcome {
@@ -35,7 +45,7 @@ pub fn fields_for_missing(kind: Kind) -> Outcome {
     }
 }
 
-pub fn compare(our: &OurRecord, foundry: &FoundryRecord) -> Outcome {
+pub fn compare(our: &OurRecord, foundry: &FoundryRecord, ctx: &Ctx) -> Outcome {
     match our.kind {
         Kind::Ancestry => ancestry(&our.value, foundry.system()),
         Kind::Heritage => Outcome {
@@ -44,15 +54,19 @@ pub fn compare(our: &OurRecord, foundry: &FoundryRecord) -> Outcome {
             fields_checked: vec!["existence", "name"],
             mismatches: vec![],
         },
-        Kind::Background => background(&our.value, foundry.system()),
+        Kind::Background => background(&our.value, foundry.system(), ctx),
         Kind::Class => class(&our.value, foundry.system()),
         Kind::AncestryFeat => feat(&our.value, foundry.system(), "ancestry", None),
         Kind::ClassFeat => feat(&our.value, foundry.system(), "class", Some("fighter")),
-        // A record-level `category` field (once skill feats ship) overrides
-        // the file-level default so skill feats compare against Foundry's
+        // Skill feats ship inside general-feats.json under the T2 ID
+        // convention `feat.skill.<slug>`; they compare against Foundry's
         // `skill` category.
         Kind::GeneralFeat => {
-            let category = our.value["category"].as_str().unwrap_or("general");
+            let category = if our.id.starts_with("feat.skill.") {
+                "skill"
+            } else {
+                "general"
+            };
             feat(&our.value, foundry.system(), category, None)
         }
         Kind::Weapon => weapon(&our.value, foundry),
@@ -97,9 +111,13 @@ fn price_cp(price: &Value) -> i64 {
         + v["cp"].as_i64().unwrap_or(0)
 }
 
-/// Foundry bulk {value: f64} -> our bulk string ("L", "1", "2", "0").
+/// Foundry bulk {value: f64} -> our bulk string ("L", "1", "2", "—").
+/// Foundry's 0 is the book's "—" (negligible) — the table has no "0" row.
 fn bulk_str(bulk: &Value) -> Option<String> {
     let v = bulk.get("value")?.as_f64()?;
+    if v == 0.0 {
+        return Some("—".to_string());
+    }
     if (v - 0.1).abs() < 1e-9 {
         return Some("L".to_string());
     }
@@ -111,7 +129,18 @@ fn bulk_str(bulk: &Value) -> Option<String> {
 
 fn norm_trait(t: &str) -> String {
     let t = t.to_lowercase().replace("ft.", "").replace('.', "");
-    t.split_whitespace().collect::<Vec<_>>().join("-")
+    // Dice-notation bridge: the book prints "Two-Hand 1d8" / "Fatal 1d12";
+    // Foundry drops the die count ("two-hand-d8"). Normalize "1dN" -> "dN".
+    let tokens: Vec<String> = t
+        .split_whitespace()
+        .map(|w| match w.strip_prefix("1d") {
+            Some(rest) if !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit()) => {
+                format!("d{rest}")
+            }
+            _ => w.to_string(),
+        })
+        .collect();
+    tokens.join("-")
 }
 
 fn size_name(foundry: &str) -> &str {
@@ -217,27 +246,32 @@ fn ancestry(our: &Value, s: &Value) -> Outcome {
     }
 }
 
-fn background(our: &Value, s: &Value) -> Outcome {
+fn background(our: &Value, s: &Value, ctx: &Ctx) -> Outcome {
     let mut mm = Vec::new();
     let (_fixed, choices, _free) = boost_slots(&s["boosts"]);
     let our_choice = sorted_lower(str_vec(&our["boost_choice"]).into_iter());
     check(&mut mm, "boosts", choices.contains(&our_choice));
-    let our_skill = str_of(&our["skill"])
-        .rsplit('.')
-        .next()
-        .unwrap_or("")
-        .replace('-', " ");
-    check(
-        &mut mm,
-        "skill",
-        vec![our_skill] == sorted_lower(str_vec(&s["trainedSkills"]["value"]).into_iter()),
-    );
-    check(
-        &mut mm,
-        "lore",
-        vec![str_of(&our["lore"]).to_lowercase()]
-            == sorted_lower(str_vec(&s["trainedSkills"]["lore"]).into_iter()),
-    );
+    // Sub-choice encoding bridge: a background with `skill_choice` ships
+    // `skill: ""`, and Foundry encodes choice-based training as an empty
+    // trainedSkills list (the choice lives in prose/rule elements there),
+    // so the checkable projection is emptiness agreement. Same for a
+    // player-named Lore (`lore: ""` + `lore_player_named`).
+    let foundry_skills = sorted_lower(str_vec(&s["trainedSkills"]["value"]).into_iter());
+    let our_skill = str_of(&our["skill"]);
+    let skill_ok = if our_skill.is_empty() && !str_vec(&our["skill_choice"]).is_empty() {
+        foundry_skills.is_empty()
+    } else {
+        vec![our_skill.rsplit('.').next().unwrap_or("").replace('-', " ")] == foundry_skills
+    };
+    check(&mut mm, "skill", skill_ok);
+    let foundry_lore = sorted_lower(str_vec(&s["trainedSkills"]["lore"]).into_iter());
+    let our_lore = str_of(&our["lore"]);
+    let lore_ok = if our_lore.is_empty() && our["lore_player_named"].as_bool() == Some(true) {
+        foundry_lore.is_empty()
+    } else {
+        vec![our_lore.to_lowercase()] == foundry_lore
+    };
+    check(&mut mm, "lore", lore_ok);
     let granted: Vec<String> = s["items"]
         .as_object()
         .map(|m| {
@@ -246,11 +280,26 @@ fn background(our: &Value, s: &Value) -> Outcome {
                 .collect()
         })
         .unwrap_or_default();
-    check(
-        &mut mm,
-        "skill_feat",
-        granted.contains(&str_of(&our["skill_feat"]).to_lowercase()),
-    );
+    // `skill_feat` holds a shipped feat ID; resolve it to the record's name
+    // for the membership test. Choice-dependent grants
+    // (`skill_feat_by_choice`, skill_feat "") and parameterized grants
+    // (`skill_feat_display`, e.g. "Assurance (Survival)") are not encoded
+    // as granted items by Foundry, so those accept an empty grant list —
+    // but a listed grant must still resolve to our feat's name.
+    let our_feat_id = str_of(&our["skill_feat"]);
+    let feat_ok = if our_feat_id.is_empty() {
+        granted.is_empty()
+    } else {
+        let resolved = ctx.feat_names.get(our_feat_id).map(|n| n.to_lowercase());
+        match resolved {
+            Some(name) => {
+                granted.contains(&name)
+                    || (our.get("skill_feat_display").is_some() && granted.is_empty())
+            }
+            None => false, // an unresolvable feat ID is always a mismatch
+        }
+    };
+    check(&mut mm, "skill_feat", feat_ok);
     Outcome {
         fields_checked: vec!["existence", "name", "boosts", "skill", "lore", "skill_feat"],
         mismatches: mm,
@@ -436,10 +485,16 @@ fn weapon(our: &Value, f: &FoundryRecord) -> Outcome {
         check(&mut mm, "hands", str_of(&our["hands"]) == f_hands);
         // Our range strings carry prose ("60 ft. / reload 0", "thrown 10
         // ft."); the mechanical projection is the range-increment number.
-        // Thrown increments live in the traits set (thrown-10), already
-        // compared above, and Foundry's range is null for melee weapons.
+        // Melee weapons with the incremented Thrown trait ("thrown 10 ft.")
+        // carry the increment in the traits set (thrown-10), already
+        // compared above, and Foundry's range is null for them. Ranged
+        // thrown weapons (dart, javelin, bola) carry the plain "thrown"
+        // trait and the increment in Foundry's range field.
         let our_range = our["range"].as_str().unwrap_or("");
-        let our_increment = if our_range.to_lowercase().starts_with("thrown") {
+        let thrown_in_traits = our_traits
+            .iter()
+            .any(|t| t.strip_prefix("thrown-").is_some_and(|r| !r.is_empty()));
+        let our_increment = if our_range.to_lowercase().starts_with("thrown") && thrown_in_traits {
             None
         } else {
             our_range
@@ -481,10 +536,12 @@ fn armor(our: &Value, s: &Value) -> Outcome {
         "speed_penalty",
         i64_of(&our["speed_penalty"]) == i64_of(&s["speedPenalty"]),
     );
+    // The book's "—" Strength entry (no requirement) ships as `str_req: 0`
+    // in our schema; Foundry encodes it as null.
     check(
         &mut mm,
         "strength",
-        i64_of(&our["str_req"]) == i64_of(&s["strength"]),
+        i64_of(&our["str_req"]) == s["strength"].as_i64().unwrap_or(0),
     );
     check(
         &mut mm,

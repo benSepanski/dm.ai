@@ -91,13 +91,15 @@ impl Index {
 }
 
 /// Lowercase, strip punctuation (apostrophes, periods, commas, parens,
-/// exclamation marks), collapse whitespace. "Stonemason's Eye" and
-/// "Burn It!" match their Foundry counterparts through this.
+/// exclamation marks), treat hyphens as spaces, collapse whitespace.
+/// "Stonemason's Eye", "Burn It!", and "Lantern (Bull's-Eye)" vs
+/// "Lantern (Bull's Eye)" match their Foundry counterparts through this.
 pub fn normalize_name(name: &str) -> String {
     let mut out = String::with_capacity(name.len());
     for c in name.to_lowercase().chars() {
         match c {
             '\'' | '\u{2019}' | '.' | '!' | ',' | '(' | ')' => {}
+            '-' => out.push(' '),
             c if c.is_whitespace() => out.push(' '),
             c => out.push(c),
         }
@@ -144,8 +146,10 @@ pub fn load_index() -> Result<Index, String> {
                     "weapon" | "ammo" => Some(Partition::Weapon),
                     "armor" => Some(Partition::Armor),
                     "shield" => Some(Partition::Shield),
-                    "equipment" | "kit" | "backpack" => Some(Partition::Gear),
-                    _ => None, // consumables, treasure, containers of no use
+                    // `consumable` covers book adventuring-gear rows Foundry
+                    // types as expendable (candle, chalk, oil, rations).
+                    "equipment" | "kit" | "backpack" | "consumable" => Some(Partition::Gear),
+                    _ => None, // treasure, containers of no use
                 },
             };
             if let Some(partition) = partition {

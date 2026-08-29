@@ -21,10 +21,11 @@ use crate::ours::{Kind, OurRecord};
 use crate::{cache, canon, compare, foundry, ours, workspace_root, FOUNDRY_SHA256, FOUNDRY_TAG};
 
 /// Set to true only when the shipped data claims full Player Core breadth
-/// (spec req 1 complete — the orchestrator flips this when the T3–T5 data
-/// tickets land). While false, `missing_from_data` is informational: the
-/// offline check asserts it empty only under a true flag.
-const CLAIMS_FULL_BREADTH: bool = false;
+/// (spec req 1 complete — flipped after the T3–T5 data tickets landed and
+/// the reverse sweep reconciled to the spec's named exclusions). While
+/// false, `missing_from_data` is informational: the offline check asserts
+/// it empty only under a true flag.
+const CLAIMS_FULL_BREADTH: bool = true;
 
 const CONFIG_PATH: &str = "crates/reference-check/overrides.json";
 
@@ -100,9 +101,10 @@ fn load_config() -> Result<Config, String> {
 }
 
 fn partition_for(record: &OurRecord) -> Option<Partition> {
-    // A record-level `category: "skill"` (once skill feats ship in the
-    // general-feats file) routes the lookup to the skill-feat partition.
-    if record.kind == Kind::GeneralFeat && record.value["category"].as_str() == Some("skill") {
+    // Skill feats ship inside general-feats.json under the T2 ID convention
+    // `feat.skill.<slug>` (non-skill general feats keep `feat.general.*`);
+    // the prefix routes the lookup to the skill-feat partition.
+    if record.kind == Kind::GeneralFeat && record.id.starts_with("feat.skill.") {
         return Some(Partition::FeatSkill);
     }
     match record.kind {
@@ -139,6 +141,16 @@ pub fn attest() -> Result<(), String> {
         }
     }
 
+    // Background `skill_feat` fields hold shipped feat IDs; the comparator
+    // resolves them to record names through this shipped-data-only map.
+    let ctx = compare::Ctx {
+        feat_names: records
+            .iter()
+            .filter(|r| r.kind == Kind::GeneralFeat)
+            .map(|r| (r.id.clone(), r.name.clone()))
+            .collect(),
+    };
+
     let mut attested: BTreeMap<String, Value> = BTreeMap::new();
     let mut overrides_used: BTreeSet<String> = BTreeSet::new();
     let mut matched_paths: BTreeSet<String> = BTreeSet::new();
@@ -148,7 +160,7 @@ pub fn attest() -> Result<(), String> {
     for record in &records {
         let counterpart = find_counterpart(record, &index, &config, &mut overrides_used)?;
         let outcome = match &counterpart {
-            Some(f) => compare::compare(record, f),
+            Some(f) => compare::compare(record, f, &ctx),
             None => compare::fields_for_missing(record.kind),
         };
         if let Some(f) = &counterpart {
