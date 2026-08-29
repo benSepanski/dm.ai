@@ -16,7 +16,7 @@ commit this file with the work. States: [ ] open, [~] in progress, [x] done.
   storage schema v2 (DecisionSource::Suggested; v1 read-accepted, upgraded
   on write, never on load; v3 refused) + persistence-test rows; gitignored
   ground-truth cache path + absence test. CI stays green at this commit.
-- [~] **T2 — engine/ruleset machinery** (spec req 2+3, bounded list): new
+- [x] **T2 — engine/ruleset machinery** (spec req 2+3, bounded list): new
   Effect variants (save/Perception proficiency override; ranged unarmed
   attack field; fist replacement); prereq kinds attribute-threshold +
   trained-in-skill (evaluable, greying with reasons); versatile-heritage
@@ -25,17 +25,17 @@ commit this file with the work. States: [ ] open, [~] in progress, [x] done.
   choice-dependent grants (Hold Mark, Gnome Obsession, Scholar pattern);
   language chooser (Int-modifier dynamic count + heritage/feat bonuses) +
   sheet languages line. Unit tests per validator/effect.
-- [ ] **T3 — data: ancestries + heritages + ancestry feats.** Gnome,
+- [x] **T3 — data: ancestries + heritages + ancestry feats.** Gnome,
   Halfling, Leshy, Orc complete (stats, languages lists, heritages ×~27,
   L1 feats ×~33); Aiuvarin + Dromaar + their L1 feats (~5); language lists
   added for the four slice-1 ancestries. Greyed-with-reason records for
   cantrip-dependent options. Noun-scrub applied (4 gnome records; rename
   First World Magic). All records lint-clean.
-- [ ] **T4 — data: backgrounds + general/skill feats.** 34 new backgrounds
+- [x] **T4 — data: backgrounds + general/skill feats.** 34 new backgrounds
   (39 total; Raised by Belief excluded), sub-choices modeled not flattened;
   9 new general feats (14 total); 53 skill-feat records; background
   skill-feat grants become resolvable IDs.
-- [ ] **T5 — data: equipment.** All common PC1 weapons (~65 incl.
+- [x] **T5 — data: equipment.** All common PC1 weapons (~65 incl.
   ammunition), 13 armors, 4 shields (Buckler, Tower Shield added), common
   adventuring gear + assistive items (~140). Categories preserved for UI
   grouping. No uncommon weapons, no services.
@@ -47,14 +47,14 @@ commit this file with the work. States: [ ] open, [~] in progress, [x] done.
   (coverage both ways, zero unwaived, per-record hash recompute, schema
   admits no ground-truth values, CI-never-invokes-tool scan). Run tool,
   fix every real mismatch, commit attestation.
-- [ ] **T7 — version bump + guard.** Manifest → pf2e-pc.0.2.0 (+
+- [x] **T7 — version bump + guard.** Manifest → pf2e-pc.0.2.0 (+
   shipped-versions entry); load-time status (current/older-known/unknown),
   computed never written; replay compare (identical / divergent /
   replay-error); roster flags + explicit re-pin, accept (records prior
   values), keep-old routes; draft resolve → re-validate → cascade reopen;
   `verify` distinguishes older-known vs unknown; `checks/version_guard.rs`
   fixtures (all three cases); no-rewrite-on-load fixture with flag.
-- [ ] **T8 — quick build.** `suggested_build` block on class record
+- [~] **T8 — quick build.** `suggested_build` block on class record
   (ordered candidate IDs; kit option + key attribute anchors); planner in
   engine-core (walk open slots in unlock order, resolve vs folded state,
   append); atomic server route (create-and-fill + fill-remaining),
