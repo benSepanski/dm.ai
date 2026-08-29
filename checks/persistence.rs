@@ -245,3 +245,25 @@ fn second_instance_on_the_same_data_dir_refuses() {
         "refusal names the live instance: {stderr}"
     );
 }
+
+/// The second-instance guard's stale-lock recovery: a lockfile whose pid is
+/// dead (here: a pid far above any OS pid range) must be reclaimed, not
+/// refused. Kept as an explicit test because the test harnesses now clean
+/// their own stale locks on kill, so restarts no longer exercise this path.
+#[test]
+fn stale_lock_with_dead_pid_is_reclaimed() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("server.lock"),
+        "2000000000\nhttp://127.0.0.1:1\n",
+    )
+    .unwrap();
+    let server = TestServer::spawn(dir.path());
+    let roster: Value = client()
+        .get(format!("{}/api/roster", server.url))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert!(roster["entries"].as_array().unwrap().is_empty());
+}

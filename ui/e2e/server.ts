@@ -1,7 +1,7 @@
 // Spawns the real server binary (the same one Ben runs) over a fresh data
 // directory, with SIGKILL and restart controls for the crash story.
 import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,6 +37,13 @@ export class TestServer {
   extraArgs: string[] = [];
 
   async start(port = 0): Promise<void> {
+    if (this.child === null) {
+      // The harness owns this dir's only server; with no live child, any
+      // lockfile is stale by construction (SIGKILL never removes it). The
+      // guard's pid-liveness probe can false-positive when a CI runner
+      // reuses the dead pid, so clear the stale lock before restarting.
+      rmSync(join(this.dataDir, 'server.lock'), { force: true });
+    }
     const child = spawn(
       serverBinary(),
       ['--data-dir', this.dataDir, '--port', String(port), ...this.extraArgs],
