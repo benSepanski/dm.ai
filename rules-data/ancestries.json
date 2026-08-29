@@ -9,6 +9,7 @@
     "free_boosts": 1,
     "flaws": ["cha"],
     "languages": ["Common", "Dwarven"],
+    "additional_languages": ["Gnomish", "Goblin", "Jotun", "Orcish", "Petran", "Sakvroth"],
     "traits": ["dwarf", "humanoid"],
     "senses": ["darkvision"],
     "specials": [
@@ -39,6 +40,7 @@
     "free_boosts": 1,
     "flaws": ["con"],
     "languages": ["Common", "Elven"],
+    "additional_languages": ["Draconic", "Empyrean", "Fey", "Gnomish", "Goblin", "Kholo", "Orcish"],
     "traits": ["elf", "humanoid"],
     "senses": ["low-light vision"],
     "specials": [
@@ -56,6 +58,33 @@
     }
   },
   {
+    "id": "ancestry.gnome",
+    "name": "Gnome",
+    "hp": 8,
+    "size": "small",
+    "speed": 25,
+    "boosts": ["con", "cha"],
+    "free_boosts": 1,
+    "flaws": ["str"],
+    "languages": ["Common", "Fey", "Gnomish"],
+    "additional_languages": ["Draconic", "Dwarven", "Elven", "Goblin", "Jotun", "Orcish"],
+    "traits": ["gnome", "humanoid"],
+    "senses": ["low-light vision"],
+    "specials": [
+      {
+        "name": "Low-Light Vision",
+        "text": "You can see in dim light as though it were bright light, so you ignore the concealed condition due to dim light."
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 50,
+      "url": "https://2e.aonprd.com/Ancestries.aspx?ID=61",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
     "id": "ancestry.goblin",
     "name": "Goblin",
     "hp": 6,
@@ -65,6 +94,7 @@
     "free_boosts": 1,
     "flaws": ["wis"],
     "languages": ["Common", "Goblin"],
+    "additional_languages": ["Draconic", "Dwarven", "Gnomish", "Halfling", "Kholo", "Orcish"],
     "traits": ["goblin", "humanoid"],
     "senses": ["darkvision"],
     "specials": [
@@ -82,6 +112,33 @@
     }
   },
   {
+    "id": "ancestry.halfling",
+    "name": "Halfling",
+    "hp": 6,
+    "size": "small",
+    "speed": 25,
+    "boosts": ["dex", "wis"],
+    "free_boosts": 1,
+    "flaws": ["str"],
+    "languages": ["Common", "Halfling"],
+    "additional_languages": ["Dwarven", "Elven", "Gnomish", "Goblin"],
+    "traits": ["halfling", "humanoid"],
+    "senses": [],
+    "specials": [
+      {
+        "name": "Keen Eyes",
+        "text": "Your eyes are sharp, allowing you to make out small details about concealed or even invisible creatures that others might miss. You gain a +2 circumstance bonus when using the Seek action to find hidden or undetected creatures within 30 feet of you. When you target an opponent that is concealed from you or hidden from you, reduce the DC of the flat check to 3 for a concealed target or 9 for a hidden one."
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 58,
+      "url": "https://2e.aonprd.com/Ancestries.aspx?ID=63",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
     "id": "ancestry.human",
     "name": "Human",
     "hp": 8,
@@ -91,6 +148,7 @@
     "free_boosts": 2,
     "flaws": [],
     "languages": ["Common"],
+    "additional_languages": ["Draconic", "Dwarven", "Elven", "Fey", "Gnomish", "Goblin", "Halfling", "Jotun", "Orcish", "Sakvroth"],
     "traits": ["human", "humanoid"],
     "senses": [],
     "specials": [],
@@ -98,6 +156,64 @@
       "book": "Pathfinder Player Core",
       "page": 62,
       "url": "https://2e.aonprd.com/Ancestries.aspx?ID=64",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "ancestry.leshy",
+    "name": "Leshy",
+    "hp": 8,
+    "size": "small",
+    "speed": 25,
+    "boosts": ["con", "wis"],
+    "free_boosts": 1,
+    "flaws": ["int"],
+    "languages": ["Common", "Fey"],
+    "additional_languages": ["Draconic", "Elven", "Gnomish", "Goblin", "Halfling", "Sakvroth"],
+    "traits": ["leshy", "plant"],
+    "senses": ["low-light vision"],
+    "specials": [
+      {
+        "name": "Low-Light Vision",
+        "text": "You can see in dim light as though it were bright light, so you ignore the concealed condition due to dim light."
+      },
+      {
+        "name": "Plant Nourishment",
+        "text": "You gain nourishment in the same way that the plants or fungi that match your body type normally do, through some combination of photosynthesis, absorbing minerals with your roots, or scavenging decaying matter. You typically do not need to pay for food. If you normally rely on photosynthesis and go without sunlight for 1 week, you begin to starve. You can derive nourishment from specially formulated bottles of sunlight instead of natural sunlight, but these bottles cost 10 times as much as standard rations."
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 66,
+      "url": "https://2e.aonprd.com/Ancestries.aspx?ID=65",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "ancestry.orc",
+    "name": "Orc",
+    "hp": 10,
+    "size": "medium",
+    "speed": 25,
+    "boosts": [],
+    "free_boosts": 2,
+    "flaws": [],
+    "languages": ["Common", "Orcish"],
+    "additional_languages": ["Goblin", "Jotun", "Petran", "Sakvroth"],
+    "traits": ["humanoid", "orc"],
+    "senses": ["darkvision"],
+    "specials": [
+      {
+        "name": "Darkvision",
+        "text": "You can see in darkness and dim light just as well as you can see in bright light, though your vision in darkness is in black and white."
+      }
+    ],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 70,
+      "url": "https://2e.aonprd.com/Ancestries.aspx?ID=66",
       "license": "ORC",
       "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
     }

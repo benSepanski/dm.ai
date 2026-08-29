@@ -1,34 +1,2876 @@
 {
   "weapons": [
-    { "id": "weapon.dagger", "name": "Dagger", "price_cp": 20, "damage": "1d4 P", "bulk": "L", "hands": "1", "group": "Knife", "category": "simple", "range": "thrown 10 ft.", "traits": ["agile", "finesse", "thrown 10 ft.", "versatile S"], "source": { "book": "Pathfinder Player Core", "page": 277, "url": "https://2e.aonprd.com/Weapons.aspx?ID=358", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.longsword", "name": "Longsword", "price_cp": 100, "damage": "1d8 S", "bulk": "1", "hands": "1", "group": "Sword", "category": "martial", "range": null, "traits": ["versatile P"], "source": { "book": "Pathfinder Player Core", "page": 279, "url": "https://2e.aonprd.com/Weapons.aspx?ID=386", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.greatsword", "name": "Greatsword", "price_cp": 200, "damage": "1d12 S", "bulk": "2", "hands": "2", "group": "Sword", "category": "martial", "range": null, "traits": ["versatile P"], "source": { "book": "Pathfinder Player Core", "page": 279, "url": "https://2e.aonprd.com/Weapons.aspx?ID=379", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.battle-axe", "name": "Battle Axe", "price_cp": 100, "damage": "1d8 S", "bulk": "1", "hands": "1", "group": "Axe", "category": "martial", "range": null, "traits": ["sweep"], "source": { "book": "Pathfinder Player Core", "page": 278, "url": "https://2e.aonprd.com/Weapons.aspx?ID=371", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.warhammer", "name": "Warhammer", "price_cp": 100, "damage": "1d8 B", "bulk": "1", "hands": "1", "group": "Hammer", "category": "martial", "range": null, "traits": ["shove"], "source": { "book": "Pathfinder Player Core", "page": 280, "url": "https://2e.aonprd.com/Weapons.aspx?ID=403", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.shortsword", "name": "Shortsword", "price_cp": 90, "damage": "1d6 P", "bulk": "L", "hands": "1", "group": "Sword", "category": "martial", "range": null, "traits": ["agile", "finesse", "versatile S"], "source": { "book": "Pathfinder Player Core", "page": 279, "url": "https://2e.aonprd.com/Weapons.aspx?ID=398", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.longbow", "name": "Longbow", "price_cp": 600, "damage": "1d8 P", "bulk": "2", "hands": "1+", "group": "Bow", "category": "martial", "range": "100 ft., reload 0", "traits": ["deadly d10", "volley 30 ft."], "source": { "book": "Pathfinder Player Core", "page": 280, "url": "https://2e.aonprd.com/Weapons.aspx?ID=436", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.shortbow", "name": "Shortbow", "price_cp": 300, "damage": "1d6 P", "bulk": "1", "hands": "1+", "group": "Bow", "category": "martial", "range": "60 ft., reload 0", "traits": ["deadly d10"], "source": { "book": "Pathfinder Player Core", "page": 280, "url": "https://2e.aonprd.com/Weapons.aspx?ID=437", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.sling", "name": "Sling", "price_cp": 0, "damage": "1d6 B", "bulk": "L", "hands": "1", "group": "Sling", "category": "simple", "range": "50 ft., reload 1", "traits": ["propulsive"], "source": { "book": "Pathfinder Player Core", "page": 278, "url": "https://2e.aonprd.com/Weapons.aspx?ID=430", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.arrows", "name": "Arrows (10)", "price_cp": 10, "damage": null, "bulk": "L", "hands": null, "group": "Bow", "category": "ammunition", "range": null, "traits": [], "source": { "book": "Pathfinder Player Core", "page": 280, "url": "https://2e.aonprd.com/Weapons.aspx?ID=443", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "weapon.sling-bullets", "name": "Sling Bullets (10)", "price_cp": 1, "damage": null, "bulk": "L", "hands": null, "group": "Sling", "category": "ammunition", "range": null, "traits": [], "source": { "book": "Pathfinder Player Core", "page": 280, "url": "https://2e.aonprd.com/Weapons.aspx?ID=442", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } }
+    {
+      "id": "weapon.blowgun",
+      "name": "Blowgun",
+      "price_cp": 10,
+      "damage": "1 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Dart",
+      "category": "simple",
+      "range": "20 ft., reload 1",
+      "traits": [
+        "agile",
+        "nonlethal"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=424",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.club",
+      "name": "Club",
+      "price_cp": 0,
+      "damage": "1d6 B",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Club",
+      "category": "simple",
+      "range": "thrown 10 ft.",
+      "traits": [
+        "thrown 10 ft."
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=357",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.crossbow",
+      "name": "Crossbow",
+      "price_cp": 300,
+      "damage": "1d8 P",
+      "bulk": "1",
+      "hands": "2",
+      "group": "Crossbow",
+      "category": "simple",
+      "range": "120 ft., reload 1",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=425",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.dart",
+      "name": "Dart",
+      "price_cp": 1,
+      "damage": "1d4 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Dart",
+      "category": "simple",
+      "range": "thrown 20 ft.",
+      "traits": [
+        "agile",
+        "thrown"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=426",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.gauntlet",
+      "name": "Gauntlet",
+      "price_cp": 20,
+      "damage": "1d4 B",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Brawling",
+      "category": "simple",
+      "range": null,
+      "traits": [
+        "agile",
+        "free-hand"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=359",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.hand-crossbow",
+      "name": "Hand Crossbow",
+      "price_cp": 300,
+      "damage": "1d6 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Crossbow",
+      "category": "simple",
+      "range": "60 ft., reload 1",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=427",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.heavy-crossbow",
+      "name": "Heavy Crossbow",
+      "price_cp": 400,
+      "damage": "1d10 P",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Crossbow",
+      "category": "simple",
+      "range": "120 ft., reload 2",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=428",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.javelin",
+      "name": "Javelin",
+      "price_cp": 10,
+      "damage": "1d6 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Dart",
+      "category": "simple",
+      "range": "thrown 30 ft.",
+      "traits": [
+        "thrown"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=429",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.light-mace",
+      "name": "Light Mace",
+      "price_cp": 40,
+      "damage": "1d4 B",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Club",
+      "category": "simple",
+      "range": null,
+      "traits": [
+        "agile",
+        "finesse",
+        "shove"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=360",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.longspear",
+      "name": "Longspear",
+      "price_cp": 50,
+      "damage": "1d8 P",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Spear",
+      "category": "simple",
+      "range": null,
+      "traits": [
+        "reach"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=361",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.mace",
+      "name": "Mace",
+      "price_cp": 100,
+      "damage": "1d6 B",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Club",
+      "category": "simple",
+      "range": null,
+      "traits": [
+        "shove"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=362",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.morningstar",
+      "name": "Morningstar",
+      "price_cp": 100,
+      "damage": "1d6 B",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Club",
+      "category": "simple",
+      "range": null,
+      "traits": [
+        "versatile P"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=363",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.sickle",
+      "name": "Sickle",
+      "price_cp": 20,
+      "damage": "1d4 S",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Knife",
+      "category": "simple",
+      "range": null,
+      "traits": [
+        "agile",
+        "finesse",
+        "trip"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=364",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.spear",
+      "name": "Spear",
+      "price_cp": 10,
+      "damage": "1d6 P",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Spear",
+      "category": "simple",
+      "range": "thrown 20 ft.",
+      "traits": [
+        "monk",
+        "thrown 20 ft."
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=365",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.spiked-gauntlet",
+      "name": "Spiked Gauntlet",
+      "price_cp": 30,
+      "damage": "1d4 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Brawling",
+      "category": "simple",
+      "range": null,
+      "traits": [
+        "agile",
+        "free-hand"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=366",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.staff",
+      "name": "Staff",
+      "price_cp": 0,
+      "damage": "1d4 B",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Club",
+      "category": "simple",
+      "range": null,
+      "traits": [
+        "monk",
+        "two-hand 1d8"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=367",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.arbalest",
+      "name": "Arbalest",
+      "price_cp": 800,
+      "damage": "1d10 P",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Crossbow",
+      "category": "martial",
+      "range": "110 ft., reload 1",
+      "traits": [
+        "backstabber"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=432",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.bastard-sword",
+      "name": "Bastard Sword",
+      "price_cp": 400,
+      "damage": "1d8 S",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Sword",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "two-hand 1d12"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=370",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.bo-staff",
+      "name": "Bo Staff",
+      "price_cp": 20,
+      "damage": "1d8 B",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Club",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "monk",
+        "parry",
+        "reach",
+        "trip"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=372",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.bola",
+      "name": "Bola",
+      "price_cp": 50,
+      "damage": "1d6 B",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Sling",
+      "category": "martial",
+      "range": "thrown 20 ft.",
+      "traits": [
+        "nonlethal",
+        "ranged trip",
+        "thrown"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=433",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.composite-longbow",
+      "name": "Composite Longbow",
+      "price_cp": 2000,
+      "damage": "1d8 P",
+      "bulk": "2",
+      "hands": "1+",
+      "group": "Bow",
+      "category": "martial",
+      "range": "100 ft., reload 0",
+      "traits": [
+        "deadly d10",
+        "propulsive",
+        "volley 30 ft."
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=434",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.composite-shortbow",
+      "name": "Composite Shortbow",
+      "price_cp": 1400,
+      "damage": "1d6 P",
+      "bulk": "1",
+      "hands": "1+",
+      "group": "Bow",
+      "category": "martial",
+      "range": "60 ft., reload 0",
+      "traits": [
+        "deadly d10",
+        "propulsive"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=435",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.falchion",
+      "name": "Falchion",
+      "price_cp": 300,
+      "damage": "1d10 S",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Sword",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "forceful",
+        "sweep"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=373",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.flail",
+      "name": "Flail",
+      "price_cp": 80,
+      "damage": "1d6 B",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Flail",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "disarm",
+        "sweep",
+        "trip"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=374",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.glaive",
+      "name": "Glaive",
+      "price_cp": 100,
+      "damage": "1d8 S",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Polearm",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "deadly d8",
+        "forceful",
+        "reach"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=375",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.greataxe",
+      "name": "Greataxe",
+      "price_cp": 200,
+      "damage": "1d12 S",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Axe",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "sweep"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=376",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.greatclub",
+      "name": "Greatclub",
+      "price_cp": 100,
+      "damage": "1d10 B",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Club",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "backswing",
+        "shove"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=377",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.greatpick",
+      "name": "Greatpick",
+      "price_cp": 100,
+      "damage": "1d10 P",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Pick",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "fatal 1d12"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=378",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.guisarme",
+      "name": "Guisarme",
+      "price_cp": 200,
+      "damage": "1d10 S",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Polearm",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "reach",
+        "trip"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=380",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.halberd",
+      "name": "Halberd",
+      "price_cp": 200,
+      "damage": "1d10 P",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Polearm",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "reach",
+        "versatile S"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=381",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.hatchet",
+      "name": "Hatchet",
+      "price_cp": 40,
+      "damage": "1d6 S",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Axe",
+      "category": "martial",
+      "range": "thrown 10 ft.",
+      "traits": [
+        "agile",
+        "sweep",
+        "thrown 10 ft."
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=382",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.lance",
+      "name": "Lance",
+      "price_cp": 100,
+      "damage": "1d8 P",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Spear",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "deadly d8",
+        "jousting 1d6",
+        "reach"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=383",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.light-hammer",
+      "name": "Light Hammer",
+      "price_cp": 30,
+      "damage": "1d6 B",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Hammer",
+      "category": "martial",
+      "range": "thrown 20 ft.",
+      "traits": [
+        "agile",
+        "thrown 20 ft."
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=384",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.light-pick",
+      "name": "Light Pick",
+      "price_cp": 40,
+      "damage": "1d4 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Pick",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "agile",
+        "fatal 1d8"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=385",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.main-gauche",
+      "name": "Main-gauche",
+      "price_cp": 50,
+      "damage": "1d4 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Knife",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "agile",
+        "disarm",
+        "finesse",
+        "parry",
+        "versatile S"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=387",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.maul",
+      "name": "Maul",
+      "price_cp": 300,
+      "damage": "1d12 B",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Hammer",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "shove"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=388",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.pick",
+      "name": "Pick",
+      "price_cp": 70,
+      "damage": "1d6 P",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Pick",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "fatal 1d10"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=389",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.ranseur",
+      "name": "Ranseur",
+      "price_cp": 200,
+      "damage": "1d10 P",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Polearm",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "disarm",
+        "reach"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=390",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.rapier",
+      "name": "Rapier",
+      "price_cp": 200,
+      "damage": "1d6 P",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Sword",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "deadly d8",
+        "disarm",
+        "finesse"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=391",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.sap",
+      "name": "Sap",
+      "price_cp": 10,
+      "damage": "1d6 B",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Club",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "agile",
+        "nonlethal"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=392",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.scimitar",
+      "name": "Scimitar",
+      "price_cp": 100,
+      "damage": "1d6 S",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Sword",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "forceful",
+        "sweep"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=393",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.scythe",
+      "name": "Scythe",
+      "price_cp": 200,
+      "damage": "1d10 S",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Polearm",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "deadly d10",
+        "trip"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=394",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.shield-bash",
+      "name": "Shield Bash",
+      "price_cp": 0,
+      "damage": "1d4 B",
+      "bulk": "—",
+      "hands": "1",
+      "group": "Shield",
+      "category": "martial",
+      "range": null,
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=395",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.shield-boss",
+      "name": "Shield Boss",
+      "price_cp": 50,
+      "damage": "1d6 B",
+      "bulk": "—",
+      "hands": "1",
+      "group": "Shield",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "attached to shield"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=396",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.shield-spikes",
+      "name": "Shield Spikes",
+      "price_cp": 50,
+      "damage": "1d6 P",
+      "bulk": "—",
+      "hands": "1",
+      "group": "Shield",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "attached to shield"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=397",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.starknife",
+      "name": "Starknife",
+      "price_cp": 200,
+      "damage": "1d4 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Knife",
+      "category": "martial",
+      "range": "thrown 20 ft.",
+      "traits": [
+        "agile",
+        "deadly d6",
+        "finesse",
+        "thrown 20 ft.",
+        "versatile S"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=399",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.sword-cane",
+      "name": "Sword Cane",
+      "price_cp": 500,
+      "damage": "1d6 P",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Sword",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "agile",
+        "concealable",
+        "finesse"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=400",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.trident",
+      "name": "Trident",
+      "price_cp": 100,
+      "damage": "1d8 P",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Spear",
+      "category": "martial",
+      "range": "thrown 20 ft.",
+      "traits": [
+        "thrown 20 ft."
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=401",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.war-flail",
+      "name": "War Flail",
+      "price_cp": 200,
+      "damage": "1d10 B",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Flail",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "disarm",
+        "sweep",
+        "trip"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=402",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.whip",
+      "name": "Whip",
+      "price_cp": 10,
+      "damage": "1d4 S",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Flail",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "disarm",
+        "finesse",
+        "nonlethal",
+        "reach",
+        "trip"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=404",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.blowgun-darts",
+      "name": "Blowgun Darts (10)",
+      "price_cp": 5,
+      "damage": null,
+      "bulk": "L",
+      "hands": null,
+      "group": "Dart",
+      "category": "ammunition",
+      "range": null,
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=440",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.bolts",
+      "name": "Bolts (10)",
+      "price_cp": 10,
+      "damage": null,
+      "bulk": "L",
+      "hands": null,
+      "group": "Crossbow",
+      "category": "ammunition",
+      "range": null,
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=441",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.dagger",
+      "name": "Dagger",
+      "price_cp": 20,
+      "damage": "1d4 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Knife",
+      "category": "simple",
+      "range": "thrown 10 ft.",
+      "traits": [
+        "agile",
+        "finesse",
+        "thrown 10 ft.",
+        "versatile S"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 277,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=358",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.longsword",
+      "name": "Longsword",
+      "price_cp": 100,
+      "damage": "1d8 S",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Sword",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "versatile P"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 279,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=386",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.greatsword",
+      "name": "Greatsword",
+      "price_cp": 200,
+      "damage": "1d12 S",
+      "bulk": "2",
+      "hands": "2",
+      "group": "Sword",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "versatile P"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 279,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=379",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.battle-axe",
+      "name": "Battle Axe",
+      "price_cp": 100,
+      "damage": "1d8 S",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Axe",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "sweep"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=371",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.warhammer",
+      "name": "Warhammer",
+      "price_cp": 100,
+      "damage": "1d8 B",
+      "bulk": "1",
+      "hands": "1",
+      "group": "Hammer",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "shove"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=403",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.shortsword",
+      "name": "Shortsword",
+      "price_cp": 90,
+      "damage": "1d6 P",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Sword",
+      "category": "martial",
+      "range": null,
+      "traits": [
+        "agile",
+        "finesse",
+        "versatile S"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 279,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=398",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.longbow",
+      "name": "Longbow",
+      "price_cp": 600,
+      "damage": "1d8 P",
+      "bulk": "2",
+      "hands": "1+",
+      "group": "Bow",
+      "category": "martial",
+      "range": "100 ft., reload 0",
+      "traits": [
+        "deadly d10",
+        "volley 30 ft."
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=436",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.shortbow",
+      "name": "Shortbow",
+      "price_cp": 300,
+      "damage": "1d6 P",
+      "bulk": "1",
+      "hands": "1+",
+      "group": "Bow",
+      "category": "martial",
+      "range": "60 ft., reload 0",
+      "traits": [
+        "deadly d10"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=437",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.sling",
+      "name": "Sling",
+      "price_cp": 0,
+      "damage": "1d6 B",
+      "bulk": "L",
+      "hands": "1",
+      "group": "Sling",
+      "category": "simple",
+      "range": "50 ft., reload 1",
+      "traits": [
+        "propulsive"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 278,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=430",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.arrows",
+      "name": "Arrows (10)",
+      "price_cp": 10,
+      "damage": null,
+      "bulk": "L",
+      "hands": null,
+      "group": "Bow",
+      "category": "ammunition",
+      "range": null,
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=443",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "weapon.sling-bullets",
+      "name": "Sling Bullets (10)",
+      "price_cp": 1,
+      "damage": null,
+      "bulk": "L",
+      "hands": null,
+      "group": "Sling",
+      "category": "ammunition",
+      "range": null,
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 280,
+        "url": "https://2e.aonprd.com/Weapons.aspx?ID=442",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    }
   ],
   "armor": [
-    { "id": "armor.padded", "name": "Padded Armor", "price_cp": 20, "ac_bonus": 1, "dex_cap": 3, "check_penalty": 0, "speed_penalty": 0, "str_req": 0, "bulk": "L", "group": "Cloth", "category": "light", "traits": ["comfort"], "source": { "book": "Pathfinder Player Core", "page": 273, "url": "https://2e.aonprd.com/Armor.aspx?ID=40", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "armor.leather", "name": "Leather Armor", "price_cp": 200, "ac_bonus": 1, "dex_cap": 4, "check_penalty": -1, "speed_penalty": 0, "str_req": 0, "bulk": "1", "group": "Leather", "category": "light", "traits": [], "source": { "book": "Pathfinder Player Core", "page": 273, "url": "https://2e.aonprd.com/Armor.aspx?ID=41", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "armor.studded-leather", "name": "Studded Leather Armor", "price_cp": 300, "ac_bonus": 2, "dex_cap": 3, "check_penalty": -1, "speed_penalty": 0, "str_req": 1, "bulk": "1", "group": "Leather", "category": "light", "traits": [], "source": { "book": "Pathfinder Player Core", "page": 273, "url": "https://2e.aonprd.com/Armor.aspx?ID=42", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "armor.hide", "name": "Hide Armor", "price_cp": 200, "ac_bonus": 3, "dex_cap": 2, "check_penalty": -2, "speed_penalty": -5, "str_req": 2, "bulk": "2", "group": "Leather", "category": "medium", "traits": [], "source": { "book": "Pathfinder Player Core", "page": 273, "url": "https://2e.aonprd.com/Armor.aspx?ID=44", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "armor.scale-mail", "name": "Scale Mail", "price_cp": 400, "ac_bonus": 3, "dex_cap": 2, "check_penalty": -2, "speed_penalty": -5, "str_req": 2, "bulk": "2", "group": "Composite", "category": "medium", "traits": [], "source": { "book": "Pathfinder Player Core", "page": 273, "url": "https://2e.aonprd.com/Armor.aspx?ID=45", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "armor.chain-mail", "name": "Chain Mail", "price_cp": 600, "ac_bonus": 4, "dex_cap": 1, "check_penalty": -2, "speed_penalty": -5, "str_req": 3, "bulk": "2", "group": "Chain", "category": "medium", "traits": ["flexible", "noisy"], "source": { "book": "Pathfinder Player Core", "page": 273, "url": "https://2e.aonprd.com/Armor.aspx?ID=46", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "armor.breastplate", "name": "Breastplate", "price_cp": 800, "ac_bonus": 4, "dex_cap": 1, "check_penalty": -2, "speed_penalty": -5, "str_req": 3, "bulk": "2", "group": "Plate", "category": "medium", "traits": [], "source": { "book": "Pathfinder Player Core", "page": 273, "url": "https://2e.aonprd.com/Armor.aspx?ID=47", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } }
+    {
+      "id": "armor.explorers-clothing",
+      "name": "Explorer's Clothing",
+      "price_cp": 10,
+      "ac_bonus": 0,
+      "dex_cap": 5,
+      "check_penalty": 0,
+      "speed_penalty": 0,
+      "str_req": 0,
+      "bulk": "L",
+      "group": "Cloth",
+      "category": "unarmored",
+      "traits": [
+        "comfort"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=39",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.chain-shirt",
+      "name": "Chain Shirt",
+      "price_cp": 500,
+      "ac_bonus": 2,
+      "dex_cap": 3,
+      "check_penalty": -1,
+      "speed_penalty": 0,
+      "str_req": 1,
+      "bulk": "1",
+      "group": "Chain",
+      "category": "light",
+      "traits": [
+        "flexible",
+        "noisy"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=43",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.splint-mail",
+      "name": "Splint Mail",
+      "price_cp": 1300,
+      "ac_bonus": 5,
+      "dex_cap": 1,
+      "check_penalty": -3,
+      "speed_penalty": -10,
+      "str_req": 3,
+      "bulk": "3",
+      "group": "Composite",
+      "category": "heavy",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=48",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.half-plate",
+      "name": "Half Plate",
+      "price_cp": 1800,
+      "ac_bonus": 5,
+      "dex_cap": 1,
+      "check_penalty": -3,
+      "speed_penalty": -10,
+      "str_req": 3,
+      "bulk": "3",
+      "group": "Plate",
+      "category": "heavy",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=49",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.full-plate",
+      "name": "Full Plate",
+      "price_cp": 3000,
+      "ac_bonus": 6,
+      "dex_cap": 0,
+      "check_penalty": -3,
+      "speed_penalty": -10,
+      "str_req": 4,
+      "bulk": "4",
+      "group": "Plate",
+      "category": "heavy",
+      "traits": [
+        "bulwark"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=50",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.padded",
+      "name": "Padded Armor",
+      "price_cp": 20,
+      "ac_bonus": 1,
+      "dex_cap": 3,
+      "check_penalty": 0,
+      "speed_penalty": 0,
+      "str_req": 0,
+      "bulk": "L",
+      "group": "Cloth",
+      "category": "light",
+      "traits": [
+        "comfort"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=40",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.leather",
+      "name": "Leather Armor",
+      "price_cp": 200,
+      "ac_bonus": 1,
+      "dex_cap": 4,
+      "check_penalty": -1,
+      "speed_penalty": 0,
+      "str_req": 0,
+      "bulk": "1",
+      "group": "Leather",
+      "category": "light",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=41",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.studded-leather",
+      "name": "Studded Leather Armor",
+      "price_cp": 300,
+      "ac_bonus": 2,
+      "dex_cap": 3,
+      "check_penalty": -1,
+      "speed_penalty": 0,
+      "str_req": 1,
+      "bulk": "1",
+      "group": "Leather",
+      "category": "light",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=42",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.hide",
+      "name": "Hide Armor",
+      "price_cp": 200,
+      "ac_bonus": 3,
+      "dex_cap": 2,
+      "check_penalty": -2,
+      "speed_penalty": -5,
+      "str_req": 2,
+      "bulk": "2",
+      "group": "Leather",
+      "category": "medium",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=44",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.scale-mail",
+      "name": "Scale Mail",
+      "price_cp": 400,
+      "ac_bonus": 3,
+      "dex_cap": 2,
+      "check_penalty": -2,
+      "speed_penalty": -5,
+      "str_req": 2,
+      "bulk": "2",
+      "group": "Composite",
+      "category": "medium",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=45",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.chain-mail",
+      "name": "Chain Mail",
+      "price_cp": 600,
+      "ac_bonus": 4,
+      "dex_cap": 1,
+      "check_penalty": -2,
+      "speed_penalty": -5,
+      "str_req": 3,
+      "bulk": "2",
+      "group": "Chain",
+      "category": "medium",
+      "traits": [
+        "flexible",
+        "noisy"
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=46",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "armor.breastplate",
+      "name": "Breastplate",
+      "price_cp": 800,
+      "ac_bonus": 4,
+      "dex_cap": 1,
+      "check_penalty": -2,
+      "speed_penalty": -5,
+      "str_req": 3,
+      "bulk": "2",
+      "group": "Plate",
+      "category": "medium",
+      "traits": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 273,
+        "url": "https://2e.aonprd.com/Armor.aspx?ID=47",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    }
   ],
   "shields": [
-    { "id": "shield.wooden", "name": "Wooden Shield", "price_cp": 100, "ac_bonus": 2, "speed_penalty": 0, "bulk": "1", "hardness": 3, "hp": 12, "bt": 6, "source": { "book": "Pathfinder Player Core", "page": 274, "url": "https://2e.aonprd.com/Shields.aspx?ID=18", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "shield.steel", "name": "Steel Shield", "price_cp": 200, "ac_bonus": 2, "speed_penalty": 0, "bulk": "1", "hardness": 5, "hp": 20, "bt": 10, "source": { "book": "Pathfinder Player Core", "page": 274, "url": "https://2e.aonprd.com/Shields.aspx?ID=19", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } }
+    {
+      "id": "shield.buckler",
+      "name": "Buckler",
+      "price_cp": 100,
+      "ac_bonus": 1,
+      "speed_penalty": 0,
+      "bulk": "L",
+      "hardness": 3,
+      "hp": 6,
+      "bt": 3,
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 274,
+        "url": "https://2e.aonprd.com/Shields.aspx?ID=17",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "shield.tower",
+      "name": "Tower Shield",
+      "price_cp": 1000,
+      "ac_bonus": 2,
+      "speed_penalty": -5,
+      "bulk": "4",
+      "hardness": 5,
+      "hp": 20,
+      "bt": 10,
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 274,
+        "url": "https://2e.aonprd.com/Shields.aspx?ID=20",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "shield.wooden",
+      "name": "Wooden Shield",
+      "price_cp": 100,
+      "ac_bonus": 2,
+      "speed_penalty": 0,
+      "bulk": "1",
+      "hardness": 3,
+      "hp": 12,
+      "bt": 6,
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 274,
+        "url": "https://2e.aonprd.com/Shields.aspx?ID=18",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "shield.steel",
+      "name": "Steel Shield",
+      "price_cp": 200,
+      "ac_bonus": 2,
+      "speed_penalty": 0,
+      "bulk": "1",
+      "hardness": 5,
+      "hp": 20,
+      "bt": 10,
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 274,
+        "url": "https://2e.aonprd.com/Shields.aspx?ID=19",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    }
   ],
   "gear": [
-    { "id": "gear.adventurers-pack", "name": "Adventurer's Pack", "price_cp": 150, "bulk": "1", "text": "Contains a backpack, bedroll, 10 pieces of chalk, flint and steel, 50 feet of rope, 2 weeks' rations, soap, 5 torches, and a waterskin.", "source": { "book": "Pathfinder Player Core", "page": 287, "url": "https://2e.aonprd.com/Equipment.aspx?ID=2700", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "gear.grappling-hook", "name": "Grappling Hook", "price_cp": 10, "bulk": "L", "text": "You can throw a grappling hook with a rope tied to it to make a climb easier.", "source": { "book": "Pathfinder Player Core", "page": 288, "url": "https://2e.aonprd.com/Equipment.aspx?ID=2712", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } },
-    { "id": "gear.healers-toolkit", "name": "Healer's Toolkit", "price_cp": 500, "bulk": "1", "text": "Bandages, herbs, and suturing tools. Required for Medicine checks to Administer First Aid, Treat Disease, Treat Poison, or Treat Wounds.", "source": { "book": "Pathfinder Player Core", "page": 288, "url": "https://2e.aonprd.com/Equipment.aspx?ID=2727", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." } }
+    {
+      "id": "gear.alchemists-lab",
+      "name": "Alchemist's Lab",
+      "price_cp": 500,
+      "bulk": "6",
+      "text": "Needed to Craft alchemical items during downtime. Takes 2 hands to use.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2701",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.alchemists-toolkit",
+      "name": "Alchemist's Toolkit",
+      "price_cp": 300,
+      "bulk": "1",
+      "text": "A mobile collection of vials and chemicals for simple alchemical tasks. Usable with 1 hand if worn, or 2 if held.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2702",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.artisans-toolkit",
+      "name": "Artisan's Toolkit",
+      "price_cp": 400,
+      "bulk": "2",
+      "text": "Needed to create items from raw materials with the Craft skill; different sets suit different trades. Usable with 1 hand if worn, or 2 if held.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2703",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.backpack",
+      "name": "Backpack",
+      "price_cp": 10,
+      "bulk": "—",
+      "text": "Holds up to 4 Bulk of items; the first 2 Bulk inside don't count against your Bulk limits. Light Bulk if carried rather than worn.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2704",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.barding-light-small-or-medium",
+      "name": "Barding (Light; Small or Medium)",
+      "price_cp": 1000,
+      "bulk": "2",
+      "text": "Light armor for a Small or Medium animal: +1 AC, Dex cap +5, check penalty -1, Speed penalty -5 ft., Strength +3.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 295,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2778",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.barding-light-large",
+      "name": "Barding (Light; Large)",
+      "price_cp": 2000,
+      "bulk": "4",
+      "text": "Light armor for a Large animal: +1 AC, Dex cap +5, check penalty -1, Speed penalty -5 ft., Strength +3.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 295,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2778",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.basic-crafters-book",
+      "name": "Basic Crafter's Book",
+      "price_cp": 10,
+      "bulk": "L",
+      "text": "Contains the formulas for Crafting the common level-0 items of the equipment chapter.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2705",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.bedroll",
+      "name": "Bedroll",
+      "price_cp": 2,
+      "bulk": "L",
+      "text": "Portable bedding for resting in the field.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2706",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.brass-ear",
+      "name": "Brass Ear",
+      "price_cp": 100,
+      "bulk": "—",
+      "text": "A flared listening tube. A door, window, or thin wall increases your Perception DC to hear sounds beyond it by only half as much as normal.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2707",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.caltrops",
+      "name": "Caltrops",
+      "price_cp": 30,
+      "bulk": "L",
+      "text": "Four-pronged spikes scattered into an adjacent square with an Interact action; the first creature to move in must succeed at a DC 14 Acrobatics check or take 1d4 piercing damage and 1 persistent bleed damage.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2708",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.candle",
+      "name": "Candle",
+      "price_cp": 1,
+      "bulk": "—",
+      "text": "A lit candle sheds dim light in a 10-foot radius for 8 hours.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2709",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.chain",
+      "name": "Chain (10 feet)",
+      "price_cp": 400,
+      "bulk": "1",
+      "text": "10 feet of sturdy metal chain.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2710",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.chalk",
+      "name": "Chalk (10)",
+      "price_cp": 1,
+      "bulk": "—",
+      "text": "10 pieces of writing chalk.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2711",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.chest",
+      "name": "Chest",
+      "price_cp": 60,
+      "bulk": "2",
+      "text": "A wooden chest that holds up to 8 Bulk of items.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2712",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.climbing-kit",
+      "name": "Climbing Kit",
+      "price_cp": 50,
+      "bulk": "1",
+      "text": "Rope, pulleys, a dozen pitons, a hammer, a grappling hook, and crampons for one climber. Anchors you while Climbing at half Speed; on a critical failure, attempt a DC 5 flat check to prevent the fall.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2713",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.clothing-ordinary",
+      "name": "Clothing (Ordinary)",
+      "price_cp": 10,
+      "bulk": "—",
+      "text": "Functional garb with basic tailoring, such as work clothes.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2715",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.clothing-cold-weather",
+      "name": "Clothing (Cold-Weather)",
+      "price_cp": 40,
+      "bulk": "L",
+      "text": "Insulated clothing for travel in cold climates.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 291,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2715",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.clothing-explorers",
+      "name": "Clothing (Explorer's)",
+      "price_cp": 10,
+      "bulk": "L",
+      "text": "Sturdy travel clothing that can be reinforced to protect you even though it isn't armor; see the armor entry of the same name.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 291,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2715",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.clothing-fine",
+      "name": "Clothing (Fine)",
+      "price_cp": 200,
+      "bulk": "L",
+      "text": "Fashionable, expensive clothing suited to high society.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 291,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2715",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.compass",
+      "name": "Compass",
+      "price_cp": 100,
+      "bulk": "—",
+      "text": "Helps you Sense Direction or navigate; without one you take a -2 item penalty to those checks.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2716",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.cookware",
+      "name": "Cookware",
+      "price_cp": 100,
+      "bulk": "2",
+      "text": "Pots, pans, and utensils for preparing meals.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2717",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.crowbar",
+      "name": "Crowbar",
+      "price_cp": 50,
+      "bulk": "L",
+      "text": "Gives leverage when Forcing Open objects without an easy grip; without one, prying something open takes a -2 item penalty to the Athletics check.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2718",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.disguise-kit",
+      "name": "Disguise Kit",
+      "price_cp": 200,
+      "bulk": "L",
+      "text": "Cosmetics, false facial hair, spirit gum, and simple wigs, usually needed to set up a disguise to Impersonate someone with Deception.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2720",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.disguise-kit-replacement-cosmetics",
+      "name": "Disguise Kit (Replacement Cosmetics)",
+      "price_cp": 10,
+      "bulk": "L",
+      "text": "Replenishes the cosmetics supply of a disguise kit.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2720",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.dueling-cape",
+      "name": "Dueling Cape",
+      "price_cp": 50,
+      "bulk": "L",
+      "text": "Wrapped around one arm with an Interact action; you can then spend an action to hold it protectively, gaining a +1 circumstance bonus to AC and to Deception checks to Feint until the start of your next turn.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2721",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.fishing-tackle",
+      "name": "Fishing Tackle",
+      "price_cp": 80,
+      "bulk": "1",
+      "text": "A collapsible fishing pole, fishhooks, line, lures, and a fishing net.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2722",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.flint-and-steel",
+      "name": "Flint and Steel",
+      "price_cp": 5,
+      "bulk": "—",
+      "text": "Lights a fire given time to catch a spark — at least 3 actions, often much longer; typically impractical during an encounter.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2723",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.formula-book",
+      "name": "Formula Book (Blank)",
+      "price_cp": 100,
+      "bulk": "L",
+      "text": "Holds the formulas needed to Craft items beyond the common equipment of this chapter; each book holds formulas for up to 100 items.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2724",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.hammer",
+      "name": "Hammer",
+      "price_cp": 10,
+      "bulk": "L",
+      "text": "A sturdy tool for driving pitons and nails.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2726",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.hourglass",
+      "name": "Hourglass",
+      "price_cp": 300,
+      "bulk": "L",
+      "text": "Measures the passage of time.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2728",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.ladder",
+      "name": "Ladder (10-foot)",
+      "price_cp": 3,
+      "bulk": "3",
+      "text": "A 10-foot wooden ladder.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2729",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.lantern-bulls-eye",
+      "name": "Lantern (Bull's-Eye)",
+      "price_cp": 100,
+      "bulk": "1",
+      "text": "Sheds bright light in a 60-foot cone (dim light in the next 60 feet); burns 1 pint of oil for 6 hours.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2730",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.lantern-hooded",
+      "name": "Lantern (Hooded)",
+      "price_cp": 70,
+      "bulk": "L",
+      "text": "Sheds bright light in a 30-foot radius (dim light in the next 30 feet); burns 1 pint of oil for 6 hours. Shutters can be closed with an Interact action to block the light.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2730",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.lock-poor",
+      "name": "Lock (Poor)",
+      "price_cp": 20,
+      "bulk": "—",
+      "text": "A crude lock; picking it requires two successful DC 15 Thievery checks.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2731",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.lock-simple",
+      "name": "Lock (Simple)",
+      "price_cp": 200,
+      "bulk": "—",
+      "text": "A simple lock; picking it requires three successful DC 20 Thievery checks.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2731",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.manacles-poor",
+      "name": "Manacles (Poor)",
+      "price_cp": 30,
+      "bulk": "—",
+      "text": "Crude restraints for binding a creature's wrists or legs.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2733",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.manacles-simple",
+      "name": "Manacles (Simple)",
+      "price_cp": 300,
+      "bulk": "—",
+      "text": "Simple restraints for binding a creature's wrists or legs.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2733",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.merchants-scale",
+      "name": "Merchant's Scale",
+      "price_cp": 20,
+      "bulk": "L",
+      "text": "A balance and weights for checking goods and coinage.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2734",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.mirror",
+      "name": "Mirror",
+      "price_cp": 100,
+      "bulk": "—",
+      "text": "A small polished mirror.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2735",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.mug",
+      "name": "Mug",
+      "price_cp": 1,
+      "bulk": "—",
+      "text": "A simple drinking vessel.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2736",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.musical-instrument-handheld",
+      "name": "Musical Instrument (Handheld)",
+      "price_cp": 80,
+      "bulk": "1",
+      "text": "A portable instrument such as a flute, lute, fiddle, small harp, or hand drum.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2737",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.musical-instrument-heavy",
+      "name": "Musical Instrument (Heavy)",
+      "price_cp": 200,
+      "bulk": "16",
+      "text": "A large instrument such as heavy drums, a full set of chimes, or a keyboard; generally stationary while played.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2737",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.net",
+      "name": "Net",
+      "price_cp": 100,
+      "bulk": "1",
+      "text": "Weighted netting, usable alone or attached to a rope; with a rope attached you can Grapple a Medium or smaller creature up to 10 feet away.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2738",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.oil",
+      "name": "Oil (1 pint)",
+      "price_cp": 1,
+      "bulk": "—",
+      "text": "Fuels lanterns, or can be prepared with an Interact action and thrown as a ranged attack; on a hit, succeed at a DC 10 flat check to ignite it for 1d6 fire damage.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2739",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.parrying-scabbard",
+      "name": "Parrying Scabbard",
+      "price_cp": 50,
+      "bulk": "L",
+      "text": "A reinforced sheath drawn alongside its one-handed sword; spend an action to position it defensively and gain a +1 circumstance bonus to AC until the start of your next turn.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2740",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.piton",
+      "name": "Piton",
+      "price_cp": 1,
+      "bulk": "—",
+      "text": "A small spike hammered into a surface as an anchor to make climbing easier.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2742",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.primal-symbol",
+      "name": "Primal Symbol",
+      "price_cp": 0,
+      "bulk": "—",
+      "text": "An adornment of natural materials symbolizing a connection to nature, such as a ring of woven plants or a token made from animal parts; primal spellcasters often wear one.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2743",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.rations",
+      "name": "Rations (1 week)",
+      "price_cp": 40,
+      "bulk": "L",
+      "text": "One week of preserved food for one person.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2744",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.religious-symbol-wooden",
+      "name": "Religious Symbol (Wooden)",
+      "price_cp": 10,
+      "bulk": "L",
+      "text": "A wooden emblem of a deity; some divine spellcasters use a religious symbol for certain abilities. Worn on a chain or pin, or held.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2745",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.religious-symbol-silver",
+      "name": "Religious Symbol (Silver)",
+      "price_cp": 200,
+      "bulk": "L",
+      "text": "A silver emblem of a deity; some divine spellcasters use a religious symbol for certain abilities. Worn on a chain or pin, or held.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2745",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.religious-text",
+      "name": "Religious Text",
+      "price_cp": 100,
+      "bulk": "L",
+      "text": "A manuscript of scripture; some divine spellcasters use a religious text, held in one hand, for certain abilities.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2746",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.repair-toolkit",
+      "name": "Repair Toolkit",
+      "price_cp": 200,
+      "bulk": "1",
+      "text": "A portable anvil, tongs, woodworking tools, a whetstone, and conditioning oils, used to Repair items with the Crafting skill.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2747",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.rope",
+      "name": "Rope (50 feet)",
+      "price_cp": 50,
+      "bulk": "L",
+      "text": "50 feet of sturdy rope.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2748",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.sack",
+      "name": "Sack",
+      "price_cp": 1,
+      "bulk": "L",
+      "text": "Holds up to 8 Bulk of items; wearable tucked into a belt when holding 2 Bulk or less. Carried with one hand, though transferring items in and out takes two.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2749",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.saddlebags",
+      "name": "Saddlebags",
+      "price_cp": 20,
+      "bulk": "L",
+      "text": "A pair of bags for a mount; each holds up to 3 Bulk, and the first 1 Bulk in each doesn't count against the mount's Bulk limit.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 290,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2750",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.signal-whistle",
+      "name": "Signal Whistle",
+      "price_cp": 8,
+      "bulk": "—",
+      "text": "When sounded, it can be heard clearly up to half a mile away across open terrain.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2751",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.soap",
+      "name": "Soap",
+      "price_cp": 2,
+      "bulk": "—",
+      "text": "For washing yourself and your belongings.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2752",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.spellbook",
+      "name": "Spellbook (Blank)",
+      "price_cp": 100,
+      "bulk": "L",
+      "text": "Holds the written knowledge needed to learn and prepare spells; each spellbook can hold up to 100 spells.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2753",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.spyglass",
+      "name": "Spyglass",
+      "price_cp": 2000,
+      "bulk": "L",
+      "text": "Lets you see eight times farther than normal.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2754",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.tack",
+      "name": "Tack",
+      "price_cp": 400,
+      "bulk": "1",
+      "text": "A saddle, bit and bridle, and stirrups — everything needed to outfit a riding animal. Bulk 2 when carried rather than worn by the animal.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2755",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.ten-foot-pole",
+      "name": "Ten-Foot Pole",
+      "price_cp": 1,
+      "bulk": "1",
+      "text": "While wielding this pole you can use Seek to search a square up to 10 feet away. Not sturdy enough to use as a weapon.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2756",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.tent-pup",
+      "name": "Tent (Pup)",
+      "price_cp": 80,
+      "bulk": "L",
+      "text": "A small tent that sleeps one.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2757",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.tent-four-person",
+      "name": "Tent (Four-Person)",
+      "price_cp": 500,
+      "bulk": "1",
+      "text": "A tent that sleeps up to four.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2757",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.thieves-toolkit",
+      "name": "Thieves' Toolkit",
+      "price_cp": 300,
+      "bulk": "L",
+      "text": "Needed to Pick Locks or Disable Devices with the Thievery skill. Usable with 1 hand if worn, or 2 if held.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2758",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.thieves-toolkit-replacement-picks",
+      "name": "Thieves' Toolkit (Replacement Picks)",
+      "price_cp": 30,
+      "bulk": "L",
+      "text": "Replacement lock picks that fix a broken thieves' toolkit without using the Repair action.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2758",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.tool-long",
+      "name": "Tool (Long)",
+      "price_cp": 100,
+      "bulk": "1",
+      "text": "A basic long hand tool such as a hoe, shovel, or sledgehammer; usable as an improvised weapon dealing 1d6 damage.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2759",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.tool-short",
+      "name": "Tool (Short)",
+      "price_cp": 40,
+      "bulk": "L",
+      "text": "A basic short hand tool such as a hand drill, ice hook, or trowel; usable as an improvised weapon dealing 1d4 damage.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2759",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.torch",
+      "name": "Torch",
+      "price_cp": 1,
+      "bulk": "L",
+      "text": "Sheds bright light in a 20-foot radius (dim light in the next 20 feet) for 1 hour; as an improvised weapon it deals 1d4 bludgeoning damage plus 1 fire damage.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2760",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.waterskin",
+      "name": "Waterskin",
+      "price_cp": 5,
+      "bulk": "L",
+      "text": "When full, holds roughly one day's worth of water for a Small or Medium creature.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2761",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.writing-set",
+      "name": "Writing Set",
+      "price_cp": 100,
+      "bulk": "L",
+      "text": "Stationery, ink, a quill or ink pen, sealing wax, and a simple seal, for drafting correspondence and scribing scrolls.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2762",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.writing-set-extra-ink-and-paper",
+      "name": "Writing Set (Extra Ink and Paper)",
+      "price_cp": 10,
+      "bulk": "L",
+      "text": "Refills a well-used writing set.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 292,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2762",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.cane",
+      "name": "Cane",
+      "price_cp": 50,
+      "bulk": "L",
+      "text": "A straight length of wood with a curved handle that helps with balance and takes some weight off the opposite leg; typically 2 to 3 feet long, lengthened or shortened as needed.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 293,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2772",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.corrective-lenses",
+      "name": "Corrective Lenses",
+      "price_cp": 50,
+      "bulk": "—",
+      "text": "Eyeglasses or goggles that correct vision; donned or removed with an Interact action.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 293,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2773",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.crutch",
+      "name": "Crutch",
+      "price_cp": 50,
+      "bulk": "L",
+      "text": "Fits under the armpit to support walking; used singly or as a pair depending on the support needed.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 293,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2774",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.hearing-aid",
+      "name": "Hearing Aid",
+      "price_cp": 50,
+      "bulk": "—",
+      "text": "Worn in the ear and made from carved wood, shaped metal, or clockwork to aid those who are hard of hearing; attached or removed with an Interact action.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 293,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2775",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.hearing-aid-magical",
+      "name": "Hearing Aid (Magical)",
+      "price_cp": 500,
+      "bulk": "—",
+      "text": "A magical hearing aid whose receiver detects sound waves and transfers them into the ear; turned on or off with an Interact action.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 293,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2775",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.prosthesis",
+      "name": "Prosthesis",
+      "price_cp": 50,
+      "bulk": "—",
+      "text": "Replaces a missing or damaged body part and provides its full range of functionality; attached or removed with an Interact action.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 293,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2776",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.wheelchair",
+      "name": "Wheelchair",
+      "price_cp": 50,
+      "bulk": "2",
+      "text": "A common wheelchair ideal for everyday use, though not designed for strenuous activity; made in a variety of sizes.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 293,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2777",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.wheelchair-travelers-chair",
+      "name": "Wheelchair (Traveler's Chair)",
+      "price_cp": 500,
+      "bulk": "3",
+      "text": "A sleek wheelchair tailored for frequent adventuring, with mechanisms that let it traverse stairs and other obstacles common to adventuring sites.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 293,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2777",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.wheelchair-chair-storage",
+      "name": "Wheelchair (Chair Storage)",
+      "price_cp": 100,
+      "bulk": "—",
+      "text": "Stowage fitted to a wheelchair for carrying belongings.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 293,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2777",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.adventurers-pack",
+      "name": "Adventurer's Pack",
+      "price_cp": 150,
+      "bulk": "1",
+      "text": "Contains a backpack, bedroll, 10 pieces of chalk, flint and steel, 50 feet of rope, 2 weeks' rations, soap, 5 torches, and a waterskin.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 287,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2700",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.grappling-hook",
+      "name": "Grappling Hook",
+      "price_cp": 10,
+      "bulk": "L",
+      "text": "You can throw a grappling hook with a rope tied to it to make a climb easier.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2725",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "gear.healers-toolkit",
+      "name": "Healer's Toolkit",
+      "price_cp": 500,
+      "bulk": "1",
+      "text": "Bandages, herbs, and suturing tools. Required for Medicine checks to Administer First Aid, Treat Disease, Treat Poison, or Treat Wounds.",
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 288,
+        "url": "https://2e.aonprd.com/Equipment.aspx?ID=2727",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    }
   ],
   "kits": [
     {
@@ -36,13 +2878,48 @@
       "name": "Fighter Kit",
       "class": "class.fighter",
       "price_cp": 580,
-      "contents": ["armor.scale-mail", "weapon.dagger", "gear.adventurers-pack", "gear.grappling-hook"],
-      "options": [
-        { "id": "kit.fighter.greatsword", "name": "add a greatsword", "price_cp": 200, "items": ["weapon.greatsword"] },
-        { "id": "kit.fighter.longbow", "name": "add a longbow with 20 arrows", "price_cp": 620, "items": ["weapon.longbow", "weapon.arrows", "weapon.arrows"] },
-        { "id": "kit.fighter.sword-and-board", "name": "add a longsword and steel shield", "price_cp": 300, "items": ["weapon.longsword", "shield.steel"] }
+      "contents": [
+        "armor.scale-mail",
+        "weapon.dagger",
+        "gear.adventurers-pack",
+        "gear.grappling-hook"
       ],
-      "source": { "book": "Pathfinder Player Core", "page": 268, "url": "https://2e.aonprd.com/ClassKits.aspx?ID=20", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+      "options": [
+        {
+          "id": "kit.fighter.greatsword",
+          "name": "add a greatsword",
+          "price_cp": 200,
+          "items": [
+            "weapon.greatsword"
+          ]
+        },
+        {
+          "id": "kit.fighter.longbow",
+          "name": "add a longbow with 20 arrows",
+          "price_cp": 620,
+          "items": [
+            "weapon.longbow",
+            "weapon.arrows",
+            "weapon.arrows"
+          ]
+        },
+        {
+          "id": "kit.fighter.sword-and-board",
+          "name": "add a longsword and steel shield",
+          "price_cp": 300,
+          "items": [
+            "weapon.longsword",
+            "shield.steel"
+          ]
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 268,
+        "url": "https://2e.aonprd.com/ClassKits.aspx?ID=20",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
     }
   ]
 }

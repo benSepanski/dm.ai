@@ -171,7 +171,7 @@ fn no_reserved_proper_nouns_in_records() {
             let lower = text.to_lowercase();
             for term in &terms {
                 assert!(
-                    !lower.contains(term.as_str()),
+                    !contains_word(&lower, term),
                     "record '{id}' field '{path}' contains reserved noun \
                      '{term}': scrub it per the ORC AxE deletion pattern, or \
                      add a reasoned exception in rules-data/denylist.json"
@@ -179,6 +179,26 @@ fn no_reserved_proper_nouns_in_records() {
             }
         }
     }
+}
+
+/// Word-boundary containment: `term` matches only when not embedded inside
+/// a longer alphanumeric run ("torag" must not match "storage"). Both
+/// inputs are already lowercased.
+fn contains_word(haystack: &str, term: &str) -> bool {
+    let bytes = haystack.as_bytes();
+    let mut from = 0;
+    while let Some(pos) = haystack[from..].find(term) {
+        let start = from + pos;
+        let end = start + term.len();
+        let alnum = |b: u8| b.is_ascii_alphanumeric();
+        let before_ok = start == 0 || !alnum(bytes[start - 1]);
+        let after_ok = end == bytes.len() || !alnum(bytes[end]);
+        if before_ok && after_ok {
+            return true;
+        }
+        from = start + 1;
+    }
+    false
 }
 
 fn collect_strings(value: &serde_json::Value, path: &str, out: &mut Vec<(String, String)>) {
