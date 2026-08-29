@@ -55,6 +55,10 @@ path = "attestation.rs"
 name = "version_guard"
 path = "version_guard.rs"
 
+[[test]]
+name = "quick_build"
+path = "quick_build.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }

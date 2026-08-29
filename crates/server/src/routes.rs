@@ -2,6 +2,7 @@
 //! re-derives natively; responses are view types from `types`, never
 //! storage documents.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::extract::{Path as AxumPath, State};
@@ -9,15 +10,17 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use engine_core::{AppendOutcome, EngineError};
+use engine_core::{AppendOutcome, EngineError, SlotSuggestion};
 use ruleset_pf2e::Pf2eEngine;
 use tokio::sync::Mutex;
 use types::{
     ApiError, CharacterId, CharacterView, ChecklistEntry, ChecklistSeverity, ClearOutcome,
-    ClearRequest, ConfirmOutcome, ConfirmRequest, CreateCharacterRequest, DraftView,
-    FinalizeOutcome, FinalizeRequest, ReplayOutcome, RosterCharacterState, RosterEntry,
-    RosterProblem, RosterView, Selection, SlotId, StepId, StepRequest, VersionActionRequest,
-    VersionFlaggedError, VersionResolutionOutcome, VersionStatus,
+    ClearRequest, ConfirmOutcome, ConfirmRequest, CreateCharacterRequest, Decision, DecisionId,
+    DecisionInput, DecisionSource, DraftView, FillRemainingOutcome, FillRemainingRequest,
+    FinalizeOutcome, FinalizeRequest, QuickBuildRequest, QuickBuildResult, ReplayOutcome,
+    RosterCharacterState, RosterEntry, RosterProblem, RosterView, Selection, SlotId, StepId,
+    StepRequest, VersionActionRequest, VersionFlaggedError, VersionResolutionOutcome,
+    VersionStatus,
 };
 
 use crate::clock;
@@ -30,6 +33,9 @@ pub(crate) struct App {
     pub rules_version: String,
     pub known: KnownVersions,
     pub license_notice: String,
+    /// Per-class suggested builds (class record ID → slot → suggestion),
+    /// resolved from the class records' suggested_build blocks at startup.
+    pub suggested: Vec<(String, BTreeMap<SlotId, SlotSuggestion>)>,
 }
 
 pub(crate) type SharedApp = Arc<App>;
@@ -38,6 +44,8 @@ pub(crate) fn router(app: SharedApp) -> Router {
     Router::new()
         .route("/api/roster", get(roster))
         .route("/api/characters", post(create_character))
+        .route("/api/characters/quick-build", post(quick_build))
+        .route("/api/characters/{id}/fill-remaining", post(fill_remaining))
         .route(
             "/api/characters/{id}",
             get(get_character).delete(delete_character),
@@ -510,6 +518,236 @@ async fn finalize(
     store.save(&loaded)?;
     Ok(Json(FinalizeOutcome::Finalized {
         sheet: loaded.sheet.clone(),
+    }))
+}
+
+// ---- Quick-build routes (spec req 7) ----
+//
+// The planner runs server-side over the same engine (the WASM engine
+// previews, the server decides); each route is one engine transaction and
+// one temp-file → fsync → rename write. Both are wizard writes for every
+// guard, including the version flag.
+
+/// Character IDs minted by quick-build derive from the client's request ID,
+/// so the file's existence IS the durable idempotency marker: a re-tap
+/// after a crash between save and ack loads the same file, returns the
+/// saved result, and appends nothing.
+const QUICK_BUILD_ID_PREFIX: &str = "c-qb-";
+
+/// Request IDs become filename stems and decision-ID prefixes; keep them to
+/// a safe shape (client generates UUIDs).
+fn valid_request_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= 64
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+/// The suggested build that applies to this log: the chosen class's block
+/// when the log names a class, else the first class shipping one.
+fn suggestion_map<'a>(
+    app: &'a App,
+    log: &[Decision],
+) -> Option<&'a BTreeMap<SlotId, SlotSuggestion>> {
+    let chosen_class = log
+        .iter()
+        .rev()
+        .find(|d| d.slot.as_str() == ruleset_pf2e::CLASS_SLOT_ID)
+        .and_then(|d| match &d.selection {
+            Selection::Option(id) => Some(id.as_str().to_string()),
+            _ => None,
+        });
+    match chosen_class {
+        Some(class_id) => app
+            .suggested
+            .iter()
+            .find(|(id, _)| *id == class_id)
+            .map(|(_, map)| map),
+        None => app.suggested.first().map(|(_, map)| map),
+    }
+}
+
+/// Deterministic decision IDs for one expansion: `{request_id}.{slot}` —
+/// hand-inspectable, and a replayed request re-mints the same IDs so the
+/// engine's decision-ID idempotency also covers partial retries.
+fn suggestion_decision_id(request_id: &str, slot: &SlotId) -> DecisionId {
+    DecisionId::new(format!("{request_id}.{slot}"))
+}
+
+async fn quick_build(
+    State(app): State<SharedApp>,
+    Json(request): Json<QuickBuildRequest>,
+) -> Result<Json<QuickBuildResult>, Failure> {
+    if !valid_request_id(&request.request_id) {
+        return Err(Failure::Unprocessable(
+            "quick-build needs a request_id of 1-64 letters, digits, '-' or '_' \
+             (it makes the request safely retryable)"
+                .into(),
+        ));
+    }
+    let store = app.store.lock().await;
+    let id = CharacterId::new(format!("{QUICK_BUILD_ID_PREFIX}{}", request.request_id));
+    let suggest_owned;
+    // Replay: the file already exists — return the saved result, append
+    // nothing (crash-between-save-and-ack contract).
+    if let Ok(loaded) = store.load(&id) {
+        if loaded.state == DocState::Finalized {
+            return Err(Failure::Unprocessable(
+                "this quick-build request was already completed and finalized".into(),
+            ));
+        }
+        guard_wizard_write(&app, &loaded)?;
+        let Some(suggest) = suggestion_map(&app, &loaded.log) else {
+            return Err(Failure::Unprocessable(
+                "no shipped class carries a suggested build".into(),
+            ));
+        };
+        let unresolved = app
+            .engine
+            .unresolved_suggestions(
+                &loaded.log,
+                &|slot| suggest.get(slot).cloned(),
+                DecisionSource::Suggested,
+            )
+            .map_err(|e| Failure::Internal(e.to_string()))?;
+        return Ok(Json(QuickBuildResult {
+            draft: draft_view(&app, &loaded)?,
+            unresolved,
+        }));
+    }
+    // Fresh build: seed the optional name as a player decision (the planner
+    // never overwrites it), expand, and write exactly once.
+    let mut log = Vec::new();
+    if let Some(name) = request.name.as_ref().filter(|n| !n.trim().is_empty()) {
+        let input = DecisionInput {
+            id: DecisionId::new(format!("{}.initial-name", request.request_id)),
+            slot: SlotId::new("pf2e.details.name"),
+            selection: Selection::Text(name.clone()),
+            source: DecisionSource::Player,
+        };
+        if let Ok(AppendOutcome::Appended(new_log)) = app.engine.append(&log, input) {
+            log = new_log;
+        }
+    }
+    {
+        let Some(suggest) = suggestion_map(&app, &log) else {
+            return Err(Failure::Unprocessable(
+                "no shipped class carries a suggested build".into(),
+            ));
+        };
+        suggest_owned = suggest.clone();
+    }
+    let request_id = request.request_id.clone();
+    let plan = app
+        .engine
+        .expand_suggestions(
+            &log,
+            &|slot| suggest_owned.get(slot).cloned(),
+            &|slot| suggestion_decision_id(&request_id, slot),
+            DecisionSource::Suggested,
+        )
+        .map_err(|e| Failure::Internal(e.to_string()))?;
+    let sheet = app
+        .engine
+        .sheet(&plan.log)
+        .map_err(|e| Failure::Internal(e.to_string()))?;
+    let loaded = Loaded {
+        id,
+        state: DocState::Draft,
+        // Review state: resume lands on the final step, where the player
+        // confirms the name and finalizes.
+        current_step: app
+            .engine
+            .steps()
+            .last()
+            .map(|(id, _)| id.clone())
+            .unwrap_or_else(|| StepId::new("concept")),
+        draft_version: 1,
+        sheet,
+        log: plan.log,
+        rules_version: app.rules_version.clone(),
+        version_history: Vec::new(),
+        keep_old: None,
+    };
+    store.save(&loaded)?;
+    Ok(Json(QuickBuildResult {
+        draft: draft_view(&app, &loaded)?,
+        unresolved: plan.unresolved,
+    }))
+}
+
+async fn fill_remaining(
+    State(app): State<SharedApp>,
+    AxumPath(id): AxumPath<String>,
+    Json(request): Json<FillRemainingRequest>,
+) -> Result<Json<FillRemainingOutcome>, Failure> {
+    if !valid_request_id(&request.request_id) {
+        return Err(Failure::Unprocessable(
+            "fill-remaining needs a request_id of 1-64 letters, digits, '-' or '_' \
+             (it makes the request safely retryable)"
+                .into(),
+        ));
+    }
+    let store = app.store.lock().await;
+    let mut loaded = store.load(&CharacterId::new(id))?;
+    if loaded.state == DocState::Finalized {
+        return Err(Failure::Unprocessable(
+            "character is finalized — build decisions are locked".into(),
+        ));
+    }
+    guard_wizard_write(&app, &loaded)?;
+    let Some(suggest) = suggestion_map(&app, &loaded.log).cloned() else {
+        return Err(Failure::Unprocessable(
+            "the chosen class carries no suggested build".into(),
+        ));
+    };
+    let suggest_fn = |slot: &SlotId| suggest.get(slot).cloned();
+    // Idempotency first (like confirm): a decision minted by this request
+    // ID already in the log means the expansion committed — return the
+    // saved state, append nothing, even under a now-stale version.
+    let marker = format!("{}.", request.request_id);
+    if loaded
+        .log
+        .iter()
+        .any(|d| d.id.as_str().starts_with(&marker))
+    {
+        let unresolved = app
+            .engine
+            .unresolved_suggestions(&loaded.log, &suggest_fn, DecisionSource::Suggested)
+            .map_err(|e| Failure::Internal(e.to_string()))?;
+        return Ok(Json(FillRemainingOutcome::Filled {
+            draft: draft_view(&app, &loaded)?,
+            unresolved,
+        }));
+    }
+    if request.version != loaded.draft_version {
+        return Ok(Json(FillRemainingOutcome::Conflict {
+            current: draft_view(&app, &loaded)?,
+        }));
+    }
+    let request_id = request.request_id.clone();
+    let plan = app
+        .engine
+        .expand_suggestions(
+            &loaded.log,
+            &suggest_fn,
+            &|slot| suggestion_decision_id(&request_id, slot),
+            DecisionSource::Suggested,
+        )
+        .map_err(|e| Failure::Internal(e.to_string()))?;
+    if !plan.appended.is_empty() {
+        loaded.log = plan.log;
+        loaded.sheet = app
+            .engine
+            .sheet(&loaded.log)
+            .map_err(|e| Failure::Internal(e.to_string()))?;
+        loaded.draft_version += 1;
+        store.save(&loaded)?;
+    }
+    Ok(Json(FillRemainingOutcome::Filled {
+        draft: draft_view(&app, &loaded)?,
+        unresolved: plan.unresolved,
     }))
 }
 

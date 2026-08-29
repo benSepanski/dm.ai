@@ -144,3 +144,62 @@ pub enum FinalizeOutcome {
 pub struct ApiError {
     pub message: String,
 }
+
+// ---- Quick build (spec req 7) ----
+
+/// A required slot the suggestion planner could not fill, with the reason —
+/// the "cannot complete" half of a quick-build/fill response. The same
+/// slots also appear on the ordinary checklist.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct UnresolvedSuggestion {
+    pub slot: SlotId,
+    pub label: String,
+    pub reason: String,
+}
+
+/// One-tap quick build: create a draft and fill every required slot from
+/// the class's suggested build. `request_id` is client-generated and makes
+/// the request idempotent: a retry after a crash between save and ack
+/// returns the already-saved draft and appends nothing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct QuickBuildRequest {
+    pub request_id: String,
+    /// Optional working name; seeds the name slot as a player decision (the
+    /// planner never overwrites it).
+    pub name: Option<String>,
+}
+
+/// The quick-build response: a normal draft view (review state, NOT
+/// finalized) plus any slots the suggested build could not fill.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct QuickBuildResult {
+    pub draft: DraftView,
+    pub unresolved: Vec<UnresolvedSuggestion>,
+}
+
+/// Fill only the open required slots of an existing draft with suggestions.
+/// Carries the draft version like every wizard write; `request_id` makes the
+/// expansion idempotent under retry.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct FillRemainingRequest {
+    pub request_id: String,
+    pub version: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+#[serde(tag = "outcome", rename_all = "snake_case")]
+pub enum FillRemainingOutcome {
+    /// The legal prefix was appended and saved (possibly nothing, when
+    /// every slot was already confirmed); `unresolved` names what remains.
+    Filled {
+        draft: DraftView,
+        unresolved: Vec<UnresolvedSuggestion>,
+    },
+    /// The submitted version is stale — reload from `current`.
+    Conflict { current: DraftView },
+}

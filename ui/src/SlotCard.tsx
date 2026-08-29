@@ -53,6 +53,14 @@ export function SlotCard({
         <h3>
           {slot.label}
           {!slot.required && <span className="slot-optional"> (optional)</span>}
+          {confirmed?.source === 'suggested' && (
+            // Provenance drives the badge: a planner-filled decision says
+            // so until the player edits it (re-confirming records the
+            // player as the source and the badge flips off).
+            <span className="badge-suggested" title="Filled by dm.ai's suggested build — edit to make it yours">
+              suggested
+            </span>
+          )}
         </h3>
         {confirmed !== null && !editing && (
           <button

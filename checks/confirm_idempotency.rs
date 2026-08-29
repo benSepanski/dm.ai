@@ -69,6 +69,86 @@ fn replayed_decision_ids_append_nothing() {
     assert_eq!(log_len(&retry["draft"]), len_after, "nothing was appended");
 }
 
+/// A replayed quick-build request ID appends nothing: the same request
+/// returns the same saved draft — same character, same version, same log —
+/// and the roster never grows a second entry (the crash-between-save-and-ack
+/// retry contract).
+#[test]
+fn replayed_quick_build_request_ids_append_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let server = TestServer::spawn(dir.path());
+    let client = reqwest::blocking::Client::new();
+    let url = format!("{}/api/characters/quick-build", server.url);
+    let body = json!({ "request_id": "qb-idem-1", "name": "Retry Proof" });
+
+    let first: Value = client
+        .post(&url)
+        .json(&body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    let id = first["draft"]["id"].as_str().unwrap().to_string();
+    let version = first["draft"]["version"].as_u64().unwrap();
+    let len = log_len(&first["draft"]);
+    assert!(len > 1, "the quick build filled the draft");
+
+    let retry: Value = client
+        .post(&url)
+        .json(&body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(retry["draft"]["id"].as_str().unwrap(), id, "same character");
+    assert_eq!(
+        retry["draft"]["version"].as_u64().unwrap(),
+        version,
+        "a replay must not bump the draft version"
+    );
+    assert_eq!(log_len(&retry["draft"]), len, "nothing was appended");
+
+    let roster: Value = client
+        .get(format!("{}/api/roster", server.url))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(
+        roster["entries"].as_array().unwrap().len(),
+        1,
+        "a replayed quick build must not create a second character"
+    );
+
+    // A replayed fill-remaining request ID appends nothing either, even
+    // with the original (now potentially stale) version.
+    let fill_url = format!("{}/api/characters/{id}/fill-remaining", server.url);
+    let fill_body = json!({ "request_id": "fill-idem-1", "version": version });
+    let first_fill: Value = client
+        .post(&fill_url)
+        .json(&fill_body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(first_fill["outcome"], "filled");
+    let after_len = log_len(&first_fill["draft"]);
+    let after_version = first_fill["draft"]["version"].as_u64().unwrap();
+    let retry_fill: Value = client
+        .post(&fill_url)
+        .json(&fill_body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(retry_fill["outcome"], "filled");
+    assert_eq!(log_len(&retry_fill["draft"]), after_len);
+    assert_eq!(
+        retry_fill["draft"]["version"].as_u64().unwrap(),
+        after_version
+    );
+}
+
 #[test]
 fn stale_confirms_conflict_with_current_state() {
     let dir = tempfile::tempdir().unwrap();

@@ -54,7 +54,7 @@ commit this file with the work. States: [ ] open, [~] in progress, [x] done.
   values), keep-old routes; draft resolve → re-validate → cascade reopen;
   `verify` distinguishes older-known vs unknown; `checks/version_guard.rs`
   fixtures (all three cases); no-rewrite-on-load fixture with flag.
-- [~] **T8 — quick build.** `suggested_build` block on class record
+- [x] **T8 — quick build.** `suggested_build` block on class record
   (ordered candidate IDs; kit option + key attribute anchors); planner in
   engine-core (walk open slots in unlock order, resolve vs folded state,
   append); atomic server route (create-and-fill + fill-remaining),

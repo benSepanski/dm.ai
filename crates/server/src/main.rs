@@ -263,6 +263,9 @@ fn serve(
         notice.orc_notice, notice.attribution, notice.reserved
     );
     let rules_version = ruleset_pf2e::rules_version(&rules).to_string();
+    // Per-class suggested builds, resolved from the class records before the
+    // data moves into the engine.
+    let suggested = ruleset_pf2e::suggested_builds(&rules);
     let engine = ruleset_pf2e::engine(Arc::new(rules));
 
     // Bind: with the lock held, a taken port walks to the next free one
@@ -280,6 +283,7 @@ fn serve(
         rules_version,
         known,
         license_notice,
+        suggested,
     });
 
     println!("Serving at {url}");

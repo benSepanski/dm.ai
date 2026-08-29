@@ -1446,6 +1446,46 @@ pub const SLOT_EXTRA_ITEMS: &str = "pf2e.equipment.extra";
 pub const SLOT_NAME: &str = "pf2e.details.name";
 pub const SLOT_DESCRIPTION: &str = "pf2e.details.description";
 
+/// Every registered slot ID — the namespace suggested-build entries are
+/// integrity-checked against. Keep in lockstep with the SLOT_* constants
+/// above (the ruleset construction test asserts the engine registers
+/// exactly these).
+pub fn known_slot_ids() -> &'static [&'static str] {
+    &[
+        SLOT_CONCEPT,
+        SLOT_ANCESTRY,
+        SLOT_HERITAGE,
+        SLOT_ANCESTRY_FEAT,
+        SLOT_ANCESTRY_FREE_BOOSTS,
+        SLOT_ANCESTRY_LANGUAGES,
+        SLOT_BACKGROUND,
+        SLOT_BACKGROUND_SKILL,
+        SLOT_BACKGROUND_LORE,
+        SLOT_BACKGROUND_BOOST_CHOICE,
+        SLOT_BACKGROUND_BOOST_FREE,
+        SLOT_CLASS,
+        SLOT_KEY_ATTRIBUTE,
+        SLOT_CLASS_FEAT,
+        SLOT_CLASS_SKILL,
+        SLOT_TRAINED_SKILLS,
+        SLOT_HERITAGE_SKILLS,
+        SLOT_FEAT_SKILLS,
+        SLOT_REPLACEMENT_1,
+        SLOT_REPLACEMENT_2,
+        SLOT_REPLACEMENT_3,
+        SLOT_FEAT_LORE,
+        SLOT_PROFICIENCY_CHOICE,
+        SLOT_HERITAGE_GENERAL_FEAT,
+        SLOT_FEAT_GENERAL_FEAT,
+        SLOT_NATURAL_AMBITION,
+        SLOT_FREE_BOOSTS,
+        SLOT_KIT,
+        SLOT_EXTRA_ITEMS,
+        SLOT_NAME,
+        SLOT_DESCRIPTION,
+    ]
+}
+
 pub fn capitalize(s: &str) -> String {
     let mut chars = s.chars();
     match chars.next() {

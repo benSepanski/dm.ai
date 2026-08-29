@@ -706,3 +706,113 @@ mod status_and_amend {
         }
     }
 }
+
+// ---- The suggestion planner (quick build) ----
+
+fn toy_suggestions(slot: &SlotId) -> Option<crate::SlotSuggestion> {
+    use crate::SlotSuggestion::{Candidates, Text};
+    match slot.as_str() {
+        "primary" => Some(Candidates(vec![OptionId::new("a")])),
+        "secondary" => Some(Candidates(vec![OptionId::new("a1"), OptionId::new("a2")])),
+        // Longer than needed: Multi{2} takes the first legal 2.
+        "picks" => Some(Candidates(vec![
+            OptionId::new("x"),
+            OptionId::new("y"),
+            OptionId::new("z"),
+        ])),
+        "name" => Some(Text("Toy".into())),
+        _ => None,
+    }
+}
+
+fn mint(slot: &SlotId) -> DecisionId {
+    DecisionId::new(format!("sug.{slot}"))
+}
+
+#[test]
+fn planner_fills_open_required_slots_in_dependency_order() {
+    let engine = toy_engine();
+    let plan = engine
+        .expand_suggestions(&[], &toy_suggestions, &mint, DecisionSource::Suggested)
+        .unwrap();
+    assert!(plan.unresolved.is_empty(), "{:?}", plan.unresolved);
+    let projection = engine.project(&plan.log).unwrap();
+    assert!(projection.can_finalize, "{:?}", projection.checklist);
+    assert!(plan
+        .log
+        .iter()
+        .all(|d| d.source == DecisionSource::Suggested));
+    // The dependent slot was filled after its dependency unlocked it.
+    let order_of = |slot: &str| {
+        plan.log
+            .iter()
+            .position(|d| d.slot.as_str() == slot)
+            .unwrap()
+    };
+    assert!(order_of("primary") < order_of("secondary"));
+    // Multi picked the first legal N in candidate order.
+    let picks = plan
+        .log
+        .iter()
+        .find(|d| d.slot.as_str() == "picks")
+        .unwrap();
+    assert_eq!(
+        picks.selection,
+        Selection::Options(vec![OptionId::new("x"), OptionId::new("y")])
+    );
+    // Deterministic: a second run is identical.
+    let again = engine
+        .expand_suggestions(&[], &toy_suggestions, &mint, DecisionSource::Suggested)
+        .unwrap();
+    assert_eq!(plan.log, again.log);
+}
+
+#[test]
+fn planner_never_overwrites_and_keeps_the_legal_prefix() {
+    let engine = toy_engine();
+    // The player chose primary=b; the suggested secondary (a1/a2) is not in
+    // b's catalog, so it stays open — while everything else still fills.
+    let log = append(&engine, &[], one("p1", "primary", "b"));
+    let plan = engine
+        .expand_suggestions(&log, &toy_suggestions, &mint, DecisionSource::Suggested)
+        .unwrap();
+    // The confirmed decision is untouched, in place.
+    assert_eq!(plan.log[0], log[0]);
+    assert!(
+        plan.log
+            .iter()
+            .filter(|d| d.slot.as_str() == "primary")
+            .count()
+            == 1
+    );
+    // The legal prefix landed (picks + name), never rolled back.
+    assert!(plan.log.iter().any(|d| d.slot.as_str() == "picks"));
+    assert!(plan.log.iter().any(|d| d.slot.as_str() == "name"));
+    // The blocked slot is reported with a reason.
+    assert_eq!(plan.unresolved.len(), 1);
+    assert_eq!(plan.unresolved[0].slot.as_str(), "secondary");
+    assert!(plan.unresolved[0]
+        .reason
+        .contains("no suggested option is currently legal"));
+}
+
+#[test]
+fn planner_reports_slots_without_suggestions() {
+    let engine = toy_engine();
+    let no_secondary = |slot: &SlotId| {
+        if slot.as_str() == "secondary" {
+            None
+        } else {
+            toy_suggestions(slot)
+        }
+    };
+    let plan = engine
+        .expand_suggestions(&[], &no_secondary, &mint, DecisionSource::Suggested)
+        .unwrap();
+    assert_eq!(plan.unresolved.len(), 1);
+    assert_eq!(plan.unresolved[0].slot.as_str(), "secondary");
+    assert!(plan.unresolved[0].reason.contains("no entry"));
+    // Everything else still filled.
+    assert!(plan.log.iter().any(|d| d.slot.as_str() == "primary"));
+    assert!(plan.log.iter().any(|d| d.slot.as_str() == "name"));
+}

@@ -84,6 +84,17 @@ export interface MeterView {
 }
 
 /**
+ * A required slot the suggestion planner could not fill, with the reason —
+ * the "cannot complete" half of a quick-build/fill response. The same
+ * slots also appear on the ordinary checklist.
+ */
+export interface UnresolvedSuggestion {
+    slot: SlotId;
+    label: string;
+    reason: string;
+}
+
+/**
  * A ruleset-defined choice slot, e.g. `pf2e.ancestry` or `pf2e.boosts.free`.
  */
 export type SlotId = string;
@@ -123,6 +134,16 @@ export interface ProjectionView {
 }
 
 /**
+ * Fill only the open required slots of an existing draft with suggestions.
+ * Carries the draft version like every wizard write; `request_id` makes the
+ * expansion idempotent under retry.
+ */
+export interface FillRemainingRequest {
+    request_id: string;
+    version: number;
+}
+
+/**
  * How a slot collects its selection. Presentation-mechanical only — the
  * meaning of the options is the ruleset's business.
  */
@@ -142,6 +163,21 @@ export interface SheetDiff {
      * The value current data derives ("(absent)" when it no longer exists).
      */
     new: string;
+}
+
+/**
+ * One-tap quick build: create a draft and fill every required slot from
+ * the class's suggested build. `request_id` is client-generated and makes
+ * the request idempotent: a retry after a crash between save and ack
+ * returns the already-saved draft and appends nothing.
+ */
+export interface QuickBuildRequest {
+    request_id: string;
+    /**
+     * Optional working name; seeds the name slot as a player decision (the
+     * planner never overwrites it).
+     */
+    name: string | undefined;
 }
 
 /**
@@ -184,6 +220,10 @@ export interface WireTypeExports {
     version_action_request: VersionActionRequest;
     version_resolution_outcome: VersionResolutionOutcome;
     version_flagged_error: VersionFlaggedError;
+    quick_build_request: QuickBuildRequest;
+    quick_build_result: QuickBuildResult;
+    fill_remaining_request: FillRemainingRequest;
+    fill_remaining_outcome: FillRemainingOutcome;
 }
 
 /**
@@ -191,6 +231,15 @@ export interface WireTypeExports {
  * infers state from weaker signals (decision presence, entry absence).
  */
 export type SlotStatus = "locked" | "empty" | "partial" | "complete" | "illegal";
+
+/**
+ * The quick-build response: a normal draft view (review state, NOT
+ * finalized) plus any slots the suggested build could not fill.
+ */
+export interface QuickBuildResult {
+    draft: DraftView;
+    unresolved: UnresolvedSuggestion[];
+}
 
 /**
  * The result of replaying an older-known character's log against current
@@ -436,6 +485,8 @@ export type ClearOutcome = { outcome: "cleared"; draft: DraftView; preview: Clea
 export type EngineRequest = { request: "project"; log: Decision[] } | { request: "preview"; log: Decision[]; candidate: DecisionInput } | { request: "clear_preview"; log: Decision[]; slot: SlotId };
 
 export type EngineResponse = { response: "projection"; projection: ProjectionView } | { response: "clear_preview"; preview: ClearPreview } | { response: "error"; message: string };
+
+export type FillRemainingOutcome = { outcome: "filled"; draft: DraftView; unresolved: UnresolvedSuggestion[] } | { outcome: "conflict"; current: DraftView };
 
 export type FinalizeOutcome = { outcome: "finalized"; sheet: SheetView } | { outcome: "blocked"; reasons: ChecklistEntry[] } | { outcome: "conflict"; current: DraftView };
 

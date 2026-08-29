@@ -53,6 +53,100 @@ enum InFlight {
     Clear,
 }
 
+/// A quick-build cycle under SIGKILL: the expansion is one engine
+/// transaction and one durable write, so after a kill the character file
+/// contains either none or ALL of what the planner committed — never a
+/// torn half-expansion. A re-tap with the same request ID then returns the
+/// saved (or freshly rebuilt) result and appends nothing beyond it.
+#[test]
+fn quick_build_under_sigkill_is_none_or_all() {
+    let dir = tempfile::tempdir().unwrap();
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+        .unwrap();
+
+    for (cycle, delay_ms) in [0u64, 2, 5, 12].into_iter().enumerate() {
+        let request_id = format!("qb-crash-{cycle}");
+        let mut server = TestServer::spawn(dir.path());
+        let fire = std::thread::spawn({
+            let client = client.clone();
+            let url = format!("{}/api/characters/quick-build", server.url);
+            let request_id = request_id.clone();
+            move || {
+                let _ = client
+                    .post(&url)
+                    .json(&json!({ "request_id": request_id, "name": null }))
+                    .send();
+            }
+        });
+        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        server.kill(); // SIGKILL, possibly mid-expansion or mid-write
+        fire.join().unwrap();
+
+        // Restart: no torn files; if the quick-build character exists it
+        // holds the complete expansion (the fighter build fully completes,
+        // so "all of what the planner committed" means review-ready).
+        let server = TestServer::spawn(dir.path());
+        let roster: Value = client
+            .get(format!("{}/api/roster", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert!(
+            roster["problems"].as_array().unwrap().is_empty(),
+            "no torn or corrupt files after a quick-build kill: {:?}",
+            roster["problems"]
+        );
+        let id = format!("c-qb-{request_id}");
+        let committed = roster["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["id"] == id.as_str());
+        if committed {
+            let view: Value = client
+                .get(format!("{}/api/characters/{id}", server.url))
+                .send()
+                .unwrap()
+                .json()
+                .unwrap();
+            assert_eq!(view["state"], "draft");
+            assert!(
+                view["projection"]["can_finalize"].as_bool().unwrap(),
+                "a committed quick build is all-or-nothing: the file must \
+                 hold the complete expansion"
+            );
+        }
+
+        // Re-tap after the crash: same request ID, saved (or rebuilt)
+        // result, and a second tap appends nothing on top of it.
+        let rebuilt: Value = client
+            .post(format!("{}/api/characters/quick-build", server.url))
+            .json(&json!({ "request_id": request_id, "name": null }))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(rebuilt["draft"]["id"].as_str().unwrap(), id);
+        assert!(rebuilt["draft"]["projection"]["can_finalize"]
+            .as_bool()
+            .unwrap());
+        let version = rebuilt["draft"]["version"].as_u64().unwrap();
+        let ids = decision_ids(&rebuilt["draft"]);
+        let again: Value = client
+            .post(format!("{}/api/characters/quick-build", server.url))
+            .json(&json!({ "request_id": request_id, "name": null }))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(again["draft"]["version"].as_u64().unwrap(), version);
+        assert_eq!(decision_ids(&again["draft"]), ids, "re-tap appends nothing");
+    }
+}
+
 #[test]
 fn kill_dash_nine_loses_no_acknowledged_confirm() {
     let dir = tempfile::tempdir().unwrap();

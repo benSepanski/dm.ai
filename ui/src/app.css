@@ -208,6 +208,30 @@ textarea {
   padding: 0.6rem;
 }
 
+/* ---- Quick build (suggested-build planner) ---- */
+.fill-remaining {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.45rem;
+}
+.quick-build {
+  white-space: nowrap;
+}
+.badge-suggested {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--good);
+  border: 1px solid var(--good);
+  border-radius: 4px;
+  padding: 0.05rem 0.4rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
 .wizard-main h2 {
   margin-top: 0;
   font-variant: small-caps;

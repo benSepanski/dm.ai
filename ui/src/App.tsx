@@ -8,6 +8,7 @@ import {
   deleteCharacter,
   fetchCharacter,
   fetchRoster,
+  quickBuild,
   resolveVersion,
   type VersionAction,
 } from './api';
@@ -105,6 +106,13 @@ export function App() {
         roster={roster}
         onCreate={(name) => {
           void createCharacter(name).then((created) => goto(`#/c/${created.id}`));
+        }}
+        onQuickBuild={(name) => {
+          void quickBuild(name)
+            .then((result) => goto(`#/c/${result.draft.id}`))
+            .catch((e: unknown) => {
+              setError(String(e instanceof Error ? e.message : e));
+            });
         }}
         onOpen={(id) => goto(`#/c/${id}`)}
         onDelete={(id) => {

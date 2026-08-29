@@ -238,7 +238,45 @@ pub struct ClassRecord {
     pub class_skill_choice: Vec<String>,
     pub additional_skills_base: u32,
     pub features: Vec<SpecialAbility>,
+    /// The app-authored suggested build the quick-build planner interprets
+    /// directly (no per-slot suggest hook). Integrity requires every
+    /// shipped class to carry one. See [`SuggestedBuild`].
+    #[serde(default)]
+    pub suggested_build: Option<SuggestedBuild>,
     pub source: SourceRef,
+}
+
+/// The suggested-build block: dm.ai-curated choices (spec req 7 **[call]**
+/// — PF2e publishes only the class kit and key attribute as quick-build
+/// anchors, so everything else here is app-authored content, never
+/// presented as Paizo-published). One entry per slot the build fills.
+///
+/// Design rule for authoring: prefer options that open no chooser chains;
+/// when a chosen option does open a sub-slot (Skilled Human's skill
+/// chooser), the block MUST carry a candidates entry for that sub-slot so
+/// the expansion stays deterministic and complete. A slot the block cannot
+/// parameterize simply stays open on the checklist.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SuggestedBuild {
+    /// One-line intent note for hand-inspection; not rendered.
+    #[serde(default)]
+    pub description: String,
+    pub entries: Vec<SuggestedBuildEntry>,
+}
+
+/// One slot's suggestion: ordered candidate option IDs (the planner takes
+/// the first legal one, or the first legal N for a state-dependent
+/// multi-pick — author the list longer than needed), or free text for a
+/// text slot. Exactly one of the two forms (integrity-checked); an empty
+/// candidates list is legal (a multi slot whose count may be zero, or a
+/// deliberately-empty list slot).
+#[derive(Debug, Clone, Deserialize)]
+pub struct SuggestedBuildEntry {
+    pub slot: String,
+    #[serde(default)]
+    pub candidates: Vec<String>,
+    #[serde(default)]
+    pub text: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -682,6 +720,7 @@ impl RulesData {
                     )));
                 }
             }
+            self.check_suggested_build(c)?;
         }
         for f in &self.class_feats {
             if !self.classes.iter().any(|c| c.id == f.class) {
@@ -767,6 +806,118 @@ impl RulesData {
             }
         }
         Ok(())
+    }
+
+    /// Suggested-build integrity: every class ships a block, every entry
+    /// names a known slot, every candidate ID resolves (records, kit
+    /// options, attribute/proficiency/language option IDs), and each entry
+    /// is either candidates or text, never both. A dangling reference is a
+    /// build-time refusal — runtime never discovers it.
+    fn check_suggested_build(&self, c: &ClassRecord) -> Result<(), DataError> {
+        let Some(block) = &c.suggested_build else {
+            return Err(DataError::Integrity(format!(
+                "class '{}' has no suggested_build block — every shipped class \
+                 must carry one (quick build, spec req 7)",
+                c.id
+            )));
+        };
+        if block.entries.is_empty() {
+            return Err(DataError::Integrity(format!(
+                "class '{}' suggested_build has no entries",
+                c.id
+            )));
+        }
+        let known_slots = crate::mechanics::known_slot_ids();
+        let mut seen_slots: BTreeSet<&str> = BTreeSet::new();
+        for entry in &block.entries {
+            if !known_slots.contains(&entry.slot.as_str()) {
+                return Err(DataError::Integrity(format!(
+                    "class '{}' suggested_build references unknown slot '{}'",
+                    c.id, entry.slot
+                )));
+            }
+            if !seen_slots.insert(&entry.slot) {
+                return Err(DataError::Integrity(format!(
+                    "class '{}' suggested_build has two entries for slot '{}'",
+                    c.id, entry.slot
+                )));
+            }
+            match &entry.text {
+                Some(text) => {
+                    if !entry.candidates.is_empty() {
+                        return Err(DataError::Integrity(format!(
+                            "class '{}' suggested_build entry for '{}' carries \
+                             both text and candidates",
+                            c.id, entry.slot
+                        )));
+                    }
+                    if text.trim().is_empty() {
+                        return Err(DataError::Integrity(format!(
+                            "class '{}' suggested_build entry for '{}' has empty text",
+                            c.id, entry.slot
+                        )));
+                    }
+                }
+                None => {
+                    for candidate in &entry.candidates {
+                        if !self.suggested_candidate_resolves(candidate) {
+                            return Err(DataError::Integrity(format!(
+                                "class '{}' suggested_build candidate '{candidate}' \
+                                 (slot '{}') does not resolve to any shipped \
+                                 record or option",
+                                c.id, entry.slot
+                            )));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether a suggested-build candidate ID resolves in shipped content:
+    /// a record ID, a kit-option ID, the no-kit sentinel, an attribute
+    /// option (`attr.*`), a proficiency-target option (`prof.*`), or a
+    /// language option (`lang.*`, name-derived from an ancestry's lists).
+    fn suggested_candidate_resolves(&self, candidate: &str) -> bool {
+        if candidate.starts_with("attr.") {
+            return crate::mechanics::ALL_ATTRIBUTES
+                .into_iter()
+                .any(|a| a.option_id().as_str() == candidate);
+        }
+        if let Some(target) = candidate.strip_prefix("prof.") {
+            return matches!(target, "fortitude" | "reflex" | "will" | "perception");
+        }
+        if candidate.starts_with("lang.") {
+            return self.ancestries.iter().any(|a| {
+                a.languages
+                    .iter()
+                    .chain(a.additional_languages.iter())
+                    .any(|lang| crate::mechanics::lang_option_id(lang) == candidate)
+            });
+        }
+        if candidate == "equipment.no-kit" {
+            return true;
+        }
+        self.ancestries.iter().any(|r| r.id == candidate)
+            || self.heritages.iter().any(|r| r.id == candidate)
+            || self.ancestry_feats.iter().any(|r| r.id == candidate)
+            || self.backgrounds.iter().any(|r| r.id == candidate)
+            || self.classes.iter().any(|r| r.id == candidate)
+            || self.class_feats.iter().any(|r| r.id == candidate)
+            || self.general_feats.iter().any(|r| r.id == candidate)
+            || self.skills.iter().any(|r| r.id == candidate)
+            || self.equipment.weapons.iter().any(|r| r.id == candidate)
+            || self.equipment.armor.iter().any(|r| r.id == candidate)
+            || self.equipment.shields.iter().any(|r| r.id == candidate)
+            || self.equipment.gear.iter().any(|r| r.id == candidate)
+            || self.equipment.kits.iter().any(|r| r.id == candidate)
+            || self
+                .equipment
+                .kits
+                .iter()
+                .flat_map(|k| k.options.iter())
+                .any(|o| o.id == candidate)
     }
 
     pub fn ancestry(&self, id: &str) -> Option<&AncestryRecord> {

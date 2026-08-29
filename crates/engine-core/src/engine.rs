@@ -5,9 +5,10 @@
 use std::collections::BTreeSet;
 
 use types::{
-    ChecklistEntry, ChecklistSeverity, ClearPreview, ClearedDecision, Decision, DecisionInput,
-    MeterState, MeterView, ProjectionView, Selection, SheetView, SlotId, SlotStatus, SlotView,
-    SlotViewKind, StepId, StepStatus, StepView,
+    ChecklistEntry, ChecklistSeverity, ClearPreview, ClearedDecision, Decision, DecisionId,
+    DecisionInput, DecisionSource, MeterState, MeterView, OptionId, ProjectionView, Selection,
+    SheetView, SlotId, SlotStatus, SlotView, SlotViewKind, StepId, StepStatus, StepView,
+    UnresolvedSuggestion,
 };
 
 use crate::{Availability, SlotRegistration};
@@ -44,6 +45,30 @@ pub enum AppendOutcome {
     /// The decision ID was already present — the log is unchanged and this
     /// is success (an idempotent retry), not an error.
     AlreadyPresent,
+}
+
+/// One slot's suggested content, supplied by the caller (a ruleset reads it
+/// from its content records; engine-core sees only option IDs and text —
+/// no game vocabulary).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SlotSuggestion {
+    /// Ordered candidates: the planner takes the first legal one for a
+    /// single-pick slot, or the first legal `count` for a multi-pick slot
+    /// (`count` is state-dependent, read from the slot's kind at plan time).
+    Candidates(Vec<OptionId>),
+    /// Free text for a text slot.
+    Text(String),
+}
+
+/// Result of expanding suggestions over a draft log: the extended log (the
+/// legal prefix — an inapplicable suggestion is skipped and reported, never
+/// rolled back), what was appended, and which required slots remain open
+/// with the reason each one could not be filled.
+#[derive(Debug, Clone)]
+pub struct SuggestionPlan {
+    pub log: Vec<Decision>,
+    pub appended: Vec<Decision>,
+    pub unresolved: Vec<UnresolvedSuggestion>,
 }
 
 impl<S> Engine<S> {
@@ -393,6 +418,181 @@ impl<S> Engine<S> {
         // The surviving log must still fold (clearing never corrupts).
         self.fold(&new_log)?;
         Ok(new_log)
+    }
+
+    // ---- The suggestion planner (quick build / fill-remaining) ----
+
+    /// Expand suggestions over a draft log: walk the open required slots in
+    /// registration (unlock/dependency) order against the folded state,
+    /// resolve each slot's suggestion, append through the normal validated
+    /// `append` path with the given provenance `source`, refold, and repeat
+    /// until no open required slot has an applicable suggestion. Never
+    /// overwrites an existing decision; deterministic (registration order ×
+    /// candidate order, no randomness). A suggestion that cannot apply is
+    /// skipped and reported in `unresolved` — the legal prefix is kept,
+    /// never rolled back.
+    pub fn expand_suggestions(
+        &self,
+        log: &[Decision],
+        suggest: &dyn Fn(&SlotId) -> Option<SlotSuggestion>,
+        mint_id: &dyn Fn(&SlotId) -> DecisionId,
+        source: DecisionSource,
+    ) -> Result<SuggestionPlan, EngineError> {
+        let mut log = log.to_vec();
+        let mut appended = Vec::new();
+        loop {
+            let state = self.fold(&log)?;
+            let mut progressed = false;
+            for reg in &self.slots {
+                if !reg.required || log.iter().any(|d| d.slot == reg.id) {
+                    continue;
+                }
+                if (reg.unlock)(&state) != Availability::Open {
+                    continue;
+                }
+                let Some(suggestion) = suggest(&reg.id) else {
+                    continue;
+                };
+                let Ok(selection) = self.suggested_selection(reg, &state, &suggestion) else {
+                    continue;
+                };
+                let input = DecisionInput {
+                    id: mint_id(&reg.id),
+                    slot: reg.id.clone(),
+                    selection,
+                    source,
+                };
+                if let Ok(AppendOutcome::Appended(new_log)) = self.append(&log, input) {
+                    appended.push(
+                        new_log
+                            .last()
+                            .cloned()
+                            .expect("append grew the log by one decision"),
+                    );
+                    log = new_log;
+                    progressed = true;
+                    // Refold before the next slot: counts, catalogs, and
+                    // unlocks may all have changed under this decision.
+                    break;
+                }
+            }
+            if !progressed {
+                break;
+            }
+        }
+        let unresolved = self.unresolved_suggestions(&log, suggest, source)?;
+        Ok(SuggestionPlan {
+            log,
+            appended,
+            unresolved,
+        })
+    }
+
+    /// The open required slots of `log` that the suggestions do not fill,
+    /// each with the reason (no entry, no legal candidate, or the engine's
+    /// structural refusal). After `expand_suggestions` this is exactly the
+    /// cannot-complete remainder; standalone (the idempotent-replay path) a
+    /// fillable slot reports that a fresh fill would apply it.
+    pub fn unresolved_suggestions(
+        &self,
+        log: &[Decision],
+        suggest: &dyn Fn(&SlotId) -> Option<SlotSuggestion>,
+        source: DecisionSource,
+    ) -> Result<Vec<UnresolvedSuggestion>, EngineError> {
+        let state = self.fold(log)?;
+        let mut out = Vec::new();
+        for reg in &self.slots {
+            if !reg.required || log.iter().any(|d| d.slot == reg.id) {
+                continue;
+            }
+            if (reg.unlock)(&state) != Availability::Open {
+                continue;
+            }
+            let reason = match suggest(&reg.id) {
+                None => "the suggested build has no entry for this slot".to_string(),
+                Some(suggestion) => match self.suggested_selection(reg, &state, &suggestion) {
+                    Err(reason) => reason,
+                    Ok(selection) => {
+                        // The selection resolves — probe the append (dry, on
+                        // a throwaway ID) so the reason is the engine's own
+                        // refusal, or an honest "not applied by this run".
+                        let probe = DecisionInput {
+                            id: DecisionId::new(format!("__suggestion-probe.{}", reg.id)),
+                            slot: reg.id.clone(),
+                            selection,
+                            source,
+                        };
+                        match self.append(log, probe) {
+                            Err(e) => e.to_string(),
+                            Ok(_) => "a legal suggestion exists for this slot — \
+                                      fill remaining again to apply it"
+                                .to_string(),
+                        }
+                    }
+                },
+            };
+            out.push(UnresolvedSuggestion {
+                slot: reg.id.clone(),
+                label: reg.label.clone(),
+                reason,
+            });
+        }
+        Ok(out)
+    }
+
+    /// Resolve one slot's suggestion into a concrete selection against the
+    /// folded state, or say why none applies. Candidates are filtered to
+    /// currently-available options, deduplicated, in the authored order.
+    fn suggested_selection(
+        &self,
+        reg: &SlotRegistration<S>,
+        state: &S,
+        suggestion: &SlotSuggestion,
+    ) -> Result<Selection, String> {
+        let kind = (reg.kind)(state);
+        match (&kind, suggestion) {
+            (SlotViewKind::Text { .. }, SlotSuggestion::Text(t)) => Ok(Selection::Text(t.clone())),
+            (SlotViewKind::Text { .. }, SlotSuggestion::Candidates(_)) => {
+                Err("the suggestion lists options but this slot takes text".to_string())
+            }
+            (_, SlotSuggestion::Text(_)) => {
+                Err("the suggestion is text but this slot takes options".to_string())
+            }
+            (_, SlotSuggestion::Candidates(candidates)) => {
+                let options = (reg.options)(state);
+                let mut legal: Vec<OptionId> = Vec::new();
+                for candidate in candidates {
+                    if legal.contains(candidate) {
+                        continue;
+                    }
+                    if options.iter().any(|o| o.available && o.id == *candidate) {
+                        legal.push(candidate.clone());
+                    }
+                }
+                match kind {
+                    SlotViewKind::Single => legal
+                        .first()
+                        .cloned()
+                        .map(Selection::Option)
+                        .ok_or_else(|| {
+                            "no suggested option is currently legal for this slot".to_string()
+                        }),
+                    SlotViewKind::Multi { count } => {
+                        let take: Vec<OptionId> = legal.into_iter().take(count as usize).collect();
+                        if take.len() < count as usize {
+                            Err(format!(
+                                "only {} of the {count} needed suggestion(s) are currently legal",
+                                take.len()
+                            ))
+                        } else {
+                            Ok(Selection::Options(take))
+                        }
+                    }
+                    SlotViewKind::List => Ok(Selection::Options(legal)),
+                    SlotViewKind::Text { .. } => unreachable!("matched above"),
+                }
+            }
+        }
     }
 
     /// The slot plus everything reachable through `dependents` edges.

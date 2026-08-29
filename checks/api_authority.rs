@@ -119,6 +119,151 @@ fn illegal_confirms_are_rejected_and_append_nothing() {
     assert_eq!(character["version"].as_u64().unwrap(), version);
 }
 
+/// Quick-build server authority: raw requests the planner cannot honor are
+/// rejected and append nothing, and both quick-build routes are wizard
+/// writes under the version guard.
+#[test]
+fn raw_quick_build_requests_are_validated_and_append_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let server = TestServer::spawn(dir.path());
+    let client = reqwest::blocking::Client::new();
+
+    // 1. A malformed request ID (path-traversal shaped) is refused outright
+    // and creates no file.
+    let response = client
+        .post(format!("{}/api/characters/quick-build", server.url))
+        .json(&json!({ "request_id": "../evil", "name": null }))
+        .send()
+        .unwrap();
+    assert_eq!(response.status().as_u16(), 422);
+    let response = client
+        .post(format!("{}/api/characters/quick-build", server.url))
+        .json(&json!({ "request_id": "", "name": null }))
+        .send()
+        .unwrap();
+    assert_eq!(response.status().as_u16(), 422);
+    let roster: Value = client
+        .get(format!("{}/api/roster", server.url))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert!(
+        roster["entries"].as_array().unwrap().is_empty(),
+        "a rejected quick-build must append nothing"
+    );
+
+    // 2. A legitimate quick build lands review-ready, NOT finalized; the
+    // server computed the expansion natively (nothing illegal persisted).
+    let built: Value = client
+        .post(format!("{}/api/characters/quick-build", server.url))
+        .json(&json!({ "request_id": "auth-qb-1", "name": null }))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    let id = built["draft"]["id"].as_str().unwrap().to_string();
+    let version = built["draft"]["version"].as_u64().unwrap();
+    assert!(built["draft"]["projection"]["can_finalize"]
+        .as_bool()
+        .unwrap());
+    let view: Value = client
+        .get(format!("{}/api/characters/{id}", server.url))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(
+        view["state"], "draft",
+        "quick build never finalizes on its own"
+    );
+
+    // 3. A malformed fill request is refused; fill on a finalized character
+    // is refused; neither writes a byte.
+    let response = client
+        .post(format!("{}/api/characters/{id}/fill-remaining", server.url))
+        .json(&json!({ "request_id": "bad id!", "version": version }))
+        .send()
+        .unwrap();
+    assert_eq!(response.status().as_u16(), 422);
+    let finalized: Value = client
+        .post(format!("{}/api/characters/{id}/finalize", server.url))
+        .json(&json!({ "version": version }))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(finalized["outcome"], "finalized", "{finalized}");
+    let before = std::fs::read(dir.path().join(format!("characters/{id}.json"))).unwrap();
+    let response = client
+        .post(format!("{}/api/characters/{id}/fill-remaining", server.url))
+        .json(&json!({ "request_id": "auth-fill-1", "version": version + 1 }))
+        .send()
+        .unwrap();
+    assert_eq!(response.status().as_u16(), 422);
+    let after = std::fs::read(dir.path().join(format!("characters/{id}.json"))).unwrap();
+    assert_eq!(before, after, "a refused fill must append nothing");
+}
+
+/// Quick-build routes are wizard writes for the version guard: a draft on
+/// an older known rules-data version rejects fill-remaining with the flag
+/// (409) and writes nothing — the --extra-known-versions fixture pattern
+/// from checks/version_guard.rs.
+#[test]
+fn fill_remaining_is_rejected_on_a_version_flagged_draft() {
+    const TEST_VERSION: &str = "pf2e-pc.0.0.1-test";
+    let dir = tempfile::tempdir().unwrap();
+    let client = reqwest::blocking::Client::new();
+
+    // Build a draft against current data, then pin its file to a fabricated
+    // prior version.
+    let id;
+    {
+        let server = TestServer::spawn(dir.path());
+        let draft: Value = client
+            .post(format!("{}/api/characters", server.url))
+            .json(&json!({ "name": "Flagged" }))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        id = draft["id"].as_str().unwrap().to_string();
+    }
+    let path = dir.path().join(format!("characters/{id}.json"));
+    let mut doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    doc["rules_version"] = Value::from(TEST_VERSION);
+    std::fs::write(&path, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+    let extra = dir.path().join("extra-known-versions.json");
+    std::fs::write(
+        &extra,
+        json!({ "versions": { TEST_VERSION: [] } }).to_string(),
+    )
+    .unwrap();
+
+    let server = TestServer::spawn_with_args(
+        dir.path(),
+        &["--extra-known-versions", extra.to_str().unwrap()],
+    );
+    let before = std::fs::read(&path).unwrap();
+    let response = client
+        .post(format!("{}/api/characters/{id}/fill-remaining", server.url))
+        .json(&json!({ "request_id": "flagged-fill-1", "version": 1 }))
+        .send()
+        .unwrap();
+    assert_eq!(
+        response.status().as_u16(),
+        409,
+        "fill-remaining is a wizard write under the version guard"
+    );
+    let body: Value = response.json().unwrap();
+    assert_eq!(body["status"]["status"], "older_known");
+    assert_eq!(
+        before,
+        std::fs::read(&path).unwrap(),
+        "a rejected wizard write must append nothing"
+    );
+}
+
 #[test]
 fn finalize_is_blocked_while_the_checklist_is_nonempty() {
     let dir = tempfile::tempdir().unwrap();

@@ -6,12 +6,15 @@ import type {
   ConfirmOutcome,
   DecisionInput,
   DraftView,
+  FillRemainingOutcome,
   FinalizeOutcome,
+  QuickBuildResult,
   RosterView,
   SlotId,
   StepId,
   VersionResolutionOutcome,
 } from './engine';
+import { newDecisionId } from './log';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -44,6 +47,25 @@ export function createCharacter(name: string | null): Promise<DraftView> {
   return request('/api/characters', {
     method: 'POST',
     body: JSON.stringify({ name }),
+  });
+}
+
+/** One tap to a complete, reviewable draft filled with the app's suggested
+ * build. The client-minted request ID makes retries safe (server-side
+ * idempotency). */
+export function quickBuild(name: string | null): Promise<QuickBuildResult> {
+  return request('/api/characters/quick-build', {
+    method: 'POST',
+    body: JSON.stringify({ request_id: newDecisionId(), name }),
+  });
+}
+
+/** Fill only the open slots of a draft with suggestions; confirmed choices
+ * never move. */
+export function fillRemaining(id: string, version: number): Promise<FillRemainingOutcome> {
+  return request(`/api/characters/${encodeURIComponent(id)}/fill-remaining`, {
+    method: 'POST',
+    body: JSON.stringify({ request_id: newDecisionId(), version }),
   });
 }
 

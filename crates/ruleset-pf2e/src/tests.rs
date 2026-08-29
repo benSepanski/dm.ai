@@ -214,7 +214,16 @@ fn data_files() -> Vec<(&'static str, String)> {
                 "armor": "trained", "unarmored_defense": "trained", "class_dc": "trained"
             },
             "class_skill_choice": ["skill.acrobatics", "skill.athletics"],
-            "additional_skills_base": 3, "features": [], "source": src()
+            "additional_skills_base": 3, "features": [],
+            "suggested_build": {
+                "description": "synthetic suggested build (integrity requires one per class)",
+                "entries": [
+                    { "slot": "pf2e.class", "candidates": ["class.fighter"] },
+                    { "slot": "pf2e.class.key-attribute", "candidates": ["attr.str"] },
+                    { "slot": "pf2e.details.name", "text": "Test Fighter" }
+                ]
+            },
+            "source": src()
         }
     ]);
     let class_feats = json!([
@@ -414,6 +423,40 @@ fn integrity_rejects_bad_new_shapes() {
     }
     let err = d.check_integrity().unwrap_err().to_string();
     assert!(err.contains("unknown skill"), "{err}");
+}
+
+#[test]
+fn integrity_rejects_bad_suggested_builds() {
+    let base = data();
+
+    // A class without a block cannot ship.
+    let mut d = base.clone();
+    d.classes[0].suggested_build = None;
+    let err = d.check_integrity().unwrap_err().to_string();
+    assert!(err.contains("no suggested_build block"), "{err}");
+
+    // An unknown slot cannot ship.
+    let mut d = base.clone();
+    d.classes[0].suggested_build.as_mut().unwrap().entries[0].slot = "pf2e.no-such-slot".into();
+    let err = d.check_integrity().unwrap_err().to_string();
+    assert!(err.contains("unknown slot"), "{err}");
+
+    // A dangling candidate (missing/renamed record) cannot ship — the
+    // data lint catches it at build time, runtime never discovers it.
+    let mut d = base.clone();
+    d.classes[0].suggested_build.as_mut().unwrap().entries[0]
+        .candidates
+        .push("class.withdrawn-record".into());
+    let err = d.check_integrity().unwrap_err().to_string();
+    assert!(err.contains("does not resolve"), "{err}");
+
+    // Text and candidates on the same entry cannot ship.
+    let mut d = base.clone();
+    d.classes[0].suggested_build.as_mut().unwrap().entries[2]
+        .candidates
+        .push("class.fighter".into());
+    let err = d.check_integrity().unwrap_err().to_string();
+    assert!(err.contains("both text and candidates"), "{err}");
 }
 
 // ---- Versatile heritages -----------------------------------------------

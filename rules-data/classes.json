@@ -30,6 +30,29 @@
         "text": "General feat (granted). Reaction. Trigger: while you have your shield raised, you would take physical damage from an attack. Your shield prevents damage up to its Hardness; you and the shield each take any remaining damage."
       }
     ],
+    "suggested_build": {
+      "description": "dm.ai suggested build (app-authored; anchored on the published class kit and key attribute): a classic sword-and-board human fighter. Candidate lists are ordered; the planner takes the first legal pick(s) against the folded draft, so lists run longer than needed.",
+      "entries": [
+        { "slot": "pf2e.ancestry", "candidates": ["ancestry.human"] },
+        { "slot": "pf2e.ancestry.heritage", "candidates": ["heritage.human.skilled"] },
+        { "slot": "pf2e.skills.heritage-choice", "candidates": ["skill.diplomacy", "skill.society", "skill.stealth"] },
+        { "slot": "pf2e.ancestry.feat", "candidates": ["feat.ancestry.human.cooperative-nature", "feat.ancestry.human.haughty-obstinacy"] },
+        { "slot": "pf2e.boosts.ancestry-free", "candidates": ["attr.str", "attr.con", "attr.wis", "attr.dex"] },
+        { "slot": "pf2e.ancestry.languages", "candidates": ["lang.dwarven", "lang.orcish", "lang.goblin", "lang.jotun"] },
+        { "slot": "pf2e.background", "candidates": ["background.warrior"] },
+        { "slot": "pf2e.boosts.background-choice", "candidates": ["attr.str", "attr.con"] },
+        { "slot": "pf2e.boosts.background-free", "candidates": ["attr.wis", "attr.con", "attr.dex"] },
+        { "slot": "pf2e.class", "candidates": ["class.fighter"] },
+        { "slot": "pf2e.class.key-attribute", "candidates": ["attr.str"] },
+        { "slot": "pf2e.class.feat", "candidates": ["feat.class.fighter.sudden-charge", "feat.class.fighter.reactive-shield"] },
+        { "slot": "pf2e.skills.class-choice", "candidates": ["skill.athletics", "skill.acrobatics"] },
+        { "slot": "pf2e.skills.trained", "candidates": ["skill.acrobatics", "skill.medicine", "skill.survival", "skill.society", "skill.stealth", "skill.crafting", "skill.nature"] },
+        { "slot": "pf2e.boosts.free", "candidates": ["attr.str", "attr.dex", "attr.con", "attr.wis", "attr.cha", "attr.int"] },
+        { "slot": "pf2e.equipment.kit", "candidates": ["kit.fighter.sword-and-board", "kit.fighter"] },
+        { "slot": "pf2e.equipment.extra", "candidates": [] },
+        { "slot": "pf2e.details.name", "text": "Garrek Ironvale" }
+      ]
+    },
     "source": { "book": "Pathfinder Player Core", "page": 136, "url": "https://2e.aonprd.com/Classes.aspx?ID=35", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
   }
 ]
