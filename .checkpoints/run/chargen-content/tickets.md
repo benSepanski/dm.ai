@@ -5,7 +5,7 @@ Contract: `.checkpoints/specs/chargen-content.md` (0ff34ff671f7) +
 branch `checkpoint/chargen-content`. Update states here as work lands;
 commit this file with the work. States: [ ] open, [~] in progress, [x] done.
 
-- [~] **T1 — constraints base** (architecture table, rows that can be green
+- [x] **T1 — constraints base** (architecture table, rows that can be green
   now): layering-allowlist edit admitting the `reference-check` crate
   (skeleton bin, edges = ruleset-pf2e + types, nothing depends on it);
   reserved-noun denylist lint + `rules-data/denylist.json` (seeded from
@@ -16,7 +16,7 @@ commit this file with the work. States: [ ] open, [~] in progress, [x] done.
   storage schema v2 (DecisionSource::Suggested; v1 read-accepted, upgraded
   on write, never on load; v3 refused) + persistence-test rows; gitignored
   ground-truth cache path + absence test. CI stays green at this commit.
-- [ ] **T2 — engine/ruleset machinery** (spec req 2+3, bounded list): new
+- [~] **T2 — engine/ruleset machinery** (spec req 2+3, bounded list): new
   Effect variants (save/Perception proficiency override; ranged unarmed
   attack field; fist replacement); prereq kinds attribute-threshold +
   trained-in-skill (evaluable, greying with reasons); versatile-heritage
