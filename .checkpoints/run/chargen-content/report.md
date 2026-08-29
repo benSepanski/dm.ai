@@ -50,7 +50,7 @@ Then start the server and follow the spec's ten walks
 ([What Ben checks](../../specs/chargen-content.md)):
 
 ```bash
-cargo run -p server
+cargo run --release -p server -- --data-dir ./campaign
 ```
 
 1. **Walk 9 first — the bump on your real roster.** Open the roster: your
@@ -75,7 +75,7 @@ cargo run -p server
    AoN — mechanics intact, nouns gone. Replay-verify everything:
 
 ```bash
-cargo run -p server -- verify
+cargo run --release -p server -- --data-dir ./campaign verify
 ```
 
 7. **Intent check:** is "a table can build any common Player Core Fighter
