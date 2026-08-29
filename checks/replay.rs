@@ -2334,11 +2334,9 @@ fn prep_gaps_and_illegal_prep_block_finalize() {
     let mut bad = sylvenne_prep();
     bad[3] = scoped_one("pf2e.prep.school-rank1", "spell.sleep");
     let p = engine.project(&log, &bad).unwrap();
-    assert!(p
-        .checklist
-        .iter()
-        .any(|e| e.severity == types::ChecklistSeverity::Illegal
-            && e.message.contains("curriculum")));
+    assert!(p.checklist.iter().any(
+        |e| e.severity == types::ChecklistSeverity::Illegal && e.message.contains("curriculum")
+    ));
     // Overfilled rank: Illegal entry.
     let mut bad = sylvenne_prep();
     bad[1] = scoped_many(

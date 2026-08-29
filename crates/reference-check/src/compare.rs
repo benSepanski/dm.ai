@@ -776,7 +776,11 @@ fn spell(our: &Value, f: &FoundryRecord) -> Outcome {
     if let (Some(t), Some(v)) = (s["area"]["type"].as_str(), s["area"]["value"].as_i64()) {
         fields.push("area");
         let expected = format!("{v}-foot {t}");
-        check(&mut mm, "area", our["area"].as_str() == Some(expected.as_str()));
+        check(
+            &mut mm,
+            "area",
+            our["area"].as_str() == Some(expected.as_str()),
+        );
     }
 
     let f_targets = s["target"]["value"].as_str().unwrap_or("");
@@ -809,8 +813,7 @@ fn spell(our: &Value, f: &FoundryRecord) -> Outcome {
             let interval = s["heightening"]["interval"].as_i64().unwrap_or(1);
             let ok = our["heightening"].as_array().is_some_and(|entries| {
                 entries.iter().any(|e| {
-                    e["kind"].as_str() == Some("per_rank")
-                        && e["step"].as_i64() == Some(interval)
+                    e["kind"].as_str() == Some("per_rank") && e["step"].as_i64() == Some(interval)
                 })
             });
             check(&mut mm, "heightening", ok);

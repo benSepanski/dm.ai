@@ -13,6 +13,7 @@ import {
   type VersionAction,
 } from './api';
 import type { CharacterView, RosterView } from './engine';
+import { PrepEditor } from './PrepEditor';
 import { Roster } from './Roster';
 import { Sheet } from './Sheet';
 import { VersionFlagPanel } from './VersionFlag';
@@ -131,15 +132,12 @@ export function App() {
       <Wizard
         key={character.id}
         initial={character}
-        onFinalized={(finalSheet) => {
-          setCharacter({
-            state: 'finalized',
-            id: character.id,
-            sheet: finalSheet,
-            version_status: { status: 'current' },
-            version: 0,
-          });
+        onFinalized={() => {
+          // Refetch: the finalized view carries the display sheet plus the
+          // prep editor's projection, which only the server can compute.
+          setCharacter(null);
           goto(`#/c/${route.id}/sheet`);
+          void loadRoute({ view: 'character', id: route.id });
         }}
         onExit={() => goto('#/')}
       />
@@ -181,6 +179,15 @@ export function App() {
         />
       )}
       <Sheet sheet={character.sheet} />
+      {(character.prep !== undefined && character.prep !== null) && (
+        <PrepEditor
+          characterId={character.id}
+          version={character.version}
+          prep={character.prep}
+          prepBroken={character.prep_broken ?? false}
+          onSaved={setCharacter}
+        />
+      )}
     </div>
   );
 }

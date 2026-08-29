@@ -8,8 +8,11 @@ import type {
   DraftView,
   FillRemainingOutcome,
   FinalizeOutcome,
+  LifecycleState,
+  PrepSaveOutcome,
   QuickBuildResult,
   RosterView,
+  ScopedChoice,
   SlotId,
   StepId,
   VersionResolutionOutcome,
@@ -118,6 +121,26 @@ export function finalizeCharacter(id: string, version: number): Promise<Finalize
   return request(`/api/characters/${encodeURIComponent(id)}/finalize`, {
     method: 'POST',
     body: JSON.stringify({ version }),
+  });
+}
+
+/** Replace the scoped preparation section wholesale (drafts mid-wizard and
+ * finalized characters' "change prepared spells" alike). The client-minted
+ * request ID makes retries safe. */
+export function savePrep(
+  id: string,
+  version: number,
+  expectedState: LifecycleState,
+  choices: ScopedChoice[],
+): Promise<PrepSaveOutcome> {
+  return request(`/api/characters/${encodeURIComponent(id)}/prep`, {
+    method: 'POST',
+    body: JSON.stringify({
+      request_id: newDecisionId(),
+      version,
+      expected_state: expectedState,
+      choices,
+    }),
   });
 }
 

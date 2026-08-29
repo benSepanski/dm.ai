@@ -109,7 +109,8 @@ fn all_records() -> Vec<(String, serde_json::Value)> {
     for file in RECORD_FILES {
         let text = std::fs::read_to_string(root.join(file)).unwrap();
         let value: serde_json::Value = serde_json::from_str(&text).unwrap();
-        let records: Vec<serde_json::Value> = if *file == "equipment.json" || *file == "spells.json" {
+        let records: Vec<serde_json::Value> = if *file == "equipment.json" || *file == "spells.json"
+        {
             value
                 .as_object()
                 .unwrap()

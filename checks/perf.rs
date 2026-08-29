@@ -56,11 +56,14 @@ fn wizard_fold_with_prep_is_under_5ms() {
         }
     };
     let one = |id: &str| Selection::Option(types::OptionId::new(id));
-    let many = |ids: &[&str]| {
-        Selection::Options(ids.iter().map(|i| types::OptionId::new(*i)).collect())
-    };
+    let many =
+        |ids: &[&str]| Selection::Options(ids.iter().map(|i| types::OptionId::new(*i)).collect());
     confirm(&mut log, "pf2e.ancestry", one("ancestry.elf"));
-    confirm(&mut log, "pf2e.ancestry.heritage", one("heritage.elf.arctic"));
+    confirm(
+        &mut log,
+        "pf2e.ancestry.heritage",
+        one("heritage.elf.arctic"),
+    );
     confirm(
         &mut log,
         "pf2e.ancestry.feat",
@@ -72,7 +75,11 @@ fn wizard_fold_with_prep_is_under_5ms() {
     confirm(&mut log, "pf2e.boosts.background-free", one("attr.cha"));
     confirm(&mut log, "pf2e.class", one("class.wizard"));
     confirm(&mut log, "pf2e.class.key-attribute", one("attr.int"));
-    confirm(&mut log, "pf2e.class.thesis", one("thesis.spell-substitution"));
+    confirm(
+        &mut log,
+        "pf2e.class.thesis",
+        one("thesis.spell-substitution"),
+    );
     confirm(&mut log, "pf2e.class.school", one("school.battle-magic"));
     confirm(
         &mut log,

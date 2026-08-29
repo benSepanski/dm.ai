@@ -10,6 +10,7 @@ import type {
   EngineRequest,
   EngineResponse,
   ProjectionView,
+  ScopedChoice,
   SlotId,
 } from './pkg/wasm';
 
@@ -35,19 +36,28 @@ function expectProjection(response: EngineResponse): ProjectionView {
   throw new Error(response.response === 'error' ? response.message : 'unexpected engine response');
 }
 
-/** Project the wizard from a decision log; throws on an engine error. */
-export function project(log: Decision[]): ProjectionView {
-  return expectProjection(engineRequest({ request: 'project', log }));
+/** Project the wizard from a decision log plus the scoped preparation
+ * choices; throws on an engine error. */
+export function project(log: Decision[], prep: ScopedChoice[] = []): ProjectionView {
+  return expectProjection(engineRequest({ request: 'project', log, prep }));
 }
 
 /** Live preview: the wizard as if `candidate` were confirmed. */
-export function preview(log: Decision[], candidate: DecisionInput): ProjectionView {
-  return expectProjection(engineRequest({ request: 'preview', log, candidate }));
+export function preview(
+  log: Decision[],
+  candidate: DecisionInput,
+  prep: ScopedChoice[] = [],
+): ProjectionView {
+  return expectProjection(engineRequest({ request: 'preview', log, candidate, prep }));
 }
 
-/** What changing a confirmed slot would clear. */
-export function clearPreview(log: Decision[], slot: SlotId): ClearPreview {
-  const response = engineRequest({ request: 'clear_preview', log, slot });
+/** What changing a confirmed slot would clear — scoped dependents included. */
+export function clearPreview(
+  log: Decision[],
+  slot: SlotId,
+  prep: ScopedChoice[] = [],
+): ClearPreview {
+  const response = engineRequest({ request: 'clear_preview', log, slot, prep });
   if (response.response === 'clear_preview') {
     return response.preview;
   }

@@ -113,8 +113,8 @@ pub fn load_all() -> Result<Vec<OurRecord>, String> {
             )?);
         }
     }
-    let text =
-        fs::read_to_string(root.join("spells.json")).map_err(|e| format!("reading spells.json: {e}"))?;
+    let text = fs::read_to_string(root.join("spells.json"))
+        .map_err(|e| format!("reading spells.json: {e}"))?;
     let spells: serde_json::Value =
         serde_json::from_str(&text).map_err(|e| format!("parsing spells.json: {e}"))?;
     let map = spells.as_object().ok_or("spells.json is not an object")?;

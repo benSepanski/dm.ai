@@ -100,7 +100,10 @@ fn prep_save_writes_only_prep() {
     );
     assert_eq!(outcome["outcome"], "saved", "{outcome:#?}");
     let after = read_doc(dir.path(), &built.id);
-    assert_eq!(after["schema_version"], 3, "envelope upgraded on first write");
+    assert_eq!(
+        after["schema_version"], 3,
+        "envelope upgraded on first write"
+    );
     assert_eq!(
         serde_json::to_string(&before["log"]).unwrap(),
         serde_json::to_string(&after["log"]).unwrap()
@@ -146,7 +149,10 @@ fn prep_save_idempotency_and_stale_rejection() {
         &revised_prep(),
     );
     assert_eq!(retry["outcome"], "saved", "a replayed ID is success");
-    assert_eq!(retry["character"]["version"].as_u64().unwrap(), version_after);
+    assert_eq!(
+        retry["character"]["version"].as_u64().unwrap(),
+        version_after
+    );
     assert_eq!(
         serde_json::to_string(&read_doc(dir.path(), &built.id)).unwrap(),
         doc_after,
@@ -370,7 +376,10 @@ fn one_validation_driver_route_and_verify_agree() {
         &illegal,
     );
     assert_eq!(outcome["outcome"], "rejected", "{outcome:#?}");
-    let route_message = outcome["reasons"][0]["message"].as_str().unwrap().to_string();
+    let route_message = outcome["reasons"][0]["message"]
+        .as_str()
+        .unwrap()
+        .to_string();
     assert!(route_message.contains("not in your spellbook"));
 
     // Write the same illegal set by hand; verify must produce the same
