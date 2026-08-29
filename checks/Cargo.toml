@@ -51,6 +51,10 @@ path = "api_authority.rs"
 name = "attestation"
 path = "attestation.rs"
 
+[[test]]
+name = "version_guard"
+path = "version_guard.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }

@@ -550,3 +550,72 @@ textarea {
   min-width: 0;
   max-width: 100%;
 }
+
+/* ---- Rules-data version guard ---- */
+.version-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--line);
+  margin-top: 0.2rem;
+  width: fit-content;
+}
+.version-review {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: #fdf6df;
+}
+.version-unknown {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.version-kept {
+  color: var(--ink-soft);
+}
+.version-panel {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 0.8rem 1.2rem;
+  margin: 0.8rem 0 1.2rem;
+}
+.version-panel h2 {
+  margin: 0.2rem 0 0.5rem;
+  font-size: 1.1rem;
+}
+.version-panel-warn {
+  border-color: var(--warn);
+  background: #fdf6df;
+}
+.version-diff {
+  border-collapse: collapse;
+  margin: 0.6rem 0;
+  width: 100%;
+}
+.version-diff th,
+.version-diff td {
+  border: 1px solid var(--line);
+  padding: 0.3rem 0.6rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+.version-old {
+  color: var(--bad);
+}
+.version-new {
+  color: var(--good);
+}
+.version-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+}
+.version-reopen-list {
+  margin: 0.4rem 0 0.2rem;
+}
+.version-error {
+  color: var(--bad);
+  font-weight: 600;
+}

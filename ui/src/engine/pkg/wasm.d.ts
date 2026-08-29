@@ -1,6 +1,15 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * 409 body when a wizard write is refused because the draft pins a
+ * rules-data version that is not current and unresolved.
+ */
+export interface VersionFlaggedError {
+    message: string;
+    status: VersionStatus;
+}
+
+/**
  * A character (draft or finalized); also its filename stem in the data dir.
  */
 export type CharacterId = string;
@@ -39,6 +48,12 @@ export interface DraftView {
      * The rules-data version this draft is built against.
      */
     rules_version: string;
+    /**
+     * Where that pin stands against the shipped data (always `Current`
+     * here: a draft with an unresolved older pin arrives as
+     * `CharacterView::FlaggedDraft` instead, never with a projection).
+     */
+    version_status: VersionStatus;
 }
 
 /**
@@ -76,7 +91,7 @@ export type SlotId = string;
 /**
  * A single character as fetched by ID.
  */
-export type CharacterView = ({ state: "draft" } & DraftView) | { state: "finalized"; id: CharacterId; sheet: SheetView };
+export type CharacterView = ({ state: "draft" } & DraftView) | { state: "finalized"; id: CharacterId; sheet: SheetView; version_status: VersionStatus; version: number } | { state: "flagged_draft"; id: CharacterId; name: string; sheet: SheetView; version: number; status: VersionStatus };
 
 /**
  * A stable rules-data record ID, e.g. `ancestry.dwarf`.
@@ -114,10 +129,39 @@ export interface ProjectionView {
 export type SlotViewKind = { kind: "single" } | { kind: "multi"; count: number } | { kind: "list" } | { kind: "text"; multiline: boolean };
 
 /**
+ * One sheet value that would change under current data, old → new.
+ */
+export interface SheetDiff {
+    section: string;
+    label: string;
+    /**
+     * The stored value ("(absent)" when the entry did not exist).
+     */
+    old: string;
+    /**
+     * The value current data derives ("(absent)" when it no longer exists).
+     */
+    new: string;
+}
+
+/**
  * Outcome of a confirm. `Conflict` carries the current draft so a stale
  * tab can reload; `Rejected` is the server refusing an illegal confirm.
  */
 export type ConfirmOutcome = { outcome: "confirmed"; draft: DraftView } | { outcome: "conflict"; current: DraftView } | { outcome: "rejected"; reasons: ChecklistEntry[]; draft: DraftView };
+
+/**
+ * Outcome of a version-resolution route.
+ */
+export type VersionResolutionOutcome = { outcome: "resolved"; character: CharacterView } | { outcome: "conflict"; character: CharacterView } | { outcome: "refused"; message: string; status: VersionStatus };
+
+/**
+ * Request body for the version-resolution routes (re-pin / accept /
+ * keep-old / resolve-errors). Carries the draft version like every write.
+ */
+export interface VersionActionRequest {
+    version: number;
+}
 
 /**
  * The HTTP wire types aren't referenced by the engine boundary, but the UI
@@ -137,6 +181,9 @@ export interface WireTypeExports {
     finalize_request: FinalizeRequest;
     finalize_outcome: FinalizeOutcome;
     api_error: ApiError;
+    version_action_request: VersionActionRequest;
+    version_resolution_outcome: VersionResolutionOutcome;
+    version_flagged_error: VersionFlaggedError;
 }
 
 /**
@@ -144,6 +191,12 @@ export interface WireTypeExports {
  * infers state from weaker signals (decision presence, entry absence).
  */
 export type SlotStatus = "locked" | "empty" | "partial" | "complete" | "illegal";
+
+/**
+ * The result of replaying an older-known character's log against current
+ * rules data.
+ */
+export type ReplayOutcome = { kind: "identical" } | { kind: "divergent"; differences: SheetDiff[] } | { kind: "replay_error"; message: string; failing_decision: DecisionId; slot: SlotId; would_reopen?: ClearedDecision[] };
 
 /**
  * Uniform error body for everything that is not a typed outcome.
@@ -171,6 +224,12 @@ export interface ClearPreview {
  * What was chosen in a slot.
  */
 export type Selection = { kind: "option"; value: OptionId } | { kind: "options"; value: OptionId[] } | { kind: "text"; value: string };
+
+/**
+ * Where a character's pinned rules-data version stands relative to the
+ * version this build ships. Computed fresh on every load.
+ */
+export type VersionStatus = { status: "current" } | { status: "older_known"; pinned: string; current: string; outcome: ReplayOutcome } | { status: "kept_old"; pinned: string; evaluated_against: string } | { status: "unknown"; pinned: string; current: string };
 
 /**
  * Who (or what) made a decision. DM exceptions and auto-mode arrive in
@@ -266,6 +325,10 @@ export interface RosterEntry {
      */
     summary: string;
     state: RosterCharacterState;
+    /**
+     * Rules-data version flag — computed at load, never written by it.
+     */
+    version: VersionStatus;
 }
 
 export interface RosterProblem {

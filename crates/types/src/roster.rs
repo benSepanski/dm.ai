@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::CharacterId;
+use crate::{CharacterId, VersionStatus};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(tsify::Tsify))]
@@ -34,6 +34,8 @@ pub struct RosterEntry {
     /// Identity line, e.g. "Dwarf Fighter 1".
     pub summary: String,
     pub state: RosterCharacterState,
+    /// Rules-data version flag — computed at load, never written by it.
+    pub version: VersionStatus,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

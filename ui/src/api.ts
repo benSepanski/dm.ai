@@ -10,6 +10,7 @@ import type {
   RosterView,
   SlotId,
   StepId,
+  VersionResolutionOutcome,
 } from './engine';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -93,6 +94,20 @@ export function setStep(id: string, version: number, step: StepId): Promise<Draf
 
 export function finalizeCharacter(id: string, version: number): Promise<FinalizeOutcome> {
   return request(`/api/characters/${encodeURIComponent(id)}/finalize`, {
+    method: 'POST',
+    body: JSON.stringify({ version }),
+  });
+}
+
+/** The explicit rules-data version-resolution actions (spec req 6). */
+export type VersionAction = 'repin' | 'accept' | 'keep-old' | 'resolve-errors';
+
+export function resolveVersion(
+  id: string,
+  action: VersionAction,
+  version: number,
+): Promise<VersionResolutionOutcome> {
+  return request(`/api/characters/${encodeURIComponent(id)}/version/${action}`, {
     method: 'POST',
     body: JSON.stringify({ version }),
   });

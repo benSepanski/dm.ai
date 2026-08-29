@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CharacterId, ChecklistEntry, ClearPreview, DecisionInput, ProjectionView, SheetView, SlotId,
-    StepId,
+    StepId, VersionStatus,
 };
 
 /// A draft mid-wizard, as the server owns it.
@@ -21,6 +21,10 @@ pub struct DraftView {
     pub projection: ProjectionView,
     /// The rules-data version this draft is built against.
     pub rules_version: String,
+    /// Where that pin stands against the shipped data (always `Current`
+    /// here: a draft with an unresolved older pin arrives as
+    /// `CharacterView::FlaggedDraft` instead, never with a projection).
+    pub version_status: VersionStatus,
 }
 
 /// A single character as fetched by ID.
@@ -29,7 +33,26 @@ pub struct DraftView {
 #[serde(tag = "state", rename_all = "snake_case")]
 pub enum CharacterView {
     Draft(DraftView),
-    Finalized { id: CharacterId, sheet: SheetView },
+    Finalized {
+        id: CharacterId,
+        sheet: SheetView,
+        /// Version flag for the sheet view; resolution actions hang off it.
+        version_status: VersionStatus,
+        /// Carried so resolution requests can pass the write version.
+        version: u64,
+    },
+    /// A draft whose pin is not current and unresolved: the wizard is
+    /// blocked behind resolution, and no projection is computed (that would
+    /// replay the old log against new data outside the resolution flow).
+    /// The stored sheet is shown read-only beside the flag.
+    FlaggedDraft {
+        id: CharacterId,
+        name: String,
+        sheet: SheetView,
+        /// Draft version, for the resolution request.
+        version: u64,
+        status: VersionStatus,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -109,7 +132,9 @@ pub enum FinalizeOutcome {
         reasons: Vec<ChecklistEntry>,
     },
     Conflict {
-        current: DraftView,
+        /// Boxed: `DraftView` dwarfs the other variants (clippy
+        /// large_enum_variant); serde/tsify treat the box as transparent.
+        current: Box<DraftView>,
     },
 }
 

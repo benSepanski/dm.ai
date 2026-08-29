@@ -1,10 +1,20 @@
 // Hash-routed shell: roster (#/), wizard (#/c/<id>), finalized sheet
 // (#/c/<id>/sheet). Refresh-safe; resume lands on the server's step cursor.
+// A draft flagged by the rules-data version guard opens blocked behind the
+// resolution panel instead of the wizard.
 import { useCallback, useEffect, useState } from 'react';
-import { createCharacter, deleteCharacter, fetchCharacter, fetchRoster } from './api';
-import type { DraftView, RosterView, SheetView } from './engine';
+import {
+  createCharacter,
+  deleteCharacter,
+  fetchCharacter,
+  fetchRoster,
+  resolveVersion,
+  type VersionAction,
+} from './api';
+import type { CharacterView, RosterView } from './engine';
 import { Roster } from './Roster';
 import { Sheet } from './Sheet';
+import { VersionFlagPanel } from './VersionFlag';
 import { Wizard } from './Wizard';
 
 type Route = { view: 'roster' } | { view: 'character'; id: string };
@@ -20,9 +30,10 @@ function parseHash(): Route {
 export function App() {
   const [route, setRoute] = useState<Route>(parseHash);
   const [roster, setRoster] = useState<RosterView | null>(null);
-  const [draft, setDraft] = useState<DraftView | null>(null);
-  const [sheet, setSheet] = useState<SheetView | null>(null);
+  const [character, setCharacter] = useState<CharacterView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resolveBusy, setResolveBusy] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
 
   useEffect(() => {
     const onHashChange = () => setRoute(parseHash());
@@ -32,20 +43,13 @@ export function App() {
 
   const loadRoute = useCallback(async (current: Route) => {
     setError(null);
+    setResolveError(null);
     try {
       if (current.view === 'roster') {
-        setDraft(null);
-        setSheet(null);
+        setCharacter(null);
         setRoster(await fetchRoster());
       } else {
-        const character = await fetchCharacter(current.id);
-        if (character.state === 'draft') {
-          setSheet(null);
-          setDraft(character);
-        } else {
-          setDraft(null);
-          setSheet(character.sheet);
-        }
+        setCharacter(await fetchCharacter(current.id));
       }
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
@@ -58,6 +62,24 @@ export function App() {
 
   const goto = (hash: string) => {
     window.location.hash = hash;
+  };
+
+  const resolve = (id: string, version: number) => (action: VersionAction) => {
+    setResolveBusy(true);
+    setResolveError(null);
+    resolveVersion(id, action, version)
+      .then((outcome) => {
+        if (outcome.outcome === 'refused') {
+          setResolveError(outcome.message);
+        } else {
+          // Resolved (or a stale-tab conflict): render the fresh view.
+          setCharacter(outcome.character);
+        }
+      })
+      .catch((e: unknown) => {
+        setResolveError(String(e instanceof Error ? e.message : e));
+      })
+      .finally(() => setResolveBusy(false));
   };
 
   if (error !== null) {
@@ -92,14 +114,23 @@ export function App() {
     );
   }
 
-  if (draft !== null) {
+  if (character === null) {
+    return <p className="loading">Loading…</p>;
+  }
+
+  if (character.state === 'draft') {
     return (
       <Wizard
-        key={draft.id}
-        initial={draft}
+        key={character.id}
+        initial={character}
         onFinalized={(finalSheet) => {
-          setSheet(finalSheet);
-          setDraft(null);
+          setCharacter({
+            state: 'finalized',
+            id: character.id,
+            sheet: finalSheet,
+            version_status: { status: 'current' },
+            version: 0,
+          });
           goto(`#/c/${route.id}/sheet`);
         }}
         onExit={() => goto('#/')}
@@ -107,16 +138,41 @@ export function App() {
     );
   }
 
-  if (sheet !== null) {
+  if (character.state === 'flagged_draft') {
+    // The wizard is blocked until the flag is resolved; the stored sheet
+    // renders read-only beside the flag.
     return (
       <div className="sheet-page">
         <button type="button" className="wizard-back" onClick={() => goto('#/')}>
           ← Roster
         </button>
-        <Sheet sheet={sheet} />
+        <VersionFlagPanel
+          status={character.status}
+          isDraft
+          busy={resolveBusy}
+          error={resolveError}
+          onResolve={resolve(character.id, character.version)}
+        />
+        <Sheet sheet={character.sheet} />
       </div>
     );
   }
 
-  return <p className="loading">Loading…</p>;
+  return (
+    <div className="sheet-page">
+      <button type="button" className="wizard-back" onClick={() => goto('#/')}>
+        ← Roster
+      </button>
+      {character.version_status.status !== 'current' && (
+        <VersionFlagPanel
+          status={character.version_status}
+          isDraft={false}
+          busy={resolveBusy}
+          error={resolveError}
+          onResolve={resolve(character.id, character.version)}
+        />
+      )}
+      <Sheet sheet={character.sheet} />
+    </div>
+  );
 }

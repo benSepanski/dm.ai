@@ -2,6 +2,7 @@
 // moves the file to trash), quarantine reports, and the ORC notice.
 import { useState } from 'react';
 import type { RosterView } from './engine';
+import { VersionBadge } from './VersionFlag';
 
 export function Roster({
   roster,
@@ -46,6 +47,7 @@ export function Roster({
                     ? `Resume creating (${entry.state.resume_label})`
                     : 'View sheet'}
                 </span>
+                <VersionBadge status={entry.version} />
               </button>
               {confirmingDelete === entry.id ? (
                 <span className="roster-delete-confirm">
