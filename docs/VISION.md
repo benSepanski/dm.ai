@@ -128,7 +128,10 @@ System order is chosen to stress the abstraction hardest, earliest:
 3. **chargen-wizard**: the PF2e Wizard — forces the spellcasting shape
    (traditions, preparation, heightening, focus pools) inside one system
    before any cross-system abstraction of it. Also proves "adding a class is
-   data + slot definitions, not core code."
+   data + slot definitions, not core code." Its spec also chooses where
+   "prepared today" lives: daily preparation must be revisable without
+   rewriting the permanent decision log — the first exercise of Epoch 8's
+   scope-agnostic-choice commitment.
 4. **chargen-dnd**: **D&D 5.5e Champion Fighter** (SRD 5.2-safe) — the
    cross-system stress test: binary proficiency vs ranks, background-coupled
    ability scores vs boosts, subclass at 3 vs 1, weight vs Bulk. If the core
@@ -160,7 +163,11 @@ Player connections and live play: LAN join via QR code with one-time claim
 codes and device tokens (no accounts, no passwords; DM-assisted recovery on a
 new device — the DM is physically present, that's the LAN superpower); sheet
 visibility rules (DM-controlled ladder from status-only to full sheets); live
-HP/conditions/resources with the DM authoritative over table state; the DM
+HP/conditions/resources with the DM authoritative over table state — tracked
+as *data* (badges, counters, a journaled event history), never as game math
+in the UI: play-aware derived values are Epoch 8's engine work, and this
+epoch's play-state journal is the durable record that epoch's undo later
+builds on, not just resync transport; the DM
 party dashboard; reconnect/resync (sequence-numbered events, snapshot
 fallback, stale badges, queued writes for your own character only — no CRDTs,
 ever); session start/pause/resume surviving DM laptop death mid-combat.
@@ -253,6 +260,104 @@ checklists over the reference graph (logs annotated, never rewritten);
 campaign forking on the setting/campaign split; richer world generation
 (maps, regions) with layered private/player annotations; timeline sanity
 with fuzzy dates.
+
+### Epoch 8 — The living sheet
+
+A stream of its own, deliberately outside the main dependency chain: it
+needs only Epoch 2's play state, can start any time after that epoch,
+interleaves freely with Epochs 3–7, and may split into several epochs at
+spec time. The goal: the sheet stops being a read-only projection and
+becomes the surface the table plays through — clicking an ability does what
+the rules say, with the DM sovereign over every result.
+
+The capability ladder, each rung independently shippable:
+
+1. **Transparency** — click any feature for its rules text (stable option
+   IDs already link them); click any derived value for its breakdown,
+   recomputed from the fold, each contributor linked to its source.
+2. **Deterministic actuation** — spend and restore pools, tick
+   uses-per-frequency, apply named conditions, rest resets driven by
+   transcribed reset semantics; every actuation a journaled, undoable
+   play-state event.
+3. **Play-aware values** — displayed numbers reflect conditions and stances
+   through a second pure layer: displayed = overlay(materialized sheet,
+   play state), computed in the engine, never in UI code; the decision-log
+   fold and its replay discipline are untouched.
+4. **Rolled actions** — strike and cast with digital rolls or entered
+   physical rolls (the same recorded-input discipline as chargen dice),
+   attack-penalty sequencing, slot and pool expenditure validated as
+   guardrails with DM override.
+5. **Daily maintenance as choices** — prepared spellcasting, refocusing,
+   item investment: recurring choices that reuse the slot/validation
+   machinery in a play-scoped context instead of the permanent log.
+6. **Turn and duration semantics** — start/end-of-turn ticks, expiring
+   effects, an initiative list. Explicitly the last rung and this stream's
+   own boundary: no targeting, no positioning, no grid; automated effects
+   apply to your own sheet, and applying anything to another character
+   stays a DM act.
+
+The flows to hold in mind: a player taps Strike, sees the bonus breakdown,
+enters their physical roll or taps to roll, and the attack penalty ticks; a
+long rest previews everything it will reset before applying it as one
+undoable batch; a prepared caster's morning is a mini-wizard over their
+spellbook with live validation — the same idiom as chargen; a homebrew
+feature has no button, just its rules text and a hand-edited counter, and
+that is fine.
+
+Earlier epochs make these structural commitments so this stream attaches
+cleanly (the same pattern as Epoch 2's identity seeding — each cheap when
+made, brutal to retrofit):
+
+- **Two pure layers, never one mutant sheet.** Play state is a separate,
+  schema-validated document; nothing ever edits a materialized sheet in
+  place, and no game arithmetic lands in the UI layer while waiting for the
+  engine overlay.
+- **The play-state journal is the record, not just the transport.** Epoch
+  2's sequence-numbered events double as the durable play-state history, so
+  undo here is a compensating event over an existing log, not new machinery.
+- **Content transcribes mechanics, not just prose.** Rules-data records
+  carry the mechanical fields the printed rules state discretely — action
+  cost, frequency and reset timing, damage dice, durations, traits — as
+  structured data even while chargen only displays them. Transcription,
+  never invention; the reference-check pipeline grows checks for these
+  fields as consumers arrive. (Content entered before this rule may need a
+  backfill pass — a data-only slice, budgeted when rung 2 starts.)
+- **Pools and frequencies have identity.** Every tracked pool the fold
+  emits carries a stable ID and its reset semantics, so "long rest" is a
+  data query, not a hand-coded list.
+- **Choice machinery is scope-agnostic.** The engine's slot/validation core
+  never hard-wires "a decision is forever" — the chargen-wizard slice's
+  daily-preparation decision is the first test that slots work in an
+  ephemeral scope.
+
+Open questions deliberately left to this stream's spec dialogues, not
+settled here: the automation dial (confirm-first vs auto-apply, per action
+kind — pillar 1's dial applied to players); undo UX and its interaction
+with DM authority; reset affordances; how partial coverage renders (a
+feature without action data is manual and must never look broken —
+physical-dice tables remain first-class); and whether rung 6 ships at all.
+
+Known risks, named at sketch level: second-authority creep (every rung
+stays an application of rules the DM can override, logged — pillar 6
+applies); the coverage cliff (partial coverage is permanent; legibility,
+not completeness, is the fix, and homebrew is always manual-plus-notes);
+schema speculation in content (mitigated by the transcribe-only rule); and
+engine creep past rung 6's boundary toward a VTT (the v1 non-goal stands —
+anything grid-shaped is a deliberate vision revision, not drift).
+
+### Stretch horizons (explicitly unplanned)
+
+Named so future dialogues know the door is deliberately kept open — no
+epoch, slice, or design work is committed to any of these:
+
+- **Cross-system / cross-edition character conversion.** Converting a PF2e
+  character to 5.5e, or migrating one to a future edition, is plausible
+  precisely because a character is a decision log — choices, not numbers.
+  Conversion would mean re-binding the log's decisions to another ruleset's
+  slots and surfacing everything with no mapping as fresh decisions for the
+  player, with the same review-don't-silently-mutate discipline as errata.
+  Nothing on the roadmap builds this and no slice should bend its design to
+  enable it; it is a payoff the substrate keeps possible, not a plan.
 
 ## Standing engineering disciplines
 
