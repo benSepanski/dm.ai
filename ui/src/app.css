@@ -328,6 +328,37 @@ textarea {
 .option-add {
   padding: 0.1rem 0.6rem;
 }
+.option-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.5rem;
+}
+.option-filter input {
+  flex: 1;
+  max-width: 22rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.option-filter-count {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.option-group-heading {
+  margin: 0.8rem 0 0.2rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+.option-group:first-of-type .option-group-heading {
+  margin-top: 0.2rem;
+}
 .multi-counter {
   color: var(--accent);
   font-weight: 600;

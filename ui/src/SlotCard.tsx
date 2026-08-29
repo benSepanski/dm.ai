@@ -4,6 +4,58 @@
 import { useState } from 'react';
 import type { ClearPreview, Decision, MeterView, OptionView, Selection, SlotView } from './engine';
 
+/**
+ * Option lists longer than this get a text filter (spec req 8: full breadth
+ * must be scannable at the table). Filtering is in-memory over the
+ * render-ready option array — no server calls, no game logic.
+ */
+export const FILTER_THRESHOLD = 15;
+
+function matchesFilter(option: OptionView, needle: string): boolean {
+  return (
+    option.label.toLowerCase().includes(needle) ||
+    option.summary.toLowerCase().includes(needle)
+  );
+}
+
+/**
+ * The shared filter state for one option list. Lives in the slot editor,
+ * which remounts per slot (keyed by slot id), so the query is ephemeral UI
+ * state that clears on slot change. Greyed options stay in the results —
+ * the filter narrows by text, never by availability.
+ */
+function useOptionFilter(options: OptionView[]): {
+  filterBox: React.ReactNode;
+  visible: OptionView[];
+} {
+  const [query, setQuery] = useState('');
+  if (options.length <= FILTER_THRESHOLD) {
+    return { filterBox: null, visible: options };
+  }
+  const needle = query.trim().toLowerCase();
+  const visible = needle === '' ? options : options.filter((o) => matchesFilter(o, needle));
+  const filterBox = (
+    <div className="option-filter">
+      <input
+        type="search"
+        data-testid="option-filter"
+        aria-label="Filter options"
+        placeholder={`Filter ${options.length} options…`}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {needle !== '' && (
+        <span className="option-filter-count" role="status">
+          {visible.length === 0
+            ? 'No options match'
+            : `${visible.length} of ${options.length} shown`}
+        </span>
+      )}
+    </div>
+  );
+  return { filterBox, visible };
+}
+
 export type TentativeSelection = Selection | null;
 
 export function SlotCard({
@@ -81,6 +133,9 @@ export function SlotCard({
       )}
       {editing ? (
         <SlotEditor
+          // Remounting per slot keeps editor-local UI state (the text
+          // filter, expanded details) from leaking across slots.
+          key={slot.id}
           slot={slot}
           tentative={effectiveTentative}
           onTentative={onTentative}
@@ -263,10 +318,12 @@ function SingleEditor({
   busy: boolean;
 }) {
   const picked = tentative?.kind === 'option' ? tentative.value : null;
+  const { filterBox, visible } = useOptionFilter(slot.options);
   return (
     <div>
+      {filterBox}
       <ul className="option-list">
-        {slot.options.map((option) => (
+        {visible.map((option) => (
           <OptionRow
             key={option.id}
             option={option}
@@ -318,6 +375,7 @@ function MultiEditor({
     const next = picked.includes(id) ? picked.filter((p) => p !== id) : [...picked, id];
     onTentative({ kind: 'options', value: next });
   };
+  const { filterBox, visible } = useOptionFilter(slot.options);
   return (
     <div>
       <p className="multi-counter" data-testid={`counter-${slot.id}`}>
@@ -327,8 +385,9 @@ function MultiEditor({
             ? 'All choices made'
             : `${-remaining} too many selected`}
       </p>
+      {filterBox}
       <ul className="option-list">
-        {slot.options.map((option) => (
+        {visible.map((option) => (
           <OptionRow
             key={option.id}
             option={option}
@@ -476,6 +535,37 @@ function BoostsEditor({
   );
 }
 
+/**
+ * Category headers for the shopping list. The data arrives categorized —
+ * every equipment option ID is namespaced by its category — so grouping is
+ * pure presentation over the render-ready array.
+ */
+const SHOP_GROUPS: readonly { prefix: string; label: string }[] = [
+  { prefix: 'weapon.', label: 'Weapons' },
+  { prefix: 'armor.', label: 'Armor' },
+  { prefix: 'shield.', label: 'Shields' },
+  { prefix: 'gear.', label: 'Adventuring gear' },
+];
+
+function groupShopOptions(
+  options: OptionView[],
+): { label: string; options: OptionView[] }[] {
+  const groups = SHOP_GROUPS.map((g) => ({ label: g.label, options: [] as OptionView[] }));
+  const other: OptionView[] = [];
+  for (const option of options) {
+    const index = SHOP_GROUPS.findIndex((g) => option.id.startsWith(g.prefix));
+    if (index >= 0) {
+      groups[index]?.options.push(option);
+    } else {
+      other.push(option);
+    }
+  }
+  if (other.length > 0) {
+    groups.push({ label: 'Other items', options: other });
+  }
+  return groups.filter((g) => g.options.length > 0);
+}
+
 function ListEditor({
   slot,
   tentative,
@@ -493,6 +583,29 @@ function ListEditor({
   const add = (id: string) => onTentative({ kind: 'options', value: [...picked, id] });
   const removeAt = (index: number) =>
     onTentative({ kind: 'options', value: picked.filter((_, i) => i !== index) });
+  // The filter spans every category group; empty groups drop their headers.
+  const { filterBox, visible } = useOptionFilter(slot.options);
+  const grouped =
+    slot.presentation_hint === 'shopping-list'
+      ? groupShopOptions(visible)
+      : [{ label: '', options: visible }];
+  const addRow = (option: OptionView) => (
+    <OptionRow
+      key={option.id}
+      option={option}
+      selected={false}
+      control={
+        <button
+          type="button"
+          className="option-add"
+          onClick={() => add(option.id)}
+          disabled={busy}
+        >
+          Add
+        </button>
+      }
+    />
+  );
   return (
     <div>
       {picked.length > 0 && (
@@ -507,25 +620,15 @@ function ListEditor({
           ))}
         </ul>
       )}
-      <ul className="option-list">
-        {slot.options.map((option) => (
-          <OptionRow
-            key={option.id}
-            option={option}
-            selected={false}
-            control={
-              <button
-                type="button"
-                className="option-add"
-                onClick={() => add(option.id)}
-                disabled={busy}
-              >
-                Add
-              </button>
-            }
-          />
-        ))}
-      </ul>
+      {filterBox}
+      {grouped.map((group) => (
+        <div key={group.label} className="option-group">
+          {group.label !== '' && (
+            <h4 className="option-group-heading">{group.label}</h4>
+          )}
+          <ul className="option-list">{group.options.map(addRow)}</ul>
+        </div>
+      ))}
       <footer className="slot-actions">
         <button
           type="button"

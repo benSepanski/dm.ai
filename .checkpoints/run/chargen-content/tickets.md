@@ -63,7 +63,7 @@ commit this file with the work. States: [ ] open, [~] in progress, [x] done.
   preserves confirmed entries byte-identical, partial result names
   remaining slots); api_authority + crash-harness extensions; UI: roster
   action, fill-remaining action, "suggested" badges flipping on edit.
-- [ ] **T9 — UI breadth.** Text filter on option lists ≥ threshold;
+- [x] **T9 — UI breadth.** Text filter on option lists ≥ threshold;
   equipment step category grouping + filterable shop; badge/greying
   affordances verified at 39-background/53-skill-feat/full-gear scale;
   Playwright scenarios for the spec's Walks 1–10 where automatable.
