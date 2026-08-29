@@ -39,7 +39,7 @@ commit this file with the work. States: [ ] open, [~] in progress, [x] done.
   ammunition), 13 armors, 4 shields (Buckler, Tower Shield added), common
   adventuring gear + assistive items (~140). Categories preserved for UI
   grouping. No uncommon weapons, no services.
-- [ ] **T6 — reference-check tool + attestation.** Fetch pinned Foundry
+- [x] **T6 — reference-check tool + attestation.** Fetch pinned Foundry
   pf2e tag (content-hash-verified cache, gitignored); match by
   publication-partition + normalized name + override map; per-record
   per-field verdicts; hash-bound waivers (scrubs, kit, known quirks);

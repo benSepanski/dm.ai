@@ -1,0 +1,125 @@
+{
+  "doc": [
+    "reference-check matching config (see crates/reference-check/src/main.rs).",
+    "overrides: our-record ID -> Foundry pack path (relative to packs/pf2e/)",
+    "  for names the normalizer cannot bridge. Reviewed like code.",
+    "waivers: reviewed exemptions for records whose comparison legitimately",
+    "  differs from ground truth or has no counterpart. Each is bound to the",
+    "  state_hash of the exact mismatch it excuses (printed by `attest`);",
+    "  if the mismatch disappears or shifts, `attest` fails until the waiver",
+    "  is re-reviewed. No Foundry values appear here - reasons are our text."
+  ],
+  "overrides": {
+    "weapon.arrows": "equipment/arrows.json",
+    "weapon.sling-bullets": "equipment/sling-bullets.json"
+  },
+  "spec_exclusions": [
+    {
+      "category": "backgrounds",
+      "name": "Raised by Belief",
+      "reason": "Excluded by name in spec req 1 [call]: its mechanics are parameterized on a deity catalog whose canonical names are ORC-reserved. The spec ships 39 of 40 backgrounds; full breadth deliberately excludes this one."
+    }
+  ],
+  "waivers": [
+    {
+      "id": "kit.fighter",
+      "reason": "Class kits exist only in the book; Foundry ships no class-kit pack. Contents and price semantics hand-verified against AoN (slice-1 dossier section 8.6).",
+      "state_hash": "c5ff5742b46791734a43c68b86ea441021f05472d741157d5f8331ddf211d27b"
+    },
+    {
+      "id": "background.street-urchin",
+      "reason": "The book parameterizes this background's Lore on the character's home settlement, naming a Golarion city as its example; we ship the generic 'City Lore' per the req-5 ORC scrub, and Foundry encodes no fixed lore for it at all.",
+      "state_hash": "91b5c657882d093fde850360ffb0fb3762d688ddcc6bf36e3dc9a3d0249e04b6"
+    },
+    {
+      "id": "weapon.arrows",
+      "reason": "Foundry attaches its systemic 'consumable' handling trait to every ammunition record; the book's ammunition entries carry no trait line (PC1 p.280). Trait sets otherwise agree.",
+      "state_hash": "bc4eaa93b13d8e26a135b01bc12a82d56f73f105797db735c5fbc0c7ef115a83"
+    },
+    {
+      "id": "weapon.sling-bullets",
+      "reason": "Foundry attaches its systemic 'consumable' handling trait to every ammunition record; the book's ammunition entries carry no trait line (PC1 p.280). Trait sets otherwise agree.",
+      "state_hash": "ad0a332400ad830841cc710a96a296e6c980008c701aac830dbc104281b3f170"
+    },
+    {
+      "id": "skill.acrobatics",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "e3d72ab03abbf3b2656a46a246315a201822df885f1230939a5a6238b8cbc777"
+    },
+    {
+      "id": "skill.arcana",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "a39ea06826c36b84c00bd4ebbdcf2cb0236911aabb0f974bd69de9a1a7b2b346"
+    },
+    {
+      "id": "skill.athletics",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "0c38df0bc4796f3129afbb446f956c458d9803ccfc7c0bed691bdaba4a8adbac"
+    },
+    {
+      "id": "skill.crafting",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "9b9840bc296e2b05f55d0f3cb9ea9cc140a6d5d0c686ba3b7cc3c1a4ce9dade5"
+    },
+    {
+      "id": "skill.deception",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "587d2de90d35af373af4cfd68632c8b6332e2c4cf300d59084ab639711e047b9"
+    },
+    {
+      "id": "skill.diplomacy",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "12ad299b28af9813ba5d05c17903988996f8a8a8835a024ffa9fd95d727baa67"
+    },
+    {
+      "id": "skill.intimidation",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "0421caac9929000fd97cc853d853e28f76235c9ba68abc13d7288b161b9243e9"
+    },
+    {
+      "id": "skill.medicine",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "0b0ad62f8de4f04ecfcf4d90baa0d3a8bcad22ad863ee7f5b12acabe9101ee1b"
+    },
+    {
+      "id": "skill.nature",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "107d6c83c352a2b4eb48a5bfef9443196e799651021cc5ea4214077a169adb1a"
+    },
+    {
+      "id": "skill.occultism",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "fd3d5f3d5cf1190651ca0e7c792d3870f893875b437c6dfbf00eb53e7c97952f"
+    },
+    {
+      "id": "skill.performance",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "37105bd8819879faccf677789db990392269a6c4bf0d3ad908206a4a9d4074b3"
+    },
+    {
+      "id": "skill.religion",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "7777eb0b0896ae09f13b7499e70f7b283ef6abf54eb7f4158042d48763be2eef"
+    },
+    {
+      "id": "skill.society",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "41a7c5edfed9cb80d88c4baa1c3095b7e49a8c44572a2f72267e80b4af62e608"
+    },
+    {
+      "id": "skill.stealth",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "0cf9c4ad5f27304607d635f4dbcdf7dc2593b79f9cc038c25f36296d24f295ce"
+    },
+    {
+      "id": "skill.survival",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "b0e7f555b25dadfe43c27ec3966d0eeadc06bed04718bb50f7345d6978a46b97"
+    },
+    {
+      "id": "skill.thievery",
+      "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+      "state_hash": "c1696d69869d6ea99abef75e5ae7042a5c85ddaacdf0cb1671491f7ece863d7d"
+    }
+  ]
+}

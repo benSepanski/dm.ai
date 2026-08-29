@@ -1,0 +1,1940 @@
+{
+  "claims_full_breadth": false,
+  "foundry_sha256": "b0a649e6f9859350f7eca86e85082ac68b20309f4335c77bf6e1643aff009c8a",
+  "foundry_tag": "pf2e-8.4.1",
+  "generated": "2026-08-29",
+  "missing_from_data": {
+    "ancestries": {
+      "count": 4,
+      "names": [
+        "Gnome",
+        "Halfling",
+        "Leshy",
+        "Orc"
+      ]
+    },
+    "ancestry_feats_l1": {
+      "count": 55,
+      "names": [
+        "Angelkin",
+        "Animal Accomplice",
+        "Animal Elocutionist",
+        "Beast Trainer",
+        "Bestial Manifestation",
+        "Brine May",
+        "Callow May",
+        "Changeling Lore",
+        "Distracting Shadows",
+        "Dream May",
+        "Earned Glory",
+        "Elf Atavism",
+        "Fey Fellowship",
+        "First World Magic",
+        "Folksy Patter",
+        "Gnome Obsession",
+        "Gnome Weapon Familiarity",
+        "Grasping Reach",
+        "Grimspawn",
+        "Hag Claws",
+        "Hag's Sight",
+        "Halfling Lore",
+        "Halfling Luck",
+        "Halfling Weapon Familiarity",
+        "Halo",
+        "Harmlessly Cute",
+        "Hellspawn",
+        "Hold Mark",
+        "Illusion Sense",
+        "Iron Fists",
+        "Lawbringer",
+        "Leshy Lore",
+        "Leshy Superstition",
+        "Monstrous Peacemaker",
+        "Musetouched",
+        "Nephilim Eyes",
+        "Nephilim Lore",
+        "Nimble Hooves",
+        "Orc Ferocity",
+        "Orc Lore",
+        "Orc Sight",
+        "Orc Superstition",
+        "Orc Weapon Familiarity",
+        "Pitborn",
+        "Prairie Rider",
+        "Razzle-Dazzle",
+        "Seedpod",
+        "Shadow of the Wilds",
+        "Slag May",
+        "Sure Feet",
+        "Titan Slinger",
+        "Tusks (Orc)",
+        "Undaunted",
+        "Unfettered Halfling",
+        "Watchful Halfling"
+      ]
+    },
+    "armor": {
+      "count": 3,
+      "names": [
+        "Chain Shirt",
+        "Explorer's Clothing",
+        "Light Barding"
+      ]
+    },
+    "backgrounds": {
+      "count": 34,
+      "names": [
+        "Acolyte",
+        "Acrobat",
+        "Animal Whisperer",
+        "Artist",
+        "Bandit",
+        "Barkeep",
+        "Barrister",
+        "Bounty Hunter",
+        "Charlatan",
+        "Cook",
+        "Criminal",
+        "Cultist",
+        "Detective",
+        "Emissary",
+        "Entertainer",
+        "Farmhand",
+        "Fortune Teller",
+        "Gambler",
+        "Gladiator",
+        "Guard",
+        "Herbalist",
+        "Hermit",
+        "Laborer",
+        "Martial Disciple",
+        "Merchant",
+        "Miner",
+        "Noble",
+        "Nomad",
+        "Prisoner",
+        "Sailor",
+        "Scholar",
+        "Scout",
+        "Teacher",
+        "Tinker"
+      ]
+    },
+    "fighter_feats_l1": {
+      "count": 0,
+      "names": []
+    },
+    "gear": {
+      "count": 70,
+      "names": [
+        "Alchemist's Lab",
+        "Alchemist's Toolkit",
+        "Artisan's Toolkit",
+        "Backpack",
+        "Basic Crafter's Book",
+        "Bedroll",
+        "Brass Ear",
+        "Caltrops",
+        "Cane",
+        "Chain (10 feet)",
+        "Chair Storage",
+        "Chest",
+        "Climbing Kit",
+        "Clothing (Cold-Weather)",
+        "Clothing (Fine)",
+        "Clothing (Ordinary)",
+        "Compass",
+        "Cookware",
+        "Corrective Lenses",
+        "Crowbar",
+        "Crutch",
+        "Disguise Kit",
+        "Disguise Kit (Replacement Cosmetics)",
+        "Dueling Cape",
+        "Fishing Tackle",
+        "Flint and Steel",
+        "Formula Book (Blank)",
+        "Hammer",
+        "Hearing Aid",
+        "Hourglass",
+        "Ladder (10-foot)",
+        "Lantern (Bull's Eye)",
+        "Lantern (Hooded)",
+        "Lock (Poor)",
+        "Manacles (Poor)",
+        "Merchant's Scale",
+        "Mirror",
+        "Mug",
+        "Musical Instrument (Handheld)",
+        "Musical Instrument (Heavy)",
+        "Net",
+        "Parrying Scabbard",
+        "Piton",
+        "Primal Symbol",
+        "Prosthesis",
+        "Religious Symbol (Silver)",
+        "Religious Symbol (Wooden)",
+        "Religious Text",
+        "Repair Toolkit",
+        "Rope",
+        "Sack",
+        "Saddlebags",
+        "Signal Whistle",
+        "Soap",
+        "Spellbook (Blank)",
+        "Spyglass",
+        "Tack",
+        "Ten-Foot Pole",
+        "Tent (Four-Person)",
+        "Tent (Pup)",
+        "Thieves' Toolkit",
+        "Thieves' Toolkit (Replacement Picks)",
+        "Tool (Long)",
+        "Tool (Short)",
+        "Torch",
+        "Traveler's Chair",
+        "Waterskin",
+        "Wheelchair",
+        "Writing Set",
+        "Writing Set (Extra Ink and Paper)"
+      ]
+    },
+    "general_feats_l1": {
+      "count": 9,
+      "names": [
+        "Adopted Ancestry",
+        "Armor Proficiency",
+        "Breath Control",
+        "Canny Acumen",
+        "Fast Recovery",
+        "Feather Step",
+        "Pet",
+        "Shield Block",
+        "Weapon Proficiency"
+      ]
+    },
+    "heritages": {
+      "count": 28,
+      "names": [
+        "Aiuvarin",
+        "Badlands Orc",
+        "Battle-Ready Orc",
+        "Cactus Leshy",
+        "Chameleon Gnome",
+        "Deep Orc",
+        "Dromaar",
+        "Fey-Touched Gnome",
+        "Fruit Leshy",
+        "Fungus Leshy",
+        "Gourd Leshy",
+        "Grave Orc",
+        "Gutsy Halfling",
+        "Hillock Halfling",
+        "Hold-Scarred Orc",
+        "Leaf Leshy",
+        "Lotus Leshy",
+        "Nomadic Halfling",
+        "Rainfall Orc",
+        "Root Leshy",
+        "Seaweed Leshy",
+        "Sensate Gnome",
+        "Twilight Halfling",
+        "Umbral Gnome",
+        "Vine Leshy",
+        "Wellspring Gnome",
+        "Wildwood Halfling",
+        "Winter Orc"
+      ]
+    },
+    "shields": {
+      "count": 2,
+      "names": [
+        "Buckler",
+        "Tower Shield"
+      ]
+    },
+    "skill_feats_l1": {
+      "count": 53,
+      "names": [
+        "Additional Lore",
+        "Alchemical Crafting",
+        "Arcane Sense",
+        "Assurance",
+        "Bargain Hunter",
+        "Battle Medicine",
+        "Cat Fall",
+        "Charming Liar",
+        "Combat Climber",
+        "Courtly Graces",
+        "Dubious Knowledge",
+        "Experienced Professional",
+        "Experienced Smuggler",
+        "Experienced Tracker",
+        "Fascinating Performance",
+        "Forager",
+        "Group Coercion",
+        "Group Impression",
+        "Hefty Hauler",
+        "Hobnobber",
+        "Impressive Performance",
+        "Intimidating Glare",
+        "Lengthy Diversion",
+        "Lie to Me",
+        "Multilingual",
+        "Natural Medicine",
+        "No Cause for Alarm",
+        "Oddity Identification",
+        "Pickpocket",
+        "Quick Coercion",
+        "Quick Identification",
+        "Quick Jump",
+        "Quick Repair",
+        "Quick Squeeze",
+        "Read Lips",
+        "Recognize Spell",
+        "Schooled in Secrets",
+        "Seasoned",
+        "Sign Language",
+        "Skill Training",
+        "Specialty Crafting",
+        "Steady Balance",
+        "Streetwise",
+        "Student of the Canon",
+        "Subtle Theft",
+        "Survey Wildlife",
+        "Terrain Expertise",
+        "Terrain Stalker",
+        "Titan Wrestler",
+        "Train Animal",
+        "Trick Magic Item",
+        "Underwater Marauder",
+        "Virtuosic Performer"
+      ]
+    },
+    "weapons": {
+      "count": 49,
+      "names": [
+        "Arbalest",
+        "Bastard Sword",
+        "Blowgun",
+        "Blowgun Darts",
+        "Bo Staff",
+        "Bola",
+        "Bolts",
+        "Club",
+        "Crossbow",
+        "Dart",
+        "Falchion",
+        "Flail",
+        "Gauntlet",
+        "Glaive",
+        "Greataxe",
+        "Greatclub",
+        "Greatpick",
+        "Guisarme",
+        "Halberd",
+        "Hand Crossbow",
+        "Hatchet",
+        "Heavy Crossbow",
+        "Javelin",
+        "Lance",
+        "Light Hammer",
+        "Light Mace",
+        "Light Pick",
+        "Longspear",
+        "Mace",
+        "Main-Gauche",
+        "Maul",
+        "Morningstar",
+        "Pick",
+        "Ranseur",
+        "Rapier",
+        "Sap",
+        "Scimitar",
+        "Scythe",
+        "Shield Boss",
+        "Shield Spikes",
+        "Sickle",
+        "Spear",
+        "Spiked Gauntlet",
+        "Staff",
+        "Starknife",
+        "Sword Cane",
+        "Trident",
+        "War Flail",
+        "Whip"
+      ]
+    }
+  },
+  "overrides_used": [
+    "weapon.arrows",
+    "weapon.sling-bullets"
+  ],
+  "records": {
+    "ancestry.dwarf": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "hp",
+        "size",
+        "speed",
+        "boosts",
+        "flaws",
+        "languages"
+      ],
+      "file_hash": "54d2fca53ab975cb8737efcae28214ae8ebcd44da52747273eab2cb60c7d4509",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "ancestry.elf": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "hp",
+        "size",
+        "speed",
+        "boosts",
+        "flaws",
+        "languages"
+      ],
+      "file_hash": "48a9d0f13d70809882c03678b7a91061a0d73695d8963d79d888726df79980ce",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "ancestry.goblin": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "hp",
+        "size",
+        "speed",
+        "boosts",
+        "flaws",
+        "languages"
+      ],
+      "file_hash": "baa5328ba63c7e74e30542dbb02a01d74277cf3dd793b88946e55830c5cc5bd7",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "ancestry.human": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "hp",
+        "size",
+        "speed",
+        "boosts",
+        "flaws",
+        "languages"
+      ],
+      "file_hash": "00d02be4faeb01aa4879ee6914defa8cddbf835df67f8b894204437a4279a079",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.breastplate": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "ac_bonus",
+        "dex_cap",
+        "check_penalty",
+        "speed_penalty",
+        "strength",
+        "bulk",
+        "group",
+        "category"
+      ],
+      "file_hash": "bc42b4c410797757e73b16d36aa160bb60dc40661a694d39451e56fd0be01b35",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.chain-mail": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "ac_bonus",
+        "dex_cap",
+        "check_penalty",
+        "speed_penalty",
+        "strength",
+        "bulk",
+        "group",
+        "category"
+      ],
+      "file_hash": "33542ea8a375d7d436d25acb159668b7cad72f9d251a7e1d443948e644966078",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.hide": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "ac_bonus",
+        "dex_cap",
+        "check_penalty",
+        "speed_penalty",
+        "strength",
+        "bulk",
+        "group",
+        "category"
+      ],
+      "file_hash": "28fe3260374ad0ea5974f417f828cf57536ef0ca6bf413350e01afba44d3c064",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.leather": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "ac_bonus",
+        "dex_cap",
+        "check_penalty",
+        "speed_penalty",
+        "strength",
+        "bulk",
+        "group",
+        "category"
+      ],
+      "file_hash": "f2b4f7f3d18c9bed42b7fa7baf26bed274a4e73441d0162b6dbb8f3e754d76dc",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.padded": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "ac_bonus",
+        "dex_cap",
+        "check_penalty",
+        "speed_penalty",
+        "strength",
+        "bulk",
+        "group",
+        "category"
+      ],
+      "file_hash": "8173af955ab8585595dc1b18938a212dc38a4e302159605b0d13baf656c9ce91",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.scale-mail": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "ac_bonus",
+        "dex_cap",
+        "check_penalty",
+        "speed_penalty",
+        "strength",
+        "bulk",
+        "group",
+        "category"
+      ],
+      "file_hash": "bfeaef27482e68147618a27440d55b51150fb6d77233732bc8b68ef7cf4b18e9",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.studded-leather": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "ac_bonus",
+        "dex_cap",
+        "check_penalty",
+        "speed_penalty",
+        "strength",
+        "bulk",
+        "group",
+        "category"
+      ],
+      "file_hash": "82f79d54f1702ad5f582574eef772cd8eef9df6a09a6086352a2ad679b84019b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "background.artisan": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "boosts",
+        "skill",
+        "lore",
+        "skill_feat"
+      ],
+      "file_hash": "917ec4ab0a7b84cba5fd2ff51337f4aefb2b98dfc003f3832e4c217de2d9c40f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "background.field-medic": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "boosts",
+        "skill",
+        "lore",
+        "skill_feat"
+      ],
+      "file_hash": "f9d36aa07608a94a7815bf3a430e2e299742ee07f532bb370d97d7ae58019650",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "background.hunter": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "boosts",
+        "skill",
+        "lore",
+        "skill_feat"
+      ],
+      "file_hash": "ff0087451bec7f385684e60491c7147a39774ebc840a570b969a8413be068ad7",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "background.street-urchin": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "boosts",
+        "skill",
+        "lore",
+        "skill_feat"
+      ],
+      "file_hash": "36c2abf5d11721ee1964b20f40e3311301ab2cffb75a7469b773235c5dc2a4e2",
+      "mismatches": [
+        "lore"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "The book parameterizes this background's Lore on the character's home settlement, naming a Golarion city as its example; we ship the generic 'City Lore' per the req-5 ORC scrub, and Foundry encodes no fixed lore for it at all.",
+        "state_hash": "91b5c657882d093fde850360ffb0fb3762d688ddcc6bf36e3dc9a3d0249e04b6"
+      }
+    },
+    "background.warrior": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "boosts",
+        "skill",
+        "lore",
+        "skill_feat"
+      ],
+      "file_hash": "e7bbb3a73077c6c2eaee53df5e68c7067b1f1879b006f40a7e464e3b38bf996b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "class.fighter": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "key_attribute",
+        "hp_per_level",
+        "perception",
+        "saves",
+        "attacks",
+        "defenses"
+      ],
+      "file_hash": "491ef908978105b2333b32aa70b1b17d4b29de4d8723c5b375d7e04ac890f7ac",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.dwarf.dwarven-doughtiness": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "e9c93140d3a28b45a474487dee2c45c37e8ec697cd8384caf673f091a84ae5b9",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.dwarf.dwarven-lore": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "835738c7e752d3761de5d693d5e9cb6144ed9bb0c4f48ce011315cb51ec17d97",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.dwarf.dwarven-weapon-familiarity": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "3bae9eb597a245ba4de0899b712a9cf52a38795c1cf7cc0f25d702b732871b80",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.dwarf.mountain-strategy": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "459030808b70333dcee0cc8010a171997884fe99254f113821572577023bab79",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.dwarf.rock-runner": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "b68053bac897b6acd99c76c2c818a84337d16f130382af32c1281728c348cf04",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.dwarf.stonemasons-eye": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "5de6decf13e37f28e8be20a92abcf7e0ba4c3510cf0cd709ff535c2963e8b75f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.dwarf.unburdened-iron": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "148044abcb66e2f91b5b943b1e07bd42226fbeed5e15109ad1d676175826d24c",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.elf.ancestral-longevity": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "3ce6ac6b6d2aa4049522d013486b58814e3fa7b6327ca06a2caaa9499d300822",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.elf.elven-lore": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "d207efbb3cc701462c16e1861d00cfecb5c1c1e04ce33b49736ca13bd7e27627",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.elf.elven-weapon-familiarity": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "bb58c5a0ddd2fa3bd51d3e1d6c3db1232ac7e4061541313b526fc47266c22762",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.elf.forlorn": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "5b9eb6a36b91d6eaa9e8cc2104f1ebf240d7491e186248cc25c0bed72d110190",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.elf.nimble-elf": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "0865905d05d6aa83a250c1e7967246f7df3ddfc5dd70c7d54a262158dce5be61",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.elf.otherworldly-magic": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "2235ede5fe46c83b1f6c9394298e0243c2d19c04a27b364de5d138169a586b9b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.elf.unwavering-mien": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "5aeb475db98714d594dd93f61d38862fdc8ee9ecfb0fd783d112b1a7e5524dc2",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.goblin.burn-it": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "ec221df0833650cdfd3f57fa9be148876a45ef6911e4c7d943f589723aba3903",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.goblin.city-scavenger": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "3ef9a169f2232bc7717911b6a7bb3012dbd701866a60e64135c4e40f850d3adb",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.goblin.goblin-lore": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "17e5bbb35d81c0a872ad3404ca971933cb969fe9b013a37638191b372ce11514",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.goblin.goblin-scuttle": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "52e5da04dbde42fec096eba9c893dc3e4bdc63c114fe3793eb557ac7aedcd551",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.goblin.goblin-song": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "feddc0f2f352f2bef03787942e6980b5d1fb4c702fad0f54b49912ef31757609",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.goblin.goblin-weapon-familiarity": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "95ebd49f50601b704910a51405cfdbca02c9f18b92694f71f7220a717abd641a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.goblin.junk-tinker": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "22181fd2c2c0bd67dfb98d21118463e190fbff65eadc258ad5f406e97a660113",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.goblin.rough-rider": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "4b608915c00c71f27dcff5cd9236f6312e0447776a2aae84abe4c8532942170f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.goblin.very-sneaky": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "3bab1e17c6bcf323eb9f165ea7d9f92f33e98031b0b7ac4eb088803f89a462a5",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.human.adapted-cantrip": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "4991d03e638f5ef677bdbda45f2434cb93d066b557868429835c2a06bea9c836",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.human.cooperative-nature": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "786c935b679603d079eddcd650611207127220b12f3748896617b11059dfdf65",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.human.general-training": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "101067fcdf821ad251bf09afa003b5996c56febf08026e4819f160521956a2ca",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.human.haughty-obstinacy": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "1bf01043cca4d36153f8909bc9749727f99dd4aa26c90bb47224ef75b2be3db5",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.human.natural-ambition": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "7d828964c8fb15f0e104058f608aa95e5cff3e44f8b1708c1db88df3a822002f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.human.natural-skill": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "8b7df4fe514bff5c15f47e70905522688aced02a98b2c1ea93283137fdab5702",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.ancestry.human.unconventional-weaponry": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "42abd5418c2f54933815fb38e99825532297bd8639074330e05a3d24cca47d61",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.combat-assessment": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "89b44f677e62a760b9715f12894a149ab473d97ce711004fe63fc86123b8794e",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.double-slice": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "908c6fc866e9bbed4b3dd480b56fc42e6395eec6e3c1865234dbaff8c6bc0341",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.exacting-strike": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "fd47a587fbd60a1fab4d29e8151239d9d522498d89b50e1cac8efbe316774697",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.point-blank-stance": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "0c5544c5e65397f62869c3a4ec038b535d96bc14f2d9f6b795f9b50c6ee13e9a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.reactive-shield": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "c52a1e93f33c7791e5fa6692e644f649e1460f11d96aed89fc7c7a4377ca1df0",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.snagging-strike": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "dde5beec5a6d9d6a8db0ec87f7e524a00c4d99ad7d421fca57c73fa83e69b159",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.sudden-charge": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "b846008e8a8d6104dd26a2286ffe652214f02b3a47e18b54a850b5e292e9b37c",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.vicious-swing": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "bc66f4df59df4727c9686ee3d2d29e65d2d098b0cadb8fa837a17ce796e411f5",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.general.diehard": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "2746359539f69379e8195972cdad91e826bc5666c823ac37297727b024b54bc9",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.general.fleet": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "0024aa3a66e3e0b73d263e61da84b4a4bddf19f8a5e305ced40dace63a2f2dfc",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.general.incredible-initiative": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "1afe4d0e904fe100602e1e42407c37d744f9595bc4eb13d03f2d80e5f383e12f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.general.ride": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "d1c6dbe86699c63c51c04e6a2a8f06236cdbd4275bed6ce1479dac0263b41b0d",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.general.toughness": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "8aceeb2a62aa60820121ac30ea554a1ecc14e075493488838a9b0b26a3a8c70b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.adventurers-pack": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price"
+      ],
+      "file_hash": "cb199e834cb5c01439763521e8d380bc73fcbb52c22522b80762d273b1752f55",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.grappling-hook": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk"
+      ],
+      "file_hash": "8c12b8c6a20cd616298e9fd8f54d08f803e1e361a39a7c76284d82cb497438f9",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.healers-toolkit": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk"
+      ],
+      "file_hash": "f855ae9dffb45decd03fda47c4d11783d363c34164981893450343c2b619e5af",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.dwarf.ancient-blooded": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "11e757721951e28e2201ff331dfdcb0baaf3631fca4971d03e1494de2a74ef46",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.dwarf.death-warden": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "55c675510f789829493a44a7008f415d5a92241d6c10588f423bba2596b879fe",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.dwarf.forge": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "13cf351c8938f85db86192699cba441c74fcc3bb1173f2a2ec3e08ea04fc82ef",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.dwarf.rock": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "52e647a84e0fdc828f31ee243293aa7d5384a0ad62850fc91519967b6c0e5c52",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.dwarf.strong-blooded": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "3df5bdddbffe5ea73b9866cdac92cdc94678c243577111907206700f0ee2d485",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.elf.ancient": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "d1ca5330011e853638037d178ab62b8becacabb004c97d7150bf2116eb06cc8f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.elf.arctic": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "28df5730d4af0b021614b3eb217474902fac146cfdbb7cc747721c1448c414b1",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.elf.cavern": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "24caf83dc9fd52a3e1efceb7d337140c375bffb1ba673c16854eca891e088243",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.elf.seer": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "ab5b41443bcfbe866886e347286170009073d5bff5e63df3bb7a8e927c981240",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.elf.whisper": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "6f40c0a2baee047109ef8871aec179c049790e105f92d9104e28910c25f60d20",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.elf.woodland": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "940c26ca28e5e44c7014870fa1fd17407737fa443bf6e221bca15de0e6950022",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.goblin.charhide": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "d06f771946680c1b45a927a9c16674ef7dcf4017a462829f50663376dbcb1b31",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.goblin.irongut": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "275be1cd03f3eabbfbbeed996b30d9b33e8be2c1c7bb311a0b40c1b72f66f34e",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.goblin.razortooth": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "28cad09666b3e688194e8cc39169d819ea704aa1af3b96682ebb0a739c753fa2",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.goblin.snow": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "172b60bde01fdf698655b127d6aa23e6527d611726a23430c6f9f638b8d53f98",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.goblin.unbreakable": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "61c95500227b71e4040b191b7ea7ef3c46297011715d30f26ba059af0d92a17d",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.human.skilled": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "9ca050ae9a3b90f4040d05bc1a606528351025cfff1ac4ea83dbce2cabe5c39c",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "heritage.human.versatile": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "b4a67921687e4b16a1192a46c71fc0a8f52946306bc305f8e9bdec5cc1a095f6",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "kit.fighter": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "5bda77c00d13a8156462b3213c06226f90d8341bb01c9511ef499b0185714c7c",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "Class kits exist only in the book; Foundry ships no class-kit pack. Contents and price semantics hand-verified against AoN (slice-1 dossier section 8.6).",
+        "state_hash": "c5ff5742b46791734a43c68b86ea441021f05472d741157d5f8331ddf211d27b"
+      }
+    },
+    "shield.steel": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "ac_bonus",
+        "hardness",
+        "hp",
+        "bt",
+        "bulk"
+      ],
+      "file_hash": "3ee0c5b25db73f90f5123576543c73c195b7e011039a98cf988a9f62983b178d",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "shield.wooden": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "ac_bonus",
+        "hardness",
+        "hp",
+        "bt",
+        "bulk"
+      ],
+      "file_hash": "e4c663594909fd1093a309ddc1671ebe6948b364504e781aaa55a52791e82248",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.acrobatics": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "f21110e13a73240623e29e2890b22caaf7e878dfe5d1d45e1c234eb61cb02536",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "e3d72ab03abbf3b2656a46a246315a201822df885f1230939a5a6238b8cbc777"
+      }
+    },
+    "skill.arcana": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "4699dcfdbb062b90ffc43f8931ee861951aec6d242d540207eece3b7bbc66679",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "a39ea06826c36b84c00bd4ebbdcf2cb0236911aabb0f974bd69de9a1a7b2b346"
+      }
+    },
+    "skill.athletics": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "8389215f4c10d654055d60c4ff29ada9b87bfa7f89098509d2deac8cb088d053",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "0c38df0bc4796f3129afbb446f956c458d9803ccfc7c0bed691bdaba4a8adbac"
+      }
+    },
+    "skill.crafting": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "f6df1b77d4ba3298739b0f34f85c0b8301db0077c3eaa9500b4b88a095f9bb75",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "9b9840bc296e2b05f55d0f3cb9ea9cc140a6d5d0c686ba3b7cc3c1a4ce9dade5"
+      }
+    },
+    "skill.deception": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "46a219d2be49607603f1a59bc857a39850efdf73b36c4a440de35c7879ac67e6",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "587d2de90d35af373af4cfd68632c8b6332e2c4cf300d59084ab639711e047b9"
+      }
+    },
+    "skill.diplomacy": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "d1d34266815cfb76e5adbeea96b6089e49a7296a10232e531dc1ee8fa7966aa3",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "12ad299b28af9813ba5d05c17903988996f8a8a8835a024ffa9fd95d727baa67"
+      }
+    },
+    "skill.intimidation": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "7376180c4a05833f65b1dc578db6cf2bdfa4518adc309c7fc0113c92f36c4175",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "0421caac9929000fd97cc853d853e28f76235c9ba68abc13d7288b161b9243e9"
+      }
+    },
+    "skill.medicine": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "f5ef802fb752fc33dc2c7a19b078b54e8f153800799c94795af0589f42e17281",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "0b0ad62f8de4f04ecfcf4d90baa0d3a8bcad22ad863ee7f5b12acabe9101ee1b"
+      }
+    },
+    "skill.nature": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "6bad2309944f9df9b813595ad7fbd1c7eaeff37f81dfe97ef406550d0b76c63d",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "107d6c83c352a2b4eb48a5bfef9443196e799651021cc5ea4214077a169adb1a"
+      }
+    },
+    "skill.occultism": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "4b55f036873649a08c180342af6904d2576dd11e66a59b19a3949ee04fdbfcee",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "fd3d5f3d5cf1190651ca0e7c792d3870f893875b437c6dfbf00eb53e7c97952f"
+      }
+    },
+    "skill.performance": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "419d8f1179e9188f5f11b8fe50deb3b603e249144421127a6efb0249fd730e68",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "37105bd8819879faccf677789db990392269a6c4bf0d3ad908206a4a9d4074b3"
+      }
+    },
+    "skill.religion": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "45942246622dcf9f62a5db1b8e5f44e1a4d7b42942f80a603da07af16d66feb2",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "7777eb0b0896ae09f13b7499e70f7b283ef6abf54eb7f4158042d48763be2eef"
+      }
+    },
+    "skill.society": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "19f5cb1414046da54d5fe54cf1c68dd2e27093caa76dc61dbce0f61928335920",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "41a7c5edfed9cb80d88c4baa1c3095b7e49a8c44572a2f72267e80b4af62e608"
+      }
+    },
+    "skill.stealth": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "a86fe0c37811729dec8dafe7c32a4b94faac7266014cd96f454c59b4c30b415a",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "0cf9c4ad5f27304607d635f4dbcdf7dc2593b79f9cc038c25f36296d24f295ce"
+      }
+    },
+    "skill.survival": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "d80e7e41af4e7bebb06a622278321c9006806a62e47e0cfb707f81e4423c67c4",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "b0e7f555b25dadfe43c27ec3966d0eeadc06bed04718bb50f7345d6978a46b97"
+      }
+    },
+    "skill.thievery": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "d53edab3532f64bdeb7d6aff171c3ec254e08494fd434e9e84fb83e7d102573a",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
+        "state_hash": "c1696d69869d6ea99abef75e5ae7042a5c85ddaacdf0cb1671491f7ece863d7d"
+      }
+    },
+    "weapon.arrows": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits"
+      ],
+      "file_hash": "0ca40adb47148144ee7a47e4863aa5d1fe14c8bd55401dea7d23a8a5761b0902",
+      "mismatches": [
+        "traits"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "Foundry attaches its systemic 'consumable' handling trait to every ammunition record; the book's ammunition entries carry no trait line (PC1 p.280). Trait sets otherwise agree.",
+        "state_hash": "bc4eaa93b13d8e26a135b01bc12a82d56f73f105797db735c5fbc0c7ef115a83"
+      }
+    },
+    "weapon.battle-axe": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits",
+        "damage",
+        "group",
+        "category",
+        "hands",
+        "range"
+      ],
+      "file_hash": "30947cf4f33ea20415bc9f5703f39eae1efc2d964cafcd336f572f7ba3abe29a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.dagger": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits",
+        "damage",
+        "group",
+        "category",
+        "hands",
+        "range"
+      ],
+      "file_hash": "f778c1a4a1a1f79ab6ee728f512f00f4ce02ce0bcb995bb6ac3778cc63bd0fa9",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.greatsword": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits",
+        "damage",
+        "group",
+        "category",
+        "hands",
+        "range"
+      ],
+      "file_hash": "643aa4f3ff1c6a86193609b598363e2bf13667b25e6202ce19dfe721ee225c4b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.longbow": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits",
+        "damage",
+        "group",
+        "category",
+        "hands",
+        "range"
+      ],
+      "file_hash": "0b189a4db9ebacfdbe048c1b30f4c1e4c5190f4b8ae4b8f1b271a124aa0232f2",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.longsword": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits",
+        "damage",
+        "group",
+        "category",
+        "hands",
+        "range"
+      ],
+      "file_hash": "3675d81819600c79c3a1089031bd590448ba91aad239619aa18a2c68ee6d0e02",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.shortbow": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits",
+        "damage",
+        "group",
+        "category",
+        "hands",
+        "range"
+      ],
+      "file_hash": "3ad5180f6903ef29b5c6b1452c61cdd6c38366c412d27f7676776f73e143ffe0",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.shortsword": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits",
+        "damage",
+        "group",
+        "category",
+        "hands",
+        "range"
+      ],
+      "file_hash": "1dc3effdf8ab568e346802e01dffb058e33d9e4cfe0b3bdd5a79e35a5e1a1c04",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.sling": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits",
+        "damage",
+        "group",
+        "category",
+        "hands",
+        "range"
+      ],
+      "file_hash": "6801f0d1e7a78ada01e1055980dbc4fa82e7bdb77215bcc94e1b78e49f9eba73",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.sling-bullets": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits"
+      ],
+      "file_hash": "89434c9f33a49937ae370c0fe4e702b057d8af637e3b4fff935df5920489a4f7",
+      "mismatches": [
+        "traits"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "Foundry attaches its systemic 'consumable' handling trait to every ammunition record; the book's ammunition entries carry no trait line (PC1 p.280). Trait sets otherwise agree.",
+        "state_hash": "ad0a332400ad830841cc710a96a296e6c980008c701aac830dbc104281b3f170"
+      }
+    },
+    "weapon.warhammer": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "price",
+        "bulk",
+        "traits",
+        "damage",
+        "group",
+        "category",
+        "hands",
+        "range"
+      ],
+      "file_hash": "dcc0163774eac660eb1ef1d485411f52d53d549985c87753bf8acfae89aa3703",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    }
+  },
+  "rules_version": "pf2e-pc.0.1.0",
+  "tool_version": "0.1.0"
+}
