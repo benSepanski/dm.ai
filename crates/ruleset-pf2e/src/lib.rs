@@ -17,6 +17,8 @@ mod equipment;
 mod feats;
 mod mechanics;
 mod skills;
+#[cfg(test)]
+mod tests;
 
 use std::sync::Arc;
 

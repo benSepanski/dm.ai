@@ -9,9 +9,10 @@ use types::{OptionId, OptionView, SlotId, SlotViewKind, StepId};
 
 use crate::data::{Effect, RulesData};
 use crate::mechanics::{
-    describe_selection, illegal, incomplete, sel_multi, sel_single, Attribute, Pf2eState,
-    SkillChoice, SLOT_CLASS_SKILL, SLOT_FEAT_SKILLS, SLOT_HERITAGE_SKILLS, SLOT_REPLACEMENT_1,
-    SLOT_REPLACEMENT_2, SLOT_REPLACEMENT_3, SLOT_TRAINED_SKILLS,
+    describe_selection, illegal, incomplete, lore_name_from_text, sel_multi, sel_single, sel_text,
+    Attribute, Pf2eState, SkillChoice, SLOT_CLASS_SKILL, SLOT_FEAT_LORE, SLOT_FEAT_SKILLS,
+    SLOT_HERITAGE_SKILLS, SLOT_REPLACEMENT_1, SLOT_REPLACEMENT_2, SLOT_REPLACEMENT_3,
+    SLOT_TRAINED_SKILLS,
 };
 
 const STEP: &str = crate::mechanics::STEP_CLASS;
@@ -50,11 +51,14 @@ fn skill_options(data: &RulesData, state: &Pf2eState, own_slot: &str) -> Vec<Opt
         .collect()
 }
 
+/// (count, source label, from-restriction) of the ChooseSkills effect the
+/// heritage or ancestry feat carries, if any. An empty `from` means any
+/// skill; non-empty restricts the chooser to that subset (Hold Mark).
 fn choose_skills_grant(
     data: &RulesData,
     state: &Pf2eState,
     from_heritage: bool,
-) -> Option<(u32, String)> {
+) -> Option<(u32, String, Vec<String>)> {
     let effects: &[Effect] = if from_heritage {
         &data.heritage(state.heritage.as_ref()?)?.effects
     } else {
@@ -64,7 +68,17 @@ fn choose_skills_grant(
         Effect::ChooseSkills {
             count,
             source_label,
-        } => Some((*count, source_label.clone())),
+            from,
+        } => Some((*count, source_label.clone(), from.clone())),
+        _ => None,
+    })
+}
+
+/// The source label of a ChooseLore effect anywhere in the folded state
+/// (heritage, ancestry feat, or a chosen general feat), if any.
+fn choose_lore_grant(state: &Pf2eState) -> Option<String> {
+    state.effects.iter().find_map(|e| match e {
+        Effect::ChooseLore { source_label } => Some(source_label.clone()),
         _ => None,
     })
 }
@@ -264,6 +278,47 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         regs.push(replacement_slot(data, slot_id, i));
     }
 
+    // --- Player-named Lore from a feat (Gnome Obsession pattern) ---
+    // A ChooseLore effect anywhere in the folded state (heritage, ancestry
+    // feat, or chosen general feat) opens this text slot; the typed name
+    // lands trained as "<Typed> Lore", same mechanics as the background
+    // Lore. At most one ChooseLore effect per build (data convention).
+    let d_desc = data.clone();
+    regs.push(SlotRegistration::<Pf2eState> {
+        id: SlotId::new(SLOT_FEAT_LORE),
+        step: StepId::new(STEP_ANCESTRY),
+        label: "Lore (feat)".into(),
+        required: true,
+        presentation_hint: None,
+        kind: Box::new(|_| SlotViewKind::Text { multiline: false }),
+        unlock: Box::new(|state| match choose_lore_grant(state) {
+            Some(_) => Availability::Open,
+            None => Availability::Hidden,
+        }),
+        dependents: vec![],
+        options: Box::new(|_| vec![]),
+        apply: Box::new(|state, decision| {
+            let Some(source) = choose_lore_grant(state) else {
+                return Err(ApplyError::new("nothing grants a Lore to name"));
+            };
+            let lore = lore_name_from_text(sel_text(&decision.selection)?)?;
+            state.lores.push((lore, source));
+            Ok(())
+        }),
+        validate: Box::new(|state, decision| match choose_lore_grant(state) {
+            Some(source) if decision.is_none() => vec![incomplete(
+                SLOT_FEAT_LORE,
+                STEP_ANCESTRY,
+                "Skills",
+                &format!("Name the Lore skill from {source}"),
+                &format!("from {source}"),
+            )],
+            _ => vec![],
+        }),
+        meters: Box::new(|_, _| vec![]),
+        describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
+    });
+
     regs
 }
 
@@ -288,8 +343,8 @@ fn chooser_slot(
         presentation_hint: None,
         kind: Box::new(
             move |state| match choose_skills_grant(&d_kind, state, from_heritage) {
-                Some((1, _)) | None => SlotViewKind::Single,
-                Some((count, _)) => SlotViewKind::Multi { count },
+                Some((1, _, _)) | None => SlotViewKind::Single,
+                Some((count, _, _)) => SlotViewKind::Multi { count },
             },
         ),
         unlock: Box::new(
@@ -299,9 +354,21 @@ fn chooser_slot(
             },
         ),
         dependents: vec![],
-        options: Box::new(move |state| skill_options(&d, state, slot_id)),
+        options: Box::new(move |state| {
+            let opts = skill_options(&d, state, slot_id);
+            // A non-empty from-restriction narrows the catalog to the
+            // listed subset (greying rules unchanged).
+            match choose_skills_grant(&d, state, from_heritage) {
+                Some((_, _, from)) if !from.is_empty() => opts
+                    .into_iter()
+                    .filter(|o| from.iter().any(|s| s == o.id.as_str()))
+                    .collect(),
+                _ => opts,
+            }
+        }),
         apply: Box::new(move |state, decision| {
-            let Some((count, source)) = choose_skills_grant(&d_apply, state, from_heritage) else {
+            let Some((count, source, from)) = choose_skills_grant(&d_apply, state, from_heritage)
+            else {
                 return Err(ApplyError::new("nothing grants this skill choice"));
             };
             let ids: Vec<String> = match &decision.selection {
@@ -320,6 +387,11 @@ fn chooser_slot(
                 if d_apply.skill(id).is_none() {
                     return Err(ApplyError::new(format!("unknown skill '{id}'")));
                 }
+                if !from.is_empty() && !from.contains(id) {
+                    return Err(ApplyError::new(format!(
+                        "'{id}' is not one of the skills this choice offers"
+                    )));
+                }
             }
             state.skill_choices.push(SkillChoice {
                 slot: slot_id,
@@ -329,7 +401,7 @@ fn chooser_slot(
             Ok(())
         }),
         validate: Box::new(move |state, decision| {
-            let Some((count, source)) = choose_skills_grant(&d_val, state, from_heritage) else {
+            let Some((count, source, _)) = choose_skills_grant(&d_val, state, from_heritage) else {
                 return vec![];
             };
             let picked = state

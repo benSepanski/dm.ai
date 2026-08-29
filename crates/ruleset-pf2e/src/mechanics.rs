@@ -61,7 +61,9 @@ impl Attribute {
 }
 
 /// Proficiency ranks; bonus is rank value + level when trained or better.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Ordered Untrained < Trained < Expert < Master < Legendary so overrides
+/// can take a max.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Proficiency {
     Untrained,
     Trained,
@@ -178,6 +180,10 @@ pub struct Pf2eState {
     pub heritage: Option<String>,
     pub ancestry_feat: Option<String>,
     pub background: Option<String>,
+    /// The skill picked in the background's sub-choice slot, when its
+    /// background offers one (Scholar pattern). Also steers the
+    /// choice-dependent skill feat on the sheet.
+    pub background_skill_choice: Option<String>,
     pub class: Option<String>,
     pub key_attribute: Option<Attribute>,
     pub class_feat: Option<String>,
@@ -197,6 +203,10 @@ pub struct Pf2eState {
     /// feats), in pick order.
     pub chosen_general_feats: Vec<String>,
     pub bonus_class_feats: Vec<String>,
+
+    /// Bonus languages picked in the ancestry-language chooser, in pick
+    /// order (display names from the ancestry's additional_languages).
+    pub chosen_languages: Vec<String>,
 
     /// Mechanical effects collected from heritage/feat records.
     pub effects: Vec<Effect>,
@@ -262,6 +272,31 @@ impl Pf2eState {
 
     pub fn has_effect(&self, pred: impl Fn(&Effect) -> bool) -> bool {
         self.effects.iter().any(pred)
+    }
+
+    /// Trained (or better) in the given skill ID under the folded state.
+    /// At level 1 every skill rank above untrained is exactly trained, so
+    /// membership in the resolution is the whole check.
+    pub fn is_trained(&self, skill: &str) -> bool {
+        self.skill_resolution()
+            .trained
+            .iter()
+            .any(|(id, _)| id == skill)
+    }
+
+    /// The ancestry-language chooser's current pick count:
+    /// max(0, Int modifier) plus every bonus-language effect.
+    pub fn language_count(&self) -> u32 {
+        let int = self.modifier(Attribute::Int).max(0) as u32;
+        let bonus: u32 = self
+            .effects
+            .iter()
+            .map(|e| match e {
+                Effect::BonusLanguages { count } => *count,
+                _ => 0,
+            })
+            .sum();
+        int + bonus
     }
 }
 
@@ -390,14 +425,15 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             summary.push(identity);
         }
         if let Some(a) = ancestry {
+            let senses = a.senses_with_effects(state);
             summary.push(format!(
                 "{} · Speed {} feet{}",
                 capitalize(&a.size),
                 effective_speed(state, data),
-                if a.senses.is_empty() {
+                if senses.is_empty() {
                     String::new()
                 } else {
-                    format!(" · {}", a.senses_with_effects(state))
+                    format!(" · {senses}")
                 }
             ));
         }
@@ -499,18 +535,44 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             }
         };
 
-        let save = |rank: &str, attr_mod: i32, attr: &str| -> (String, String) {
-            let p = Proficiency::parse(rank);
+        // A proficiency-override effect (Canny Acumen) sets a save or
+        // Perception to a named rank; derivation takes max(class rank,
+        // override) so an override never lowers anything.
+        let effective_rank = |class_rank: &str, target: &str| -> Proficiency {
+            state
+                .effects
+                .iter()
+                .filter_map(|e| match e {
+                    Effect::ProficiencyOverride { target: t, rank } if t == target => {
+                        Some(Proficiency::parse(rank))
+                    }
+                    _ => None,
+                })
+                .fold(Proficiency::parse(class_rank), Proficiency::max)
+        };
+        let save = |p: Proficiency, attr_mod: i32, attr: &str| -> (String, String) {
             let total = p.bonus(LEVEL) + attr_mod;
             (
                 format_signed(total),
                 format!("{} {} + {} {}", p.bonus(LEVEL), p.label(), attr_mod, attr),
             )
         };
-        let (fort, fort_d) = save(&c.proficiencies.fortitude, con, "Con");
-        let (refl, refl_d) = save(&c.proficiencies.reflex, dex, "Dex");
-        let (will, will_d) = save(&c.proficiencies.will, wis, "Wis");
-        let (perc, perc_d) = save(&c.proficiencies.perception, wis, "Wis");
+        let (fort, fort_d) = save(
+            effective_rank(&c.proficiencies.fortitude, "fortitude"),
+            con,
+            "Con",
+        );
+        let (refl, refl_d) = save(
+            effective_rank(&c.proficiencies.reflex, "reflex"),
+            dex,
+            "Dex",
+        );
+        let (will, will_d) = save(effective_rank(&c.proficiencies.will, "will"), wis, "Wis");
+        let (perc, perc_d) = save(
+            effective_rank(&c.proficiencies.perception, "perception"),
+            wis,
+            "Wis",
+        );
         let class_dc = 10
             + Proficiency::parse(&c.proficiencies.class_dc).bonus(LEVEL)
             + state.key_attribute.map(|a| state.modifier(a)).unwrap_or(0);
@@ -645,11 +707,27 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         }
     }
     if let Some(b) = state.background.as_ref().and_then(|id| data.background(id)) {
-        features.push(SheetEntry {
-            label: b.skill_feat.clone(),
-            value: format!("skill feat — {}", b.name),
-            detail: Some(b.text.clone()),
-        });
+        // A choice-dependent skill feat follows the chosen sub-choice
+        // skill; a fixed one renders directly; no entry while the choice
+        // (or the feat itself) is missing.
+        let feat_label = if !b.skill_feat_by_choice.is_empty() {
+            state
+                .background_skill_choice
+                .as_ref()
+                .and_then(|s| b.skill_feat_by_choice.get(s))
+                .cloned()
+        } else if b.skill_feat.is_empty() {
+            None
+        } else {
+            Some(b.skill_feat.clone())
+        };
+        if let Some(label) = feat_label {
+            features.push(SheetEntry {
+                label,
+                value: format!("skill feat — {}", b.name),
+                detail: Some(b.text.clone()),
+            });
+        }
     }
     for e in &state.effects {
         if let Effect::GrantLore { name: lore } = e {
@@ -741,11 +819,19 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         });
     }
 
-    // Languages and lore.
+    // Languages and lore. The value keeps the ancestry defaults first, in
+    // record order, then chosen additional languages in pick order — with
+    // nothing chosen it renders exactly as before.
     if let Some(a) = ancestry {
+        let mut languages = a.languages.clone();
+        for lang in &state.chosen_languages {
+            if !languages.contains(lang) {
+                languages.push(lang.clone());
+            }
+        }
         let mut entries = vec![SheetEntry {
             label: "Languages".into(),
-            value: a.languages.join(", "),
+            value: languages.join(", "),
             detail: None,
         }];
         if !state.lores.is_empty() {
@@ -774,10 +860,26 @@ impl crate::data::AncestryRecord {
     fn senses_with_effects(&self, state: &Pf2eState) -> String {
         let mut senses: Vec<String> = self.senses.clone();
         for e in &state.effects {
-            if let Effect::Sense { value } = e {
-                if !senses.contains(value) {
-                    senses.push(value.clone());
+            match e {
+                Effect::Sense { value } => {
+                    if !senses.contains(value) {
+                        senses.push(value.clone());
+                    }
                 }
+                // Grants `otherwise` normally; when the ancestry's own
+                // base senses already include `otherwise`, upgrades to
+                // `sense` instead (the Aiuvarin/Dromaar rule).
+                Effect::SenseUpgrade { sense, otherwise } => {
+                    let granted = if self.senses.contains(otherwise) {
+                        sense
+                    } else {
+                        otherwise
+                    };
+                    if !senses.contains(granted) {
+                        senses.push(granted.clone());
+                    }
+                }
+                _ => {}
             }
         }
         senses.join(", ")
@@ -853,57 +955,86 @@ fn attack_entries(
         }
     };
 
-    // Fist first — everyone has it.
+    // Fist first — everyone has it, unless a replaces_fist unarmed-attack
+    // effect (Iron Fists pattern) swaps it out below.
     let unarmed_prof = Proficiency::parse(&class.proficiencies.unarmed_attacks);
-    let fist_attr = if dex > str_ { dex } else { str_ };
-    let fist_attr_name = if dex > str_ { "Dex" } else { "Str" };
-    entries.push(SheetEntry {
-        label: "Fist".into(),
-        value: format!(
-            "{} · 1d4{} B",
-            format_signed(unarmed_prof.bonus(LEVEL) + fist_attr),
-            if str_ != 0 {
-                format_signed(str_)
-            } else {
-                String::new()
+    let fist_replaced = state.has_effect(|e| {
+        matches!(
+            e,
+            Effect::UnarmedAttack {
+                replaces_fist: true,
+                ..
             }
-        ),
-        detail: Some(format!(
-            "{} {} + {} {} · agile, finesse, nonlethal, unarmed",
-            unarmed_prof.bonus(LEVEL),
-            unarmed_prof.label(),
-            fist_attr,
-            fist_attr_name
-        )),
+        )
     });
+    if !fist_replaced {
+        let fist_attr = if dex > str_ { dex } else { str_ };
+        let fist_attr_name = if dex > str_ { "Dex" } else { "Str" };
+        entries.push(SheetEntry {
+            label: "Fist".into(),
+            value: format!(
+                "{} · 1d4{} B",
+                format_signed(unarmed_prof.bonus(LEVEL) + fist_attr),
+                if str_ != 0 {
+                    format_signed(str_)
+                } else {
+                    String::new()
+                }
+            ),
+            detail: Some(format!(
+                "{} {} + {} {} · agile, finesse, nonlethal, unarmed",
+                unarmed_prof.bonus(LEVEL),
+                unarmed_prof.label(),
+                fist_attr,
+                fist_attr_name
+            )),
+        });
+    }
     for e in &state.effects {
         if let Effect::UnarmedAttack {
             name,
             damage,
             traits,
+            range,
+            replaces_fist: _,
         } = e
         {
-            let finesse = traits.iter().any(|t| t == "finesse");
-            let attr = if finesse && dex > str_ { dex } else { str_ };
-            let attr_name = if finesse && dex > str_ { "Dex" } else { "Str" };
+            // Kept simple by design: a `range` marks a true ranged
+            // unarmed attack (Seedpod) — Dex to the attack roll, no
+            // attribute to damage. Melee unarmed attacks use Str (Dex
+            // with finesse when higher) and add Str to damage.
+            let (attr, attr_name, dmg_mod) = if range.is_some() {
+                (dex, "Dex", 0)
+            } else {
+                let finesse = traits.iter().any(|t| t == "finesse");
+                if finesse && dex > str_ {
+                    (dex, "Dex", str_)
+                } else {
+                    (str_, "Str", str_)
+                }
+            };
             entries.push(SheetEntry {
                 label: name.clone(),
                 value: format!(
                     "{} · {}{}",
                     format_signed(unarmed_prof.bonus(LEVEL) + attr),
                     damage,
-                    if str_ != 0 {
-                        format!(" ({})", format_signed(str_))
+                    if dmg_mod != 0 {
+                        format!(" ({})", format_signed(dmg_mod))
                     } else {
                         String::new()
                     }
                 ),
                 detail: Some(format!(
-                    "{} {} + {} {} · {}",
+                    "{} {} + {} {}{} · {}",
                     unarmed_prof.bonus(LEVEL),
                     unarmed_prof.label(),
                     attr,
                     attr_name,
+                    range
+                        .as_ref()
+                        .map(|r| format!(" · {r}"))
+                        .unwrap_or_default(),
                     traits.join(", ")
                 )),
             });
@@ -1067,6 +1198,98 @@ pub fn sel_attributes(selection: &Selection) -> Result<Vec<Attribute>, ApplyErro
         .collect()
 }
 
+// ---- Prerequisites (shared by every catalog that evaluates them) ----
+
+/// Human-readable description of one prerequisite: the record's own text
+/// when present, otherwise generated from the kind's fields.
+pub fn prereq_description(data: &RulesData, p: &crate::data::Prerequisite) -> String {
+    if !p.text.is_empty() {
+        return p.text.clone();
+    }
+    match p.kind.as_str() {
+        "attribute" => match (p.attribute, p.value) {
+            (Some(attr), Some(value)) => format!("{} {}", attr.name(), format_signed(value)),
+            _ => "an attribute threshold".to_string(),
+        },
+        "trained_skill" => match &p.skill {
+            Some(skill) => format!(
+                "trained in {}",
+                data.skill(skill)
+                    .map(|s| s.name.clone())
+                    .unwrap_or_else(|| skill.clone())
+            ),
+            None => "trained in a skill".to_string(),
+        },
+        other => other.replace('_', " "),
+    }
+}
+
+/// Evaluable prerequisite kinds gate availability against the folded
+/// state; the rest annotate only. Returns the greying reason for the
+/// first unmet prerequisite. Used for option greying AND re-checked on
+/// apply (the server folds through the same registrations, so a raw
+/// request cannot skip it).
+pub fn prereq_unavailable(
+    data: &RulesData,
+    prereqs: &[crate::data::Prerequisite],
+    state: &Pf2eState,
+) -> Option<String> {
+    for p in prereqs {
+        let unmet = match p.kind.as_str() {
+            // No class in this data version has a spellcasting feature.
+            "spellcasting" => true,
+            "attribute" => match (p.attribute, p.value) {
+                (Some(attr), Some(value)) => state.modifier(attr) < value,
+                _ => false,
+            },
+            "trained_skill" => match &p.skill {
+                Some(skill) => !state.is_trained(skill),
+                None => false,
+            },
+            _ => false,
+        };
+        if unmet {
+            // Spellcasting records carry their full reason as text; the
+            // evaluated kinds get a generated "requires …" naming the rule.
+            return Some(if p.kind == "spellcasting" && !p.text.is_empty() {
+                p.text.clone()
+            } else {
+                format!("requires {}", prereq_description(data, p))
+            });
+        }
+    }
+    None
+}
+
+// ---- Player-named Lore skills ----
+
+/// Normalize the player-typed Lore subject into the sheet's "<Typed> Lore"
+/// form: trims, strips one trailing "Lore" word (any ASCII case) so typing
+/// "Steppe Lore" doesn't render "Steppe Lore Lore", and rejects an empty
+/// subject.
+pub fn lore_name_from_text(text: &str) -> Result<String, ApplyError> {
+    let t = text.trim();
+    let bytes = t.as_bytes();
+    let t = if bytes.len() > 5 && bytes[bytes.len() - 5..].eq_ignore_ascii_case(b" lore") {
+        t[..t.len() - 5].trim_end()
+    } else {
+        t
+    };
+    if t.is_empty() || t.eq_ignore_ascii_case("lore") {
+        return Err(ApplyError::new("name the Lore's subject (e.g. \"Steppe\")"));
+    }
+    Ok(format!("{t} Lore"))
+}
+
+// ---- Language options ----
+
+/// Option ID for a language name ("Sylvan" → "lang.sylvan"). Languages are
+/// plain names on ancestry records, not records of their own, so the slot
+/// derives stable option IDs from the names.
+pub fn lang_option_id(name: &str) -> String {
+    format!("lang.{}", name.trim().to_lowercase().replace(' ', "-"))
+}
+
 pub fn incomplete(
     slot: &str,
     step: &str,
@@ -1100,6 +1323,18 @@ pub fn display_name(data: &RulesData, id: &OptionId) -> String {
     let s = id.as_str();
     if let Some(attr) = Attribute::from_option_id(id) {
         return attr.name().to_string();
+    }
+    if s.starts_with("lang.") {
+        // Language options carry name-derived IDs; recover the display
+        // name from the ancestry language lists.
+        for a in &data.ancestries {
+            for lang in a.languages.iter().chain(a.additional_languages.iter()) {
+                if lang_option_id(lang) == s {
+                    return lang.clone();
+                }
+            }
+        }
+        return s.trim_start_matches("lang.").to_string();
     }
     data.ancestry(s)
         .map(|r| r.name.clone())
@@ -1179,7 +1414,10 @@ pub const SLOT_ANCESTRY: &str = "pf2e.ancestry";
 pub const SLOT_HERITAGE: &str = "pf2e.ancestry.heritage";
 pub const SLOT_ANCESTRY_FEAT: &str = "pf2e.ancestry.feat";
 pub const SLOT_ANCESTRY_FREE_BOOSTS: &str = "pf2e.boosts.ancestry-free";
+pub const SLOT_ANCESTRY_LANGUAGES: &str = "pf2e.ancestry.languages";
 pub const SLOT_BACKGROUND: &str = "pf2e.background";
+pub const SLOT_BACKGROUND_SKILL: &str = "pf2e.background.skill";
+pub const SLOT_BACKGROUND_LORE: &str = "pf2e.background.lore";
 pub const SLOT_BACKGROUND_BOOST_CHOICE: &str = "pf2e.boosts.background-choice";
 pub const SLOT_BACKGROUND_BOOST_FREE: &str = "pf2e.boosts.background-free";
 pub const SLOT_CLASS: &str = "pf2e.class";
@@ -1192,6 +1430,7 @@ pub const SLOT_FEAT_SKILLS: &str = "pf2e.skills.feat-choice";
 pub const SLOT_REPLACEMENT_1: &str = "pf2e.skills.replacement-1";
 pub const SLOT_REPLACEMENT_2: &str = "pf2e.skills.replacement-2";
 pub const SLOT_REPLACEMENT_3: &str = "pf2e.skills.replacement-3";
+pub const SLOT_FEAT_LORE: &str = "pf2e.skills.feat-lore";
 pub const SLOT_HERITAGE_GENERAL_FEAT: &str = "pf2e.feats.general.heritage";
 pub const SLOT_FEAT_GENERAL_FEAT: &str = "pf2e.feats.general.ancestry-feat";
 pub const SLOT_NATURAL_AMBITION: &str = "pf2e.feats.class.natural-ambition";

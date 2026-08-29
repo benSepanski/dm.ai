@@ -10,8 +10,9 @@ use types::{OptionId, OptionView, SlotId, SlotViewKind, StepId};
 
 use crate::data::{Effect, RulesData};
 use crate::mechanics::{
-    describe_selection, incomplete, sel_single, Pf2eState, SLOT_CLASS_FEAT, SLOT_FEAT_GENERAL_FEAT,
-    SLOT_HERITAGE_GENERAL_FEAT, SLOT_NATURAL_AMBITION,
+    describe_selection, incomplete, prereq_description, prereq_unavailable, sel_single, Pf2eState,
+    SLOT_CLASS_FEAT, SLOT_FEAT_GENERAL_FEAT, SLOT_FEAT_LORE, SLOT_HERITAGE_GENERAL_FEAT,
+    SLOT_NATURAL_AMBITION,
 };
 
 const STEP: &str = crate::mechanics::STEP_CLASS;
@@ -51,14 +52,22 @@ fn general_feat_options(data: &RulesData, state: &Pf2eState) -> Vec<OptionView> 
     data.general_feats
         .iter()
         .map(|f| {
-            let already = state.chosen_general_feats.contains(&f.id);
+            let unavailable = if state.chosen_general_feats.contains(&f.id) {
+                Some("already selected".to_string())
+            } else {
+                prereq_unavailable(data, &f.prerequisites, state)
+            };
+            let mut details = vec![f.text.clone()];
+            for p in &f.prerequisites {
+                details.push(format!("Prerequisite: {}", prereq_description(data, p)));
+            }
             OptionView {
                 id: OptionId::new(&f.id),
                 label: f.name.clone(),
                 summary: String::new(),
-                details: vec![f.text.clone()],
-                available: !already,
-                unavailable_reason: already.then(|| "already selected".to_string()),
+                details,
+                available: unavailable.is_none(),
+                unavailable_reason: unavailable,
             }
         })
         .collect()
@@ -99,6 +108,14 @@ fn apply_general_feat(
     let record = data
         .general_feat(id.as_str())
         .ok_or_else(|| ApplyError::new(format!("unknown general feat '{id}'")))?;
+    // Prerequisites are re-checked on apply — the server folds through
+    // this same path, so a raw request cannot skip the greying rule.
+    if let Some(reason) = prereq_unavailable(data, &record.prerequisites, state) {
+        return Err(ApplyError::new(format!(
+            "'{}' is not available: {reason}",
+            record.name
+        )));
+    }
     state.chosen_general_feats.push(record.id.clone());
     state.effects.extend(record.effects.iter().cloned());
     Ok(())
@@ -177,7 +194,9 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 Availability::Hidden
             }
         }),
-        dependents: vec![],
+        // A chosen general feat can carry a ChooseLore effect; its named
+        // Lore dies with the feat.
+        dependents: vec![SlotId::new(SLOT_FEAT_LORE)],
         options: Box::new(move |state| general_feat_options(&d, state)),
         apply: Box::new(move |state, decision| {
             apply_general_feat(&d_apply, state, &decision.selection)
@@ -219,7 +238,9 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 Availability::Hidden
             }
         }),
-        dependents: vec![],
+        // Same as the heritage-granted slot: a ChooseLore-carrying feat's
+        // named Lore dies with the feat.
+        dependents: vec![SlotId::new(SLOT_FEAT_LORE)],
         options: Box::new(move |state| general_feat_options(&d, state)),
         apply: Box::new(move |state, decision| {
             apply_general_feat(&d_apply, state, &decision.selection)
