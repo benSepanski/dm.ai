@@ -170,15 +170,23 @@ fn data_files() -> Vec<(&'static str, String)> {
             // The slice-1 shape, untouched fields: serde defaults must hold.
             "id": "background.field-medic", "name": "Field Medic", "text": "Mended wounds.",
             "boost_choice": ["con", "wis"], "skill": "skill.medicine",
-            "lore": "Warfare Lore", "skill_feat": "Battle Medicine", "source": src()
+            "lore": "Warfare Lore", "skill_feat": "feat.skill.battle-medicine",
+            "source": src()
         },
         {
             // Skill sub-choice + choice-dependent skill feat (Scholar).
+            // The by-choice values are feat IDs; the parameterized display
+            // labels ride in skill_feat_display_by_choice.
             "id": "background.scholar", "name": "Scholar", "text": "Studied deeply.",
             "boost_choice": ["int", "wis"], "skill": "",
             "skill_choice": ["skill.arcana", "skill.nature", "skill.religion"],
             "lore": "Academia Lore", "skill_feat": "",
             "skill_feat_by_choice": {
+                "skill.arcana": "feat.skill.assurance",
+                "skill.nature": "feat.skill.assurance",
+                "skill.religion": "feat.skill.assurance"
+            },
+            "skill_feat_display_by_choice": {
                 "skill.arcana": "Assurance (Arcana)",
                 "skill.nature": "Assurance (Nature)",
                 "skill.religion": "Assurance (Religion)"
@@ -186,11 +194,13 @@ fn data_files() -> Vec<(&'static str, String)> {
             "source": src()
         },
         {
-            // Player-named Lore (Nomad).
+            // Player-named Lore (Nomad), plus a parameterized fixed grant:
+            // the ID resolves, the display override renders.
             "id": "background.nomad", "name": "Nomad", "text": "Wandered far.",
             "boost_choice": ["con", "wis"], "skill": "skill.nature",
             "lore": "", "lore_player_named": true,
-            "skill_feat": "Assurance (Survival)", "source": src()
+            "skill_feat": "feat.skill.assurance",
+            "skill_feat_display": "Assurance (Survival)", "source": src()
         },
     ]);
     let classes = json!([
@@ -224,6 +234,17 @@ fn data_files() -> Vec<(&'static str, String)> {
             "id": "feat.general.assurance-gate", "name": "Assured Balance", "level": 1,
             "prerequisites": [{ "kind": "trained_skill", "skill": "skill.acrobatics" }],
             "text": "Needs Acrobatics.", "effects": [], "source": src()
+        },
+        {
+            "id": "feat.skill.battle-medicine", "name": "Battle Medicine", "level": 1,
+            "prerequisites": [{ "kind": "trained_skill", "skill": "skill.medicine" }],
+            "text": "Patch up wounds, even in combat.", "effects": [], "source": src()
+        },
+        {
+            "id": "feat.skill.assurance", "name": "Assurance", "level": 1,
+            "prerequisites": [{ "kind": "special", "text": "trained in at least one skill" }],
+            "text": "Forgo rolling a chosen trained skill for 10 + proficiency.",
+            "effects": [], "source": src()
         },
     ]);
     let equipment = json!({ "weapons": [], "armor": [], "shields": [], "gear": [], "kits": [] });
@@ -708,6 +729,78 @@ fn player_named_background_lore_lands_trained() {
         state.lores,
         vec![("Steppe Lore".to_string(), "Background: Nomad".to_string())]
     );
+}
+
+// ---- Skill-feat grants as resolvable IDs -------------------------------
+
+#[test]
+fn fixed_skill_feat_id_renders_the_feat_records_name() {
+    let engine = engine();
+    let mut log = Vec::new();
+    confirm(
+        &engine,
+        &mut log,
+        SLOT_BACKGROUND,
+        one("background.field-medic"),
+    );
+    let sheet = engine.sheet(&log).unwrap();
+    let entry = sheet
+        .entry("Features", "Battle Medicine")
+        .expect("skill-feat grant renders the feat name, not its ID");
+    assert_eq!(entry.value, "skill feat — Field Medic");
+}
+
+#[test]
+fn parameterized_skill_feat_display_overrides_the_record_name() {
+    let engine = engine();
+    let mut log = Vec::new();
+    confirm(&engine, &mut log, SLOT_BACKGROUND, one("background.nomad"));
+    let sheet = engine.sheet(&log).unwrap();
+    assert!(
+        sheet.entry("Features", "Assurance (Survival)").is_some(),
+        "the display override must render"
+    );
+    assert!(
+        sheet.entry("Features", "Assurance").is_none(),
+        "the bare record name must not render when overridden"
+    );
+}
+
+#[test]
+fn integrity_rejects_dangling_skill_feat_references() {
+    let base = data();
+
+    // Fixed grant referencing an unknown feat ID.
+    let mut d = base.clone();
+    d.backgrounds[0].skill_feat = "feat.skill.nonexistent".into();
+    let err = d.check_integrity().unwrap_err().to_string();
+    assert!(
+        err.contains("skill_feat") && err.contains("feat.skill.nonexistent"),
+        "{err}"
+    );
+
+    // Choice-dependent grant referencing an unknown feat ID.
+    let mut d = base.clone();
+    d.backgrounds[1]
+        .skill_feat_by_choice
+        .insert("skill.arcana".into(), "feat.skill.nonexistent".into());
+    let err = d.check_integrity().unwrap_err().to_string();
+    assert!(err.contains("feat.skill.nonexistent"), "{err}");
+
+    // A display override needs a grant to display.
+    let mut d = base.clone();
+    d.backgrounds[0].skill_feat = String::new();
+    d.backgrounds[0].skill_feat_display = "Assurance (Medicine)".into();
+    let err = d.check_integrity().unwrap_err().to_string();
+    assert!(err.contains("skill_feat_display"), "{err}");
+
+    // A by-choice display override needs a matching by-choice grant.
+    let mut d = base.clone();
+    d.backgrounds[1]
+        .skill_feat_display_by_choice
+        .insert("skill.medicine".into(), "Assurance (Medicine)".into());
+    let err = d.check_integrity().unwrap_err().to_string();
+    assert!(err.contains("skill_feat_display_by_choice"), "{err}");
 }
 
 // ---- Choice-dependent grants on feats ----------------------------------

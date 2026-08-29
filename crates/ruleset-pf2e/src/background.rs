@@ -88,7 +88,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                         b.lore.clone()
                     };
                     let feat_part = if b.skill_feat_by_choice.is_empty() {
-                        b.skill_feat.clone()
+                        b.skill_feat_label(&d).unwrap_or_default()
                     } else {
                         "follows your skill choice".to_string()
                     };

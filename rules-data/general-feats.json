@@ -43,5 +43,563 @@
     "text": "When you Command an Animal you're mounted on to take a move action, you automatically succeed. A mounted animal acts on your turn like a minion.",
     "effects": [],
     "source": { "book": "Pathfinder Player Core", "page": 261, "url": "https://2e.aonprd.com/Feats.aspx?ID=5206", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.adopted-ancestry",
+    "level": 1,
+    "name": "Adopted Ancestry",
+    "prerequisites": [],
+    "text": "You're fully immersed in another ancestry's culture and traditions. Choose a common ancestry. You can select ancestry feats from that ancestry in addition to your own, as long as the feats don't require a physiological feature you lack, as determined by the GM.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 252, "url": "https://2e.aonprd.com/Feats.aspx?ID=5115", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.armor-proficiency",
+    "level": 1,
+    "name": "Armor Proficiency",
+    "prerequisites": [],
+    "text": "You become trained in light armor. If you were already trained in light armor, you gain training in medium armor; if you were trained in both, you become trained in heavy armor. If you are at least 13th level, you become an expert in this armor type. You can select this feat more than once, becoming trained in the next type of armor each time.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 252, "url": "https://2e.aonprd.com/Feats.aspx?ID=5120", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.breath-control",
+    "level": 1,
+    "name": "Breath Control",
+    "prerequisites": [],
+    "text": "You can hold your breath for 25 times as long as usual before suffocating. You gain a +1 circumstance bonus to saving throws against inhaled threats, such as inhaled poisons, and if you roll a success on such a saving throw, you get a critical success instead.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 253, "url": "https://2e.aonprd.com/Feats.aspx?ID=5129", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.canny-acumen",
+    "level": 1,
+    "name": "Canny Acumen",
+    "prerequisites": [],
+    "text": "Your avoidance or observation is beyond the ken of most in your profession. Choose Fortitude saves, Reflex saves, Will saves, or Perception. You become an expert in your choice. At 17th level, you become a master in your choice.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 253, "url": "https://2e.aonprd.com/Feats.aspx?ID=5130", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.fast-recovery",
+    "level": 1,
+    "name": "Fast Recovery",
+    "prerequisites": [{ "kind": "attribute", "attribute": "con", "value": 2 }],
+    "text": "Your body quickly bounces back. You regain twice as many Hit Points from resting. Each successful Fortitude save against an ongoing disease or poison reduces its stage by 2 (by 1 if it's virulent), and each critical success reduces it by 3 (by 2 if virulent). When you rest for a night, your drained condition decreases by 2 instead of 1.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 255, "url": "https://2e.aonprd.com/Feats.aspx?ID=5148", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.feather-step",
+    "level": 1,
+    "name": "Feather Step",
+    "prerequisites": [{ "kind": "attribute", "attribute": "dex", "value": 2 }],
+    "text": "You step carefully and quickly. You can Step into difficult terrain.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 256, "url": "https://2e.aonprd.com/Feats.aspx?ID=5149", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.pet",
+    "level": 1,
+    "name": "Pet",
+    "prerequisites": [],
+    "text": "You have a pet: a Tiny animal of a type you choose. It has the minion trait, gaining 2 actions on your turn when you use the Command an Animal action (no Nature check needed). It can't take attack actions except to Escape or Force Open. Its level equals yours; its save modifiers and AC equal yours; it has 5 Hit Points per level, low-light vision, and a Speed of 25 feet (or a swim Speed of 25 feet for an aquatic pet). When you gain your pet, choose two pet abilities.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 259, "url": "https://2e.aonprd.com/Feats.aspx?ID=5186", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.shield-block",
+    "level": 1,
+    "name": "Shield Block",
+    "prerequisites": [],
+    "text": "You snap your shield in place to ward off a blow (reaction; trigger: while you have your shield raised, you would take physical damage from an attack). Your shield prevents you from taking an amount of damage up to the shield's Hardness. You and the shield each take any remaining damage, possibly breaking or destroying the shield.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 262, "url": "https://2e.aonprd.com/Feats.aspx?ID=5212", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.general.weapon-proficiency",
+    "level": 1,
+    "name": "Weapon Proficiency",
+    "prerequisites": [],
+    "text": "You become trained in all martial weapons. If you were already trained in all martial weapons, you become trained in one advanced weapon of your choice. If you are at least 11th level, you also become an expert in these weapons. You can select this feat more than once, becoming trained in another advanced weapon each time.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 265, "url": "https://2e.aonprd.com/Feats.aspx?ID=5239", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.additional-lore",
+    "level": 1,
+    "name": "Additional Lore",
+    "prerequisites": [],
+    "text": "Your knowledge has expanded to encompass a new field. Choose a Lore skill subcategory. You become trained in it, and you gain additional skill increases to it at 3rd, 7th, and 15th levels.",
+    "effects": [{ "type": "choose_lore", "source_label": "Additional Lore" }],
+    "source": { "book": "Pathfinder Player Core", "page": 252, "url": "https://2e.aonprd.com/Feats.aspx?ID=5114", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.alchemical-crafting",
+    "level": 1,
+    "name": "Alchemical Crafting",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.crafting" }],
+    "text": "You can use the Craft activity to create alchemical items. When you select this feat, you immediately add the formulas for four common 1st-level alchemical items to your formula book.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 252, "url": "https://2e.aonprd.com/Feats.aspx?ID=5117", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.arcane-sense",
+    "level": 1,
+    "name": "Arcane Sense",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.arcana" }],
+    "text": "Your study of magic allows you to instinctively sense its presence. You can cast 1st-rank detect magic at will as an arcane innate spell. If you're a master in Arcana, the spell is heightened to 3rd rank; if you're legendary, to 4th rank.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 252, "url": "https://2e.aonprd.com/Feats.aspx?ID=5119", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.assurance",
+    "level": 1,
+    "name": "Assurance",
+    "prerequisites": [{ "kind": "special", "text": "trained in at least one skill" }],
+    "text": "Even in the worst circumstances, you can perform basic tasks. Choose a skill you're trained in. You can forgo rolling a check for that skill to instead receive a result of 10 + your proficiency bonus (do not apply any other bonuses, penalties, or modifiers).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 252, "url": "https://2e.aonprd.com/Feats.aspx?ID=5121", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.bargain-hunter",
+    "level": 1,
+    "name": "Bargain Hunter",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.diplomacy" }],
+    "text": "You can Earn Income using Diplomacy, hunting for bargains and reselling at a profit. You can also spend time sniffing out a great bargain on an item, purchasing it at a discount equal to the money you would have earned. If you select this feat at 1st level, you start play with an additional 2 gp.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 252, "url": "https://2e.aonprd.com/Feats.aspx?ID=5123", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.battle-medicine",
+    "level": 1,
+    "name": "Battle Medicine",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.medicine" }],
+    "text": "You can patch up wounds, even in combat (one action; requires a healer's toolkit). Attempt a Medicine check with the same DC as Treat Wounds and restore the corresponding amount of HP; this doesn't remove the wounded condition. The target is then immune to your Battle Medicine for 1 day.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 253, "url": "https://2e.aonprd.com/Feats.aspx?ID=5125", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.cat-fall",
+    "level": 1,
+    "name": "Cat Fall",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.acrobatics" }],
+    "text": "Your catlike aerial acrobatics allow you to cushion your falls. Treat falls as 10 feet shorter, 25 feet if you're an expert in Acrobatics, or 50 feet if you're a master. If you're legendary, you always land on your feet and take no falling damage.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 253, "url": "https://2e.aonprd.com/Feats.aspx?ID=5131", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.charming-liar",
+    "level": 1,
+    "name": "Charming Liar",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.deception" }],
+    "text": "Your charm allows you to win over those you lie to. When you get a critical success using the Lie action, the target's attitude toward you improves by one step, as though you'd succeeded at using Diplomacy to Make an Impression. This works only once per conversation, and the lie must impart seemingly important information, inflate your status, or ingratiate yourself.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 253, "url": "https://2e.aonprd.com/Feats.aspx?ID=5132", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.combat-climber",
+    "level": 1,
+    "name": "Combat Climber",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.athletics" }],
+    "text": "Your techniques allow you to fight as you climb. You're not off-guard while Climbing and can Climb with a hand occupied. You must still use another hand and both legs to Climb.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 253, "url": "https://2e.aonprd.com/Feats.aspx?ID=5134", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.courtly-graces",
+    "level": 1,
+    "name": "Courtly Graces",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.society" }],
+    "text": "You have learned proper etiquette and bearing, letting you present yourself as a noble and play games of influence. You can use Society to Make an Impression on a noble and with Impersonate to pretend to be a noble; if you use the normal skills in those situations instead, you gain a +1 circumstance bonus to the check.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 254, "url": "https://2e.aonprd.com/Feats.aspx?ID=5138", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.dubious-knowledge",
+    "level": 1,
+    "name": "Dubious Knowledge",
+    "prerequisites": [{ "kind": "special", "text": "trained in a skill with the Recall Knowledge action" }],
+    "text": "You're a treasure trove of information, but not all of it comes from reputable sources. When you fail (but don't critically fail) a Recall Knowledge check using any skill, you learn the correct answer and an erroneous answer, with no way to differentiate which is which.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 254, "url": "https://2e.aonprd.com/Feats.aspx?ID=5142", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.experienced-professional",
+    "level": 1,
+    "name": "Experienced Professional",
+    "prerequisites": [{ "kind": "special", "text": "trained in a Lore skill" }],
+    "text": "You carefully safeguard your professional endeavors to prevent disaster. When you use Lore to Earn Income, a critical failure becomes a failure instead, and if you're an expert in Lore, you gain twice as much income from a failed check (unless it was originally a critical failure).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 254, "url": "https://2e.aonprd.com/Feats.aspx?ID=5144", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.experienced-smuggler",
+    "level": 1,
+    "name": "Experienced Smuggler",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.stealth" }],
+    "text": "You often smuggle things past the authorities. When the GM rolls your Stealth check to see if a passive observer notices a small concealed item, the GM uses the number rolled or 10, whichever is higher (15 if you're a master in Stealth; you automatically succeed if you're legendary). This provides no benefit against an active search.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 255, "url": "https://2e.aonprd.com/Feats.aspx?ID=5145", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.experienced-tracker",
+    "level": 1,
+    "name": "Experienced Tracker",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.survival" }],
+    "text": "Tracking is second nature to you. You can Track while moving at full Speed by taking a –5 penalty to your Survival check. If you're a master in Survival, you don't take the penalty; if you're legendary, you no longer need to roll a new check every hour while tracking.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 255, "url": "https://2e.aonprd.com/Feats.aspx?ID=5146", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.fascinating-performance",
+    "level": 1,
+    "name": "Fascinating Performance",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.performance" }],
+    "text": "When you Perform, compare your result to the Will DC of one observer; on a success, that observer is fascinated by you for 1 round (in demanding situations such as combat you must critically succeed, and the action gains the incapacitation trait). The target is then temporarily immune for 1 hour. Higher Performance proficiency lets you fascinate more observers at once.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 255, "url": "https://2e.aonprd.com/Feats.aspx?ID=5147", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.forager",
+    "level": 1,
+    "name": "Forager",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.survival" }],
+    "text": "While using Survival to Subsist, if you roll any result worse than a success, you get a success. On a success you can provide subsistence living for yourself and four additional creatures (twice as many on a critical success), with the numbers growing at higher Survival proficiency.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 256, "url": "https://2e.aonprd.com/Feats.aspx?ID=5152", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.group-coercion",
+    "level": 1,
+    "name": "Group Coercion",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.intimidation" }],
+    "text": "You can strong-arm people effectively, even in groups. When you Coerce, you can compare your Intimidation check result to the Will DCs of up to five targets instead of one (10 if you're an expert, 25 a master, 50 legendary).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 256, "url": "https://2e.aonprd.com/Feats.aspx?ID=5154", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.group-impression",
+    "level": 1,
+    "name": "Group Impression",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.diplomacy" }],
+    "text": "When you Make an Impression, you can compare your Diplomacy check result to the Will DCs of up to 10 targets you conversed with, with no penalty (20 if you're an expert, 50 a master, 100 legendary).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 256, "url": "https://2e.aonprd.com/Feats.aspx?ID=5155", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.hefty-hauler",
+    "level": 1,
+    "name": "Hefty Hauler",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.athletics" }],
+    "text": "You can carry more than your frame implies. Increase your maximum and encumbered Bulk limits by 2.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 256, "url": "https://2e.aonprd.com/Feats.aspx?ID=5156", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.hobnobber",
+    "level": 1,
+    "name": "Hobnobber",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.diplomacy" }],
+    "text": "You are skilled at learning information through conversation. The Gather Information exploration activity takes you half as long as normal. If you're a master in Diplomacy, a critical failure to Gather Information becomes a failure instead.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 256, "url": "https://2e.aonprd.com/Feats.aspx?ID=5157", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.impressive-performance",
+    "level": 1,
+    "name": "Impressive Performance",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.performance" }],
+    "text": "Your performances inspire admiration and win you fans. You can Make an Impression using Performance instead of Diplomacy. If you perform for at least 10 minutes, you can Make an Impression targeting up to 10 audience members who saw the whole performance, without the normal penalty (20 for a 1-hour performance, 50 for 2 hours).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 256, "url": "https://2e.aonprd.com/Feats.aspx?ID=5159", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.intimidating-glare",
+    "level": 1,
+    "name": "Intimidating Glare",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.intimidation" }],
+    "text": "You can Demoralize with a mere glare. When you do, Demoralize loses the auditory trait and gains the visual trait, and you don't take a penalty if the creature doesn't understand your language.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 257, "url": "https://2e.aonprd.com/Feats.aspx?ID=5162", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.lengthy-diversion",
+    "level": 1,
+    "name": "Lengthy Diversion",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.deception" }],
+    "text": "When you critically succeed to Create a Diversion, you continue to remain hidden after the end of your turn, for an amount of time that depends on the diversion and situation as determined by the GM (minimum 1 additional round).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 258, "url": "https://2e.aonprd.com/Feats.aspx?ID=5176", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.lie-to-me",
+    "level": 1,
+    "name": "Lie to Me",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.deception" }],
+    "text": "You can use Deception to weave traps for anyone trying to deceive you. If you can engage in conversation with someone trying to Lie to you, use your Deception DC if it is higher than your Perception DC to determine whether they succeed. This doesn't apply without back-and-forth dialogue.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 258, "url": "https://2e.aonprd.com/Feats.aspx?ID=5177", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.multilingual",
+    "level": 1,
+    "name": "Multilingual",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.society" }],
+    "text": "You easily pick up new languages. You learn two new languages, chosen from common languages, uncommon languages, and any others you have access to. You learn an additional language if you are or become a master in Society and again if you become legendary.",
+    "effects": [{ "type": "bonus_languages", "count": 2 }],
+    "source": { "book": "Pathfinder Player Core", "page": 258, "url": "https://2e.aonprd.com/Feats.aspx?ID=5181", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.natural-medicine",
+    "level": 1,
+    "name": "Natural Medicine",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.nature" }],
+    "text": "You can apply natural cures to heal your allies. You can use Nature instead of Medicine to Treat Wounds. If you're in the wilderness, you might have easier access to fresh ingredients, gaining a +2 circumstance bonus to the check subject to the GM's determination.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 258, "url": "https://2e.aonprd.com/Feats.aspx?ID=5182", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.no-cause-for-alarm",
+    "level": 1,
+    "name": "No Cause for Alarm",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.diplomacy" }],
+    "text": "You attempt to reduce panic (three actions). Attempt a Diplomacy check against the Will DC of frightened creatures in a 10-foot emanation around you; each is temporarily immune for 1 hour. On a success, reduce a creature's frightened value by 1 (by 2 on a critical success).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 259, "url": "https://2e.aonprd.com/Feats.aspx?ID=5184", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.oddity-identification",
+    "level": 1,
+    "name": "Oddity Identification",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.occultism" }],
+    "text": "When you become aware of a magical effect or see a spell being cast, you can immediately determine if it twists minds, fights against fortune, or reveals secrets. When you Identify Magic or Recall Knowledge about such effects, you can always use Occultism without penalty and gain a +2 circumstance bonus.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 259, "url": "https://2e.aonprd.com/Feats.aspx?ID=5185", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.pickpocket",
+    "level": 1,
+    "name": "Pickpocket",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.thievery" }],
+    "text": "You can Steal or Palm an Object that's closely guarded, such as in a pocket, without taking the –5 penalty. If you're a master in Thievery, you can attempt to Steal from a creature in combat or on guard, taking 2 actions and a –5 penalty.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 259, "url": "https://2e.aonprd.com/Feats.aspx?ID=5187", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.quick-coercion",
+    "level": 1,
+    "name": "Quick Coercion",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.intimidation" }],
+    "text": "You can bully others with just a few choice implications. You can Coerce a creature after 1 round of conversation instead of 1 minute. You still can't Coerce a creature in the midst of combat or without engaging in a conversation.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 260, "url": "https://2e.aonprd.com/Feats.aspx?ID=5193", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.quick-identification",
+    "level": 1,
+    "name": "Quick Identification",
+    "prerequisites": [{ "kind": "special", "text": "trained in Arcana, Nature, Occultism, or Religion" }],
+    "text": "You can Identify Magic swiftly. You take only 1 minute when using Identify Magic to determine the properties of an item, ongoing effect, or location, rather than 10 minutes. If you're a master in the relevant skill, it takes a 3-action activity, and if you're legendary, 1 action.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 260, "url": "https://2e.aonprd.com/Feats.aspx?ID=5195", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.quick-jump",
+    "level": 1,
+    "name": "Quick Jump",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.athletics" }],
+    "text": "You can use High Jump and Long Jump as a single action instead of 2 actions. If you do, you don't perform the initial Stride, nor do you fail if you don't Stride 10 feet.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 260, "url": "https://2e.aonprd.com/Feats.aspx?ID=5196", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.quick-repair",
+    "level": 1,
+    "name": "Quick Repair",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.crafting" }],
+    "text": "For you, the Repair activity loses the exploration trait and takes 1 minute instead of 10 minutes. If you're a master in Crafting, it takes 3 actions; if you're legendary, 1 action.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 260, "url": "https://2e.aonprd.com/Feats.aspx?ID=5198", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.quick-squeeze",
+    "level": 1,
+    "name": "Quick Squeeze",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.acrobatics" }],
+    "text": "You Squeeze 5 feet per round, or 10 feet on a critical success. If you're legendary in Acrobatics, you Squeeze at full Speed.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 260, "url": "https://2e.aonprd.com/Feats.aspx?ID=5199", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.read-lips",
+    "level": 1,
+    "name": "Read Lips",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.society" }],
+    "text": "You can read the lips of others nearby whom you can clearly see, in a language you know. At your leisure this is automatic; in encounter mode or for a difficult feat of lipreading, you're fascinated and off-guard each round you focus, and you must succeed at a Society check set by the GM.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 261, "url": "https://2e.aonprd.com/Feats.aspx?ID=5204", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.recognize-spell",
+    "level": 1,
+    "name": "Recognize Spell",
+    "prerequisites": [{ "kind": "special", "text": "trained in Arcana, Nature, Occultism, or Religion" }],
+    "text": "As a reaction when a creature within line of sight casts a spell you don't have prepared or in your repertoire, identify the spell: the GM rolls a secret check with the skill matching the spell's tradition. If you're trained in that skill and it's a common spell of 2nd rank or lower, you can't get a worse result than success (the automatic rank rises with higher proficiency). On a critical success you also gain a +1 circumstance bonus to your saving throw or AC against it.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 261, "url": "https://2e.aonprd.com/Feats.aspx?ID=5205", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.schooled-in-secrets",
+    "level": 1,
+    "name": "Schooled in Secrets",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.occultism" }],
+    "text": "You notice the signs and symbols secret societies use. You can use Occultism in place of Diplomacy to Gather Information about such groups and in place of Deception to Impersonate a member. If you belong to such an organization, you automatically recognize its members unless they conceal their presence from you.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 262, "url": "https://2e.aonprd.com/Feats.aspx?ID=5209", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.seasoned",
+    "level": 1,
+    "name": "Seasoned",
+    "prerequisites": [{ "kind": "special", "text": "trained in Alcohol Lore, Cooking Lore, or Crafting" }],
+    "text": "You've mastered the preparation of many types of food and drink. You gain a +1 circumstance bonus to checks to Craft food and drink (including elixirs with Alchemical Crafting and potions with Magical Crafting). If you're a master in a prerequisite skill, the bonus increases to +2.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 262, "url": "https://2e.aonprd.com/Feats.aspx?ID=5210", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.sign-language",
+    "level": 1,
+    "name": "Sign Language",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.society" }],
+    "text": "You learn the sign languages associated with the languages you know, allowing you to sign and understand signs. Sign languages typically require both hands and are visual rather than auditory; they're hard to use in low visibility or when attention is divided, as in combat.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 262, "url": "https://2e.aonprd.com/Feats.aspx?ID=5213", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.skill-training",
+    "level": 1,
+    "name": "Skill Training",
+    "prerequisites": [{ "kind": "attribute", "attribute": "int", "value": 1 }],
+    "text": "You become trained in the skill of your choice. You can select this feat multiple times, choosing a new skill each time.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 262, "url": "https://2e.aonprd.com/Feats.aspx?ID=5214", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.specialty-crafting",
+    "level": 1,
+    "name": "Specialty Crafting",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.crafting" }],
+    "text": "Your training focused on Crafting one particular kind of item, such as blacksmithing, tailoring, or woodworking. Select one such specialty; you gain a +1 circumstance bonus to Crafting checks to Craft items of that type (+2 if you're a master in Crafting). If it's unclear whether the specialty applies, the GM decides.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 262, "url": "https://2e.aonprd.com/Feats.aspx?ID=5216", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.steady-balance",
+    "level": 1,
+    "name": "Steady Balance",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.acrobatics" }],
+    "text": "You can keep your balance easily, even in adverse conditions. Whenever you roll a success using the Balance action, you get a critical success instead. You're not off-guard while attempting to Balance on narrow surfaces and uneven ground.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 263, "url": "https://2e.aonprd.com/Feats.aspx?ID=5217", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.streetwise",
+    "level": 1,
+    "name": "Streetwise",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.society" }],
+    "text": "You know about life on the streets. You can use your Society modifier instead of Diplomacy to Gather Information. In any settlement you frequent regularly, you can use Recall Knowledge with Society to know the same sorts of information, usually at a significantly higher DC but without spending time gathering it.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 263, "url": "https://2e.aonprd.com/Feats.aspx?ID=5218", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.student-of-the-canon",
+    "level": 1,
+    "name": "Student of the Canon",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.religion" }],
+    "text": "You've researched many faiths. A critical failure on a Religion check to Decipher Writing of a religious nature or to Recall Knowledge about the tenets of faiths becomes a failure. When you Recall Knowledge about the tenets of your own faith, a failure becomes a success and a success becomes a critical success.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 263, "url": "https://2e.aonprd.com/Feats.aspx?ID=5219", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.subtle-theft",
+    "level": 1,
+    "name": "Subtle Theft",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.thievery" }],
+    "text": "When you successfully Steal something, observers other than your victim take a –2 circumstance penalty to their Perception DCs to detect your theft. If you first Create a Diversion using Deception, taking a single Palm an Object or Steal action doesn't end your undetected condition.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 263, "url": "https://2e.aonprd.com/Feats.aspx?ID=5220", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.survey-wildlife",
+    "level": 1,
+    "name": "Survey Wildlife",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.survival" }],
+    "text": "You can spend 10 minutes assessing the area around you to find out what creatures are nearby, based on nests, scat, and marks on vegetation. Attempt a Survival check against a GM-determined DC; on a success you can attempt a Recall Knowledge check with a –2 penalty to learn more about the creatures (no penalty if you're a master in Survival).",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 263, "url": "https://2e.aonprd.com/Feats.aspx?ID=5221", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.terrain-expertise",
+    "level": 1,
+    "name": "Terrain Expertise",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.survival" }],
+    "text": "Your experience navigating a certain type of terrain makes you supremely confident there. You gain a +1 circumstance bonus to Survival checks in one type of terrain, chosen when you select this feat: aquatic, arctic, desert, forest, mountain, plains, sky, swamp, or underground. You can select this feat more than once, choosing a different terrain each time.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 263, "url": "https://2e.aonprd.com/Feats.aspx?ID=5223", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.terrain-stalker",
+    "level": 1,
+    "name": "Terrain Stalker",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.stealth" }],
+    "text": "Select rubble, snow, or underbrush. While undetected by all non-allies in that type of difficult terrain, you can Sneak without attempting a Stealth check as long as you move no more than 5 feet and don't pass within 10 feet of an enemy. During exploration, you can automatically approach within 15 feet of creatures not actively Searching or on guard while Avoiding Notice.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 263, "url": "https://2e.aonprd.com/Feats.aspx?ID=5224", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.titan-wrestler",
+    "level": 1,
+    "name": "Titan Wrestler",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.athletics" }],
+    "text": "You can attempt to Disarm, Grapple, Reposition, Shove, or Trip creatures up to two sizes larger than you, or up to three sizes larger if you're legendary in Athletics.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 263, "url": "https://2e.aonprd.com/Feats.aspx?ID=5226", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.train-animal",
+    "level": 1,
+    "name": "Train Animal",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.nature" }],
+    "text": "You spend downtime teaching an animal to do a certain action, either a basic action it already knows or a new one. The GM determines the DC and the time required (usually at least a week). On a success the animal learns the action; a known action can then be Commanded without a Nature check.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 264, "url": "https://2e.aonprd.com/Feats.aspx?ID=5228", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.trick-magic-item",
+    "level": 1,
+    "name": "Trick Magic Item",
+    "prerequisites": [{ "kind": "special", "text": "trained in Arcana, Nature, Occultism, or Religion" }],
+    "text": "You examine a magic item you normally couldn't use in an effort to fool it and activate it temporarily (one action). Attempt a check in the skill matching the item's magic tradition against a GM-determined DC based on the item's level; on a success, you can activate the item until the end of the current turn.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 264, "url": "https://2e.aonprd.com/Feats.aspx?ID=5229", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.underwater-marauder",
+    "level": 1,
+    "name": "Underwater Marauder",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.athletics" }],
+    "text": "You've learned to fight underwater. You are not off-guard while in water, and you don't take the usual penalties for using a bludgeoning or slashing melee weapon in water.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 264, "url": "https://2e.aonprd.com/Feats.aspx?ID=5230", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "feat.skill.virtuosic-performer",
+    "level": 1,
+    "name": "Virtuosic Performer",
+    "prerequisites": [{ "kind": "trained_skill", "skill": "skill.performance" }],
+    "text": "You have exceptional talent with one type of performance, such as acting, dance, singing, or a family of instruments. Select one such specialty; you gain a +1 circumstance bonus to Performance checks of that type (+2 if you're a master in Performance). If it's unclear whether the specialty applies, the GM decides.",
+    "effects": [],
+    "source": { "book": "Pathfinder Player Core", "page": 264, "url": "https://2e.aonprd.com/Feats.aspx?ID=5235", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
   }
 ]

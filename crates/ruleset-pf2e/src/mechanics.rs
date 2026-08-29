@@ -714,12 +714,9 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             state
                 .background_skill_choice
                 .as_ref()
-                .and_then(|s| b.skill_feat_by_choice.get(s))
-                .cloned()
-        } else if b.skill_feat.is_empty() {
-            None
+                .and_then(|s| b.skill_feat_label_for_choice(data, s))
         } else {
-            Some(b.skill_feat.clone())
+            b.skill_feat_label(data)
         };
         if let Some(label) = feat_label {
             features.push(SheetEntry {

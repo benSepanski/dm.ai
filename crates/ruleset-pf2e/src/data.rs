@@ -172,17 +172,59 @@ pub struct BackgroundRecord {
     /// trained on the sheet as "<Typed> Lore".
     #[serde(default)]
     pub lore_player_named: bool,
-    /// The fixed skill-feat display string. May be empty when the feat
-    /// follows the skill sub-choice (`skill_feat_by_choice`).
+    /// The fixed skill-feat grant, as a general-feat ID (e.g.
+    /// "feat.skill.battle-medicine"; integrity-checked to resolve in
+    /// `general_feats`). May be empty when the feat follows the skill
+    /// sub-choice (`skill_feat_by_choice`). The sheet renders the
+    /// referenced feat record's name unless `skill_feat_display`
+    /// overrides it.
     pub skill_feat: String,
+    /// Display override for a parameterized fixed grant (Nomad's
+    /// "Assurance (Survival)"): rendered instead of the referenced feat
+    /// record's name. Empty means no override; only meaningful alongside
+    /// a non-empty `skill_feat` (integrity-checked).
+    #[serde(default)]
+    pub skill_feat_display: String,
     /// Choice-dependent skill feat: skill ID (must appear in
-    /// `skill_choice`) → skill-feat display string. When non-empty, the
-    /// sheet's background skill-feat entry follows the chosen skill.
-    /// (Display strings for now; feat IDs arrive with the skill-feat
-    /// catalog.)
+    /// `skill_choice`) → general-feat ID (integrity-checked to resolve in
+    /// `general_feats`). When non-empty, the sheet's background
+    /// skill-feat entry follows the chosen skill.
     #[serde(default)]
     pub skill_feat_by_choice: std::collections::BTreeMap<String, String>,
+    /// Display overrides for parameterized choice-dependent grants
+    /// (Scholar's "Assurance (Arcana)"): skill ID → rendered label. Keys
+    /// must be a subset of `skill_feat_by_choice` keys
+    /// (integrity-checked); a missing key renders the referenced feat
+    /// record's name.
+    #[serde(default)]
+    pub skill_feat_display_by_choice: std::collections::BTreeMap<String, String>,
     pub source: SourceRef,
+}
+
+impl BackgroundRecord {
+    /// The rendered label of the fixed skill-feat grant: the display
+    /// override when present, else the referenced feat record's name.
+    /// None when there is no fixed grant (`skill_feat` empty) or the ID
+    /// dangles (shipped data cannot dangle — integrity rejects it).
+    pub fn skill_feat_label(&self, data: &RulesData) -> Option<String> {
+        if self.skill_feat.is_empty() {
+            return None;
+        }
+        if !self.skill_feat_display.is_empty() {
+            return Some(self.skill_feat_display.clone());
+        }
+        data.general_feat(&self.skill_feat).map(|f| f.name.clone())
+    }
+
+    /// The rendered label of the choice-dependent skill-feat grant under
+    /// the chosen `skill`, with the same override-then-name fallback.
+    pub fn skill_feat_label_for_choice(&self, data: &RulesData, skill: &str) -> Option<String> {
+        if let Some(display) = self.skill_feat_display_by_choice.get(skill) {
+            return Some(display.clone());
+        }
+        let id = self.skill_feat_by_choice.get(skill)?;
+        data.general_feat(id).map(|f| f.name.clone())
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -575,11 +617,42 @@ impl RulesData {
                     )));
                 }
             }
-            for key in b.skill_feat_by_choice.keys() {
+            let feat_resolves = |id: &str| self.general_feats.iter().any(|f| f.id == id);
+            if !b.skill_feat.is_empty() && !feat_resolves(&b.skill_feat) {
+                return Err(DataError::Integrity(format!(
+                    "background '{}' skill_feat '{}' does not resolve in \
+                     general_feats",
+                    b.id, b.skill_feat
+                )));
+            }
+            if !b.skill_feat_display.is_empty() && b.skill_feat.is_empty() {
+                return Err(DataError::Integrity(format!(
+                    "background '{}' carries skill_feat_display without a \
+                     skill_feat to display",
+                    b.id
+                )));
+            }
+            for (key, feat) in &b.skill_feat_by_choice {
                 if !b.skill_choice.contains(key) {
                     return Err(DataError::Integrity(format!(
                         "background '{}' skill_feat_by_choice key '{key}' is not \
                          in its skill_choice list",
+                        b.id
+                    )));
+                }
+                if !feat_resolves(feat) {
+                    return Err(DataError::Integrity(format!(
+                        "background '{}' skill_feat_by_choice feat '{feat}' does \
+                         not resolve in general_feats",
+                        b.id
+                    )));
+                }
+            }
+            for key in b.skill_feat_display_by_choice.keys() {
+                if !b.skill_feat_by_choice.contains_key(key) {
+                    return Err(DataError::Integrity(format!(
+                        "background '{}' skill_feat_display_by_choice key '{key}' \
+                         has no matching skill_feat_by_choice entry",
                         b.id
                     )));
                 }

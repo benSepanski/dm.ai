@@ -6,7 +6,7 @@
     "boost_choice": ["con", "wis"],
     "skill": "skill.medicine",
     "lore": "Warfare Lore",
-    "skill_feat": "Battle Medicine",
+    "skill_feat": "feat.skill.battle-medicine",
     "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=423", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
   },
   {
@@ -16,7 +16,7 @@
     "boost_choice": ["str", "con"],
     "skill": "skill.intimidation",
     "lore": "Warfare Lore",
-    "skill_feat": "Intimidating Glare",
+    "skill_feat": "feat.skill.intimidating-glare",
     "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=445", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
   },
   {
@@ -26,7 +26,7 @@
     "boost_choice": ["str", "int"],
     "skill": "skill.crafting",
     "lore": "Guild Lore",
-    "skill_feat": "Specialty Crafting",
+    "skill_feat": "feat.skill.specialty-crafting",
     "source": { "book": "Pathfinder Player Core", "page": 84, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=409", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
   },
   {
@@ -36,7 +36,7 @@
     "boost_choice": ["dex", "wis"],
     "skill": "skill.survival",
     "lore": "Tanning Lore",
-    "skill_feat": "Survey Wildlife",
+    "skill_feat": "feat.skill.survey-wildlife",
     "source": { "book": "Pathfinder Player Core", "page": 87, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=430", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
   },
   {
@@ -46,7 +46,379 @@
     "boost_choice": ["dex", "con"],
     "skill": "skill.thievery",
     "lore": "City Lore",
-    "skill_feat": "Pickpocket",
+    "skill_feat": "feat.skill.pickpocket",
     "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=442", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.acolyte",
+    "name": "Acolyte",
+    "text": "You spent your early days in a religious institution, absorbing its teachings and helping to scribe its texts.",
+    "boost_choice": ["int", "wis"],
+    "skill": "skill.religion",
+    "lore": "Scribing Lore",
+    "skill_feat": "feat.skill.student-of-the-canon",
+    "source": { "book": "Pathfinder Player Core", "page": 84, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=406", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.acrobat",
+    "name": "Acrobat",
+    "text": "You performed dazzling feats of agility for a circus or as a street performer.",
+    "boost_choice": ["str", "dex"],
+    "skill": "skill.acrobatics",
+    "lore": "Circus Lore",
+    "skill_feat": "feat.skill.steady-balance",
+    "source": { "book": "Pathfinder Player Core", "page": 84, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=407", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.animal-whisperer",
+    "name": "Animal Whisperer",
+    "text": "You have always felt a connection to animals, and they seem to trust you in turn. Your Lore relates to one terrain inhabited by animals you like.",
+    "boost_choice": ["wis", "cha"],
+    "skill": "skill.nature",
+    "lore": "",
+    "lore_player_named": true,
+    "skill_feat": "feat.skill.train-animal",
+    "source": { "book": "Pathfinder Player Core", "page": 84, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=408", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.artist",
+    "name": "Artist",
+    "text": "Your paintings, sculptures, or other works of art capture the imagination of all who see them.",
+    "boost_choice": ["dex", "cha"],
+    "skill": "skill.crafting",
+    "lore": "Art Lore",
+    "skill_feat": "feat.skill.specialty-crafting",
+    "source": { "book": "Pathfinder Player Core", "page": 84, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=410", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.bandit",
+    "name": "Bandit",
+    "text": "You waylaid travelers on the roads, taking what you wanted by threat of force. Your Lore relates to the terrain you worked in.",
+    "boost_choice": ["dex", "cha"],
+    "skill": "skill.intimidation",
+    "lore": "",
+    "lore_player_named": true,
+    "skill_feat": "feat.skill.group-coercion",
+    "source": { "book": "Pathfinder Player Core", "page": 84, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=411", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.barkeep",
+    "name": "Barkeep",
+    "text": "You ran or tended a tavern, pouring drinks, breaking up brawls, and hearing everyone's stories.",
+    "boost_choice": ["con", "cha"],
+    "skill": "skill.diplomacy",
+    "lore": "Alcohol Lore",
+    "skill_feat": "feat.skill.hobnobber",
+    "source": { "book": "Pathfinder Player Core", "page": 84, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=412", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.barrister",
+    "name": "Barrister",
+    "text": "You practiced law, advocating for clients before magistrates and learning to argue persuasively.",
+    "boost_choice": ["int", "cha"],
+    "skill": "skill.diplomacy",
+    "lore": "Legal Lore",
+    "skill_feat": "feat.skill.group-impression",
+    "source": { "book": "Pathfinder Player Core", "page": 85, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=413", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.bounty-hunter",
+    "name": "Bounty Hunter",
+    "text": "You tracked down fugitives for coin, learning to follow trails and work within the law's edges.",
+    "boost_choice": ["str", "wis"],
+    "skill": "skill.survival",
+    "lore": "Legal Lore",
+    "skill_feat": "feat.skill.experienced-tracker",
+    "source": { "book": "Pathfinder Player Core", "page": 85, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=414", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.charlatan",
+    "name": "Charlatan",
+    "text": "You traveled from place to place selling false hopes and grand lies, moving on before you could be caught.",
+    "boost_choice": ["int", "cha"],
+    "skill": "skill.deception",
+    "lore": "Underworld Lore",
+    "skill_feat": "feat.skill.charming-liar",
+    "source": { "book": "Pathfinder Player Core", "page": 85, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=415", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.cook",
+    "name": "Cook",
+    "text": "You fed hungry customers or an entire crew, learning to make do with whatever ingredients were at hand.",
+    "boost_choice": ["con", "int"],
+    "skill": "skill.survival",
+    "lore": "Cooking Lore",
+    "skill_feat": "feat.skill.seasoned",
+    "source": { "book": "Pathfinder Player Core", "page": 85, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=416", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.criminal",
+    "name": "Criminal",
+    "text": "You made your living outside the law as a smuggler or burglar, staying one step ahead of the authorities.",
+    "boost_choice": ["dex", "int"],
+    "skill": "skill.stealth",
+    "lore": "Underworld Lore",
+    "skill_feat": "feat.skill.experienced-smuggler",
+    "source": { "book": "Pathfinder Player Core", "page": 85, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=417", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.cultist",
+    "name": "Cultist",
+    "text": "You joined a secret cult or society, whether out of true belief or hunger for its secrets. Your Lore relates to your deity or cult.",
+    "boost_choice": ["int", "cha"],
+    "skill": "skill.occultism",
+    "lore": "",
+    "lore_player_named": true,
+    "skill_feat": "feat.skill.schooled-in-secrets",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=418", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.detective",
+    "name": "Detective",
+    "text": "You solved crimes as an investigator, piecing together clues that others missed.",
+    "boost_choice": ["int", "wis"],
+    "skill": "skill.society",
+    "lore": "Underworld Lore",
+    "skill_feat": "feat.skill.streetwise",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=419", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.emissary",
+    "name": "Emissary",
+    "text": "You traveled as a diplomat's aide or messenger, meeting people from many walks of life. Your Lore relates to one city you've visited often.",
+    "boost_choice": ["int", "cha"],
+    "skill": "skill.society",
+    "lore": "",
+    "lore_player_named": true,
+    "skill_feat": "feat.skill.multilingual",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=420", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.entertainer",
+    "name": "Entertainer",
+    "text": "You earned your living on the stage, singing, acting, or otherwise captivating audiences.",
+    "boost_choice": ["dex", "cha"],
+    "skill": "skill.performance",
+    "lore": "Theater Lore",
+    "skill_feat": "feat.skill.fascinating-performance",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=421", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.farmhand",
+    "name": "Farmhand",
+    "text": "You worked long days in the fields, building strength and patience with every harvest.",
+    "boost_choice": ["con", "wis"],
+    "skill": "skill.athletics",
+    "lore": "Farming Lore",
+    "skill_feat": "feat.skill.assurance",
+    "skill_feat_display": "Assurance (Athletics)",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=422", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.fortune-teller",
+    "name": "Fortune Teller",
+    "text": "You told fortunes with cards, palms, or tea leaves, whether through real talent or clever guesswork.",
+    "boost_choice": ["int", "cha"],
+    "skill": "skill.occultism",
+    "lore": "Fortune-Telling Lore",
+    "skill_feat": "feat.skill.oddity-identification",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=424", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.gambler",
+    "name": "Gambler",
+    "text": "You lived by games of chance, reading opponents and bluffing your way to winnings.",
+    "boost_choice": ["dex", "cha"],
+    "skill": "skill.deception",
+    "lore": "Games Lore",
+    "skill_feat": "feat.skill.lie-to-me",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=425", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.gladiator",
+    "name": "Gladiator",
+    "text": "You fought for the crowd's adoration in the arena, and its roar still drives you.",
+    "boost_choice": ["str", "cha"],
+    "skill": "skill.performance",
+    "lore": "Gladiatorial Lore",
+    "skill_feat": "feat.skill.impressive-performance",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=426", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.guard",
+    "name": "Guard",
+    "text": "You served in a guard company, keeping order and getting difficult suspects to talk. Your Lore is Legal Lore or Warfare Lore.",
+    "boost_choice": ["str", "cha"],
+    "skill": "skill.intimidation",
+    "lore": "",
+    "lore_player_named": true,
+    "skill_feat": "feat.skill.quick-coercion",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=427", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.herbalist",
+    "name": "Herbalist",
+    "text": "You gathered and prepared plants to treat ailments, learning the healing properties of the natural world.",
+    "boost_choice": ["con", "wis"],
+    "skill": "skill.nature",
+    "lore": "Herbalism Lore",
+    "skill_feat": "feat.skill.natural-medicine",
+    "source": { "book": "Pathfinder Player Core", "page": 86, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=428", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.hermit",
+    "name": "Hermit",
+    "text": "You lived apart from society in an isolated place, communing with nature or with strange knowledge. Your Lore relates to the terrain you lived in as a hermit.",
+    "boost_choice": ["con", "int"],
+    "skill": "",
+    "skill_choice": ["skill.nature", "skill.occultism"],
+    "lore": "",
+    "lore_player_named": true,
+    "skill_feat": "feat.skill.dubious-knowledge",
+    "source": { "book": "Pathfinder Player Core", "page": 87, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=429", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.laborer",
+    "name": "Laborer",
+    "text": "You spent years hauling and building, and hard work holds no fear for you.",
+    "boost_choice": ["str", "con"],
+    "skill": "skill.athletics",
+    "lore": "Labor Lore",
+    "skill_feat": "feat.skill.hefty-hauler",
+    "source": { "book": "Pathfinder Player Core", "page": 87, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=431", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.martial-disciple",
+    "name": "Martial Disciple",
+    "text": "You dedicated yourself to intense training in a martial school, honing your body into a weapon.",
+    "boost_choice": ["str", "dex"],
+    "skill": "",
+    "skill_choice": ["skill.acrobatics", "skill.athletics"],
+    "lore": "Warfare Lore",
+    "skill_feat": "",
+    "skill_feat_by_choice": {
+      "skill.acrobatics": "feat.skill.cat-fall",
+      "skill.athletics": "feat.skill.quick-jump"
+    },
+    "source": { "book": "Pathfinder Player Core", "page": 87, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=432", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.merchant",
+    "name": "Merchant",
+    "text": "You bought low and sold high, bargaining in markets and trade halls.",
+    "boost_choice": ["int", "cha"],
+    "skill": "skill.diplomacy",
+    "lore": "Mercantile Lore",
+    "skill_feat": "feat.skill.bargain-hunter",
+    "source": { "book": "Pathfinder Player Core", "page": 87, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=433", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.miner",
+    "name": "Miner",
+    "text": "You worked deep underground, extracting ore and learning the dangers of the tunnels.",
+    "boost_choice": ["str", "wis"],
+    "skill": "skill.survival",
+    "lore": "Mining Lore",
+    "skill_feat": "feat.skill.terrain-expertise",
+    "skill_feat_display": "Terrain Expertise (Underground)",
+    "source": { "book": "Pathfinder Player Core", "page": 87, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=434", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.noble",
+    "name": "Noble",
+    "text": "You were raised among the aristocracy, schooled in etiquette and the games of influence. Your Lore is Genealogy Lore or Heraldry Lore.",
+    "boost_choice": ["int", "cha"],
+    "skill": "skill.society",
+    "lore": "",
+    "lore_player_named": true,
+    "skill_feat": "feat.skill.courtly-graces",
+    "source": { "book": "Pathfinder Player Core", "page": 87, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=435", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.nomad",
+    "name": "Nomad",
+    "text": "You wandered wide stretches of wilderness, at home wherever you set camp. Your Lore relates to one terrain you traveled in.",
+    "boost_choice": ["con", "wis"],
+    "skill": "skill.survival",
+    "lore": "",
+    "lore_player_named": true,
+    "skill_feat": "feat.skill.assurance",
+    "skill_feat_display": "Assurance (Survival)",
+    "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=436", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.prisoner",
+    "name": "Prisoner",
+    "text": "You served hard time or escaped it, and the experience left you tough and wary.",
+    "boost_choice": ["str", "con"],
+    "skill": "skill.stealth",
+    "lore": "Underworld Lore",
+    "skill_feat": "feat.skill.experienced-smuggler",
+    "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=437", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.sailor",
+    "name": "Sailor",
+    "text": "You worked aboard ships, hauling lines and weathering storms.",
+    "boost_choice": ["str", "dex"],
+    "skill": "skill.athletics",
+    "lore": "Sailing Lore",
+    "skill_feat": "feat.skill.underwater-marauder",
+    "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=439", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.scholar",
+    "name": "Scholar",
+    "text": "You devoted yourself to intensive study in a library or academy, mastering a scholarly tradition.",
+    "boost_choice": ["int", "wis"],
+    "skill": "",
+    "skill_choice": ["skill.arcana", "skill.nature", "skill.occultism", "skill.religion"],
+    "lore": "Academia Lore",
+    "skill_feat": "",
+    "skill_feat_by_choice": {
+      "skill.arcana": "feat.skill.assurance",
+      "skill.nature": "feat.skill.assurance",
+      "skill.occultism": "feat.skill.assurance",
+      "skill.religion": "feat.skill.assurance"
+    },
+    "skill_feat_display_by_choice": {
+      "skill.arcana": "Assurance (Arcana)",
+      "skill.nature": "Assurance (Nature)",
+      "skill.occultism": "Assurance (Occultism)",
+      "skill.religion": "Assurance (Religion)"
+    },
+    "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=440", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.scout",
+    "name": "Scout",
+    "text": "You ranged ahead of armies or expeditions, mapping routes and living off the land. Your Lore relates to one terrain you scouted in.",
+    "boost_choice": ["dex", "wis"],
+    "skill": "skill.survival",
+    "lore": "",
+    "lore_player_named": true,
+    "skill_feat": "feat.skill.forager",
+    "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=441", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.teacher",
+    "name": "Teacher",
+    "text": "You educated students in a classroom or as a private tutor, learning how to hold their attention.",
+    "boost_choice": ["int", "wis"],
+    "skill": "",
+    "skill_choice": ["skill.performance", "skill.society"],
+    "lore": "Academia Lore",
+    "skill_feat": "feat.skill.experienced-professional",
+    "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=443", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+  },
+  {
+    "id": "background.tinker",
+    "name": "Tinker",
+    "text": "You experimented with gadgets and mechanisms, taking devices apart to see how they work.",
+    "boost_choice": ["dex", "int"],
+    "skill": "skill.crafting",
+    "lore": "Engineering Lore",
+    "skill_feat": "feat.skill.specialty-crafting",
+    "source": { "book": "Pathfinder Player Core", "page": 88, "url": "https://2e.aonprd.com/Backgrounds.aspx?ID=444", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
   }
 ]
