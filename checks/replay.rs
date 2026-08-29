@@ -236,6 +236,16 @@ fn elyse_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
         "pf2e.boosts.free",
         many(&["attr.dex", "attr.con", "attr.wis", "attr.int"]),
     );
+    // Int +1 grants one bonus language from the human list (chargen-content:
+    // the language chooser opened once ancestries carried additional
+    // languages; hand-verified addition to the golden).
+    confirm(
+        engine,
+        &mut log,
+        n,
+        "pf2e.ancestry.languages",
+        many(&["lang.elven"]),
+    );
     confirm(
         engine,
         &mut log,

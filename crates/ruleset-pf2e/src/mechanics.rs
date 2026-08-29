@@ -1321,6 +1321,14 @@ pub fn display_name(data: &RulesData, id: &OptionId) -> String {
     if let Some(attr) = Attribute::from_option_id(id) {
         return attr.name().to_string();
     }
+    if let Some(target) = s.strip_prefix("prof.") {
+        // Proficiency-override chooser options (Canny Acumen targets).
+        let mut label: String = target.to_string();
+        if let Some(first) = label.get_mut(0..1) {
+            first.make_ascii_uppercase();
+        }
+        return label;
+    }
     if s.starts_with("lang.") {
         // Language options carry name-derived IDs; recover the display
         // name from the ancestry language lists.
@@ -1428,6 +1436,7 @@ pub const SLOT_REPLACEMENT_1: &str = "pf2e.skills.replacement-1";
 pub const SLOT_REPLACEMENT_2: &str = "pf2e.skills.replacement-2";
 pub const SLOT_REPLACEMENT_3: &str = "pf2e.skills.replacement-3";
 pub const SLOT_FEAT_LORE: &str = "pf2e.skills.feat-lore";
+pub const SLOT_PROFICIENCY_CHOICE: &str = "pf2e.feats.proficiency-choice";
 pub const SLOT_HERITAGE_GENERAL_FEAT: &str = "pf2e.feats.general.heritage";
 pub const SLOT_FEAT_GENERAL_FEAT: &str = "pf2e.feats.general.ancestry-feat";
 pub const SLOT_NATURAL_AMBITION: &str = "pf2e.feats.class.natural-ambition";

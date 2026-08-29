@@ -443,6 +443,14 @@ pub enum Effect {
     /// "will", "perception"; sheet derivation takes max(class rank,
     /// override) — an override never lowers a rank.
     ProficiencyOverride { target: String, rank: String },
+    /// Choice-in-a-feat proficiency override (Canny Acumen): the record
+    /// opens a chooser over `targets`; the pick folds as a concrete
+    /// `ProficiencyOverride` at `rank`.
+    ChooseProficiencyOverride {
+        targets: Vec<String>,
+        rank: String,
+        source_label: String,
+    },
     /// Extra bonus-language picks (Nomadic Halfling's +2, Multilingual):
     /// raises the "pf2e.ancestry.languages" chooser's count.
     BonusLanguages { count: u32 },
@@ -708,6 +716,25 @@ impl RulesData {
                     if !self.skills.iter().any(|sk| sk.id == *s) {
                         return Err(DataError::Integrity(format!(
                             "record '{id}' effect references unknown skill '{s}'"
+                        )));
+                    }
+                }
+                let prof_targets: &[String] = match e {
+                    Effect::ProficiencyOverride { target, .. } => std::slice::from_ref(target),
+                    Effect::ChooseProficiencyOverride { targets, .. } => {
+                        if targets.is_empty() {
+                            return Err(DataError::Integrity(format!(
+                                "record '{id}' choose_proficiency_override has no targets"
+                            )));
+                        }
+                        targets
+                    }
+                    _ => &[],
+                };
+                for t in prof_targets {
+                    if !matches!(t.as_str(), "fortitude" | "reflex" | "will" | "perception") {
+                        return Err(DataError::Integrity(format!(
+                            "record '{id}' proficiency override names unknown target '{t}'"
                         )));
                     }
                 }

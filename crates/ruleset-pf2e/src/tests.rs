@@ -246,6 +246,14 @@ fn data_files() -> Vec<(&'static str, String)> {
             "text": "Forgo rolling a chosen trained skill for 10 + proficiency.",
             "effects": [], "source": src()
         },
+        {
+            "id": "feat.general.canny", "name": "Canny Acumen", "level": 1,
+            "prerequisites": [], "text": "One save or Perception becomes expert.",
+            "effects": [{ "type": "choose_proficiency_override",
+                          "targets": ["fortitude", "reflex", "will", "perception"],
+                          "rank": "expert", "source_label": "Canny Acumen" }],
+            "source": src()
+        },
     ]);
     let equipment = json!({ "weapons": [], "armor": [], "shields": [], "gear": [], "kits": [] });
 
@@ -1008,6 +1016,71 @@ fn general_feat_prerequisites_grey_and_gate_apply() {
         SLOT_HERITAGE_GENERAL_FEAT,
         one("feat.general.toughness"),
     );
+}
+
+#[test]
+fn canny_acumen_chooser_folds_the_picked_override() {
+    let engine = engine();
+    let mut log = Vec::new();
+    confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.human"));
+    confirm(&engine, &mut log, SLOT_CLASS, one("class.fighter"));
+    confirm(
+        &engine,
+        &mut log,
+        SLOT_HERITAGE,
+        one("heritage.human.versatile"),
+    );
+    // No chooser until a proficiency-choice feat is picked.
+    let p = engine.project(&log).unwrap();
+    assert!(slot_view(&p, crate::mechanics::SLOT_PROFICIENCY_CHOICE).is_none());
+
+    confirm(
+        &engine,
+        &mut log,
+        SLOT_HERITAGE_GENERAL_FEAT,
+        one("feat.general.canny"),
+    );
+    let p = engine.project(&log).unwrap();
+    let chooser = slot_view(&p, crate::mechanics::SLOT_PROFICIENCY_CHOICE)
+        .expect("proficiency chooser opens");
+    assert_eq!(chooser.options.len(), 4);
+    assert!(p.checklist.iter().any(|e| {
+        e.slot.as_str() == crate::mechanics::SLOT_PROFICIENCY_CHOICE
+            && e.message.contains("Canny Acumen")
+    }));
+
+    // A target outside the feat's list is rejected.
+    let err = try_confirm(
+        &engine,
+        &mut log,
+        crate::mechanics::SLOT_PROFICIENCY_CHOICE,
+        one("prof.nonsense"),
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(err.contains("not one of"), "{err}");
+
+    confirm(
+        &engine,
+        &mut log,
+        crate::mechanics::SLOT_PROFICIENCY_CHOICE,
+        one("prof.will"),
+    );
+    let sheet = engine.sheet(&log).unwrap();
+    let will = sheet.entry("Defense", "Will").unwrap();
+    assert_eq!(
+        will.value, "+5",
+        "chosen expert override lifts trained Will"
+    );
+    assert!(will.detail.as_deref().unwrap().contains("expert"));
+
+    // The pick dies with the feat.
+    let cleared = engine
+        .clear(&log, &SlotId::new(SLOT_HERITAGE_GENERAL_FEAT))
+        .unwrap();
+    assert!(!cleared
+        .iter()
+        .any(|d| d.slot.as_str() == crate::mechanics::SLOT_PROFICIENCY_CHOICE));
 }
 
 // ---- New effect variants on the sheet ----------------------------------

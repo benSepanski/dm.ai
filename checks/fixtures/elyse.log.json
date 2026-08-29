@@ -154,22 +154,34 @@
   },
   {
     "id": "golden-15",
-    "slot": "pf2e.equipment.kit",
+    "slot": "pf2e.ancestry.languages",
     "selection": {
-      "kind": "option",
-      "value": "kit.fighter.longbow"
+      "kind": "options",
+      "value": [
+        "lang.elven"
+      ]
     },
     "source": "player",
     "order": 14
   },
   {
     "id": "golden-16",
+    "slot": "pf2e.equipment.kit",
+    "selection": {
+      "kind": "option",
+      "value": "kit.fighter.longbow"
+    },
+    "source": "player",
+    "order": 15
+  },
+  {
+    "id": "golden-17",
     "slot": "pf2e.details.name",
     "selection": {
       "kind": "text",
       "value": "Elyse"
     },
     "source": "player",
-    "order": 15
+    "order": 16
   }
 ]
