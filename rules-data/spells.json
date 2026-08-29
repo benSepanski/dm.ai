@@ -44,8 +44,7 @@
         "arcane",
         "divine",
         "occult",
-        "primal",
-        "elemental"
+        "primal"
       ],
       "traits": [
         "cantrip",
@@ -265,8 +264,7 @@
         "arcane",
         "divine",
         "occult",
-        "primal",
-        "elemental"
+        "primal"
       ],
       "traits": [
         "cantrip",
@@ -303,8 +301,7 @@
       "traditions": [
         "arcane",
         "divine",
-        "occult",
-        "elemental"
+        "occult"
       ],
       "traits": [
         "auditory",
@@ -345,8 +342,7 @@
         "arcane",
         "divine",
         "occult",
-        "primal",
-        "elemental"
+        "primal"
       ],
       "traits": [
         "cantrip",
@@ -376,8 +372,7 @@
       "traditions": [
         "arcane",
         "divine",
-        "occult",
-        "elemental"
+        "occult"
       ],
       "traits": [
         "cantrip",
@@ -414,8 +409,7 @@
         "arcane",
         "divine",
         "occult",
-        "primal",
-        "elemental"
+        "primal"
       ],
       "traits": [
         "cantrip",
@@ -628,7 +622,7 @@
       "range": "30 feet",
       "area": null,
       "targets": "1 creature",
-      "duration": null,
+      "duration": "varies",
       "text": "You plant fear in the target: on a failed Will save it becomes frightened 2 (frightened 1 on a success; on a critical failure, frightened 3 and fleeing for 1 round).",
       "heightening": [
         {
@@ -693,7 +687,7 @@
         "manipulate"
       ],
       "actions": "2",
-      "defense": null,
+      "defense": "Reflex",
       "range": "30 feet",
       "area": "4 contiguous 5-foot squares",
       "targets": "1 object of Bulk 1 or less",
@@ -872,8 +866,7 @@
         "arcane",
         "divine",
         "occult",
-        "primal",
-        "elemental"
+        "primal"
       ],
       "traits": [
         "concentrate",

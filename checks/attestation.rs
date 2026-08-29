@@ -92,6 +92,7 @@ const ATTESTED_RECORD_FILES: &[&str] = &[
     "general-feats.json",
     "skills.json",
     "equipment.json",
+    "spells.json",
 ];
 
 /// (id, record) for every shipped record, from the committed JSON bytes.
@@ -101,7 +102,7 @@ fn current_records() -> Vec<(String, serde_json::Value)> {
     for file in ATTESTED_RECORD_FILES {
         let text = std::fs::read_to_string(root.join(file)).unwrap();
         let value: serde_json::Value = serde_json::from_str(&text).unwrap();
-        let records: Vec<serde_json::Value> = if *file == "equipment.json" {
+        let records: Vec<serde_json::Value> = if *file == "equipment.json" || *file == "spells.json" {
             value
                 .as_object()
                 .unwrap()

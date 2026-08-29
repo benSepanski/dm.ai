@@ -69,8 +69,8 @@ fn documents_round_trip_a_versioned_schema() {
     // The document on disk carries the schema version and parses.
     let path = dir.path().join(format!("characters/{id}.json"));
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(doc["schema_version"], 2);
-    assert_eq!(doc["rules_version"], "pf2e-pc.0.2.0");
+    assert_eq!(doc["schema_version"], 3);
+    assert_eq!(doc["rules_version"], "pf2e-pc.0.3.0");
     assert_eq!(doc["log"].as_array().unwrap().len(), 2); // name + ancestry
 
     // A fresh server round-trips it.
@@ -84,9 +84,9 @@ fn documents_round_trip_a_versioned_schema() {
     assert_eq!(character["state"], "draft");
 }
 
-/// Storage schema v2 (architecture: chargen-content): a v1 file reads, is
-/// never rewritten by loading, and upgrades to v2 on its first ordinary
-/// write.
+/// Storage schema discipline (architecture: chargen-content + chargen-
+/// wizard): an older file reads, is never rewritten by loading, and
+/// upgrades to the current schema on its first ordinary write.
 #[test]
 fn v1_documents_read_untouched_and_upgrade_on_first_write() {
     let dir = tempfile::tempdir().unwrap();
@@ -98,8 +98,9 @@ fn v1_documents_read_untouched_and_upgrade_on_first_write() {
         id = draft["id"].as_str().unwrap().to_string();
     }
 
-    // Rewind the on-disk document to schema v1 (v2 is structurally v1 plus
-    // the `suggested` source value, which this file doesn't use).
+    // Rewind the on-disk document to schema v1 (later schemas are
+    // structurally v1 plus the `suggested` source value and the optional
+    // prep section, which this file doesn't use).
     let path = dir.path().join(format!("characters/{id}.json"));
     let mut doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     doc["schema_version"] = Value::from(1);
@@ -122,7 +123,7 @@ fn v1_documents_read_untouched_and_upgrade_on_first_write() {
             "loading a v1 file must not rewrite it"
         );
 
-        // First ordinary write upgrades the stored document to v2.
+        // First ordinary write upgrades the stored document.
         let outcome = confirm(
             &client,
             &server.url,
@@ -136,9 +137,75 @@ fn v1_documents_read_untouched_and_upgrade_on_first_write() {
     }
     let upgraded: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(
-        upgraded["schema_version"], 2,
+        upgraded["schema_version"], 3,
         "first write after load upgrades v1 to the current schema"
     );
+}
+
+/// v3 (chargen-wizard): a v2 file reads unchanged; absence of the prep
+/// section is valid at every layer; a structurally unparseable prep
+/// section degrades — the character loads and the file is not quarantined
+/// — because prep parses independently of the log and sheet.
+#[test]
+fn v2_documents_read_and_broken_prep_degrades() {
+    let dir = tempfile::tempdir().unwrap();
+    let client = client();
+    let id;
+    {
+        let server = TestServer::spawn(dir.path());
+        let draft = create_character(&client, &server.url, "Middle");
+        id = draft["id"].as_str().unwrap().to_string();
+    }
+    let path = dir.path().join(format!("characters/{id}.json"));
+    let mut doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    doc["schema_version"] = Value::from(2);
+    doc.as_object_mut().unwrap().remove("prep");
+    std::fs::write(&path, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+    let v2_bytes = std::fs::read(&path).unwrap();
+    {
+        let server = TestServer::spawn(dir.path());
+        let character: Value = client
+            .get(format!("{}/api/characters/{id}", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(character["state"], "draft", "v2 file must load");
+        assert_eq!(
+            std::fs::read(&path).unwrap(),
+            v2_bytes,
+            "loading a v2 file must not rewrite it"
+        );
+    }
+
+    // Hand-mangle the prep section: the file still loads (no quarantine),
+    // because the section parses independently and degrades.
+    let mut doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    doc["schema_version"] = Value::from(3);
+    doc["prep"] = serde_json::json!({"choices": "not-an-array"});
+    std::fs::write(&path, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+    {
+        let server = TestServer::spawn(dir.path());
+        let roster: Value = client
+            .get(format!("{}/api/roster", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        let entries = roster["entries"].as_array().unwrap();
+        assert!(
+            entries.iter().any(|e| e["id"] == id.as_str()),
+            "character with broken prep must stay on the roster"
+        );
+        assert!(
+            roster["problems"].as_array().unwrap().is_empty(),
+            "broken prep must not quarantine the file"
+        );
+        assert!(
+            !dir.path().join("quarantine").exists(),
+            "no quarantine directory for a broken prep section"
+        );
+    }
 }
 
 #[test]

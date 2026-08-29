@@ -119,6 +119,8 @@ fn partition_for(record: &OurRecord) -> Option<Partition> {
         Kind::Armor => Some(Partition::Armor),
         Kind::Shield => Some(Partition::Shield),
         Kind::Gear => Some(Partition::Gear),
+        Kind::Spell => Some(Partition::Spell),
+        Kind::ClassFeature => Some(Partition::ClassFeature),
         // No Foundry pack exists for these: PF2e core skills are fixed game
         // vocabulary (not compendium records) and class kits ship only in
         // the book. They are attestable solely via reviewed waivers.

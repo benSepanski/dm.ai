@@ -28,12 +28,14 @@ fn every_record_carries_license_metadata() {
             assert_license(&record, file);
         }
     }
-    // equipment.json holds categorized arrays.
-    let text = std::fs::read_to_string(root.join("equipment.json")).unwrap();
-    let equipment: serde_json::Value = serde_json::from_str(&text).unwrap();
-    for (key, records) in equipment.as_object().unwrap() {
-        for record in records.as_array().unwrap() {
-            assert_license(record, &format!("equipment.json/{key}"));
+    // equipment.json and spells.json hold categorized arrays.
+    for file in ["equipment.json", "spells.json"] {
+        let text = std::fs::read_to_string(root.join(file)).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&text).unwrap();
+        for (key, records) in value.as_object().unwrap() {
+            for record in records.as_array().unwrap() {
+                assert_license(record, &format!("{file}/{key}"));
+            }
         }
     }
 }
@@ -97,6 +99,7 @@ const RECORD_FILES: &[&str] = &[
     "general-feats.json",
     "skills.json",
     "equipment.json",
+    "spells.json",
 ];
 
 /// Collect (record id, full record JSON) from every record file.
@@ -106,7 +109,7 @@ fn all_records() -> Vec<(String, serde_json::Value)> {
     for file in RECORD_FILES {
         let text = std::fs::read_to_string(root.join(file)).unwrap();
         let value: serde_json::Value = serde_json::from_str(&text).unwrap();
-        let records: Vec<serde_json::Value> = if *file == "equipment.json" {
+        let records: Vec<serde_json::Value> = if *file == "equipment.json" || *file == "spells.json" {
             value
                 .as_object()
                 .unwrap()
