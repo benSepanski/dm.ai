@@ -610,14 +610,24 @@ function ListEditor({
     <div>
       {picked.length > 0 && (
         <ul className="shopping-list">
-          {picked.map((id, index) => (
-            <li key={`${id}-${index}`}>
-              {slot.options.find((o) => o.id === id)?.label ?? id}
-              <button type="button" onClick={() => removeAt(index)} disabled={busy}>
-                remove
-              </button>
-            </li>
-          ))}
+          {picked.map((id, index) => {
+            const option = slot.options.find((o) => o.id === id);
+            return (
+              <li key={`${id}-${index}`}>
+                {option?.label ?? id}
+                {option && option.summary !== '' && (
+                  // Per-item cost (price · Bulk) so an over-budget basket
+                  // can be trimmed by removing the right items.
+                  <span className="shopping-item-cost" data-testid="item-cost">
+                    {option.summary}
+                  </span>
+                )}
+                <button type="button" onClick={() => removeAt(index)} disabled={busy}>
+                  remove
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
       {filterBox}

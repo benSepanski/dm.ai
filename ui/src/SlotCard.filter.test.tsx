@@ -191,3 +191,31 @@ describe('shopping-list category grouping', () => {
     expect(screen.queryAllByRole('heading', { level: 4 })).toHaveLength(0);
   });
 });
+
+describe('shopping basket costs', () => {
+  it('shows each purchased item with its price and bulk', () => {
+    const slot: SlotView = {
+      ...singleSlot(
+        [
+          option('weapon.longsword', 'Longsword', '1 gp · Bulk 1'),
+          option('gear.rope', 'Rope', '5 sp · Bulk L'),
+        ],
+        'pf2e.equipment.extra',
+      ),
+      kind: { kind: 'list' },
+      presentation_hint: 'shopping-list',
+    };
+    render(
+      <SlotCard
+        slot={slot}
+        tentative={{ kind: 'options', value: ['weapon.longsword', 'gear.rope'] }}
+        onTentative={vi.fn()}
+        onConfirm={vi.fn()}
+        onRequestChange={() => undefined}
+        busy={false}
+      />,
+    );
+    const costs = screen.getAllByTestId('item-cost').map((el) => el.textContent);
+    expect(costs).toEqual(['1 gp · Bulk 1', '5 sp · Bulk L']);
+  });
+});

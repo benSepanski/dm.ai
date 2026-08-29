@@ -674,3 +674,10 @@ textarea {
   color: var(--bad);
   font-weight: 600;
 }
+
+.shopping-item-cost {
+  color: var(--muted, #888);
+  font-size: 0.85em;
+  margin: 0 0.6em;
+  white-space: nowrap;
+}
