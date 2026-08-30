@@ -1,7 +1,7 @@
 {
-  "approved_at": "2026-08-29T21:31:59Z",
+  "approved_at": "2026-08-30T17:07:40Z",
   "doc": ".checkpoints/architecture/chargen-wizard.md",
-  "hash": "94ee856e5f41a1c7d7b4dc2a67a1309cec6e4ac2b757a75bc5e60308e71585a7",
+  "hash": "4d89c0b2b47fe6936f2e06bbcdcf1e375b36997f36935566941e0a57365e0ec3",
   "kind": "architecture",
   "slug": "chargen-wizard"
 }

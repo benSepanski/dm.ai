@@ -6,192 +6,128 @@ status: approved
 # Chargen slice 3 — architecture
 
 > Delta on the chargen-fighter and chargen-content architectures: every
-> boundary, failure mode, and constraint there remains in force. This doc
-> adds only what spellcasting, the play-scoped preparation section, and the
-> first write path to finalized files introduce. The prep-engine decision
-> (engine-core gains one scoped-choice operation) was made with Ben in
-> dialogue (2026-08-29).
+> boundary, failure mode, and constraint there remains in force. Revised
+> 2026-08-30 with the spec: daily preparation left the epoch, so the
+> scoped-choice engine machinery from the first implementation is
+> reverted (its validated design is recorded for Epoch 8 in the vision
+> and in this branch's history), storage is untouched, and the slice adds
+> only what the Wizard's build decisions and spell data introduce.
 
 ## Situations
 
-- **Choices now live in two scopes; the engine owns both with one driver.**
-  Preparation is a choice set bound to ruleset-defined prep slots, validated
-  against the folded build sheet, replaceable wholesale. engine-core gains
-  exactly one game-word-free operation: validate a **scoped choice set**
-  (slot definitions + choices + folded base → checklist entries). PF2e
-  defines the prep slots (per-rank counts, in-book option source, the
-  curriculum restriction); Epoch 8's daily prep and the 5.5e slice call the
-  same operation. What must never happen: a second, ruleset-private
-  validation driver; prep entries in the decision log or replay; engine-core
-  learning "spell", "spellbook", or "preparation" vocabulary — the operation
-  sees slots, choices, and a base state.
-- **The stored sheet stays a pure function of the log.** Sheet =
-  fold(decision log, data version), byte-for-byte as before — the
-  spellcasting block the fold adds (spell attack/DC, slots by rank, focus
-  pool, cantrip rank) derives from build decisions only. Prepared spells are
-  presentation: the projection layer (engine, both runtimes) combines the
-  materialized sheet with the prep section into the view. What must never
-  happen: prep contaminating the stored sheet or replay; the UI computing
-  legality, slot counts, or heightened ranks.
-- **Build decisions cast shadows into the prep scope.** Changing an
-  upstream build choice (arcane school) invalidates dependent scoped
-  choices (curriculum-slot prep, the school's focus spell). The existing
-  dependent-clearing machinery extends across the scope boundary: the
-  confirmation lists prep entries that will clear alongside log decisions,
-  and the clear happens in the same durable write. What must never happen:
-  a school change leaving stale curriculum prep behind, or clearing prep
-  without listing it first.
-- **Finalized files now have two writers; writes are serialized per file.**
-  Slice 2's version actions (re-pin, accept-divergence, keep-old) were the
-  first finalized-file writers; the prep save is the second, and they are
-  independent surfaces. All finalized-file mutations for one character go
-  through a per-character serialized write path: read-modify-write happens
-  under the serialization, so the later write always operates on the
-  earlier's result — a prep save that raced a version action is validated
-  against the post-action state, and a version action never resurrects
-  pre-prep-save content. What must never happen: two interleaved
-  read-modify-writes where the loser's effect silently vanishes. The prep route may touch only the prep section: decision
-  log and materialized sheet remain byte-identical across any prep save,
-  crash included. The route carries the full confirm discipline — request
-  idempotency ID, prep-section version, stale-view rejection, temp-file →
-  fsync → rename. The one sanctioned exception: a v2 file's first prep
-  save also bumps the schema-version envelope (the ordinary upgrade-on-
-  write), with log and sheet bytes still identical. What must never
-  happen: a prep save that rewrites, reorders, or re-serializes the log or
-  sheet; a stale tab silently clobbering a preparation.
-- **Spells are the richest records yet, transcribed not designed.** A new
-  `spells` record kind carries the mechanical fields the printed rules
-  state discretely (action cost, components/traits, range/area/targets,
-  duration, defense, heightening entries). The heightening schema admits
-  exactly the printed entry shapes — per-rank-step deltas and fixed-rank
-  overrides — nothing more. Data version bumps (0.2.0 → 0.3.0, additive);
-  the attestation pipeline covers spell records like any record. What must
-  never happen: a heightening or effect DSL designed past what shipped
-  records need; ground-truth bytes in the repo.
-- **The experiment stays falsifiable.** The Wizard lands as ruleset kind
-  modules (class features, spells) plus records; the engine-core diff is
-  exactly two amendments — the scoped-choice operation and the widened
-  projection input — listed and justified in the implement report. A
-  bigger engine-core need is the sanctioned re-open of this doc, never a
-  quiet extra operation.
+- **The engine must not change at all.** Every Wizard mechanism — the
+  thesis and school slots, the unified per-rank spellbook pickers with
+  the curriculum-minimum constraint, the hidden class-feat slot, the
+  spellcasting block on the sheet — is expressible with the existing five
+  operations: state-dependent Multi counts, validators over folded state,
+  unlock conditions, meters, derivation. What must never happen:
+  engine-core growing an operation, a field, or vocabulary for this
+  slice; a "spell" appearing anywhere in core types.
+- **One picker per rank; constraints live inside it.** The spellbook is
+  one slot per rank. The rank-1 count is school-dependent (5, or 7 once a
+  school is chosen) and the curriculum minimum is a validator + meter
+  inside that slot, with curriculum options badged. What must never
+  happen: a second card the player must reconcile against the first, or
+  any reachable state whose requirement no combination of picks can
+  satisfy (the constraint re-judges picks; it never greys options into a
+  dead end).
+- **Changing the school destroys nothing.** School is data the book
+  validator reads: on a school change the existing picks stand and the
+  curriculum meter re-judges them, flagging a shortfall as an ordinary
+  checklist entry; the focus spell is derived and follows automatically.
+  What must never happen: a school change clearing spellbook picks, or a
+  cascade prompt listing losses this design no longer has.
+- **Spells are the richest records, transcribed not designed.** The
+  `spells` record kind carries the printed mechanical fields (action
+  cost, traits, range/area/targets, duration, defense, heightening
+  entries bounded to the two printed shapes). Data version bumps
+  additively; the attestation pipeline covers spell records like any
+  record. What must never happen: a heightening or effect DSL designed
+  past what shipped records need; ground-truth bytes in the repo.
+- **The wordiest content is a tested load, not a hope.** Spell texts are
+  the longest prose the UI renders; layout integrity (no horizontal
+  overflow, no hidden controls) and card-local feedback for every confirm
+  outcome are enforced invariants — swept generically across every screen
+  the story walks visit, not asserted on one curated page. What must
+  never happen: feedback that renders only at the top of a long step, or
+  a control pushed out of reach by content length.
+- **A control's shape derives from the selection's semantics.** A
+  selection is either a *set* (membership — picking twice is meaningless:
+  rendered as toggles, duplicates unrepresentable) or a *bag* (each pick
+  is an instance: rendered as an add/remove tray with grouped "×N" rows
+  and always-visible removes). The presentation contract's slot kind
+  declares which; the UI derives the control from the kind and never
+  chooses by context. This slice ships only sets (spellbook, skills,
+  boosts) and one open bag (the shopping list); the bounded-bag variant
+  (count + repeats, engine-enforced distinctness on sets) is the sanctioned
+  vocabulary extension for its first real consumer — Epoch 8's
+  preparation slots — not built speculatively now.
+- **Class identity never lives in shared code.** The Fighter's leak into
+  the Wizard's skill labels came from a class name hardcoded in shared
+  mechanics — a category the crate/module boundaries cannot catch. What
+  must hold: anything class-specific is a data lookup on the chosen class
+  record; class-conditional behavior keys on record fields, never names.
+  What must never happen: a shipped record's display name as a source
+  literal in ruleset code, or one class's vocabulary appearing in another
+  class's projection or sheet.
+- **Storage does not change.** No prep section, no schema bump — schema
+  stays v2, and the no-rewrite-on-load / persistence rows run unchanged.
+  What must never happen: any new write path to finalized files in this
+  slice.
 
 ## Boundaries
 
-Slice-1/2 diagrams unchanged. Additions:
+Slice-1/2 diagrams unchanged. Additions are confined to two boxes:
 
-```
-  character file (schema v3)
-  ┌───────────────────────────────┐      engine-core (+1 operation)
-  │ sheet  = fold(log)  ◀─replay──┼──┐   ┌─────────────────────────────┐
-  │ log    (append-only)          │  ├──▶│ fold / validate / slots ... │
-  │ prep   (replaceable section;  │  │   │ validate_scoped(slots,      │
-  │         absent = valid)       │◀─┼───│   choices, folded base)     │
-  └───────────────────────────────┘  │   └─────────────▲───────────────┘
-        ▲ prep-save route            │                 │ prep-slot defs,
-        │ (only writer of prep;      │                 │ spell catalogs
-        │  log/sheet byte-identical) │   ┌─────────────┴───────────────┐
-  ┌─────┴─────┐                      └───│ ruleset-pf2e                │
-  │ server    │  projection = view(      │  + spells kind module       │
-  │ (axum)    │   sheet, prep) — engine, │  + wizard class kind        │
-  └───────────┘   native & WASM          │  (kinds → mechanics → core) │
-                                         └─────────────────────────────┘
-```
-
-- **engine-core**: two listed diffs, and only these. (1) One new operation,
-  `validate_scoped` in spirit (name is implement's): slot definitions + a
-  choice set + a folded base state → checklist entries. Base-decision
-  changes reporting and clearing dependent scoped choices is the *existing*
-  slot-graph/dependent-clearing machinery reaching across the scope
-  boundary — an extended reach of one mechanism, never a second dependency
-  tracker. (2) The existing projection operation's inputs widen to accept
-  an optional scoped-choice section, so the view combines sheet + prep in
-  engine code on both runtimes. No new crates, no new dependencies, no
-  game vocabulary.
-- **ruleset-pf2e**: a `spells` kind module (record parsing, catalogs,
-  option sources) and the Wizard's class kind (thesis, school, bond, class
-  feat, spellbook and prep slot definitions). Kind isolation holds:
-  school→curriculum and spellbook→prep references are record IDs resolved
-  by data lint and engine queries, never kind↔kind imports.
-- **types**: the prep-section shape, the scoped-choice request/response
-  shapes, and the spellcasting presentation block (book vs prepared
-  distinguished, cantrip rank precomputed) — render-ready, so the UI stays
-  arithmetic-free and the TUI litmus test stands.
-- **server**: the prep step inside the draft flow writes the draft's prep
-  section through the ordinary confirm route machinery; one new route
-  edits a finalized character's prep. Both are the only writers of the
-  prep section; no route writes a finalized log or sheet.
-- **persistence**: schema v3 adds the optional prep section. v2 (and
-  read-accepted v1) files load unchanged, never rewritten on load, upgrade
-  on their next ordinary write; v4 refused in place. Absence of the
-  section is the valid state for non-preparing classes and all pre-slice
-  files.
-- **verify**: replay covers the log exactly as before; a new pass
-  re-validates the prep section through the same scoped operation,
-  reporting illegal or unresolvable prep the way sheet divergence is
-  reported. Prep on a class with no prep slots is reported, not repaired.
-- **reference-check**: the pinned ground truth grows the spell partition;
-  attestation semantics unchanged.
+- **`ruleset-pf2e`**: a `spells` kind module — spell/thesis/school record
+  parsing and catalogs, the thesis and school slots, the two spellbook
+  slots (cantrips Multi{10}; rank-1 Multi{5|7} with the curriculum-minimum
+  validator and badged options) — plus a class-feat unlock that hides the
+  slot for classes whose advancement table grants none, and the
+  class-skill source label resolved from the chosen class record (never a
+  literal class name). Kind isolation holds: school→curriculum references
+  are record IDs resolved by data lint and folded state, never kind↔kind
+  imports.
+- **`rules-data`**: `spells.json` (spells, theses, schools), the Wizard
+  class record with its printed spellcasting entry (slot and book counts
+  as display/validation facts), the Wizard kit; manifest and
+  shipped-versions bump additively. `reference-check` gains the spell and
+  class-feature partitions.
+- `types`, `engine-core`, `server`, `persistence`, `wasm` interfaces:
+  **unchanged** (the wasm binary re-embeds the new data; bindings
+  regenerate without shape changes). The UI renders the new slots through
+  the existing SlotCard machinery; its two behavioral changes — wrapped/
+  clamped tray content and card-local outcome feedback — are presentation.
 
 ## Failure modes
 
-- **Crash mid-prep-save** (draft step or finalized edit): atomic-rename
-  discipline — prior prep intact; a retried request ID returns the saved
-  result and changes nothing; the crash harness gains three cycles: draft
-  prep confirm, finalized prep edit, and the school-change cascade write.
-- **Prep save racing a version action on the same finalized file**: the
-  per-character write serialization orders them; the prep save is
-  validated against the post-action state (or vice versa), both effects
-  land, and neither writer's result silently vanishes.
-- **Stale prep save** (second tab, either flow): rejected with the current
-  prep state attached; the UI reloads the picker — never silently merged.
-- **Hand-edited prep** — illegal picks, unknown spell IDs, prep on a
-  Fighter: file loads, sheet renders, `verify` names each violation and the
-  prep picker shows the same checklist entries; nothing is auto-repaired.
-- **Rules-data correction invalidates stored prep** (a `wizard-content`
-  fix): surfaces exactly like hand-edited prep after the re-pin — the
-  version-guard flow is untouched, prep legality is recomputed against the
-  current data after resolution, never persisted as a verdict.
-- **Prep operations on a flagged or older-pinned character**: rejected
-  until the version flag is resolved — the slice-2 "wizard writes on a
-  flagged draft rejected" rule extended to the prep routes. Only current
-  catalogs ship, so legality against an old pin is not computable: `verify`
-  reports that character's prep as not evaluable under a non-current pin
-  rather than validating it against the wrong catalogs, and the sheet view
-  shows the flag, not a legality verdict.
-- **Structurally unparseable prep section** (hand-mangled JSON in an
-  otherwise valid file): the prep section parses independently of the
-  file's log and sheet. The character loads, the prep is reported broken —
-  in `verify` and in the picker, which offers wholesale replacement — and
-  whole-file quarantine stays reserved for files whose log or sheet cannot
-  be read. Consistent with "absent = valid": a broken replaceable section
-  never takes the character down with it.
-- **School changed with dependent prep** (draft flow): the confirmation
-  lists the curriculum-slot prep and focus-spell entries that will clear;
-  decline leaves everything; accept clears log dependents and prep
-  dependents in one durable write. A crash between confirm and write loses
-  the whole change, never half of it.
-- **Raw illegal prep request** (bypassing the UI): server re-validates
-  natively via the same operation and rejects; the file is untouched —
-  the slice-1 authority pattern extended to the new route.
-- **Prep route against a draft mid-wizard vs finalized character**: each
-  route accepts only its own lifecycle state; a finalized-prep edit against
-  a draft (or vice versa) is rejected, not coerced.
-- **Projection bigger than the wire expects** (spell text in catalogs):
-  same posture as slice 2 — payload growth measured and reported, filtering
-  stays UI-side over render-ready options, no new engine queries.
+- **Curriculum shortfall after a school change or late picks:** an
+  ordinary Illegal/Incomplete checklist entry on the rank-1 spellbook
+  slot naming the school and the shortfall; finalize blocks; fixing picks
+  clears it. Never a cleared slot, never a dead end.
+- **A record with extreme text lengths:** wraps and clamps within its
+  card; controls stay visible; the layout invariant check fails the build
+  otherwise.
+- **A confirm outcome on a card deep in a long step:** rendered at the
+  card (rejection reasons, saved-partial state, conflicts); the top-level
+  notice may repeat it but is never the only signal.
+- **Rules-data corrections to spells** flow through the existing
+  version-guard machinery exactly as any record correction (flag, resolve
+  explicitly, never silent).
+- Everything else — crash mid-confirm, stale tabs, quarantine, version
+  guard, replay divergence — is inherited unchanged from slices 1–2.
 
 ## Performance budgets
 
 | Budget | Value | Asserted where |
 |---|---|---|
-| Derivation fold of a complete level-1 log | < 5 ms (unchanged; now includes the spellcasting block) | native benchmark in `checks/perf.rs` |
-| Scoped prep validation (full wizard prep) | rides the same benchmark, asserted within the fold budget's headroom — no separate ceiling unless it grows one | `checks/perf.rs` |
+| Derivation fold of a complete level-1 log | < 5 ms (unchanged; now includes the spellcasting block over full spell data) | native benchmark in `checks/perf.rs` |
 | Default test suite wall time | < 20 s (unchanged) | CI timing gate |
-| Warm incremental rebuild | < 10 s (unchanged; slice-2 levers and their order still pre-authorized) | timed CI step |
+| Warm incremental rebuild | < 10 s (unchanged; slice-2 levers still pre-authorized) | timed CI step |
 
-Design targets, hand-checked: prep picker feels instant (in-memory options,
-WASM preview validation); projection payload delta reported in the implement
-report alongside suite/rebuild/WASM-size deltas.
+Design targets, hand-checked: picker feel at subset size; projection
+payload delta reported in the implement report alongside suite/rebuild/
+WASM-size deltas.
 
 ## Constraints emitted
 
@@ -199,45 +135,33 @@ All slice-1 and slice-2 rows remain in force. New or amended rows:
 
 | Rule | Enforced by | Config lives at |
 |---|---|---|
-| Prep never touches replay: for fixture characters with identical logs and different (or absent) prep sections, fold output and stored sheets are byte-identical; replay determinism ignores prep | property + golden tests | `checks/replay.rs` |
-| Prep-save writes only prep: across any prep save (draft step or finalized edit), the file's decision log and materialized sheet are byte-identical before and after — including a v2 file's first prep save, where only the schema envelope may additionally change (fixture covers it) | standalone test | `checks/prep.rs` |
-| Prep-save idempotency + concurrency: a replayed request ID changes nothing and returns the saved result; a save carrying a stale prep version is rejected with current state | standalone test reusing the slice-1 idempotency test helpers — one pattern, new surface | `checks/prep.rs` |
-| Crash safety: SIGKILL during draft-prep confirms and finalized-prep edits leaves every file loadable, prior prep intact or new prep complete — never torn | crash harness extension | `checks/crash_harness.rs` |
-| Cascade atomicity: SIGKILL between a school-change confirm and its durable write leaves either the full change (log dependents and prep dependents cleared together) or none — never a cleared log with surviving curriculum prep | crash harness extension (third prep cycle) | `checks/crash_harness.rs` |
-| Finalized-file writers don't race: a prep save concurrent with a version action (re-pin / accept-divergence / keep-old) on the same character leaves both effects in the final file, in some serial order — neither write lost | standalone concurrency test | `checks/prep.rs` |
-| Prep routes respect the version guard: a prep save on a flagged or older-pinned character is rejected until resolution | standalone test (extends the slice-2 version-guard rows) | `checks/version_guard.rs` |
-| One validation driver, observable: a single illegal-prep fixture yields identical checklist entries from the native prep route, the `verify` pass, and the WASM preview — a private second driver diverges visibly | parity test | `checks/prep.rs` |
-| Broken prep degrades, never quarantines: a fixture file with unparseable prep but valid log/sheet loads with prep reported broken; whole-file quarantine fires only when log or sheet is unreadable | persistence contract test extension | `checks/persistence.rs` |
-| Server authority over prep: raw requests with not-in-book, overfilled-rank, non-curriculum-in-school-slot, wrong-lifecycle, or no-prep-class payloads are rejected natively and append/change nothing | standalone test | `checks/api_authority.rs` |
-| `verify` re-validates prep: fixtures with illegal picks, unknown spell IDs, and prep-on-a-Fighter each produce a named report; absent prep section is silent; a legal revised prep is clean | standalone test | `checks/prep.rs` |
-| Scoped dependents clear atomically and completely: changing a school on a fixture draft clears exactly the listed curriculum-slot prep and focus-spell entries — no stale curriculum prep survives, nothing unlisted clears | standalone test through the real engine | `checks/prep.rs` |
-| Storage schema v3: v2 fixture reads, is not rewritten on load, upgrades on first ordinary write (incl. a finalized v2 file whose first write is a prep save); v4 refused in place; prep-section absence valid at every layer | persistence contract test (extends existing rows) | `checks/persistence.rs` |
-| Spell records: schema-valid including the bounded heightening shape (per-rank-step delta or fixed-rank override, no other variants); IDs stable; license metadata present; school curriculum / focus-spell / spellbook-eligibility cross-references resolve to shipped spell records | data lint (extends existing rules) | `checks/rules_data.rs` |
-| Attestation covers the spell partition: every spell record attested, hash-current, zero unwaived mismatches — the slice-2 machinery, wider | offline attestation check (unchanged code, more records) | `checks/attestation.rs` |
-| Engine purity applies to the new operation: no I/O, clock, randomness, env in the scoped-validation path | existing clippy bans + layering test (no config change; listed so review checks the new code falls under them) | `clippy.toml`, `checks/crate_layering.rs` |
-| Kind isolation: the `spells` kind module and the Wizard class kind have no kind↔kind imports | existing module-graph scan (crate layout extends) | `checks/crate_layering.rs` |
-| Golden coverage: one hand-verified Wizard (sheet + initial prep) per shipped school; the changed-school cascade fixture; a revised-prep fixture | golden tests | `checks/replay.rs` |
+| engine-core is byte-identical to its pre-slice state (the experiment's zero) | review of the implement report's diff listing + the existing layering/purity rows over anything that would slip in | report; `checks/crate_layering.rs`, `clippy.toml` |
+| Spellbook satisfiability: for every shipped school, a full legal spellbook exists and no pick order can dead-end the rank-1 requirement (the constraint re-judges; options are never greyed into unsatisfiability) | property test through the real engine over shipped data | `checks/replay.rs` |
+| School change destroys nothing: on a fixture draft with a full book, amending the school leaves every spellbook decision byte-identical and re-judges the curriculum meter (shortfall = checklist entry, not a clear) | standalone test through the real engine | `checks/replay.rs` |
+| Class-feat slot hidden for classes without a level-1 class feat; class-skill source labels name the chosen class | golden assertions (Sylvenne + Torvald) | `checks/replay.rs` |
+| Spell records: schema-valid with the bounded heightening shape (per-rank-step delta or fixed-rank override only); IDs stable; license metadata present; curriculum and focus-spell cross-references resolve | data lint (extends existing rules) | `checks/rules_data.rs` + ruleset integrity |
+| Attestation covers the spell and class-feature partitions: every record attested, hash-current, zero unwaived mismatches | offline attestation check (slice-2 machinery, wider) | `checks/attestation.rs` |
+| Layout sweep, everywhere: a shared `expectSaneLayout` helper asserts (a) the document has no horizontal scroll, (b) no element with visible overflow-x has `scrollWidth > clientWidth`, (c) every enabled control lies inside its clipping ancestor's box — called on every step visit in the shared e2e helpers (so all story walks sweep every screen they reach) plus a dedicated stress spec: longest shipped descriptions expanded, at desktop AND narrow (tablet) viewports | Playwright helper wired into `ui/e2e/helpers.ts` + stress spec | `ui/e2e/layout.ts`, `ui/e2e/layout.spec.ts` |
+| Card-local feedback: a refused or partial confirm renders its outcome inside the card (asserted in the illegal-picks walk) | Playwright story assertion | `ui/e2e/wizard-class.spec.ts` |
+| No shipped-record display name as a source literal: every record name in the shipped data is scanned against `ruleset-pf2e` source (tests and data excluded); a match fails the build — class-specific anything must be a data lookup | source lint over shipped data × ruleset source | `checks/class_isolation.rs` |
+| Cross-class contamination: for every shipped class, a complete character built through the real engine yields a projection + sheet that never mentions another class's name or class-scoped record IDs (sole sanctioned exception: the class-picker catalog); pairwise, automatic for every future class | sweep test through the real engine | `checks/class_isolation.rs` |
+| Kind→control mapping is total and exclusive: set-kinds (single/multi) never render an add control; bag-kinds (list) always render grouped tray rows with visible removes | UI unit test over the slot editor | `ui/src/SlotCard.test.tsx` |
+| Storage untouched: schema version and persistence fixtures unchanged from slice 2; no new write paths | existing persistence/no-rewrite rows (no config change; listed so review checks nothing crept in) | `checks/persistence.rs`, `checks/no_rewrite_on_load.rs` |
+| Golden coverage: one hand-verified Wizard per shipped school; the school-change re-judge fixture | golden tests | `checks/replay.rs` |
+| Wizard projection < 5 ms over full spell data | asserting benchmark | `checks/perf.rs` |
 
-Deliberately unenforced, with reasons: "engine-core gained exactly one
-operation" is not mechanically checkable — the implement report's engine-core
-diff listing plus review own it (the layering, purity, and vocabulary rules
-still bound what any addition can be). "The heightening schema captures only
-printed shapes" is enforced as schema strictness; whether a field was
-*invented* is a transcription judgment left to the reference pipeline and
-review. "The prep picker reuses the shared slot components" is UI structure,
-review-judged like slice 2's filter placement. "Prep legality is never
-persisted as a verdict" is structural — there is no field to store it in —
-and the no-rewrite-on-load check already catches any load-path write. "The
-prep routes are the only writers of the prep section" is likewise
-structural (route layout), with the dangerous inverse direction — anything
-else writing prep, or prep writing anything else — covered by the
-byte-identity and no-rewrite-on-load rows. "No second validation driver"
-is enforced observably via the parity row rather than by code inspection.
+Deliberately unenforced, with reasons: "engine-core byte-identical" is
+review-plus-report rather than a hash check (a hash row would fight every
+future slice; the layering/purity rows bound what any change could be).
+"The sheet's preparation note reads plainly" and picker feel are
+review-judged. The WASM copy's agreement with the native engine remains
+structural (same commit, bindings-freshness gate), as in slice 1.
 
 ## Review record
 
 | Role | Verdict | Folded in |
 |---|---|---|
-| constraint-auditor | block, resolved | cascade-atomicity crash row (third harness cycle); one-driver parity row (native route / verify / WASM preview agree on an illegal-prep fixture); only-writers-of-prep moved to deliberately-unenforced with the structural reason |
-| failure-mode-reviewer | block, resolved | per-character serialization of finalized-file writes (prep save vs version actions — no lost update) + concurrency row; prep routes rejected on flagged/older-pinned characters, verify says not-evaluable under a non-current pin; v2-first-prep-save schema-envelope carve-out + fixture; unparseable prep degrades instead of quarantining the file |
-| simplicity-warden | advice | dependency clearing reworded as the existing machinery's extended reach (never a second tracker); projection-input widening named as the second listed engine-core diff; prep idempotency test reuses slice-1 helpers |
+| constraint-auditor | block, resolved | (original round) cascade-atomicity + parity rows — superseded: prep and its cascade left the slice; satisfiability and destroy-nothing rows replace them |
+| failure-mode-reviewer | block, resolved | (original round) finalized-writer race + flagged-prep rules — superseded: no prep, no new finalized write path; wordy-content and shortfall failure modes added |
+| simplicity-warden | advice | (original round) engine accounting honesty — the revision resolves it maximally: engine-core diff is zero |
+| Ben (implementation review, 2026-08-30) | revision | findings 1–7 folded: preparation out of the epoch; unified per-rank picker with in-picker constraint; layout + card-feedback invariants promoted to enforced rows |
