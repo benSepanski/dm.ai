@@ -73,6 +73,14 @@ pub fn compare(our: &OurRecord, foundry: &FoundryRecord, ctx: &Ctx) -> Outcome {
         Kind::Armor => armor(&our.value, foundry.system()),
         Kind::Shield => shield(&our.value, foundry.system()),
         Kind::Gear => gear(&our.value, foundry),
+        Kind::Spell => spell(&our.value, foundry),
+        Kind::ClassFeature => Outcome {
+            // Thesis and school mechanics are prose in both schemas;
+            // existence + name (established by the match itself) is the
+            // checkable set. Curriculum lists are review-verified.
+            fields_checked: vec!["existence", "name"],
+            mismatches: vec![],
+        },
         // Skills and kits have no Foundry counterpart partition; the match
         // loop never gets here for them.
         Kind::Skill | Kind::Kit => unreachable!("no Foundry partition for skills/kits"),
@@ -640,4 +648,207 @@ fn gear(our: &Value, f: &FoundryRecord) -> Outcome {
         fields_checked: fields,
         mismatches: mm,
     }
+}
+
+/// Spells: rank (with the cantrip rule), traditions, traits, action cost,
+/// defense, range, area, targets, duration, and — where Foundry structures
+/// it — the heightening shape. Normalization bridges (systematic, not
+/// per-record):
+/// - our rank 0 = Foundry level 1 + `cantrip` trait; ranked spells match
+///   the level with no cantrip trait
+/// - `focus` is a directory in Foundry (`spells/focus/`), a flag here (the
+///   Focus trait itself appears in both schemas and is compared)
+/// - rarity (Uncommon/Rare) is a printed trait but a separate `rarity`
+///   field in Foundry — dropped from our side of the trait comparison
+/// - focus spells carry no tradition list in Foundry — skipped for them
+/// - our "AC" defense = printed Defense line of attack spells; Foundry
+///   models those as no defense + the `attack` trait
+/// - area {type, value} renders as "<value>-foot <type>"
+/// - a sustained duration with no printed time renders as "sustained"
+fn spell(our: &Value, f: &FoundryRecord) -> Outcome {
+    let s = f.system();
+    let mut fields = vec![
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+    ];
+    let mut mm = Vec::new();
+
+    let foundry_traits: Vec<String> = s["traits"]["value"]
+        .as_array()
+        .map(|a| {
+            a.iter()
+                .filter_map(|v| v.as_str())
+                .map(str::to_lowercase)
+                .collect()
+        })
+        .unwrap_or_default();
+    let is_cantrip_f = foundry_traits.iter().any(|t| t == "cantrip");
+    let is_focus_f = f.path.contains("/focus/");
+    let our_rank = i64_of(&our["rank"]);
+    let our_focus = our["focus"].as_bool().unwrap_or(false);
+    let f_level = s["level"]["value"].as_i64().unwrap_or(-1);
+    let rank_ok = if our_rank == 0 {
+        is_cantrip_f && f_level == 1
+    } else {
+        !is_cantrip_f && f_level == our_rank
+    };
+    check(&mut mm, "rank", rank_ok && our_focus == is_focus_f);
+
+    if !our_focus {
+        fields.push("traditions");
+        let ours = sorted_lower(
+            our["traditions"]
+                .as_array()
+                .unwrap_or(&vec![])
+                .iter()
+                .filter_map(|v| v.as_str())
+                .map(String::from),
+        );
+        let theirs = sorted_lower(
+            s["traits"]["traditions"]
+                .as_array()
+                .unwrap_or(&vec![])
+                .iter()
+                .filter_map(|v| v.as_str())
+                .map(String::from),
+        );
+        check(&mut mm, "traditions", ours == theirs);
+    }
+
+    let ours_traits = sorted_lower(
+        our["traits"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|v| v.as_str())
+            .filter(|t| !t.eq_ignore_ascii_case("uncommon") && !t.eq_ignore_ascii_case("rare"))
+            .map(String::from),
+    );
+    let mut theirs_traits = foundry_traits.clone();
+    theirs_traits.sort();
+    check(&mut mm, "traits", ours_traits == theirs_traits);
+
+    check(
+        &mut mm,
+        "actions",
+        str_of(&our["actions"]) == s["time"]["value"].as_str().unwrap_or(""),
+    );
+
+    let our_defense = our["defense"].as_str();
+    let defense_ok = match &s["defense"]["save"] {
+        Value::Object(save) => {
+            let stat = save["statistic"].as_str().unwrap_or("");
+            let basic = save["basic"].as_bool().unwrap_or(false);
+            let expected = if basic {
+                format!("basic {}", capitalize_ascii(stat))
+            } else {
+                capitalize_ascii(stat)
+            };
+            our_defense == Some(expected.as_str())
+        }
+        _ => {
+            // No save in Foundry: an attack spell's printed Defense is AC.
+            if foundry_traits.iter().any(|t| t == "attack") {
+                our_defense == Some("AC")
+            } else {
+                our_defense.is_none()
+            }
+        }
+    };
+    check(&mut mm, "defense", defense_ok);
+
+    let f_range = s["range"]["value"].as_str().unwrap_or("");
+    check(
+        &mut mm,
+        "range",
+        our["range"].as_str().unwrap_or("") == f_range,
+    );
+
+    // Area is checkable only when Foundry structures it (Grease models its
+    // dual area/target in prose).
+    if let (Some(t), Some(v)) = (s["area"]["type"].as_str(), s["area"]["value"].as_i64()) {
+        fields.push("area");
+        let expected = format!("{v}-foot {t}");
+        check(
+            &mut mm,
+            "area",
+            our["area"].as_str() == Some(expected.as_str()),
+        );
+    }
+
+    let f_targets = s["target"]["value"].as_str().unwrap_or("");
+    check(
+        &mut mm,
+        "targets",
+        our["targets"].as_str().unwrap_or("") == f_targets,
+    );
+
+    let f_duration = s["duration"]["value"].as_str().unwrap_or("");
+    let sustained = s["duration"]["sustained"].as_bool().unwrap_or(false);
+    let expected_duration = if f_duration.is_empty() && sustained {
+        "sustained".to_string()
+    } else {
+        f_duration.to_string()
+    };
+    check(
+        &mut mm,
+        "duration",
+        our["duration"].as_str().unwrap_or("") == expected_duration,
+    );
+
+    // Heightening shape, when Foundry structures it. Interval entries must
+    // have a matching per_rank step; fixed entries must cover Foundry's
+    // structured levels (we may carry MORE printed entries than Foundry
+    // structures — those are review-verified).
+    match s["heightening"]["type"].as_str() {
+        Some("interval") => {
+            fields.push("heightening");
+            let interval = s["heightening"]["interval"].as_i64().unwrap_or(1);
+            let ok = our["heightening"].as_array().is_some_and(|entries| {
+                entries.iter().any(|e| {
+                    e["kind"].as_str() == Some("per_rank") && e["step"].as_i64() == Some(interval)
+                })
+            });
+            check(&mut mm, "heightening", ok);
+        }
+        Some("fixed") => {
+            fields.push("heightening");
+            let levels: Vec<i64> = s["heightening"]["levels"]
+                .as_object()
+                .map(|m| m.keys().filter_map(|k| k.parse().ok()).collect())
+                .unwrap_or_default();
+            let ours: Vec<i64> = our["heightening"]
+                .as_array()
+                .map(|a| {
+                    a.iter()
+                        .filter(|e| e["kind"].as_str() == Some("fixed"))
+                        .filter_map(|e| e["rank"].as_i64())
+                        .collect()
+                })
+                .unwrap_or_default();
+            let ok = levels.iter().all(|l| ours.contains(l));
+            check(&mut mm, "heightening", ok);
+        }
+        _ => {}
+    }
+
+    Outcome {
+        fields_checked: fields,
+        mismatches: mm,
+    }
+}
+
+fn capitalize_ascii(s: &str) -> String {
+    let mut out = s.to_string();
+    if let Some(first) = out.get_mut(0..1) {
+        first.make_ascii_uppercase();
+    }
+    out
 }

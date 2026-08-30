@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use engine_core::{ApplyError, Availability, SlotRegistration};
-use types::{MeterState, MeterView, OptionId, OptionView, SlotId, SlotViewKind, StepId};
+use types::{MeterView, OptionId, OptionView, SlotId, SlotViewKind, StepId};
 
 use crate::data::RulesData;
 use crate::mechanics::{
@@ -56,6 +56,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     details: vec![],
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 });
                 for opt in &kit.options {
                     out.push(OptionView {
@@ -73,6 +75,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                         details: vec![],
                         available: true,
                         unavailable_reason: None,
+                        group: None,
+                        badge: None,
                     });
                 }
             }
@@ -83,6 +87,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 details: vec![],
                 available: true,
                 unavailable_reason: None,
+                group: None,
+                badge: None,
             });
             out
         }),
@@ -162,6 +168,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     details: vec![],
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 });
             }
             out
@@ -203,16 +211,12 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         // what's left, so remaining is the headline.
         meters: Box::new(move |state, _| {
             let spend = total_spend_cp(state, &d_meter);
-            vec![MeterView {
-                label: "Remaining".into(),
-                current: format_cp(STARTING_WEALTH_CP - spend),
-                limit: Some("15 gp".into()),
-                state: if spend > STARTING_WEALTH_CP {
-                    MeterState::Exceeded
-                } else {
-                    MeterState::Ok
-                },
-            }]
+            vec![MeterView::budget(
+                "Remaining",
+                spend,
+                STARTING_WEALTH_CP,
+                format_cp,
+            )]
         }),
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     });

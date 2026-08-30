@@ -1,6 +1,9 @@
-//! Skills kind: the class skill choice, the trained-skill picks, the
-//! skill-chooser slots granted by heritage/ancestry feats, and the
-//! replacement slots the PF2e "already trained" rule opens on collisions.
+//! Skills kind: the class skill choice, the trained-skill picks, and the
+//! skill-chooser slots granted by heritage/ancestry feats. Ownership
+//! policy (see `Pf2eState::skill_resolution`): fixed grants own a skill
+//! and its attribution; a grant or class skill landing on an
+//! already-trained skill converts into one extra free trained pick, and a
+//! free pick landing on an owned skill re-judges in place.
 
 use std::sync::Arc;
 
@@ -11,8 +14,7 @@ use crate::data::{Effect, RulesData};
 use crate::mechanics::{
     describe_selection, illegal, incomplete, lore_name_from_text, sel_multi, sel_single, sel_text,
     Attribute, Pf2eState, SkillChoice, SLOT_CLASS_SKILL, SLOT_FEAT_LORE, SLOT_FEAT_SKILLS,
-    SLOT_HERITAGE_SKILLS, SLOT_REPLACEMENT_1, SLOT_REPLACEMENT_2, SLOT_REPLACEMENT_3,
-    SLOT_TRAINED_SKILLS,
+    SLOT_HERITAGE_SKILLS, SLOT_TRAINED_SKILLS,
 };
 
 const STEP: &str = crate::mechanics::STEP_CLASS;
@@ -46,6 +48,8 @@ fn skill_options(data: &RulesData, state: &Pf2eState, own_slot: &str) -> Vec<Opt
                 available: blocked.is_none(),
                 unavailable_reason: blocked
                     .map(|source| format!("already trained (from {source})")),
+                group: None,
+                badge: None,
             }
         })
         .collect()
@@ -83,11 +87,14 @@ fn choose_lore_grant(state: &Pf2eState) -> Option<String> {
     })
 }
 
-/// The Fighter trains 3 + Int additional skills.
+/// The class's additional trained skills: its base count plus Int, plus
+/// one per redundant grant/class-skill (the "select another skill
+/// instead" rule).
 fn additional_skill_count(data: &RulesData, state: &Pf2eState) -> Option<u32> {
     let class = data.class(state.class.as_ref()?)?;
     let int = state.modifier(Attribute::Int);
-    Some((class.additional_skills_base as i32 + int).max(0) as u32)
+    let extra = state.skill_resolution().extra_free_picks.len() as i32;
+    Some((class.additional_skills_base as i32 + int + extra).max(0) as u32)
 }
 
 pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> {
@@ -125,6 +132,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     details: vec![],
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 })
                 .collect()
         }),
@@ -147,7 +156,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     SLOT_CLASS_SKILL,
                     STEP,
                     "Skills",
-                    "Choose Acrobatics or Athletics",
+                    "Choose your class skill",
                     "from Class",
                 )]
             } else {
@@ -179,11 +188,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 reason: "choose a class first".into(),
             },
         }),
-        dependents: vec![
-            SlotId::new(SLOT_REPLACEMENT_1),
-            SlotId::new(SLOT_REPLACEMENT_2),
-            SlotId::new(SLOT_REPLACEMENT_3),
-        ],
+        dependents: vec![],
         options: Box::new(move |state| skill_options(&d, state, SLOT_TRAINED_SKILLS)),
         apply: Box::new(move |state, decision| {
             let ids = sel_multi(&decision.selection)?;
@@ -194,7 +199,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             }
             state.skill_choices.push(SkillChoice {
                 slot: SLOT_TRAINED_SKILLS,
-                source: "Fighter".into(),
+                source: state.class_name.clone().unwrap_or_else(|| "Class".into()),
                 skills: ids.iter().map(|i| i.as_str().to_string()).collect(),
             });
             Ok(())
@@ -212,11 +217,21 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             let mut out = Vec::new();
             if decision.is_none() || picked < expected as usize {
                 let left = expected as usize - picked.min(expected as usize);
+                let extras = state.skill_resolution().extra_free_picks;
+                let bonus_note = if extras.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        " (includes {} extra: {} trains a skill you already have)",
+                        extras.len(),
+                        extras.join(", ")
+                    )
+                };
                 out.push(incomplete(
                     SLOT_TRAINED_SKILLS,
                     STEP,
                     "Skills",
-                    &format!("{} skill choice(s) left", left.max(1)),
+                    &format!("{} skill choice(s) left{bonus_note}", left.max(1)),
                     "from Class",
                 ));
             } else if picked > expected as usize {
@@ -230,14 +245,14 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     "from Class",
                 ));
             }
-            for (slot, skill) in state.skill_resolution().illegal_choice_dupes {
+            for (slot, skill, owner) in state.skill_resolution().illegal_choice_dupes {
                 if slot == SLOT_TRAINED_SKILLS {
                     out.push(illegal(
                         SLOT_TRAINED_SKILLS,
                         STEP,
                         "Skills",
                         &format!(
-                            "{} is already trained — pick a different skill",
+                            "{} now comes from {owner} — pick a different skill",
                             d_val
                                 .skill(&skill)
                                 .map(|s| s.name.clone())
@@ -269,14 +284,6 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         "Skills (ancestry feat)",
         false,
     ));
-
-    // --- Replacement slots ---
-    for (i, slot_id) in [SLOT_REPLACEMENT_1, SLOT_REPLACEMENT_2, SLOT_REPLACEMENT_3]
-        .into_iter()
-        .enumerate()
-    {
-        regs.push(replacement_slot(data, slot_id, i));
-    }
 
     // --- Player-named Lore from a feat (Gnome Obsession pattern) ---
     // A ChooseLore effect anywhere in the folded state (heritage, ancestry
@@ -423,91 +430,17 @@ fn chooser_slot(
                     &format!("from {source}"),
                 ));
             }
-            for (slot, skill) in state.skill_resolution().illegal_choice_dupes {
+            for (slot, skill, owner) in state.skill_resolution().illegal_choice_dupes {
                 if slot == slot_id {
                     out.push(illegal(
                         slot_id,
                         step,
                         "Skills",
                         &format!(
-                            "{} is already trained — pick a different skill",
+                            "{} now comes from {owner} — pick a different skill",
                             d_val.skill(&skill).map(|s| s.name.clone()).unwrap_or(skill)
                         ),
                         &format!("from {source}"),
-                    ));
-                }
-            }
-            out
-        }),
-        meters: Box::new(|_, _| vec![]),
-        describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
-    }
-}
-
-fn replacement_slot(
-    data: &Arc<RulesData>,
-    slot_id: &'static str,
-    index: usize,
-) -> SlotRegistration<Pf2eState> {
-    let d = data.clone();
-    let d_apply = data.clone();
-    let d_val = data.clone();
-    let d_desc = data.clone();
-    SlotRegistration::<Pf2eState> {
-        id: SlotId::new(slot_id),
-        step: StepId::new(STEP),
-        label: "Replacement skill".to_string(),
-        required: true,
-        presentation_hint: None,
-        kind: Box::new(|_| SlotViewKind::Single),
-        unlock: Box::new(move |state| {
-            let collisions = state.skill_resolution().collisions;
-            if collisions.len() > index {
-                Availability::Open
-            } else {
-                Availability::Hidden
-            }
-        }),
-        dependents: vec![],
-        options: Box::new(move |state| skill_options(&d, state, slot_id)),
-        apply: Box::new(move |state, decision| {
-            let id = sel_single(&decision.selection)?;
-            if d_apply.skill(id.as_str()).is_none() {
-                return Err(ApplyError::new(format!("unknown skill '{id}'")));
-            }
-            state.skill_choices.push(SkillChoice {
-                slot: slot_id,
-                source: "replacement (already trained)".into(),
-                skills: vec![id.as_str().to_string()],
-            });
-            Ok(())
-        }),
-        validate: Box::new(move |state, decision| {
-            let collisions = state.skill_resolution().collisions;
-            let mut out = Vec::new();
-            if collisions.len() > index && decision.is_none() {
-                out.push(incomplete(
-                    slot_id,
-                    STEP,
-                    "Skills",
-                    &format!(
-                        "You're already trained in the skill granted by {} — choose a replacement skill",
-                        collisions[index]
-                    ),
-                    &format!("from {}", collisions[index]),
-                ));
-            }
-            for (slot, skill) in state.skill_resolution().illegal_choice_dupes {
-                if slot == slot_id {
-                    out.push(illegal(
-                        slot_id,
-                        STEP,
-                        "Skills",
-                        &format!(
-                            "{} is already trained — pick a different skill",
-                            d_val.skill(&skill).map(|s| s.name.clone()).unwrap_or(skill)
-                        ),
-                        "replacement",
                     ));
                 }
             }

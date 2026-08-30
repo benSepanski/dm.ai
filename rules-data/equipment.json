@@ -2920,6 +2920,36 @@
         "license": "ORC",
         "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
       }
+    },
+    {
+      "id": "kit.wizard",
+      "name": "Wizard Kit",
+      "class": "class.wizard",
+      "price_cp": 170,
+      "contents": [
+        "weapon.staff",
+        "gear.adventurers-pack",
+        "gear.writing-set"
+      ],
+      "options": [
+        {
+          "id": "kit.wizard.crossbow",
+          "name": "add a crossbow with 20 bolts",
+          "price_cp": 320,
+          "items": [
+            "weapon.crossbow",
+            "weapon.bolts",
+            "weapon.bolts"
+          ]
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 269,
+        "url": "https://2e.aonprd.com/Rules.aspx?ID=2818",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
     }
   ]
 }

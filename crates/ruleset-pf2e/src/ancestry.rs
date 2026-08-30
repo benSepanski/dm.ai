@@ -12,8 +12,7 @@ use crate::mechanics::{
     prereq_unavailable, sel_attributes, sel_multi, sel_single, Pf2eState, SLOT_ANCESTRY,
     SLOT_ANCESTRY_FEAT, SLOT_ANCESTRY_FREE_BOOSTS, SLOT_ANCESTRY_LANGUAGES, SLOT_FEAT_GENERAL_FEAT,
     SLOT_FEAT_LORE, SLOT_FEAT_SKILLS, SLOT_HERITAGE, SLOT_HERITAGE_GENERAL_FEAT,
-    SLOT_HERITAGE_SKILLS, SLOT_NATURAL_AMBITION, SLOT_REPLACEMENT_1, SLOT_REPLACEMENT_2,
-    SLOT_REPLACEMENT_3,
+    SLOT_HERITAGE_SKILLS, SLOT_NATURAL_AMBITION,
 };
 
 const STEP: &str = crate::mechanics::STEP_ANCESTRY;
@@ -117,6 +116,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     },
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 })
                 .collect()
         }),
@@ -192,6 +193,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                         details: vec![],
                         available: unavailable.is_none(),
                         unavailable_reason: unavailable,
+                        group: None,
+                        badge: None,
                     }
                 })
                 .collect()
@@ -280,9 +283,6 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             SlotId::new(SLOT_FEAT_GENERAL_FEAT),
             SlotId::new(SLOT_NATURAL_AMBITION),
             SlotId::new(SLOT_FEAT_LORE),
-            SlotId::new(SLOT_REPLACEMENT_1),
-            SlotId::new(SLOT_REPLACEMENT_2),
-            SlotId::new(SLOT_REPLACEMENT_3),
         ],
         options: Box::new(move |state| {
             if state.ancestry.is_none() {
@@ -305,6 +305,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                         details,
                         available: unavailable.is_none(),
                         unavailable_reason: unavailable,
+                        group: None,
+                        badge: None,
                     }
                 })
                 .collect()
@@ -513,6 +515,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     details: vec![],
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 })
                 .collect()
         }),

@@ -2,7 +2,7 @@
   "claims_full_breadth": true,
   "foundry_sha256": "b0a649e6f9859350f7eca86e85082ac68b20309f4335c77bf6e1643aff009c8a",
   "foundry_tag": "pf2e-8.4.1",
-  "generated": "2026-08-29",
+  "generated": "2026-08-30",
   "missing_from_data": {
     "ancestries": {
       "count": 0,
@@ -995,6 +995,22 @@
         "defenses"
       ],
       "file_hash": "6cae8c0f7abd9b4b3bd5ac3596ebdb19974fe7eb4f56fb4e796b857479504ef7",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "class.wizard": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "key_attribute",
+        "hp_per_level",
+        "perception",
+        "saves",
+        "attacks",
+        "defenses"
+      ],
+      "file_hash": "ad04f3c42629d5f07cbeaf61aae359421ed22656aa13b92bd811dab5db4b477a",
       "mismatches": [],
       "verdict": "match",
       "waiver": null
@@ -4354,6 +4370,41 @@
         "state_hash": "c5ff5742b46791734a43c68b86ea441021f05472d741157d5f8331ddf211d27b"
       }
     },
+    "kit.wizard": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "1b0d0281b837dfba69e50ab24153f31d8cf841f63fe5cef47c171036207898d0",
+      "mismatches": [
+        "existence"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "Class kits exist only in the book; Foundry ships no class-kit pack. Contents (staff, adventurer's pack, writing set; crossbow-with-bolts option) and prices hand-verified against Player Core pg. 269.",
+        "state_hash": "de0c7ca9a356c8e95f47dd5fc315d1ed9c4722c135f859165cca7d73ed210eff"
+      }
+    },
+    "school.battle-magic": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "aafd5550fb8373591844de6de86b6dfe6ac6b113f3b760e84ac4d3f6b7527fea",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "school.protean-form": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "6efd02e0b4842d343729e51b7e7c6780867bcf989bb4114a711f820af3b9622b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "shield.buckler": {
       "fields_checked": [
         "existence",
@@ -4657,6 +4708,565 @@
         "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
         "state_hash": "c1696d69869d6ea99abef75e5ae7042a5c85ddaacdf0cb1671491f7ece863d7d"
       }
+    },
+    "spell.breathe-fire": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "area",
+        "heightening"
+      ],
+      "file_hash": "72f9e9665ce39bffe6ffa759b3d0b959b5573d26c9d99e85372388b42bba462c",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.caustic-blast": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "area",
+        "heightening"
+      ],
+      "file_hash": "74ceee2b1ed8399582a543b68b39c9ee07644bd5af795cdc0053e9186ec78dae",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.command": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "8c42b86b1ee2128fd0c1aa9c0b28f1854cd34d5252d97bd9430273f894f57a8a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.detect-magic": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "area"
+      ],
+      "file_hash": "36584dd8effad31d61f68278f76ffc019c0a2adf77a512bd1b30c920810f8ed6",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.electric-arc": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "d40b0e6676cc48c9cf9943f43ea30f34c3b732004ebcbd2ee27ee0ca019dea47",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.fear": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "6f65f6bcb6f86aebb3a668d7734a6b3b8a3e31d03759fb2b61a9c8ae92ae7058",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.figment": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "1963e3772afbae6ac76026051c7256e6fbed838a59657b60969c9fbf68551557",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.force-barrage": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "cdc111f2685fd4097e1f003878aa054c91074c6e892d99c32c7a6a6b48cb0469",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.force-bolt": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "heightening"
+      ],
+      "file_hash": "510a3217b2fef140c4b7b108452f10f91ab0b9ef8a3b56c6afbc3f5a07da1644",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.frostbite": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "2c4cbef31ab73ac9bb2d7116b298c133f863e52216a3aecbd72b9139513a073c",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.gouging-claw": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "7c4e0b93107d4b37808b86cd93c6fcb9ef10a9f83d124c6464e83de178b9d28f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.grease": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "5abc5caf0fe4a94409eefef356c49c17b7783455afa08fd2370422b931a56b56",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.grim-tendrils": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "area",
+        "heightening"
+      ],
+      "file_hash": "373458af0a38f224f5b2c16c0bad31cc0004e48459db6cc169f6937c58693c22",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.ignition": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "5250460aae6f774f65096622d020a490649034b0f4266dc81d907a7c91d8ebbb",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.illusory-disguise": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "658f48948276cda38ec885e927b17d027a9b0ab8a566f6bb0be85b9b9c8f8229",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.illusory-object": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "area"
+      ],
+      "file_hash": "aaa996775c01371f09a3b813c51bcb0ae93ad234d062779a81a01cc81755b97e",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.jump": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "31e93b0918d84ad54f8bf6b29645ec8def6bf542d49713a9ad6bd1facb9cb5c3",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.light": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "c1305e67d6716601894187096eac7b977a4f446f3d51f3c19e50426d18795f75",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.message": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "4c8b22a83bafade77fbb7670835546976fef948ea495b65a99b97244a023a5b6",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.mystic-armor": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "c557ea7fdbc73333ee86fd8fcfee33883f9e4fb7d2d6d49a27ca47d7f7a1f789",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.pest-form": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "251c414ca4357cdb26d8452aeaa21c0f422dabaa727da14f110131a0eb8c93d1",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.prestidigitation": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "6f943c3b5888091b13fd2061788da2b2c71024312c1c30ced852528234fc5844",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.scramble-body": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration"
+      ],
+      "file_hash": "38c912772a64e488481cadad9de93d841bd222c02b7c1e55e69b1619d4b625d0",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.shield": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "0cee6a340856cb7d939e34b040997213629d10b5f77e67d4b98f07728695d40f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.sigil": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "b090ddc382f1b703fd520810345ba1d1949315851cf7faf313243ad56a647d61",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.sleep": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "area"
+      ],
+      "file_hash": "44655f56029296c4c21ef77d65f9d024dde670c830b24abff2c6ce4c11f8f0fc",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.spider-sting": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "e83f7600720c1838b754b0e52273634d794a15d1e430e60e6df0b5f315c20587",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.tangle-vine": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "086462d80cb8fca35d660a44a7b9cb7e756f34924df60884b45d2d193cf352e7",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.telekinetic-projectile": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "c131038e320723ae5a6174a4a7602ddfc3b129241df75921f60429abb73a8e36",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "thesis.spell-blending": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "c18d1cdc2954f2ab0a8562b3a61918e3b1f7446cc95faaf1d0c4573ad45bebb5",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "thesis.spell-substitution": {
+      "fields_checked": [
+        "existence",
+        "name"
+      ],
+      "file_hash": "ce142f9b6fa7cd70a317e51db0d5464597ff9b33a4ebdb1e2603be9fe5d8afd3",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
     },
     "weapon.arbalest": {
       "fields_checked": [
@@ -5791,6 +6401,6 @@
       "waiver": null
     }
   },
-  "rules_version": "pf2e-pc.0.2.0",
+  "rules_version": "pf2e-pc.0.3.1",
   "tool_version": "0.1.0"
 }

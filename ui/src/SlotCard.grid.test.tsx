@@ -145,9 +145,13 @@ describe('SlotStatus × SlotViewKind rendering grid', () => {
             expect(a.changeButton, caseName).toBe(true);
             expect(a.editor, caseName).toBe(false);
           } else {
-            // Illegal: closed-with-Change when confirmed, editor when not;
-            // either way the status class carries the red styling.
-            expect(withDecision ? a.confirmedValue : a.editor, caseName).toBe(true);
+            // Illegal: always editable in place (fix where the problem is),
+            // with any confirmed picks preloaded for swapping.
+            expect(a.editor, caseName).toBe(true);
+            expect(a.changeButton, caseName).toBe(false);
+            if (withDecision) {
+              expect(a.prefilled, caseName).toBe(true);
+            }
           }
 
           // Distinguishable: no two cases of this kind may render with an

@@ -272,6 +272,11 @@
       "id": "skill.thievery",
       "reason": "PF2e core skills are fixed game vocabulary, not Foundry compendium records; attribute pairing hand-verified against AoN in slice 1.",
       "state_hash": "c1696d69869d6ea99abef75e5ae7042a5c85ddaacdf0cb1671491f7ece863d7d"
+    },
+    {
+      "id": "kit.wizard",
+      "reason": "Class kits exist only in the book; Foundry ships no class-kit pack. Contents (staff, adventurer's pack, writing set; crossbow-with-bolts option) and prices hand-verified against Player Core pg. 269.",
+      "state_hash": "de0c7ca9a356c8e95f47dd5fc315d1ed9c4722c135f859165cca7d73ed210eff"
     }
   ]
 }

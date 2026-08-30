@@ -24,6 +24,10 @@ pub enum Kind {
     Shield,
     Gear,
     Kit,
+    Spell,
+    /// Arcane theses and schools — Foundry class features; existence +
+    /// name is the checkable set (mechanics are prose in both schemas).
+    ClassFeature,
 }
 
 pub struct OurRecord {
@@ -56,6 +60,13 @@ const EQUIPMENT_CATEGORIES: &[(&str, Kind)] = &[
     ("shields", Kind::Shield),
     ("gear", Kind::Gear),
     ("kits", Kind::Kit),
+];
+
+/// spells.json holds categorized arrays too.
+const SPELLS_CATEGORIES: &[(&str, Kind)] = &[
+    ("spells", Kind::Spell),
+    ("theses", Kind::ClassFeature),
+    ("schools", Kind::ClassFeature),
 ];
 
 pub fn load_all() -> Result<Vec<OurRecord>, String> {
@@ -99,6 +110,34 @@ pub fn load_all() -> Result<Vec<OurRecord>, String> {
                 record.clone(),
                 *kind,
                 &format!("equipment.json/{key}"),
+            )?);
+        }
+    }
+    let text = fs::read_to_string(root.join("spells.json"))
+        .map_err(|e| format!("reading spells.json: {e}"))?;
+    let spells: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("parsing spells.json: {e}"))?;
+    let map = spells.as_object().ok_or("spells.json is not an object")?;
+    for key in map.keys() {
+        if !SPELLS_CATEGORIES.iter().any(|(k, _)| k == key) {
+            return Err(format!(
+                "spells.json has unknown category '{key}': teach \
+                 reference-check (ours.rs + a comparator) about it"
+            ));
+        }
+    }
+    for (key, kind) in SPELLS_CATEGORIES {
+        let Some(records) = map.get(*key) else {
+            continue;
+        };
+        let records = records
+            .as_array()
+            .ok_or_else(|| format!("spells.json/{key} is not an array"))?;
+        for record in records {
+            out.push(to_record(
+                record.clone(),
+                *kind,
+                &format!("spells.json/{key}"),
             )?);
         }
     }

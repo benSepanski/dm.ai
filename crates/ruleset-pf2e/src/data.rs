@@ -227,6 +227,10 @@ impl BackgroundRecord {
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct ClassRecord {
     pub id: String,
@@ -238,6 +242,20 @@ pub struct ClassRecord {
     pub class_skill_choice: Vec<String>,
     pub additional_skills_base: u32,
     pub features: Vec<SpecialAbility>,
+    /// Whether the class grants a level-1 class feat (Fighter yes, Wizard
+    /// no — the advancement table states it discretely). Defaults true.
+    #[serde(default = "default_true")]
+    pub level1_class_feat: bool,
+    /// Prepared spellcasting, when the class has it (the Wizard). Absent
+    /// for non-casters; counts and proficiencies are transcription from
+    /// the class's printed spellcasting entry.
+    #[serde(default)]
+    pub spellcasting: Option<SpellcastingDef>,
+    /// True while the class deliberately ships without a suggested build
+    /// (the Wizard until `wizard-content` adds its quick build); integrity
+    /// then allows the absent block instead of failing.
+    #[serde(default)]
+    pub quick_build_deferred: bool,
     /// The app-authored suggested build the quick-build planner interprets
     /// directly (no per-slot suggest hook). Integrity requires every
     /// shipped class to carry one. See [`SuggestedBuild`].
@@ -277,6 +295,102 @@ pub struct SuggestedBuildEntry {
     pub candidates: Vec<String>,
     #[serde(default)]
     pub text: Option<String>,
+}
+
+/// A prepared-caster class's spellcasting shape, as the printed class entry
+/// states it: tradition, prepared counts, spellbook size, and the school
+/// extra slot. Transcription, never invention.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SpellcastingDef {
+    /// "arcane" (the only shipped tradition this slice).
+    pub tradition: String,
+    pub attack_proficiency: String,
+    pub dc_proficiency: String,
+    /// Cantrips prepared each day.
+    pub cantrips_prepared: u32,
+    /// Rank-1 spell slots (before the school's extra slot).
+    pub rank1_slots: u32,
+    /// Spellbook contents at level 1: freely chosen cantrips and rank-1
+    /// spells, plus rank-1 spells added from the school's curriculum.
+    pub spellbook_cantrips: u32,
+    pub spellbook_rank1: u32,
+    pub spellbook_curriculum_rank1: u32,
+    /// Whether the arcane school grants the extra curriculum-only
+    /// preparations (one cantrip, one spell of each castable rank — the
+    /// printed wizard-spellcasting rule).
+    pub school_extra_slot: bool,
+}
+
+/// One printed heightening entry on a spell. Exactly the two printed
+/// shapes — "Heightened (+N)" and "Heightened (Nth)" — and nothing more
+/// (architecture: the schema admits no other variants).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum HeighteningEntry {
+    /// "Heightened (+step)": applies per `step` ranks above the base.
+    PerRank { step: u32, text: String },
+    /// "Heightened (rank)": applies at exactly that rank.
+    Fixed { rank: u32, text: String },
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SpellRecord {
+    pub id: String,
+    pub name: String,
+    /// 0 = cantrip.
+    pub rank: u32,
+    /// Focus spells never appear in spellbook catalogs; they are granted
+    /// (by a school) and cast from the focus pool.
+    #[serde(default)]
+    pub focus: bool,
+    pub traditions: Vec<String>,
+    pub traits: Vec<String>,
+    /// Action cost as printed: "1", "2", "3", "1 to 3", "reaction", "free".
+    pub actions: String,
+    /// The defense the spell targets, as printed: "AC" for attack-roll
+    /// spells, "basic Reflex" and kin for saves; absent when none.
+    #[serde(default)]
+    pub defense: Option<String>,
+    #[serde(default)]
+    pub range: Option<String>,
+    #[serde(default)]
+    pub area: Option<String>,
+    #[serde(default)]
+    pub targets: Option<String>,
+    #[serde(default)]
+    pub duration: Option<String>,
+    pub text: String,
+    #[serde(default)]
+    pub heightening: Vec<HeighteningEntry>,
+    pub source: SourceRef,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ThesisRecord {
+    pub id: String,
+    pub name: String,
+    pub text: String,
+    pub source: SourceRef,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SchoolRecord {
+    pub id: String,
+    pub name: String,
+    pub text: String,
+    /// Curriculum spell IDs by rank, as the school's printed list states.
+    pub curriculum_cantrips: Vec<String>,
+    pub curriculum_rank1: Vec<String>,
+    /// The school's granted focus spell (a `focus: true` spell record).
+    pub focus_spell: String,
+    pub source: SourceRef,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SpellsFile {
+    pub spells: Vec<SpellRecord>,
+    pub theses: Vec<ThesisRecord>,
+    pub schools: Vec<SchoolRecord>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -506,6 +620,7 @@ pub struct RulesDataFiles<'a> {
     pub general_feats: &'a str,
     pub skills: &'a str,
     pub equipment: &'a str,
+    pub spells: &'a str,
 }
 
 #[derive(Debug, Clone)]
@@ -520,6 +635,7 @@ pub struct RulesData {
     pub general_feats: Vec<GeneralFeatRecord>,
     pub skills: Vec<SkillRecord>,
     pub equipment: EquipmentFile,
+    pub spells: SpellsFile,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -550,6 +666,7 @@ impl RulesData {
             general_feats: parse("general-feats.json", files.general_feats)?,
             skills: parse("skills.json", files.skills)?,
             equipment: parse("equipment.json", files.equipment)?,
+            spells: parse("spells.json", files.spells)?,
         };
         data.check_integrity()?;
         Ok(data)
@@ -575,6 +692,9 @@ impl RulesData {
             .chain(self.equipment.shields.iter().map(|r| r.id.as_str()))
             .chain(self.equipment.gear.iter().map(|r| r.id.as_str()))
             .chain(self.equipment.kits.iter().map(|r| r.id.as_str()))
+            .chain(self.spells.spells.iter().map(|r| r.id.as_str()))
+            .chain(self.spells.theses.iter().map(|r| r.id.as_str()))
+            .chain(self.spells.schools.iter().map(|r| r.id.as_str()))
             .collect();
         for id in &all_ids {
             if !ids.insert(id) {
@@ -720,8 +840,27 @@ impl RulesData {
                     )));
                 }
             }
-            self.check_suggested_build(c)?;
+            if c.quick_build_deferred {
+                if c.suggested_build.is_some() {
+                    return Err(DataError::Integrity(format!(
+                        "class '{}' both defers quick build and carries a \
+                         suggested_build — drop the flag",
+                        c.id
+                    )));
+                }
+            } else {
+                self.check_suggested_build(c)?;
+            }
+            if let Some(sc) = &c.spellcasting {
+                if sc.tradition != "arcane" {
+                    return Err(DataError::Integrity(format!(
+                        "class '{}' names unshipped tradition '{}'",
+                        c.id, sc.tradition
+                    )));
+                }
+            }
         }
+        self.check_spells()?;
         for f in &self.class_feats {
             if !self.classes.iter().any(|c| c.id == f.class) {
                 return Err(DataError::Integrity(format!(
@@ -801,6 +940,76 @@ impl RulesData {
                     return Err(DataError::Integrity(format!(
                         "kit '{}' references unknown item '{item}'",
                         kit.id
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Spell/thesis/school integrity: every cross-reference resolves to a
+    /// shipped spell of the right rank and kind; heightening entries carry
+    /// text; focus spells stay out of the spellbook catalogs by
+    /// construction (the `focus` flag).
+    fn check_spells(&self) -> Result<(), DataError> {
+        for s in &self.spells.spells {
+            if s.traditions.is_empty() {
+                return Err(DataError::Integrity(format!(
+                    "spell '{}' lists no traditions",
+                    s.id
+                )));
+            }
+            for h in &s.heightening {
+                let (ok, what) = match h {
+                    HeighteningEntry::PerRank { step, text } => {
+                        (*step >= 1 && !text.trim().is_empty(), "per_rank")
+                    }
+                    HeighteningEntry::Fixed { rank, text } => {
+                        (*rank > s.rank && !text.trim().is_empty(), "fixed")
+                    }
+                };
+                if !ok {
+                    return Err(DataError::Integrity(format!(
+                        "spell '{}' has a malformed {what} heightening entry",
+                        s.id
+                    )));
+                }
+            }
+        }
+        let spell = |id: &str| self.spells.spells.iter().find(|s| s.id == id);
+        for school in &self.spells.schools {
+            for (list, rank) in [
+                (&school.curriculum_cantrips, 0u32),
+                (&school.curriculum_rank1, 1u32),
+            ] {
+                for id in list {
+                    let Some(s) = spell(id) else {
+                        return Err(DataError::Integrity(format!(
+                            "school '{}' curriculum references unknown spell '{id}'",
+                            school.id
+                        )));
+                    };
+                    if s.rank != rank || s.focus {
+                        return Err(DataError::Integrity(format!(
+                            "school '{}' curriculum entry '{id}' is not a rank-{rank} \
+                             non-focus spell",
+                            school.id
+                        )));
+                    }
+                }
+            }
+            match spell(&school.focus_spell) {
+                Some(s) if s.focus => {}
+                Some(_) => {
+                    return Err(DataError::Integrity(format!(
+                        "school '{}' focus_spell '{}' is not a focus spell",
+                        school.id, school.focus_spell
+                    )));
+                }
+                None => {
+                    return Err(DataError::Integrity(format!(
+                        "school '{}' focus_spell '{}' does not resolve",
+                        school.id, school.focus_spell
                     )));
                 }
             }
@@ -900,6 +1109,9 @@ impl RulesData {
             return true;
         }
         self.ancestries.iter().any(|r| r.id == candidate)
+            || self.spells.spells.iter().any(|r| r.id == candidate)
+            || self.spells.theses.iter().any(|r| r.id == candidate)
+            || self.spells.schools.iter().any(|r| r.id == candidate)
             || self.heritages.iter().any(|r| r.id == candidate)
             || self.ancestry_feats.iter().any(|r| r.id == candidate)
             || self.backgrounds.iter().any(|r| r.id == candidate)
@@ -946,5 +1158,14 @@ impl RulesData {
     }
     pub fn kit(&self, id: &str) -> Option<&KitRecord> {
         self.equipment.kits.iter().find(|r| r.id == id)
+    }
+    pub fn spell(&self, id: &str) -> Option<&SpellRecord> {
+        self.spells.spells.iter().find(|r| r.id == id)
+    }
+    pub fn thesis(&self, id: &str) -> Option<&ThesisRecord> {
+        self.spells.theses.iter().find(|r| r.id == id)
+    }
+    pub fn school(&self, id: &str) -> Option<&SchoolRecord> {
+        self.spells.schools.iter().find(|r| r.id == id)
     }
 }

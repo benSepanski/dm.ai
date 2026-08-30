@@ -27,6 +27,8 @@ fn opt(id: &str) -> OptionView {
         details: vec![],
         available: true,
         unavailable_reason: None,
+        group: None,
+        badge: None,
     }
 }
 

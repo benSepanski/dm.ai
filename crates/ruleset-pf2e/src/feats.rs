@@ -43,6 +43,8 @@ fn class_feat_options(
                 details,
                 available: !already,
                 unavailable_reason: already.then(|| "already selected".to_string()),
+                group: None,
+                badge: None,
             }
         })
         .collect()
@@ -68,6 +70,8 @@ fn general_feat_options(data: &RulesData, state: &Pf2eState) -> Vec<OptionView> 
                 details,
                 available: unavailable.is_none(),
                 unavailable_reason: unavailable,
+                group: None,
+                badge: None,
             }
         })
         .collect()
@@ -148,11 +152,19 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         required: true,
         presentation_hint: None,
         kind: Box::new(|_| SlotViewKind::Single),
-        unlock: Box::new(|state| match state.class {
-            Some(_) => Availability::Open,
-            None => Availability::Locked {
-                reason: "choose a class first".into(),
-            },
+        unlock: Box::new({
+            let d = data.clone();
+            move |state| match &state.class {
+                // A class whose advancement table grants no level-1 class
+                // feat (the Wizard) hides the slot entirely.
+                Some(id) => match d.class(id) {
+                    Some(c) if !c.level1_class_feat => Availability::Hidden,
+                    _ => Availability::Open,
+                },
+                None => Availability::Locked {
+                    reason: "choose a class first".into(),
+                },
+            }
         }),
         dependents: vec![],
         options: Box::new(move |state| class_feat_options(&d, state, &[])),
@@ -316,6 +328,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                         details: vec![],
                         available: true,
                         unavailable_reason: None,
+                        group: None,
+                        badge: None,
                     }
                 })
                 .collect()

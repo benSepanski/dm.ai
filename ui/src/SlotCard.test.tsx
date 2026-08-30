@@ -213,3 +213,75 @@ describe('SlotCard suggested-provenance badge', () => {
     expect(container.querySelector('.badge-suggested')).toBeNull();
   });
 });
+
+// ---- The set/bag rule: the control derives from the declared kind ----
+// (architecture: chargen-wizard). Set-kinds (single/multi) render toggles
+// and never an Add control — duplicates are unrepresentable; bag-kinds
+// (list) render Add controls and a grouped tray with visible removes.
+
+function kindSlot(kind: SlotView['kind']): SlotView {
+  return {
+    id: 'test.slot',
+    label: 'Test slot',
+    kind,
+    presentation_hint: undefined,
+    locked_reason: undefined,
+    required: true,
+    status: 'empty',
+    meters: [],
+    decision: undefined,
+    options: ['a', 'b'].map((id) => ({
+      id: `opt.${id}`,
+      label: id.toUpperCase(),
+      summary: '',
+      details: [],
+      available: true,
+      unavailable_reason: undefined,
+    })),
+  };
+}
+
+function renderKind(kind: SlotView['kind'], tentative: Selection | null = null) {
+  render(
+    <SlotCard
+      slot={kindSlot(kind)}
+      tentative={tentative}
+      onTentative={vi.fn()}
+      onConfirm={vi.fn()}
+      onRequestChange={() => undefined}
+      busy={false}
+    />,
+  );
+}
+
+describe('kind→control mapping is total and exclusive', () => {
+  it('single renders radios, never Add', () => {
+    renderKind({ kind: 'single' });
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
+    expect(document.querySelectorAll('button.option-add')).toHaveLength(0);
+  });
+
+  it('multi renders checkboxes (a set: duplicates unrepresentable), never Add', () => {
+    renderKind({ kind: 'multi', count: 2 });
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+    expect(document.querySelectorAll('button.option-add')).toHaveLength(0);
+  });
+
+  it('list renders Add controls and no toggles (a bag)', () => {
+    renderKind({ kind: 'list' });
+    // The Add button's accessible name inherits its option label; count by
+    // its class.
+    expect(document.querySelectorAll('button.option-add')).toHaveLength(2);
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByRole('radio')).toBeNull();
+  });
+
+  it('a bag tray groups repeats as one ×N row with a visible remove', () => {
+    renderKind({ kind: 'list' }, { kind: 'options', value: ['opt.a', 'opt.a', 'opt.b'] });
+    const tray = document.querySelector('.shopping-list');
+    expect(tray).not.toBeNull();
+    expect(tray?.querySelectorAll('li')).toHaveLength(2);
+    expect(tray?.textContent).toContain('×2');
+    expect(screen.getAllByRole('button', { name: 'remove' })).toHaveLength(2);
+  });
+});

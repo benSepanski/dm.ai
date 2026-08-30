@@ -38,6 +38,7 @@ const RULES_CLASS_FEATS: &str = include_str!("../../../rules-data/class-feats.js
 const RULES_GENERAL_FEATS: &str = include_str!("../../../rules-data/general-feats.json");
 const RULES_SKILLS: &str = include_str!("../../../rules-data/skills.json");
 const RULES_EQUIPMENT: &str = include_str!("../../../rules-data/equipment.json");
+const RULES_SPELLS: &str = include_str!("../../../rules-data/spells.json");
 // The lineage record: ID sets of every shipped data version. The server
 // only needs its key set — a pin is "older known" when it appears in the
 // manifest's supersedes chain AND here.
@@ -55,6 +56,7 @@ fn load_rules() -> Result<ruleset_pf2e::RulesData, String> {
         general_feats: RULES_GENERAL_FEATS,
         skills: RULES_SKILLS,
         equipment: RULES_EQUIPMENT,
+        spells: RULES_SPELLS,
     })
     .map_err(|e| format!("rules data is corrupt — refusing to start: {e}"))
 }

@@ -125,13 +125,17 @@ System order is chosen to stress the abstraction hardest, earliest:
    rules-published **quick build** fast path (one tap → legal character from
    the class's suggested choices); AI-suggested builds and backstories wait
    for the muse epoch.
-3. **chargen-wizard**: the PF2e Wizard — forces the spellcasting shape
-   (traditions, preparation, heightening, focus pools) inside one system
-   before any cross-system abstraction of it. Also proves "adding a class is
-   data + slot definitions, not core code." Its spec also chooses where
-   "prepared today" lives: daily preparation must be revisable without
-   rewriting the permanent decision log — the first exercise of Epoch 8's
-   scope-agnostic-choice commitment.
+3. **chargen-wizard**: the PF2e Wizard — forces the spellcasting *build*
+   shape (traditions, the spellbook with its curriculum rules, slot counts
+   and heightening as derived facts, the focus pool) inside one system
+   before any cross-system abstraction of it. Also proves "adding a class
+   is data + slot definitions, not core code." Daily preparation is
+   deliberately NOT part of character creation (decided 2026-08-30, after
+   a first implementation taught the lesson): prepared spells are session
+   state — getting ready for, or recovering from, a play session — and
+   the whole preparation flow lives in Epoch 8's daily-maintenance rung.
+   A freshly created caster's prepared column is simply empty, like a
+   fresh paper sheet.
 4. **chargen-dnd**: **D&D 5.5e Champion Fighter** (SRD 5.2-safe) — the
    cross-system stress test: binary proficiency vs ranks, background-coupled
    ability scores vs boosts, subclass at 3 vs 1, weight vs Bulk. If the core
@@ -289,7 +293,10 @@ The capability ladder, each rung independently shippable:
    guardrails with DM override.
 5. **Daily maintenance as choices** — prepared spellcasting, refocusing,
    item investment: recurring choices that reuse the slot/validation
-   machinery in a play-scoped context instead of the permanent log.
+   machinery in a play-scoped context instead of the permanent log —
+   including the *first* preparation: a fresh caster prepares for their
+   first session here, not in the creation dialog (the boundary the
+   chargen-wizard slice learned).
 6. **Turn and duration semantics** — start/end-of-turn ticks, expiring
    effects, an initiative list. Explicitly the last rung and this stream's
    own boundary: no targeting, no positioning, no grid; automated effects
@@ -325,10 +332,13 @@ made, brutal to retrofit):
 - **Pools and frequencies have identity.** Every tracked pool the fold
   emits carries a stable ID and its reset semantics, so "long rest" is a
   data query, not a hand-coded list.
-- **Choice machinery is scope-agnostic.** The engine's slot/validation core
-  never hard-wires "a decision is forever" — the chargen-wizard slice's
-  daily-preparation decision is the first test that slots work in an
-  ephemeral scope.
+- **Choice machinery is scope-agnostic.** The engine's slot/validation
+  core never hard-wires "a decision is forever." A first implementation
+  (chargen-wizard branch, 2026-08-30) validated the design — scoped
+  choice sets beside the log, validated by the same slot driver, cleared
+  across the scope boundary by the same dependency machinery — and was
+  deliberately shelved along with its product surface; this epoch
+  re-lands it when its first real consumer arrives.
 
 Open questions deliberately left to this stream's spec dialogues, not
 settled here: the automation dial (confirm-first vs auto-apply, per action

@@ -17,6 +17,7 @@ mod equipment;
 mod feats;
 mod mechanics;
 mod skills;
+mod spells;
 #[cfg(test)]
 mod tests;
 
@@ -59,6 +60,7 @@ pub fn engine(data: Arc<RulesData>) -> Pf2eEngine {
     registrations.extend(ancestry::registrations(&data));
     registrations.extend(background::registrations(&data));
     registrations.extend(class::registrations(&data));
+    registrations.extend(spells::registrations(&data));
     registrations.extend(feats::registrations(&data));
     registrations.extend(skills::registrations(&data));
     registrations.extend(boosts::registrations(&data));

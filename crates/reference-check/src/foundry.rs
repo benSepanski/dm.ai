@@ -26,7 +26,10 @@ pub enum Partition {
     Weapon, // includes Foundry `ammo` records
     Armor,
     Shield,
-    Gear, // Foundry `equipment`, `kit`, and `backpack` records
+    Gear,  // Foundry `equipment`, `kit`, and `backpack` records
+    Spell, // the spells pack (cantrips, ranked spells, focus spells)
+    /// The class-features pack (arcane theses and schools match here).
+    ClassFeature,
 }
 
 pub struct FoundryRecord {
@@ -127,12 +130,20 @@ pub fn load_index() -> Result<Index, String> {
         ("heritages", Some(Partition::Heritage)),
         ("backgrounds", Some(Partition::Background)),
         ("classes", Some(Partition::Class)),
+        ("class-features", Some(Partition::ClassFeature)),
+        ("spells", None),
         ("feats", None),
         ("equipment", None),
     ] {
         for record in walk_pack(&root, pack)? {
             let partition = match fixed {
                 Some(p) => Some(p),
+                None if pack == "spells" => match record.item_type() {
+                    // Rituals share the pack tree but are out of scope;
+                    // the school/spellbook subset never references them.
+                    "spell" => Some(Partition::Spell),
+                    _ => None,
+                },
                 None if pack == "feats" => {
                     match record.system()["category"].as_str().unwrap_or("") {
                         "ancestry" => Some(Partition::FeatAncestry),

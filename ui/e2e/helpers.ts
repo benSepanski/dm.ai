@@ -1,13 +1,16 @@
 // Shared driving helpers for the walk scenarios (same idioms as
 // stories.spec.ts: role/testid locators, engine-judged waits, no sleeps).
 import { expect, type Page } from '@playwright/test';
+import { expectSaneLayout } from './layout';
 import type { TestServer } from './server';
 
 export async function createCharacter(page: Page, server: TestServer, name: string) {
   await page.goto(server.url);
+  await expectSaneLayout(page);
   await page.getByPlaceholder('Working name (optional)').fill(name);
   await page.getByRole('button', { name: 'Create character' }).click();
   await expect(page.locator('.wizard')).toBeVisible();
+  await expectSaneLayout(page);
 }
 
 export function slot(page: Page, id: string) {
@@ -16,6 +19,9 @@ export function slot(page: Page, id: string) {
 
 export async function gotoStep(page: Page, title: string) {
   await page.getByRole('button', { name: new RegExp(`\\d+\\. ${title}`) }).click();
+  // The layout sweep rides every step visit: every walk checks every
+  // screen it reaches, for free.
+  await expectSaneLayout(page);
 }
 
 export async function confirmOption(page: Page, slotId: string, optionLabel: string) {

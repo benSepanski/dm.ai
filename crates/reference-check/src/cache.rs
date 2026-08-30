@@ -20,6 +20,8 @@ const NEEDED_PACKS: &[&str] = &[
     "heritages",
     "backgrounds",
     "classes",
+    "class-features",
+    "spells",
     "feats",
     "equipment",
 ];

@@ -164,7 +164,7 @@ pub struct SkillGrant {
     pub source: String,
 }
 
-/// A player-chosen set of skills (class picks, chooser slots, replacements).
+/// A player-chosen set of skills (class picks, chooser slots).
 #[derive(Debug, Clone)]
 pub struct SkillChoice {
     pub slot: &'static str,
@@ -185,8 +185,17 @@ pub struct Pf2eState {
     /// choice-dependent skill feat on the sheet.
     pub background_skill_choice: Option<String>,
     pub class: Option<String>,
+    /// The chosen class's display name, resolved from its record at apply
+    /// time — every source label derives from this, never from a literal.
+    pub class_name: Option<String>,
     pub key_attribute: Option<Attribute>,
     pub class_feat: Option<String>,
+
+    /// Spellcasting build choices (the Wizard).
+    pub thesis: Option<String>,
+    pub school: Option<String>,
+    pub spellbook_cantrips: Vec<String>,
+    pub spellbook_rank1: Vec<String>,
 
     /// Boosts by batch; duplicates within a batch are recorded as picked
     /// (validators flag them) but count once toward the modifier.
@@ -234,38 +243,45 @@ impl Pf2eState {
         m - self.flaws.iter().filter(|f| **f == attr).count() as i32
     }
 
-    /// Trained skills in canonical precedence order plus the grant
-    /// collisions that open replacement slots. Choices count first (they
-    /// were picked against catalogs that excluded trained skills); fixed
-    /// grants landing on an already-trained skill collide and demand a
-    /// replacement pick, per the PF2e replacement rule.
+    /// Trained skills under the ownership policy: **fixed grants own a
+    /// skill and its attribution; player picks flex around them.** Grants
+    /// resolve first, so a sheet always names the granting source. A grant
+    /// (or the class skill) landing on an already-trained skill converts
+    /// into one extra free trained pick — the printed "select another
+    /// skill instead" rule — while a free/chooser pick landing on an
+    /// owned skill is the player's to re-judge in place.
     pub fn skill_resolution(&self) -> SkillResolution {
         let mut trained: Vec<(String, String)> = Vec::new();
-        let mut illegal_choice_dupes: Vec<(&'static str, String)> = Vec::new();
+        let mut extra_free_picks: Vec<String> = Vec::new();
+        let mut illegal_choice_dupes: Vec<(&'static str, String, String)> = Vec::new();
 
+        for grant in &self.skill_grants {
+            if trained.iter().any(|(t, _)| t == &grant.skill) {
+                extra_free_picks.push(grant.source.clone());
+            } else {
+                trained.push((grant.skill.clone(), grant.source.clone()));
+            }
+        }
         if let Some(s) = &self.class_skill_choice {
-            trained.push((s.clone(), "Fighter".to_string()));
+            let source = self.class_name.clone().unwrap_or_else(|| "Class".into());
+            if trained.iter().any(|(t, _)| t == s) {
+                extra_free_picks.push(source);
+            } else {
+                trained.push((s.clone(), source));
+            }
         }
         for choice in &self.skill_choices {
             for s in &choice.skills {
-                if trained.iter().any(|(t, _)| t == s) {
-                    illegal_choice_dupes.push((choice.slot, s.clone()));
+                if let Some((_, owner)) = trained.iter().find(|(t, _)| t == s) {
+                    illegal_choice_dupes.push((choice.slot, s.clone(), owner.clone()));
                 } else {
                     trained.push((s.clone(), choice.source.clone()));
                 }
             }
         }
-        let mut collisions: Vec<String> = Vec::new();
-        for grant in &self.skill_grants {
-            if trained.iter().any(|(t, _)| t == &grant.skill) {
-                collisions.push(grant.source.clone());
-            } else {
-                trained.push((grant.skill.clone(), grant.source.clone()));
-            }
-        }
         SkillResolution {
             trained,
-            collisions,
+            extra_free_picks,
             illegal_choice_dupes,
         }
     }
@@ -301,14 +317,15 @@ impl Pf2eState {
 }
 
 pub struct SkillResolution {
-    /// (skill id, source label), in precedence order.
+    /// (skill id, source label), grants first (they own attribution).
     pub trained: Vec<(String, String)>,
-    /// One entry per fixed grant that landed on an already-trained skill —
-    /// each opens a replacement-skill slot, in order.
-    pub collisions: Vec<String>,
-    /// A chooser slot re-picked an already-trained skill (stale after an
-    /// upstream change): (slot id, skill id) — flagged Illegal there.
-    pub illegal_choice_dupes: Vec<(&'static str, String)>,
+    /// One extra free trained pick per entry — a grant or the class skill
+    /// that landed on an already-trained skill (the printed "select
+    /// another skill instead" rule). Entries name the redundant source.
+    pub extra_free_picks: Vec<String>,
+    /// A free or chooser pick landing on an owned skill, the player's to
+    /// re-judge in place: (slot id, skill id, owning source label).
+    pub illegal_choice_dupes: Vec<(&'static str, String, String)>,
 }
 
 /// Everything owned, derived from kit + extras: (item id, source label).
@@ -812,6 +829,127 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         });
         sections.push(SheetSection {
             title: "Equipment".to_string(),
+            entries,
+        });
+    }
+
+    // Spellcasting (prepared casters): every value derived from the
+    // class's printed spellcasting entry and the folded build choices.
+    // Slot and per-day counts are stated facts; which spells are prepared
+    // is session state and no business of this sheet.
+    if let Some((c, sc)) = class.and_then(|c| c.spellcasting.as_ref().map(|sc| (c, sc))) {
+        let attr = state
+            .key_attribute
+            .or_else(|| c.key_attribute_choice.first().copied());
+        let m = attr.map(|a| state.modifier(a)).unwrap_or(0);
+        let attr_label = attr.map(|a| a.abbrev()).unwrap_or("—");
+        let attack = Proficiency::parse(&sc.attack_proficiency);
+        let dc = Proficiency::parse(&sc.dc_proficiency);
+        let mut entries = vec![
+            SheetEntry {
+                label: "Tradition".into(),
+                value: capitalize(&sc.tradition),
+                detail: None,
+            },
+            SheetEntry {
+                label: "Spell attack".into(),
+                value: format_signed(attack.bonus(LEVEL) + m),
+                detail: Some(format!(
+                    "{} {} + {m} {attr_label}",
+                    attack.bonus(LEVEL),
+                    attack.label()
+                )),
+            },
+            SheetEntry {
+                label: "Spell DC".into(),
+                value: (10 + dc.bonus(LEVEL) + m).to_string(),
+                detail: Some(format!(
+                    "10 + {} {} + {m} {attr_label}",
+                    dc.bonus(LEVEL),
+                    dc.label()
+                )),
+            },
+        ];
+        let school = state.school.as_ref().and_then(|id| data.school(id));
+        let extra = if sc.school_extra_slot && school.is_some() {
+            1
+        } else {
+            0
+        };
+        entries.push(SheetEntry {
+            label: "Cantrips".into(),
+            value: format!("{}/day", sc.cantrips_prepared + extra),
+            detail: Some(format!(
+                "heightened to rank {} (half level, rounded up){}",
+                (LEVEL + 1) / 2,
+                school
+                    .filter(|_| extra > 0)
+                    .map(|s| format!(" · includes 1 school cantrip ({} curriculum)", s.name))
+                    .unwrap_or_default()
+            )),
+        });
+        entries.push(SheetEntry {
+            label: "Rank 1 slots".into(),
+            value: (sc.rank1_slots + extra).to_string(),
+            detail: school
+                .filter(|_| extra > 0)
+                .map(|s| format!("includes 1 school slot ({} curriculum only)", s.name)),
+        });
+        if let Some(t) = state.thesis.as_ref().and_then(|id| data.thesis(id)) {
+            entries.push(SheetEntry {
+                label: "Arcane thesis".into(),
+                value: t.name.clone(),
+                detail: None,
+            });
+        }
+        if let Some(s) = school {
+            entries.push(SheetEntry {
+                label: "Arcane school".into(),
+                value: s.name.clone(),
+                detail: None,
+            });
+            if let Some(f) = data.spell(&s.focus_spell) {
+                entries.push(SheetEntry {
+                    label: "Focus pool".into(),
+                    value: "1 Focus Point".into(),
+                    detail: Some(format!("focus spell: {} (from {})", f.name, s.name)),
+                });
+            }
+        }
+        let book_names = |ids: &[String]| -> String {
+            if ids.is_empty() {
+                "none chosen yet".to_string()
+            } else {
+                ids.iter()
+                    .map(|id| {
+                        data.spell(id)
+                            .map(|s| s.name.clone())
+                            .unwrap_or_else(|| id.clone())
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            }
+        };
+        entries.push(SheetEntry {
+            label: "Spellbook (cantrips)".into(),
+            value: book_names(&state.spellbook_cantrips),
+            detail: None,
+        });
+        entries.push(SheetEntry {
+            label: "Spellbook (rank 1)".into(),
+            value: book_names(&state.spellbook_rank1),
+            detail: school.map(|s| format!("includes the {} curriculum additions", s.name)),
+        });
+        entries.push(SheetEntry {
+            label: "Preparation".into(),
+            value: "at the table".into(),
+            detail: Some(
+                "Daily preparation is session play, not character creation —                  it arrives with the play features."
+                    .into(),
+            ),
+        });
+        sections.push(SheetSection {
+            title: "Spellcasting".to_string(),
             entries,
         });
     }
@@ -1343,6 +1481,9 @@ pub fn display_name(data: &RulesData, id: &OptionId) -> String {
     }
     data.ancestry(s)
         .map(|r| r.name.clone())
+        .or_else(|| data.spell(s).map(|r| r.name.clone()))
+        .or_else(|| data.thesis(s).map(|r| r.name.clone()))
+        .or_else(|| data.school(s).map(|r| r.name.clone()))
         .or_else(|| data.heritage(s).map(|r| r.name.clone()))
         .or_else(|| data.ancestry_feat(s).map(|r| r.name.clone()))
         .or_else(|| data.background(s).map(|r| r.name.clone()))
@@ -1397,6 +1538,8 @@ pub fn attribute_options(
                 details: vec![],
                 available: note.is_none(),
                 unavailable_reason: note,
+                group: None,
+                badge: None,
             }
         })
         .collect()
@@ -1432,9 +1575,6 @@ pub const SLOT_CLASS_SKILL: &str = "pf2e.skills.class-choice";
 pub const SLOT_TRAINED_SKILLS: &str = "pf2e.skills.trained";
 pub const SLOT_HERITAGE_SKILLS: &str = "pf2e.skills.heritage-choice";
 pub const SLOT_FEAT_SKILLS: &str = "pf2e.skills.feat-choice";
-pub const SLOT_REPLACEMENT_1: &str = "pf2e.skills.replacement-1";
-pub const SLOT_REPLACEMENT_2: &str = "pf2e.skills.replacement-2";
-pub const SLOT_REPLACEMENT_3: &str = "pf2e.skills.replacement-3";
 pub const SLOT_FEAT_LORE: &str = "pf2e.skills.feat-lore";
 pub const SLOT_PROFICIENCY_CHOICE: &str = "pf2e.feats.proficiency-choice";
 pub const SLOT_HERITAGE_GENERAL_FEAT: &str = "pf2e.feats.general.heritage";
@@ -1445,6 +1585,10 @@ pub const SLOT_KIT: &str = "pf2e.equipment.kit";
 pub const SLOT_EXTRA_ITEMS: &str = "pf2e.equipment.extra";
 pub const SLOT_NAME: &str = "pf2e.details.name";
 pub const SLOT_DESCRIPTION: &str = "pf2e.details.description";
+pub const SLOT_THESIS: &str = "pf2e.class.thesis";
+pub const SLOT_SCHOOL: &str = "pf2e.class.school";
+pub const SLOT_SPELLBOOK_CANTRIPS: &str = "pf2e.class.spellbook.cantrips";
+pub const SLOT_SPELLBOOK_RANK1: &str = "pf2e.class.spellbook.rank1";
 
 /// Every registered slot ID — the namespace suggested-build entries are
 /// integrity-checked against. Keep in lockstep with the SLOT_* constants
@@ -1470,9 +1614,6 @@ pub fn known_slot_ids() -> &'static [&'static str] {
         SLOT_TRAINED_SKILLS,
         SLOT_HERITAGE_SKILLS,
         SLOT_FEAT_SKILLS,
-        SLOT_REPLACEMENT_1,
-        SLOT_REPLACEMENT_2,
-        SLOT_REPLACEMENT_3,
         SLOT_FEAT_LORE,
         SLOT_PROFICIENCY_CHOICE,
         SLOT_HERITAGE_GENERAL_FEAT,
@@ -1483,6 +1624,10 @@ pub fn known_slot_ids() -> &'static [&'static str] {
         SLOT_EXTRA_ITEMS,
         SLOT_NAME,
         SLOT_DESCRIPTION,
+        SLOT_THESIS,
+        SLOT_SCHOOL,
+        SLOT_SPELLBOOK_CANTRIPS,
+        SLOT_SPELLBOOK_RANK1,
     ]
 }
 
