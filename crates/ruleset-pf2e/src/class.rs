@@ -9,9 +9,7 @@ use crate::data::RulesData;
 use crate::mechanics::{
     describe_selection, incomplete, sel_attribute, sel_single, Pf2eState, SLOT_CLASS,
     SLOT_CLASS_FEAT, SLOT_CLASS_SKILL, SLOT_KEY_ATTRIBUTE, SLOT_KIT, SLOT_NATURAL_AMBITION,
-    SLOT_PREP_CANTRIPS, SLOT_PREP_RANK1, SLOT_PREP_SCHOOL, SLOT_PREP_SCHOOL_CANTRIP, SLOT_SCHOOL,
-    SLOT_SPELLBOOK_CANTRIPS, SLOT_SPELLBOOK_CURRICULUM, SLOT_SPELLBOOK_RANK1, SLOT_THESIS,
-    SLOT_TRAINED_SKILLS,
+    SLOT_SCHOOL, SLOT_SPELLBOOK_CANTRIPS, SLOT_SPELLBOOK_RANK1, SLOT_THESIS, SLOT_TRAINED_SKILLS,
 };
 
 const STEP: &str = crate::mechanics::STEP_CLASS;
@@ -38,17 +36,11 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             SlotId::new(SLOT_TRAINED_SKILLS),
             SlotId::new(SLOT_KIT),
             SlotId::new(SLOT_NATURAL_AMBITION),
-            // Spellcasting choices die with the class — including the
-            // scoped preparation, cleared across the scope boundary.
+            // Spellcasting build choices die with the class.
             SlotId::new(SLOT_THESIS),
             SlotId::new(SLOT_SCHOOL),
             SlotId::new(SLOT_SPELLBOOK_CANTRIPS),
             SlotId::new(SLOT_SPELLBOOK_RANK1),
-            SlotId::new(SLOT_SPELLBOOK_CURRICULUM),
-            SlotId::new(SLOT_PREP_CANTRIPS),
-            SlotId::new(SLOT_PREP_RANK1),
-            SlotId::new(SLOT_PREP_SCHOOL_CANTRIP),
-            SlotId::new(SLOT_PREP_SCHOOL),
         ],
         options: Box::new(move |_| {
             d.classes
@@ -87,6 +79,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 .class(id.as_str())
                 .ok_or_else(|| ApplyError::new(format!("unknown class '{id}'")))?;
             state.class = Some(record.id.clone());
+            state.class_name = Some(record.name.clone());
             Ok(())
         }),
         validate: Box::new(|state, _| {

@@ -192,44 +192,7 @@ fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData, known: version::Kno
                     );
                 }
             }
-            if !c.prep.choices().is_empty() || c.prep.broken_message().is_some() {
-                println!(
-                    "          {}: preparation not evaluable under a non-current pin — resolve the version flag first",
-                    c.id
-                );
-            }
             continue;
-        }
-        // Prep re-validation (current-pin characters only — replay above
-        // handles the log; prep is validated state, not replayed history).
-        // Absent prep is silent; a broken or illegal section is reported
-        // the way sheet divergence is, and never blocks loading.
-        let mut prep_problems: Vec<String> = Vec::new();
-        if let Some(message) = c.prep.broken_message() {
-            prep_problems.push(message.to_string());
-        } else {
-            let choices = c.prep.choices();
-            if !choices.is_empty() {
-                match engine.scoped_projection(&c.log, choices) {
-                    Ok(scoped) => {
-                        for entry in scoped
-                            .checklist
-                            .iter()
-                            .filter(|e| e.severity == types::ChecklistSeverity::Illegal)
-                        {
-                            prep_problems.push(format!("{}: {}", entry.rule, entry.message));
-                        }
-                    }
-                    Err(e) => prep_problems.push(format!("prep not evaluable: {e}")),
-                }
-            }
-        }
-        for p in &prep_problems {
-            failures += 1;
-            println!(
-                "PREP-BAD  {} ({}): preparation section is not legal — {p}. The sheet still loads; fix it from the prep editor (or by hand).",
-                c.id, c.sheet.name
-            );
         }
         match engine.sheet(&c.log) {
             Ok(replayed) if replayed == c.sheet => {

@@ -27,7 +27,7 @@ use engine_core::Engine;
 use types::StepId;
 
 pub use data::{DataError, RulesData, RulesDataFiles};
-pub use mechanics::{scoped_slot_ids, Pf2eState};
+pub use mechanics::Pf2eState;
 
 pub type Pf2eEngine = Engine<Pf2eState>;
 
@@ -66,17 +66,12 @@ pub fn engine(data: Arc<RulesData>) -> Pf2eEngine {
     registrations.extend(boosts::registrations(&data));
     registrations.extend(equipment::registrations(&data));
 
-    let scoped = spells::scoped_registrations(&data);
-
     let d_sheet = data.clone();
-    let d_scoped = data.clone();
-    Engine::with_scoped(
+    Engine::new(
         steps,
         registrations,
-        scoped,
         Box::new(Pf2eState::default),
         Box::new(move |state| mechanics::derive_sheet(state, &d_sheet)),
-        Box::new(move |state, prep| mechanics::derive_scoped_sections(state, prep, &d_scoped)),
     )
 }
 

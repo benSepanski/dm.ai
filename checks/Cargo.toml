@@ -60,8 +60,8 @@ name = "quick_build"
 path = "quick_build.rs"
 
 [[test]]
-name = "prep"
-path = "prep.rs"
+name = "class_isolation"
+path = "class_isolation.rs"
 
 [dependencies]
 cargo_metadata = { workspace = true }

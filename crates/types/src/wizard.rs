@@ -123,12 +123,6 @@ pub struct SlotView {
     pub decision: Option<Decision>,
     /// The catalog as of the current log (empty for text slots).
     pub options: Vec<OptionView>,
-    /// True for a slot in a scoped section (preparation): its selection is
-    /// saved through the scoped-save route as part of a wholesale
-    /// replacement, never confirmed into the decision log. The UI switches
-    /// the save path on this flag and nothing else.
-    #[serde(default)]
-    pub scoped: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

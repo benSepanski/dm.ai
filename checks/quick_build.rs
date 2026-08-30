@@ -36,7 +36,7 @@ fn suggested_build_folds_clean_with_empty_checklist_and_finalizes() {
             plan.unresolved
         );
         let projection = engine
-            .project(&plan.log, &[])
+            .project(&plan.log)
             .unwrap_or_else(|e| panic!("{class_id}: expanded log must project: {e}"));
         assert!(
             !projection

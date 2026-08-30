@@ -17,16 +17,14 @@ use types::{
     ApiError, CharacterId, CharacterView, ChecklistEntry, ChecklistSeverity, ClearOutcome,
     ClearRequest, ConfirmOutcome, ConfirmRequest, CreateCharacterRequest, Decision, DecisionId,
     DecisionInput, DecisionSource, DraftView, FillRemainingOutcome, FillRemainingRequest,
-    FinalizeOutcome, FinalizeRequest, LifecycleState, PrepSaveOutcome, PrepSaveRequest,
-    QuickBuildRequest, QuickBuildResult, ReplayOutcome, RosterCharacterState, RosterEntry,
-    RosterProblem, RosterView, Selection, SlotId, StepId, StepRequest, VersionActionRequest,
-    VersionFlaggedError, VersionResolutionOutcome, VersionStatus,
+    FinalizeOutcome, FinalizeRequest, QuickBuildRequest, QuickBuildResult, ReplayOutcome,
+    RosterCharacterState, RosterEntry, RosterProblem, RosterView, Selection, SlotId, StepId,
+    StepRequest, VersionActionRequest, VersionFlaggedError, VersionResolutionOutcome,
+    VersionStatus,
 };
 
 use crate::clock;
-use crate::persistence::{
-    DocState, KeepOldMarker, Loaded, PrepDoc, PrepState, Store, StoreError, VersionEvent,
-};
+use crate::persistence::{DocState, KeepOldMarker, Loaded, Store, StoreError, VersionEvent};
 use crate::version::{repair_replay, status_for, KnownVersions};
 
 pub(crate) struct App {
@@ -53,7 +51,6 @@ pub(crate) fn router(app: SharedApp) -> Router {
             get(get_character).delete(delete_character),
         )
         .route("/api/characters/{id}/confirm", post(confirm))
-        .route("/api/characters/{id}/prep", post(prep_save))
         .route("/api/characters/{id}/amend", post(amend))
         .route("/api/characters/{id}/clear", post(clear))
         .route("/api/characters/{id}/step", post(set_step))
@@ -124,7 +121,7 @@ fn step_index(engine: &Pf2eEngine, step: &StepId) -> usize {
 fn draft_view(app: &App, loaded: &Loaded) -> Result<DraftView, Failure> {
     let projection = app
         .engine
-        .project(&loaded.log, loaded.prep.choices())
+        .project(&loaded.log)
         .map_err(|e| Failure::Internal(format!("stored log does not replay: {e}")))?;
     Ok(DraftView {
         id: loaded.id.clone(),
@@ -145,31 +142,12 @@ fn draft_view(app: &App, loaded: &Loaded) -> Result<DraftView, Failure> {
 fn character_view(app: &App, loaded: &Loaded) -> Result<CharacterView, Failure> {
     let status = status_for(&app.engine, &app.known, loaded);
     Ok(match loaded.state {
-        DocState::Finalized => {
-            // The displayed sheet is the STORED materialized sheet (the
-            // load path — never a refold) plus the scoped sections. Prep
-            // is only projected against current data; a non-current pin
-            // shows the stored sheet and its flag, prep unevaluated.
-            let mut sheet = loaded.sheet.clone();
-            let mut prep = None;
-            if status == VersionStatus::Current {
-                let choices = loaded.prep.choices();
-                if let Ok(sections) = app.engine.scoped_sections(&loaded.log, choices) {
-                    sheet.sections.extend(sections);
-                }
-                if app.engine.has_scoped_slots(&loaded.log).unwrap_or(false) {
-                    prep = app.engine.scoped_projection(&loaded.log, choices).ok();
-                }
-            }
-            CharacterView::Finalized {
-                id: loaded.id.clone(),
-                sheet,
-                version_status: status,
-                version: loaded.draft_version,
-                prep,
-                prep_broken: loaded.prep.broken_message().is_some(),
-            }
-        }
+        DocState::Finalized => CharacterView::Finalized {
+            id: loaded.id.clone(),
+            sheet: loaded.sheet.clone(),
+            version_status: status,
+            version: loaded.draft_version,
+        },
         DocState::Draft if status == VersionStatus::Current => {
             CharacterView::Draft(draft_view(app, loaded)?)
         }
@@ -283,7 +261,6 @@ async fn create_character(
         rules_version: app.rules_version.clone(),
         version_history: Vec::new(),
         keep_old: None,
-        prep: PrepState::None,
     };
     store.save(&loaded)?;
     Ok(Json(draft_view(&app, &loaded)?))
@@ -388,87 +365,6 @@ async fn confirm(
     }
 }
 
-/// Replace the scoped preparation section wholesale — the only writer of
-/// prep, on drafts (the wizard's prep step) and finalized characters (the
-/// sheet view's "change prepared spells") alike. Full confirm discipline:
-/// request-ID idempotency, write-version check, native re-validation,
-/// temp-file → fsync → rename. The decision log and materialized sheet are
-/// byte-identical across this route by construction — it never touches
-/// them.
-async fn prep_save(
-    State(app): State<SharedApp>,
-    AxumPath(id): AxumPath<String>,
-    Json(request): Json<PrepSaveRequest>,
-) -> Result<Json<PrepSaveOutcome>, Failure> {
-    if !valid_request_id(&request.request_id) {
-        return Err(Failure::Unprocessable(
-            "prep saves need a request_id of 1-64 letters, digits, '-' or '_' \
-             (it makes the save safely retryable)"
-                .into(),
-        ));
-    }
-    let store = app.store.lock().await;
-    let mut loaded = store.load(&CharacterId::new(id))?;
-    // Version guard first: prep legality is only computable against
-    // current data, so a flagged or older-pinned character (draft OR
-    // finalized) must resolve before its preparation can change.
-    if loaded.rules_version != app.rules_version {
-        return Err(Failure::VersionFlagged(Box::new(status_for(
-            &app.engine,
-            &app.known,
-            &loaded,
-        ))));
-    }
-    // Idempotency: a retry after a crash between save and ack carries a
-    // stale version but the same request ID — the saved result stands.
-    if let PrepState::Ok(doc) = &loaded.prep {
-        if doc.last_request_id.as_deref() == Some(request.request_id.as_str()) {
-            return Ok(Json(PrepSaveOutcome::Saved {
-                character: Box::new(character_view(&app, &loaded)?),
-            }));
-        }
-    }
-    // Lifecycle: a stale UI holding the wrong lifecycle is told, never
-    // coerced.
-    let expected = match loaded.state {
-        DocState::Draft => LifecycleState::Draft,
-        DocState::Finalized => LifecycleState::Finalized,
-    };
-    if request.expected_state != expected || request.version != loaded.draft_version {
-        return Ok(Json(PrepSaveOutcome::Conflict {
-            character: Box::new(character_view(&app, &loaded)?),
-        }));
-    }
-    // Native re-validation — the server is the authority. Illegal picks
-    // always reject; on a finalized character an incomplete preparation
-    // rejects too (a finished sheet stays table-ready).
-    let scoped = app
-        .engine
-        .scoped_projection(&loaded.log, &request.choices)
-        .map_err(|e| Failure::Internal(format!("stored log does not replay: {e}")))?;
-    let blocking: Vec<ChecklistEntry> = scoped
-        .checklist
-        .iter()
-        .filter(|e| e.severity == ChecklistSeverity::Illegal || loaded.state == DocState::Finalized)
-        .cloned()
-        .collect();
-    if !blocking.is_empty() {
-        return Ok(Json(PrepSaveOutcome::Rejected {
-            reasons: blocking,
-            character: Box::new(character_view(&app, &loaded)?),
-        }));
-    }
-    loaded.prep = PrepState::Ok(PrepDoc {
-        choices: request.choices,
-        last_request_id: Some(request.request_id),
-    });
-    loaded.draft_version += 1;
-    store.save(&loaded)?;
-    Ok(Json(PrepSaveOutcome::Saved {
-        character: Box::new(character_view(&app, &loaded)?),
-    }))
-}
-
 /// Replace a slot's decision atomically (cascade + append in one durable
 /// write). Same request/outcome shapes and idempotency rules as confirm.
 async fn amend(
@@ -495,16 +391,12 @@ async fn amend(
         }));
     }
     let slot = request.decision.slot.clone();
-    match app
-        .engine
-        .amend(&loaded.log, loaded.prep.choices(), request.decision)
-    {
-        Ok((AppendOutcome::AlreadyPresent, _)) => Ok(Json(ConfirmOutcome::Confirmed {
+    match app.engine.amend(&loaded.log, request.decision) {
+        Ok(AppendOutcome::AlreadyPresent) => Ok(Json(ConfirmOutcome::Confirmed {
             draft: draft_view(&app, &loaded)?,
         })),
-        Ok((AppendOutcome::Appended(new_log), surviving_prep)) => {
+        Ok(AppendOutcome::Appended(new_log)) => {
             loaded.log = new_log;
-            loaded.set_prep_choices(surviving_prep);
             loaded.sheet = app
                 .engine
                 .sheet(&loaded.log)
@@ -550,14 +442,13 @@ async fn clear(
     }
     let preview = app
         .engine
-        .clear_preview(&loaded.log, loaded.prep.choices(), &request.slot)
+        .clear_preview(&loaded.log, &request.slot)
         .map_err(|e| Failure::Unprocessable(e.to_string()))?;
-    let (new_log, surviving_prep) = app
+    let new_log = app
         .engine
-        .clear(&loaded.log, loaded.prep.choices(), &request.slot)
+        .clear(&loaded.log, &request.slot)
         .map_err(|e| Failure::Unprocessable(e.to_string()))?;
     loaded.log = new_log;
-    loaded.set_prep_choices(surviving_prep);
     loaded.sheet = app
         .engine
         .sheet(&loaded.log)
@@ -614,7 +505,7 @@ async fn finalize(
     }
     let projection = app
         .engine
-        .project(&loaded.log, loaded.prep.choices())
+        .project(&loaded.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
     if !projection.can_finalize {
         return Ok(Json(FinalizeOutcome::Blocked {
@@ -622,23 +513,12 @@ async fn finalize(
         }));
     }
     loaded.state = DocState::Finalized;
-    // The STORED sheet is the pure fold of the log — the projection's
-    // sheet carries scoped display sections that never touch disk.
-    loaded.sheet = app
-        .engine
-        .sheet(&loaded.log)
-        .map_err(|e| Failure::Internal(e.to_string()))?;
+    loaded.sheet = projection.sheet;
     loaded.draft_version += 1;
     store.save(&loaded)?;
-    // The response shows the displayed sheet (scoped sections included).
-    let mut sheet = loaded.sheet.clone();
-    if let Ok(sections) = app
-        .engine
-        .scoped_sections(&loaded.log, loaded.prep.choices())
-    {
-        sheet.sections.extend(sections);
-    }
-    Ok(Json(FinalizeOutcome::Finalized { sheet }))
+    Ok(Json(FinalizeOutcome::Finalized {
+        sheet: loaded.sheet.clone(),
+    }))
 }
 
 // ---- Quick-build routes (spec req 7) ----
@@ -789,7 +669,6 @@ async fn quick_build(
         rules_version: app.rules_version.clone(),
         version_history: Vec::new(),
         keep_old: None,
-        prep: PrepState::None,
     };
     store.save(&loaded)?;
     Ok(Json(QuickBuildResult {

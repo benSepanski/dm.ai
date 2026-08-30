@@ -185,20 +185,17 @@ pub struct Pf2eState {
     /// choice-dependent skill feat on the sheet.
     pub background_skill_choice: Option<String>,
     pub class: Option<String>,
+    /// The chosen class's display name, resolved from its record at apply
+    /// time — every source label derives from this, never from a literal.
+    pub class_name: Option<String>,
     pub key_attribute: Option<Attribute>,
     pub class_feat: Option<String>,
 
-    /// Spellcasting build choices (the Wizard). The preparation section is
-    /// deliberately NOT here: prepared spells are scoped choices beside the
-    /// log, so the fold — and therefore the materialized sheet — never
-    /// sees them.
+    /// Spellcasting build choices (the Wizard).
     pub thesis: Option<String>,
     pub school: Option<String>,
     pub spellbook_cantrips: Vec<String>,
     pub spellbook_rank1: Vec<String>,
-    /// The rank-1 curriculum spells added to the spellbook from the school
-    /// (the printed "you also add two 1st-rank spells from the curriculum").
-    pub spellbook_curriculum: Vec<String>,
 
     /// Boosts by batch; duplicates within a batch are recorded as picked
     /// (validators flag them) but count once toward the modifier.
@@ -256,7 +253,8 @@ impl Pf2eState {
         let mut illegal_choice_dupes: Vec<(&'static str, String)> = Vec::new();
 
         if let Some(s) = &self.class_skill_choice {
-            trained.push((s.clone(), "Fighter".to_string()));
+            let source = self.class_name.clone().unwrap_or_else(|| "Class".into());
+            trained.push((s.clone(), source));
         }
         for choice in &self.skill_choices {
             for s in &choice.skills {
@@ -873,7 +871,7 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         };
         entries.push(SheetEntry {
             label: "Cantrips".into(),
-            value: format!("{} prepared", sc.cantrips_prepared + extra),
+            value: format!("{}/day", sc.cantrips_prepared + extra),
             detail: Some(format!(
                 "heightened to rank {} (half level, rounded up){}",
                 (LEVEL + 1) / 2,
@@ -933,15 +931,16 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         entries.push(SheetEntry {
             label: "Spellbook (rank 1)".into(),
             value: book_names(&state.spellbook_rank1),
-            detail: None,
+            detail: school.map(|s| format!("includes the {} curriculum additions", s.name)),
         });
-        if school.is_some() || !state.spellbook_curriculum.is_empty() {
-            entries.push(SheetEntry {
-                label: "Spellbook (curriculum)".into(),
-                value: book_names(&state.spellbook_curriculum),
-                detail: school.map(|s| format!("added from the {} curriculum", s.name)),
-            });
-        }
+        entries.push(SheetEntry {
+            label: "Preparation".into(),
+            value: "at the table".into(),
+            detail: Some(
+                "Daily preparation is session play, not character creation —                  it arrives with the play features."
+                    .into(),
+            ),
+        });
         sections.push(SheetSection {
             title: "Spellcasting".to_string(),
             entries,
@@ -983,77 +982,6 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         summary,
         sections,
     }
-}
-
-/// The scoped sheet sections: prepared spells, rendered onto *displayed*
-/// sheets only (the engine appends these; the materialized sheet never
-/// contains them). Pure over (state, choices, data).
-pub fn derive_scoped_sections(
-    state: &Pf2eState,
-    prep: &[types::ScopedChoice],
-    data: &RulesData,
-) -> Vec<SheetSection> {
-    let Some(sc) = state
-        .class
-        .as_ref()
-        .and_then(|id| data.class(id))
-        .and_then(|c| c.spellcasting.as_ref())
-    else {
-        return Vec::new();
-    };
-    let names = |slot: &str| -> String {
-        let ids: Vec<&OptionId> = prep
-            .iter()
-            .filter(|c| c.slot.as_str() == slot)
-            .flat_map(|c| match &c.selection {
-                Selection::Option(id) => std::slice::from_ref(id).iter().collect::<Vec<_>>(),
-                Selection::Options(ids) => ids.iter().collect(),
-                Selection::Text(_) => Vec::new(),
-            })
-            .collect();
-        if ids.is_empty() {
-            "none prepared".to_string()
-        } else {
-            ids.iter()
-                .map(|id| {
-                    data.spell(id.as_str())
-                        .map(|s| s.name.clone())
-                        .unwrap_or_else(|| id.as_str().to_string())
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
-        }
-    };
-    let mut entries = vec![
-        SheetEntry {
-            label: "Cantrips".into(),
-            value: names(SLOT_PREP_CANTRIPS),
-            detail: Some(format!("{} prepared each day", sc.cantrips_prepared)),
-        },
-        SheetEntry {
-            label: "Rank 1".into(),
-            value: names(SLOT_PREP_RANK1),
-            detail: Some(format!("{} slot(s)", sc.rank1_slots)),
-        },
-    ];
-    if sc.school_extra_slot {
-        if let Some(school) = state.school.as_ref().and_then(|id| data.school(id)) {
-            entries.push(SheetEntry {
-                label: "School cantrip".into(),
-                value: names(SLOT_PREP_SCHOOL_CANTRIP),
-                detail: Some(format!("{} curriculum only", school.name)),
-            });
-            entries.push(SheetEntry {
-                label: "School slot (rank 1)".into(),
-                value: names(SLOT_PREP_SCHOOL),
-                detail: Some(format!("{} curriculum only", school.name)),
-            });
-        }
-    }
-    vec![SheetSection {
-        title: "Prepared Spells".to_string(),
-        entries,
-    }]
 }
 
 impl crate::data::AncestryRecord {
@@ -1655,17 +1583,6 @@ pub const SLOT_THESIS: &str = "pf2e.class.thesis";
 pub const SLOT_SCHOOL: &str = "pf2e.class.school";
 pub const SLOT_SPELLBOOK_CANTRIPS: &str = "pf2e.class.spellbook.cantrips";
 pub const SLOT_SPELLBOOK_RANK1: &str = "pf2e.class.spellbook.rank1";
-/// The two rank-1 curriculum spells the printed spellbook rule adds from
-/// the chosen school.
-pub const SLOT_SPELLBOOK_CURRICULUM: &str = "pf2e.class.spellbook.curriculum";
-// Scoped slots (the preparation section) — registered through the engine's
-// scoped set, never confirmable into the log. The school slots prepare
-// directly from the curriculum (the printed "as well as … from your arcane
-// school"), not from the spellbook.
-pub const SLOT_PREP_CANTRIPS: &str = "pf2e.prep.cantrips";
-pub const SLOT_PREP_RANK1: &str = "pf2e.prep.rank1";
-pub const SLOT_PREP_SCHOOL_CANTRIP: &str = "pf2e.prep.school-cantrip";
-pub const SLOT_PREP_SCHOOL: &str = "pf2e.prep.school-rank1";
 
 /// Every registered slot ID — the namespace suggested-build entries are
 /// integrity-checked against. Keep in lockstep with the SLOT_* constants
@@ -1708,20 +1625,6 @@ pub fn known_slot_ids() -> &'static [&'static str] {
         SLOT_SCHOOL,
         SLOT_SPELLBOOK_CANTRIPS,
         SLOT_SPELLBOOK_RANK1,
-        SLOT_SPELLBOOK_CURRICULUM,
-    ]
-}
-
-/// The scoped (preparation) slot IDs — beside `known_slot_ids` because a
-/// suggested build cannot parameterize a scoped slot (the planner fills
-/// the log only; `wizard-content` extends it when the Wizard's quick
-/// build ships).
-pub fn scoped_slot_ids() -> &'static [&'static str] {
-    &[
-        SLOT_PREP_CANTRIPS,
-        SLOT_PREP_RANK1,
-        SLOT_PREP_SCHOOL_CANTRIP,
-        SLOT_PREP_SCHOOL,
     ]
 }
 

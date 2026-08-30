@@ -64,36 +64,24 @@ pub fn engine_request(request: Ts<EngineRequest>) -> Result<Ts<EngineResponse>, 
 
 fn handle(request: EngineRequest) -> EngineResponse {
     match request {
-        EngineRequest::Project { log, prep } => match engine().project(&log, &prep) {
+        EngineRequest::Project { log } => match engine().project(&log) {
             Ok(projection) => EngineResponse::Projection { projection },
             Err(e) => EngineResponse::Error {
                 message: e.to_string(),
             },
         },
-        EngineRequest::Preview {
-            log,
-            candidate,
-            prep,
-        } => match engine().preview(&log, &candidate, &prep) {
+        EngineRequest::Preview { log, candidate } => match engine().preview(&log, &candidate) {
             Ok(projection) => EngineResponse::Projection { projection },
             Err(e) => EngineResponse::Error {
                 message: e.to_string(),
             },
         },
-        EngineRequest::PreviewPrep { log, prep } => match engine().project(&log, &prep) {
-            Ok(projection) => EngineResponse::Projection { projection },
+        EngineRequest::ClearPreview { log, slot } => match engine().clear_preview(&log, &slot) {
+            Ok(preview) => EngineResponse::ClearPreview { preview },
             Err(e) => EngineResponse::Error {
                 message: e.to_string(),
             },
         },
-        EngineRequest::ClearPreview { log, slot, prep } => {
-            match engine().clear_preview(&log, &prep, &slot) {
-                Ok(preview) => EngineResponse::ClearPreview { preview },
-                Err(e) => EngineResponse::Error {
-                    message: e.to_string(),
-                },
-            }
-        }
     }
 }
 
@@ -121,8 +109,6 @@ pub struct WireTypeExports {
     pub quick_build_result: types::QuickBuildResult,
     pub fill_remaining_request: types::FillRemainingRequest,
     pub fill_remaining_outcome: types::FillRemainingOutcome,
-    pub prep_save_request: types::PrepSaveRequest,
-    pub prep_save_outcome: types::PrepSaveOutcome,
 }
 
 #[wasm_bindgen]

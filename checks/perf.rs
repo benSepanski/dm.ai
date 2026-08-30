@@ -30,16 +30,13 @@ fn fold_of_complete_log_is_under_5ms() {
     );
 }
 
-/// chargen-wizard: the full wizard projection — fold + scoped prep
-/// validation + sheet — rides inside the same 5 ms budget (architecture:
-/// scoped validation is asserted within the fold budget's headroom).
+/// chargen-wizard: the full Wizard projection — fold + validation + sheet
+/// over the full spell catalog — rides the same 5 ms budget.
 #[test]
 #[allow(clippy::disallowed_methods)] // timing a budget needs a clock
-fn wizard_fold_with_prep_is_under_5ms() {
-    use types::{ScopedChoice, Selection, SlotId};
+fn wizard_projection_is_under_5ms() {
+    use types::{Selection, SlotId};
     let engine = ruleset_pf2e::engine(std::sync::Arc::new(checks::load_rules_data()));
-    // Build the golden wizard log through the engine (no fixture file: the
-    // wizard log is authored in checks/replay.rs; here a compact rebuild).
     let mut log: Vec<Decision> = Vec::new();
     let mut n = 0u32;
     let mut confirm = |log: &mut Vec<Decision>, slot: &str, selection: Selection| {
@@ -64,15 +61,6 @@ fn wizard_fold_with_prep_is_under_5ms() {
         "pf2e.ancestry.heritage",
         one("heritage.elf.arctic"),
     );
-    confirm(
-        &mut log,
-        "pf2e.ancestry.feat",
-        one("feat.ancestry.elf.unwavering-mien"),
-    );
-    confirm(&mut log, "pf2e.boosts.ancestry-free", many(&["attr.wis"]));
-    confirm(&mut log, "pf2e.background", one("background.artisan"));
-    confirm(&mut log, "pf2e.boosts.background-choice", one("attr.int"));
-    confirm(&mut log, "pf2e.boosts.background-free", one("attr.cha"));
     confirm(&mut log, "pf2e.class", one("class.wizard"));
     confirm(&mut log, "pf2e.class.key-attribute", one("attr.int"));
     confirm(
@@ -106,53 +94,22 @@ fn wizard_fold_with_prep_is_under_5ms() {
             "spell.grease",
             "spell.jump",
             "spell.sleep",
+            "spell.breathe-fire",
+            "spell.force-barrage",
         ]),
     );
-    confirm(
-        &mut log,
-        "pf2e.class.spellbook.curriculum",
-        many(&["spell.breathe-fire", "spell.force-barrage"]),
-    );
-    let prep = vec![
-        ScopedChoice {
-            slot: SlotId::new("pf2e.prep.cantrips"),
-            selection: many(&[
-                "spell.shield",
-                "spell.ignition",
-                "spell.electric-arc",
-                "spell.detect-magic",
-                "spell.light",
-            ]),
-        },
-        ScopedChoice {
-            slot: SlotId::new("pf2e.prep.rank1"),
-            selection: many(&["spell.fear", "spell.command"]),
-        },
-        ScopedChoice {
-            slot: SlotId::new("pf2e.prep.school-cantrip"),
-            selection: one("spell.telekinetic-projectile"),
-        },
-        ScopedChoice {
-            slot: SlotId::new("pf2e.prep.school-rank1"),
-            selection: one("spell.mystic-armor"),
-        },
-    ];
 
     for _ in 0..10 {
-        let _ = engine.project(&log, &prep).unwrap();
+        let _ = engine.project(&log).unwrap();
     }
     let runs = 100;
     let start = std::time::Instant::now();
     for _ in 0..runs {
-        std::hint::black_box(
-            engine
-                .project(std::hint::black_box(&log), std::hint::black_box(&prep))
-                .unwrap(),
-        );
+        std::hint::black_box(engine.project(std::hint::black_box(&log)).unwrap());
     }
     let per_run = start.elapsed() / runs;
     assert!(
         per_run < std::time::Duration::from_millis(5),
-        "wizard projection with prep took {per_run:?} per run — budget is 5 ms"
+        "wizard projection took {per_run:?} per run — budget is 5 ms"
     );
 }

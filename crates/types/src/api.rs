@@ -4,8 +4,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CharacterId, ChecklistEntry, ClearPreview, DecisionInput, ProjectionView, ScopedChoice,
-    ScopedProjection, SheetView, SlotId, StepId, VersionStatus,
+    CharacterId, ChecklistEntry, ClearPreview, DecisionInput, ProjectionView, SheetView, SlotId,
+    StepId, VersionStatus,
 };
 
 /// A draft mid-wizard, as the server owns it.
@@ -35,25 +35,11 @@ pub enum CharacterView {
     Draft(DraftView),
     Finalized {
         id: CharacterId,
-        /// The display sheet: the materialized build sheet plus any scoped
-        /// sections (prepared spells) the projection layer appends. The
-        /// stored sheet on disk never contains the scoped sections.
         sheet: SheetView,
         /// Version flag for the sheet view; resolution actions hang off it.
         version_status: VersionStatus,
         /// Carried so resolution requests can pass the write version.
         version: u64,
-        /// The scoped preparation section, rendered for the sheet view's
-        /// "change prepared spells" editor. `None` when the character's
-        /// class has no scoped slots (no affordance is shown), or when the
-        /// stored section could not be parsed (see `prep_broken`).
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        prep: Option<ScopedProjection>,
-        /// True when the stored preparation section is structurally
-        /// unparseable: the character still loads, the sheet renders, and
-        /// the editor offers wholesale replacement.
-        #[serde(default)]
-        prep_broken: bool,
     },
     /// A draft whose pin is not current and unresolved: the wizard is
     /// blocked behind resolution, and no projection is computed (that would
@@ -149,47 +135,6 @@ pub enum FinalizeOutcome {
         /// Boxed: `DraftView` dwarfs the other variants (clippy
         /// large_enum_variant); serde/tsify treat the box as transparent.
         current: Box<DraftView>,
-    },
-}
-
-// ---- Scoped preparation saves (chargen-wizard) ----
-
-/// The lifecycle state a scoped save expects to act on. A stale UI holding
-/// the wrong lifecycle (a draft tab after finalize, or vice versa) is
-/// rejected with the current state, never coerced.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
-#[serde(rename_all = "snake_case")]
-pub enum LifecycleState {
-    Draft,
-    Finalized,
-}
-
-/// Replace a character's scoped preparation section wholesale. Carries the
-/// character's write version like every mutation; `request_id` makes the
-/// save idempotent under retry (a crash between save and ack returns the
-/// saved result and changes nothing).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
-pub struct PrepSaveRequest {
-    pub request_id: String,
-    pub version: u64,
-    pub expected_state: LifecycleState,
-    pub choices: Vec<ScopedChoice>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
-#[serde(tag = "outcome", rename_all = "snake_case")]
-pub enum PrepSaveOutcome {
-    /// Saved durably (or already saved under the same request ID).
-    Saved { character: Box<CharacterView> },
-    /// Stale version or lifecycle mismatch — reload from `character`.
-    Conflict { character: Box<CharacterView> },
-    /// The choice set is illegal; nothing was written.
-    Rejected {
-        reasons: Vec<ChecklistEntry>,
-        character: Box<CharacterView>,
     },
 }
 

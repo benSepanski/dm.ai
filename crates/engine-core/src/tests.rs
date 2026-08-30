@@ -52,15 +52,12 @@ fn selection_id(selection: &Selection) -> Result<String, ApplyError> {
     }
 }
 
-fn toy_steps() -> Vec<(StepId, String)> {
-    vec![
+fn toy_engine() -> Engine<ToyState> {
+    let steps = vec![
         (StepId::new("one"), "Step One".to_string()),
         (StepId::new("two"), "Step Two".to_string()),
-    ]
-}
-
-fn toy_engine_slots() -> Vec<SlotRegistration<ToyState>> {
-    vec![
+    ];
+    let slots = vec![
         SlotRegistration::<ToyState> {
             id: SlotId::new("primary"),
             step: StepId::new("one"),
@@ -233,13 +230,10 @@ fn toy_engine_slots() -> Vec<SlotRegistration<ToyState>> {
             meters: Box::new(|_, _| vec![]),
             describe: Box::new(|sel| format!("{sel:?}")),
         },
-    ]
-}
-
-fn toy_engine() -> Engine<ToyState> {
+    ];
     Engine::new(
-        toy_steps(),
-        toy_engine_slots(),
+        steps,
+        slots,
         Box::new(ToyState::default),
         Box::new(|s: &ToyState| SheetView {
             name: s.name.clone().unwrap_or_default(),
@@ -256,73 +250,6 @@ fn toy_engine() -> Engine<ToyState> {
                     detail: None,
                 }],
             }],
-        }),
-    )
-}
-
-/// The toy engine plus one scoped slot ("memo"): pick one of the confirmed
-/// `picks` — options derive from build state exactly the way preparation
-/// derives from a spellbook. Hidden until a primary exists; `primary`
-/// lists it as a dependent, so clearing primary reaches across the scope
-/// boundary.
-fn toy_engine_with_scoped() -> Engine<ToyState> {
-    let mut slots_engine = toy_engine_slots();
-    // primary gains the scoped dependent.
-    for slot in &mut slots_engine {
-        if slot.id.as_str() == "primary" {
-            slot.dependents.push(SlotId::new("memo"));
-        }
-    }
-    let scoped = vec![SlotRegistration::<ToyState> {
-        id: SlotId::new("memo"),
-        step: StepId::new("two"),
-        label: "Memo".into(),
-        required: false,
-        presentation_hint: None,
-        kind: Box::new(|_| SlotViewKind::Single),
-        unlock: Box::new(|s| match s.primary {
-            Some(_) => Availability::Open,
-            None => Availability::Hidden,
-        }),
-        dependents: vec![],
-        options: Box::new(|s| s.picks.iter().map(|p| opt(p)).collect()),
-        apply: Box::new(|s, d| {
-            let id = selection_id(&d.selection)?;
-            if !s.picks.contains(&id) {
-                return Err(ApplyError::new(format!("'{id}' is not among your picks")));
-            }
-            Ok(())
-        }),
-        validate: Box::new(|_, _| vec![]),
-        meters: Box::new(|_, _| vec![]),
-        describe: Box::new(|sel| format!("{sel:?}")),
-    }];
-    Engine::with_scoped(
-        toy_steps(),
-        slots_engine,
-        scoped,
-        Box::new(ToyState::default),
-        Box::new(|s: &ToyState| SheetView {
-            name: s.name.clone().unwrap_or_default(),
-            summary: vec![format!(
-                "{}/{}",
-                s.primary.clone().unwrap_or_default(),
-                s.secondary.clone().unwrap_or_default()
-            )],
-            sections: vec![],
-        }),
-        Box::new(|_, prep| {
-            vec![SheetSection {
-                title: "Memo".into(),
-                entries: prep
-                    .iter()
-                    .map(|c| SheetEntry {
-                        label: c.slot.to_string(),
-                        value: format!("{:?}", c.selection),
-                        detail: None,
-                    })
-                    .collect(),
-            }]
         }),
     )
 }
@@ -350,7 +277,7 @@ fn append(engine: &Engine<ToyState>, log: &[Decision], i: DecisionInput) -> Vec<
 #[test]
 fn empty_log_projects_with_incompletes_and_locks() {
     let engine = toy_engine();
-    let projection = engine.project(&[], &[]).unwrap();
+    let projection = engine.project(&[]).unwrap();
     assert!(!projection.can_finalize);
     assert!(projection
         .checklist
@@ -419,7 +346,7 @@ fn illegal_states_confirm_but_block_finalize() {
             Selection::Options(vec![OptionId::new("x"), OptionId::new("x")]),
         ),
     );
-    let projection = engine.project(&log, &[]).unwrap();
+    let projection = engine.project(&log).unwrap();
     let illegal: Vec<_> = projection
         .checklist
         .iter()
@@ -449,7 +376,7 @@ fn complete_draft_can_finalize() {
         &log,
         input("d4", "name", Selection::Text("Toy".into())),
     );
-    let projection = engine.project(&log, &[]).unwrap();
+    let projection = engine.project(&log).unwrap();
     assert!(
         projection.can_finalize,
         "checklist: {:?}",
@@ -470,18 +397,16 @@ fn clearing_cascades_to_dependents_and_renumbers() {
         input("d4", "name", Selection::Text("T".into())),
     );
 
-    let preview = engine
-        .clear_preview(&log, &[], &SlotId::new("primary"))
-        .unwrap();
+    let preview = engine.clear_preview(&log, &SlotId::new("primary")).unwrap();
     let cleared_slots: Vec<&str> = preview.cleared.iter().map(|c| c.slot.as_str()).collect();
     assert_eq!(cleared_slots, vec!["primary", "secondary", "bonus"]);
 
-    let (cleared, _) = engine.clear(&log, &[], &SlotId::new("primary")).unwrap();
+    let cleared = engine.clear(&log, &SlotId::new("primary")).unwrap();
     assert_eq!(cleared.len(), 1);
     assert_eq!(cleared[0].slot.as_str(), "name");
     assert_eq!(cleared[0].order, 0, "survivors renumber densely");
     // The bonus slot is hidden again after its parent cleared.
-    let projection = engine.project(&cleared, &[]).unwrap();
+    let projection = engine.project(&cleared).unwrap();
     assert!(projection
         .steps
         .iter()
@@ -493,12 +418,10 @@ fn clearing_cascades_to_dependents_and_renumbers() {
 fn preview_is_stateless_and_replaces_in_place() {
     let engine = toy_engine();
     let log = append(&engine, &[], one("d1", "primary", "a"));
-    let projection = engine
-        .preview(&log, &one("d2", "primary", "b"), &[])
-        .unwrap();
+    let projection = engine.preview(&log, &one("d2", "primary", "b")).unwrap();
     assert_eq!(projection.sheet.summary[0], "b/");
     // Original log untouched.
-    assert_eq!(engine.project(&log, &[]).unwrap().sheet.summary[0], "a/");
+    assert_eq!(engine.project(&log).unwrap().sheet.summary[0], "a/");
 }
 
 #[test]
@@ -506,8 +429,8 @@ fn replay_is_deterministic() {
     let engine = toy_engine();
     let mut log = append(&engine, &[], one("d1", "primary", "a"));
     log = append(&engine, &log, one("d2", "secondary", "a1"));
-    let p1 = engine.project(&log, &[]).unwrap();
-    let p2 = engine.project(&log, &[]).unwrap();
+    let p1 = engine.project(&log).unwrap();
+    let p2 = engine.project(&log).unwrap();
     assert_eq!(p1, p2);
     assert_eq!(engine.sheet(&log).unwrap(), p1.sheet);
 }
@@ -573,7 +496,7 @@ mod random_walk {
                     }
                     Op::Clear { slot } => {
                         let slot_name = SLOTS[slot % SLOTS.len()];
-                        if let Ok((new_log, _)) = engine.clear(&log, &[], &SlotId::new(slot_name)) {
+                        if let Ok(new_log) = engine.clear(&log, &SlotId::new(slot_name)) {
                             log = new_log;
                         }
                     }
@@ -586,10 +509,10 @@ mod random_walk {
                 for d in &log {
                     prop_assert!(slots_seen.insert(d.slot.clone()), "two decisions in one slot");
                 }
-                let p1 = engine.project(&log, &[]);
+                let p1 = engine.project(&log);
                 prop_assert!(p1.is_ok(), "accepted log must project: {:?}", p1.err());
                 let p1 = p1.unwrap();
-                let p2 = engine.project(&log, &[]).unwrap();
+                let p2 = engine.project(&log).unwrap();
                 prop_assert_eq!(&p1, &p2, "projection must be deterministic");
                 prop_assert_eq!(p1.can_finalize, p1.checklist.is_empty());
                 crate::tests::status_and_amend::assert_coherent(&p1);
@@ -613,12 +536,12 @@ mod status_and_amend {
     #[test]
     fn statuses_track_the_slot_lifecycle() {
         let engine = toy_engine();
-        let p = engine.project(&[], &[]).unwrap();
+        let p = engine.project(&[]).unwrap();
         assert_eq!(slot_view(&p, "primary").status, SlotStatus::Empty);
         assert_eq!(slot_view(&p, "secondary").status, SlotStatus::Locked);
 
         let log = append(&engine, &[], one("d1", "primary", "a"));
-        let p = engine.project(&log, &[]).unwrap();
+        let p = engine.project(&log).unwrap();
         assert_eq!(slot_view(&p, "primary").status, SlotStatus::Complete);
         assert_eq!(slot_view(&p, "secondary").status, SlotStatus::Empty);
 
@@ -628,7 +551,7 @@ mod status_and_amend {
             &log,
             input("d2", "picks", Selection::Options(vec![OptionId::new("x")])),
         );
-        let p = engine.project(&log2, &[]).unwrap();
+        let p = engine.project(&log2).unwrap();
         let picks = slot_view(&p, "picks");
         assert_eq!(picks.status, SlotStatus::Partial);
         let meter = &picks.meters[0];
@@ -648,7 +571,7 @@ mod status_and_amend {
                 Selection::Options(vec![OptionId::new("x"), OptionId::new("x")]),
             ),
         );
-        let p = engine.project(&log3, &[]).unwrap();
+        let p = engine.project(&log3).unwrap();
         assert_eq!(slot_view(&p, "picks").status, SlotStatus::Illegal);
     }
 
@@ -656,14 +579,14 @@ mod status_and_amend {
     fn step_status_folds_over_slot_statuses() {
         let engine = toy_engine();
         // Fresh log: step one has an actionable required slot -> Incomplete.
-        let p = engine.project(&[], &[]).unwrap();
+        let p = engine.project(&[]).unwrap();
         assert_eq!(p.steps[0].status, StepStatus::Incomplete);
 
         // A step whose only required work is locked shows Waiting, not done:
         // complete everything in step two except nothing — instead check the
         // constructed case: primary confirmed makes secondary actionable.
         let log = append(&engine, &[], one("w1", "primary", "a"));
-        let p = engine.project(&log, &[]).unwrap();
+        let p = engine.project(&log).unwrap();
         assert_eq!(p.steps[0].status, StepStatus::Incomplete); // secondary now empty
     }
 
@@ -678,7 +601,6 @@ mod status_and_amend {
         let out = engine
             .amend(
                 &log,
-                &[],
                 input(
                     "a2",
                     "picks",
@@ -686,13 +608,13 @@ mod status_and_amend {
                 ),
             )
             .unwrap();
-        let (AppendOutcome::Appended(new_log), _) = out else {
+        let AppendOutcome::Appended(new_log) = out else {
             panic!("expected append");
         };
         assert_eq!(new_log.len(), 1, "old decision replaced, not stacked");
         assert_eq!(new_log[0].id.as_str(), "a2");
         assert_eq!(new_log[0].order, 0);
-        let p = engine.project(&new_log, &[]).unwrap();
+        let p = engine.project(&new_log).unwrap();
         assert_eq!(slot_view(&p, "picks").status, SlotStatus::Complete);
     }
 
@@ -700,16 +622,13 @@ mod status_and_amend {
     fn amend_is_idempotent_and_falls_back_to_append() {
         let engine = toy_engine();
         // Unoccupied slot: amend behaves as append.
-        let (out, _) = engine.amend(&[], &[], one("f1", "primary", "b")).unwrap();
+        let out = engine.amend(&[], one("f1", "primary", "b")).unwrap();
         let AppendOutcome::Appended(log) = out else {
             panic!("expected append");
         };
         // Replay of the same decision ID appends nothing.
         assert_eq!(
-            engine
-                .amend(&log, &[], one("f1", "primary", "b"))
-                .unwrap()
-                .0,
+            engine.amend(&log, one("f1", "primary", "b")).unwrap(),
             AppendOutcome::AlreadyPresent
         );
     }
@@ -720,7 +639,7 @@ mod status_and_amend {
         let mut log = append(&engine, &[], one("c1", "primary", "b"));
         log = append(&engine, &log, one("c2", "secondary", "b1"));
         // Amending primary to "a" clears secondary (catalog changed).
-        let (out, _) = engine.amend(&log, &[], one("c3", "primary", "a")).unwrap();
+        let out = engine.amend(&log, one("c3", "primary", "a")).unwrap();
         let AppendOutcome::Appended(new_log) = out else {
             panic!("expected append");
         };
@@ -817,7 +736,7 @@ fn planner_fills_open_required_slots_in_dependency_order() {
         .expand_suggestions(&[], &toy_suggestions, &mint, DecisionSource::Suggested)
         .unwrap();
     assert!(plan.unresolved.is_empty(), "{:?}", plan.unresolved);
-    let projection = engine.project(&plan.log, &[]).unwrap();
+    let projection = engine.project(&plan.log).unwrap();
     assert!(projection.can_finalize, "{:?}", projection.checklist);
     assert!(plan
         .log
@@ -896,157 +815,4 @@ fn planner_reports_slots_without_suggestions() {
     // Everything else still filled.
     assert!(plan.log.iter().any(|d| d.slot.as_str() == "primary"));
     assert!(plan.log.iter().any(|d| d.slot.as_str() == "name"));
-}
-
-mod scoped {
-    use super::*;
-    use types::ScopedChoice;
-
-    fn choice(slot: &str, option: &str) -> ScopedChoice {
-        ScopedChoice {
-            slot: SlotId::new(slot),
-            selection: Selection::Option(OptionId::new(option)),
-        }
-    }
-
-    fn picked_log(engine: &Engine<ToyState>) -> Vec<Decision> {
-        let log = append(engine, &[], one("d1", "primary", "a"));
-        append(
-            engine,
-            &log,
-            input(
-                "d2",
-                "picks",
-                Selection::Options(vec![OptionId::new("x"), OptionId::new("y")]),
-            ),
-        )
-    }
-
-    #[test]
-    fn scoped_slots_render_flagged_and_validate_through_one_driver() {
-        let engine = toy_engine_with_scoped();
-        let log = picked_log(&engine);
-        let p = engine.project(&log, &[choice("memo", "x")]).unwrap();
-        let memo = p
-            .steps
-            .iter()
-            .flat_map(|s| &s.slots)
-            .find(|s| s.id.as_str() == "memo")
-            .expect("scoped slot renders into its step");
-        assert!(memo.scoped, "scoped slots carry the flag");
-        assert_eq!(memo.status, types::SlotStatus::Complete);
-        // Wizard slots stay unflagged.
-        assert!(p
-            .steps
-            .iter()
-            .flat_map(|s| &s.slots)
-            .filter(|s| s.id.as_str() != "memo")
-            .all(|s| !s.scoped));
-    }
-
-    #[test]
-    fn illegal_scoped_choices_come_back_as_entries_never_errors() {
-        let engine = toy_engine_with_scoped();
-        let log = picked_log(&engine);
-        // Not among picks; unknown slot; duplicate — all total, all Illegal.
-        let p = engine
-            .scoped_projection(
-                &log,
-                &[
-                    choice("memo", "z"),
-                    choice("nonsense", "q"),
-                    choice("memo", "x"),
-                ],
-            )
-            .unwrap();
-        let illegal: Vec<&str> = p
-            .checklist
-            .iter()
-            .filter(|e| e.severity == ChecklistSeverity::Illegal)
-            .map(|e| e.message.as_str())
-            .collect();
-        assert_eq!(illegal.len(), 3, "each problem reported: {illegal:?}");
-        assert!(illegal.iter().any(|m| m.contains("not among your picks")));
-        assert!(illegal.iter().any(|m| m.contains("unknown scoped slot")));
-        assert!(illegal.iter().any(|m| m.contains("two entries")));
-    }
-
-    #[test]
-    fn scoped_choice_on_hidden_slot_is_reported() {
-        let engine = toy_engine_with_scoped();
-        // No primary: memo is hidden, a stored choice for it is illegal.
-        let p = engine
-            .scoped_projection(&[], &[choice("memo", "x")])
-            .unwrap();
-        assert!(p
-            .checklist
-            .iter()
-            .any(|e| e.severity == ChecklistSeverity::Illegal
-                && e.message.contains("does not exist")));
-        assert!(!engine.has_scoped_slots(&[]).unwrap());
-        let log = append(&engine, &[], one("d1", "primary", "a"));
-        assert!(engine.has_scoped_slots(&log).unwrap());
-    }
-
-    #[test]
-    fn illegal_prep_blocks_finalize_through_the_same_checklist() {
-        let engine = toy_engine_with_scoped();
-        let log = picked_log(&engine);
-        let clean = engine.project(&log, &[choice("memo", "x")]).unwrap();
-        let dirty = engine.project(&log, &[choice("memo", "z")]).unwrap();
-        assert!(dirty.checklist.len() > clean.checklist.len());
-        assert!(!dirty.can_finalize);
-    }
-
-    #[test]
-    fn stored_sheet_ignores_prep_display_sheet_appends_it() {
-        let engine = toy_engine_with_scoped();
-        let log = picked_log(&engine);
-        let bare = engine.sheet(&log).unwrap();
-        let with_prep = engine.sheet(&log).unwrap();
-        assert_eq!(bare, with_prep, "materialized sheet is fold(log) only");
-        let display = engine.display_sheet(&log, &[choice("memo", "x")]).unwrap();
-        assert!(display.sections.iter().any(|s| s.title == "Memo"));
-        assert!(!bare.sections.iter().any(|s| s.title == "Memo"));
-    }
-
-    #[test]
-    fn clearing_reaches_across_the_scope_boundary() {
-        let engine = toy_engine_with_scoped();
-        let log = picked_log(&engine);
-        let prep = vec![choice("memo", "x")];
-        let preview = engine
-            .clear_preview(&log, &prep, &SlotId::new("primary"))
-            .unwrap();
-        assert!(
-            preview.cleared.iter().any(|c| c.slot.as_str() == "memo"),
-            "the confirmation lists the scoped dependent"
-        );
-        let (new_log, surviving) = engine.clear(&log, &prep, &SlotId::new("primary")).unwrap();
-        assert!(
-            surviving.is_empty(),
-            "scoped dependent cleared with the slot"
-        );
-        assert!(!new_log.iter().any(|d| d.slot.as_str() == "primary"));
-        // Clearing an unrelated slot leaves the scoped choice alone.
-        let log2 = append(
-            &engine,
-            &log,
-            input("d3", "name", Selection::Text("T".into())),
-        );
-        let (_, surviving2) = engine.clear(&log2, &prep, &SlotId::new("name")).unwrap();
-        assert_eq!(surviving2, prep);
-    }
-
-    #[test]
-    fn amend_returns_surviving_scoped_choices() {
-        let engine = toy_engine_with_scoped();
-        let log = picked_log(&engine);
-        let prep = vec![choice("memo", "x")];
-        let (out, surviving) = engine
-            .amend(&log, &prep, one("d9", "primary", "b"))
-            .unwrap();
-        assert!(matches!(out, AppendOutcome::Appended(_)));
-        assert!(surviving.is_empty(), "changing primary cleared the memo");
-    }
 }

@@ -83,7 +83,7 @@ fn choose_lore_grant(state: &Pf2eState) -> Option<String> {
     })
 }
 
-/// The Fighter trains 3 + Int additional skills.
+/// The class's additional trained skills: its base count plus Int.
 fn additional_skill_count(data: &RulesData, state: &Pf2eState) -> Option<u32> {
     let class = data.class(state.class.as_ref()?)?;
     let int = state.modifier(Attribute::Int);
@@ -147,7 +147,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     SLOT_CLASS_SKILL,
                     STEP,
                     "Skills",
-                    "Choose Acrobatics or Athletics",
+                    "Choose your class skill",
                     "from Class",
                 )]
             } else {
@@ -194,7 +194,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             }
             state.skill_choices.push(SkillChoice {
                 slot: SLOT_TRAINED_SKILLS,
-                source: "Fighter".into(),
+                source: state.class_name.clone().unwrap_or_else(|| "Class".into()),
                 skills: ids.iter().map(|i| i.as_str().to_string()).collect(),
             });
             Ok(())
