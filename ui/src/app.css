@@ -681,3 +681,67 @@ textarea {
   margin: 0 0.6em;
   white-space: nowrap;
 }
+
+/* Layout integrity: cards never overflow horizontally, whatever the
+   content length. Flex children need min-width: 0 to be allowed to
+   shrink; long words (or unbroken strings) wrap instead of escaping. */
+.slot,
+.slot * {
+  overflow-wrap: anywhere;
+}
+.option-body,
+.shopping-item-body {
+  min-width: 0;
+}
+
+/* The bag tray: one grouped row per item, remove always visible. */
+.shopping-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.shopping-item-body {
+  flex: 1;
+  display: block;
+}
+.shopping-item-label {
+  font-weight: 600;
+}
+.shopping-item-count {
+  color: var(--accent, #8c2f2f);
+}
+.shopping-item-cost {
+  display: block;
+  color: #777;
+  font-size: 0.85em;
+  /* Clamp long prose in the tray — the full text lives on the option row. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.shopping-item-remove {
+  flex: none;
+}
+
+/* A refusal pinned to its card. */
+.slot-error {
+  color: #8c2f2f;
+  font-weight: 600;
+}
+
+/* Responsive: below tablet-landscape width the three-column grid starves
+   the content column (15rem + 22rem of chrome). Stack instead: nav on
+   top, content full width, the checklist/sheet sidebar after. */
+@media (max-width: 68rem) {
+  .wizard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wizard-steps {
+    position: static;
+  }
+  .wizard-side {
+    position: static;
+    max-height: none;
+  }
+}

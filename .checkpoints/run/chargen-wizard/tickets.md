@@ -1,29 +1,48 @@
-# chargen-wizard — ticket plan
+# chargen-wizard — ticket plan (revised contract)
 
-Contract: spec e90d35d5, architecture 94ee856e. Branch `checkpoint/chargen-wizard`.
-All tickets complete; report at report.md.
+Contract: spec 5a2924b1, architecture 4d89c0b2 (the post-review revision:
+build decisions only, preparation out of the epoch). Branch
+`checkpoint/chargen-wizard`. All tickets complete; report at report.md.
 
-## T1 — Constraints emitted table applied  [x]
+The first implementation round (prep-era tickets, preserved in git history
+through commit 729b7bf) was reviewed by Ben; findings 1–7 (findings.md)
+revised the contract. This plan is the rework to the revised contract.
 
-- [x] replay ignores prep — `checks/replay.rs` (stored_sheet_is_pure_over_prep)
-- [x] prep-save writes only prep (+ v2-envelope fixture) — `checks/prep.rs`
-- [x] prep-save idempotency + stale + lifecycle rejection — `checks/prep.rs`
-- [x] crash harness: draft-prep, finalized-prep, school-cascade cycles — `checks/crash_harness.rs`
-- [x] finalized writers don't race — `checks/prep.rs` (finalized_writers_serialize)
-- [x] prep routes respect version guard — `checks/version_guard.rs`
-- [x] server authority over prep — `checks/api_authority.rs`
-- [x] verify re-validates prep — `checks/prep.rs` (verify_revalidates_prep)
-- [x] one-driver parity (route = verify; WASM structural) — `checks/prep.rs`
-- [x] cascade clears exactly the listed dependents — `checks/replay.rs`
-- [x] storage v3 rows — `checks/persistence.rs`
-- [x] broken prep degrades, never quarantines — `checks/persistence.rs`
-- [x] spell-record data lint + bounded heightening — ruleset integrity + `checks/rules_data.rs`
-- [x] attestation covers the spell partition — `checks/attestation.rs` (zero unwaived)
-- [x] engine purity + kind isolation over new code — existing checks, green
-- [x] goldens: Sylvenne (Battle Magic) + Protean swap + cascade + revised-prep — `checks/replay.rs`
-- [x] perf: wizard projection with prep < 5 ms — `checks/perf.rs`
+## R1 — Constraints emitted table applied  [x]
 
-## T2 — types  [x]  ## T3/T4 — engine-core diffs  [x]  ## T5 — ruleset  [x]
-## T6 — rules-data 0.3.0 + reference pipeline  [x]  ## T7 — persistence v3  [x]
-## T8 — server routes  [x]  ## T9 — wasm + bindings  [x]  ## T10 — ui  [x]
-## T11 — goldens, perf, e2e  [x]  ## T12 — report  [x]
+- [x] engine-core byte-identical (report diff listing; layering/purity rows guard) — verified: `git diff main...` over engine-core/types/persistence/routes/version.rs is empty
+- [x] spellbook satisfiability, every school, no dead ends — `checks/replay.rs`
+- [x] school change destroys nothing, re-judges — `checks/replay.rs`
+- [x] class-feat slot hidden for Wizard; class-named skill sources — goldens (Sylvenne + Torvald)
+- [x] spell-record lint: bounded heightening, stable IDs, license, cross-refs — `checks/rules_data.rs` + ruleset integrity
+- [x] attestation covers spell + class-feature partitions, zero unwaived — `checks/attestation.rs`
+- [x] layout sweep on every step visit + wordiest-content stress at 2 widths — `ui/e2e/layout.ts`, `layout.spec.ts`, helpers wiring
+- [x] card-local confirm feedback — `ui/e2e/wizard-class.spec.ts` illegal-picks story
+- [x] no shipped-record name as ruleset source literal — `checks/class_isolation.rs`
+- [x] cross-class contamination sweep (complete character per class) — `checks/class_isolation.rs`
+- [x] kind→control mapping total and exclusive — `ui/src/SlotCard.test.tsx`
+- [x] storage untouched (schema v2, no new write paths) — `checks/persistence.rs` unchanged from slice 2
+- [x] goldens per shipped school + re-judge fixture — `checks/replay.rs`
+- [x] wizard projection < 5 ms — `checks/perf.rs`
+
+## R2 — revert the detour  [x]
+engine-core, types, persistence, routes, version.rs restored byte-identical
+to the branch point; `scoped.rs` deleted; prep checks deleted.
+
+## R3 — ruleset: unified spellbook  [x]
+thesis slot; school slot with no dependents; cantrips Multi{10}; rank-1
+Multi{5|7} with curriculum-first ordering, badge prefix, minimum validator,
+Curriculum meter; `class_name` threaded through state.
+
+## R4 — UI: set/bag controls, card feedback, responsive layout  [x]
+grouped bag trays; `slot-error` card feedback incl. illegal-saved;
+illegal slots editable preloaded; responsive stack ≤68rem.
+
+## R5 — hands-on browser passes + fixes  [x]
+Playwright-driven visual review (scratch scripts, screenshots read back):
+found + fixed tablet column starvation, illegal-slot collapse, green ack
+carrying an illegal save.
+
+## R6 — tests green, feature map, report  [x]
+cargo workspace 116 passed / clippy 0 / fmt clean; UI 36 unit, tsc, eslint
+clean; e2e 26 passed (~36 s). `docs/feature-map.md` added. Report rewritten.

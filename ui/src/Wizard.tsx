@@ -8,7 +8,6 @@ import {
   confirmDecision,
   fillRemaining,
   finalizeCharacter,
-  savePrep,
   setStep as apiSetStep,
 } from './api';
 import { Checklist } from './Checklist';
@@ -18,13 +17,12 @@ import type {
   Decision,
   DraftView,
   ProjectionView,
-  ScopedChoice,
   Selection,
   SheetView,
   StepStatus,
 } from './engine';
 import { clearPreview as engineClearPreview, initEngine, project as engineProject } from './engine';
-import { logFromProjection, newDecisionId, prepFromProjection } from './log';
+import { logFromProjection, newDecisionId } from './log';
 import { Sheet } from './Sheet';
 import { ClearConfirmDialog, SlotCard } from './SlotCard';
 
@@ -64,6 +62,9 @@ export function Wizard({
   // Transient in-card acknowledgment for saves that leave the slot open —
   // without it, a successful 4-of-5 confirm looks like a dead button.
   const [ack, setAck] = useState<{ slot: string; message: string } | null>(null);
+  // A refusal pinned to its card: outcomes render where the player is
+  // looking, never only in the top-of-step notice.
+  const [cardError, setCardError] = useState<{ slot: string; message: string } | null>(null);
 
   useEffect(() => {
     if (ack === null) {
@@ -90,55 +91,36 @@ export function Wizard({
   }, []);
 
   const serverLog = useMemo(() => logFromProjection(draft.projection), [draft]);
-  const serverPrep = useMemo(() => prepFromProjection(draft.projection), [draft]);
-
-  /** Whether a slot ID is a scoped (preparation) slot in this projection. */
-  const isScoped = (slotId: string): boolean =>
-    draft.projection.steps
-      .flatMap((s) => s.slots)
-      .some((s) => s.id === slotId && s.scoped);
 
   // The displayed projection: server state plus every tentative selection,
   // recomputed by the local engine. Falls back to the server's projection
   // until the engine is ready (or if a hypothetical doesn't fold).
-  // Tentative picks on scoped slots ride the prep set; everything else
-  // rides the hypothetical log (amend semantics either way).
   const displayed: ProjectionView = useMemo(() => {
     const entries = Object.entries(pending);
     if (!engineReady || entries.length === 0) {
       return draft.projection;
     }
     try {
-      const scopedIds = new Set(
-        draft.projection.steps
-          .flatMap((s) => s.slots)
-          .filter((s) => s.scoped)
-          .map((s) => s.id),
-      );
+      // A tentative selection REPLACES the slot's confirmed decision in the
+      // hypothetical (amend semantics) — keeping both would double-count a
+      // partial slot's picks.
       const hypothetical: Decision[] = serverLog.filter(
         (d) => pending[d.slot] === undefined,
       );
-      const hypotheticalPrep: ScopedChoice[] = serverPrep.filter(
-        (c) => pending[c.slot] === undefined,
-      );
       for (const [slot, selection] of entries) {
-        if (scopedIds.has(slot)) {
-          hypotheticalPrep.push({ slot, selection });
-        } else {
-          hypothetical.push({
-            id: `preview-${slot}`,
-            slot,
-            selection,
-            source: 'player',
-            order: hypothetical.length,
-          });
-        }
+        hypothetical.push({
+          id: `preview-${slot}`,
+          slot,
+          selection,
+          source: 'player',
+          order: hypothetical.length,
+        });
       }
-      return engineProject(hypothetical, hypotheticalPrep);
+      return engineProject(hypothetical);
     } catch {
       return draft.projection;
     }
-  }, [draft, pending, serverLog, serverPrep, engineReady]);
+  }, [draft, pending, serverLog, engineReady]);
 
   // Step badges, checklist, and the sheet react to tentative selections;
   // the slot editors themselves render the server-confirmed state, so a
@@ -163,56 +145,10 @@ export function Wizard({
     });
   };
 
-  /** Save a scoped (preparation) slot: replace that slot's choice inside
-   * the whole prep set through the prep route — never the decision log. */
-  const confirmScoped = async (slot: string, selection: Selection) => {
-    setBusy(true);
-    setNotice(null);
-    try {
-      const choices: ScopedChoice[] = [
-        ...serverPrep.filter((c) => c.slot !== slot),
-        { slot, selection },
-      ];
-      const outcome = await savePrep(draft.id, draft.version, 'draft', choices);
-      switch (outcome.outcome) {
-        case 'saved':
-        case 'conflict': {
-          if (outcome.character.state === 'draft') {
-            setDraft(outcome.character);
-          }
-          setPending((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== slot)));
-          if (outcome.outcome === 'conflict') {
-            setNotice(
-              'This draft was changed from another tab — the latest confirmed state has been reloaded.',
-            );
-          }
-          break;
-        }
-        case 'rejected':
-          setNotice(
-            `The server refused that preparation: ${outcome.reasons
-              .map((r) => r.message)
-              .join('; ')}`,
-          );
-          break;
-      }
-    } catch (error) {
-      setNotice(
-        `That preparation did not save (${String(
-          error instanceof Error ? error.message : error,
-        )}). The server may be restarting — try again.`,
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const confirm = async (slot: string, selection: Selection) => {
-    if (isScoped(slot)) {
-      return confirmScoped(slot, selection);
-    }
     setBusy(true);
     setNotice(null);
+    setCardError(null);
     try {
       const occupied = serverLog.some((d) => d.slot === slot);
       const send = occupied ? amendDecision : confirmDecision;
@@ -231,7 +167,19 @@ export function Wizard({
           const saved = outcome.draft.projection.steps
             .flatMap((s) => s.slots)
             .find((s) => s.id === slot);
-          if (saved !== undefined && saved.status !== 'complete') {
+          if (saved !== undefined && saved.status === 'illegal') {
+            // Durably saved, but a rule is broken: say so in the error
+            // register, not as a green success.
+            const remainder = outcome.draft.projection.checklist.find(
+              (e) => e.slot === slot && e.severity === 'illegal',
+            );
+            setCardError({
+              slot,
+              message: `Saved, but against the rules${
+                remainder !== undefined ? `: ${remainder.message}` : ''
+              }`,
+            });
+          } else if (saved !== undefined && saved.status !== 'complete') {
             const remainder = outcome.draft.projection.checklist.find((e) => e.slot === slot);
             setAck({
               slot,
@@ -251,20 +199,20 @@ export function Wizard({
           );
           break;
         case 'rejected':
-          setNotice(
-            `The server refused that choice: ${outcome.reasons
-              .map((r) => r.message)
-              .join('; ')}`,
-          );
+          setCardError({
+            slot,
+            message: outcome.reasons.map((r) => r.message).join('; '),
+          });
           setDraft(outcome.draft);
           break;
       }
     } catch (error) {
-      setNotice(
-        `That choice did not save (${String(
+      setCardError({
+        slot,
+        message: `That choice did not save (${String(
           error instanceof Error ? error.message : error,
         )}). The server may be restarting — try again.`,
-      );
+      });
     } finally {
       setBusy(false);
     }
@@ -272,32 +220,8 @@ export function Wizard({
 
   const requestChange = (slot: string, label: string) => {
     try {
-      if (isScoped(slot)) {
-        // A scoped choice is replaceable on its own: clearing it never
-        // cascades, so the preview is just itself.
-        const choice = serverPrep.find((c) => c.slot === slot);
-        setClearDialog({
-          slot,
-          label,
-          preview: {
-            slot,
-            cleared:
-              choice === undefined
-                ? []
-                : [
-                    {
-                      slot,
-                      slot_label: label,
-                      selection_label: 'this preparation',
-                      selection: choice.selection,
-                    },
-                  ],
-          },
-        });
-        return;
-      }
       const preview = engineReady
-        ? engineClearPreview(serverLog, slot, serverPrep)
+        ? engineClearPreview(serverLog, slot)
         : { slot, cleared: serverLog.filter((d) => d.slot === slot).map((d) => ({
             slot: d.slot,
             slot_label: label,
@@ -317,24 +241,6 @@ export function Wizard({
     setBusy(true);
     setNotice(null);
     try {
-      if (isScoped(clearDialog.slot)) {
-        const choices = serverPrep.filter((c) => c.slot !== clearDialog.slot);
-        const outcome = await savePrep(draft.id, draft.version, 'draft', choices);
-        if (outcome.outcome !== 'rejected' && outcome.character.state === 'draft') {
-          setDraft(outcome.character);
-          setPending({});
-          if (outcome.outcome === 'conflict') {
-            setNotice('This draft was changed from another tab — reloaded.');
-          }
-        } else if (outcome.outcome === 'rejected') {
-          setNotice(
-            `Could not clear that preparation: ${outcome.reasons
-              .map((r) => r.message)
-              .join('; ')}`,
-          );
-        }
-        return;
-      }
       const outcome = await clearSlot(draft.id, draft.version, clearDialog.slot);
       if (outcome.outcome === 'cleared') {
         setDraft(outcome.draft);
@@ -485,6 +391,7 @@ export function Wizard({
             onRequestChange={() => requestChange(slot.id, slot.label)}
             busy={busy}
             ack={ack !== null && ack.slot === slot.id ? ack.message : null}
+            error={cardError !== null && cardError.slot === slot.id ? cardError.message : null}
           />
         ))}
       </main>

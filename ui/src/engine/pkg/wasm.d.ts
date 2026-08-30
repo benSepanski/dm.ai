@@ -102,7 +102,7 @@ export type SlotId = string;
 /**
  * A single character as fetched by ID.
  */
-export type CharacterView = ({ state: "draft" } & DraftView) | { state: "finalized"; id: CharacterId; sheet: SheetView; version_status: VersionStatus; version: number; prep?: ScopedProjection; prep_broken?: boolean } | { state: "flagged_draft"; id: CharacterId; name: string; sheet: SheetView; version: number; status: VersionStatus };
+export type CharacterView = ({ state: "draft" } & DraftView) | { state: "finalized"; id: CharacterId; sheet: SheetView; version_status: VersionStatus; version: number } | { state: "flagged_draft"; id: CharacterId; name: string; sheet: SheetView; version: number; status: VersionStatus };
 
 /**
  * A stable rules-data record ID, e.g. `ancestry.dwarf`.
@@ -150,16 +150,6 @@ export interface FillRemainingRequest {
 export type SlotViewKind = { kind: "single" } | { kind: "multi"; count: number } | { kind: "list" } | { kind: "text"; multiline: boolean };
 
 /**
- * One pick in a scoped section. No decision ID and no order: the section
- * is replaced as a whole, so idempotency and history live at the save
- * layer, not per choice.
- */
-export interface ScopedChoice {
-    slot: SlotId;
-    selection: Selection;
-}
-
-/**
  * One sheet value that would change under current data, old → new.
  */
 export interface SheetDiff {
@@ -202,19 +192,6 @@ export type ConfirmOutcome = { outcome: "confirmed"; draft: DraftView } | { outc
 export type VersionResolutionOutcome = { outcome: "resolved"; character: CharacterView } | { outcome: "conflict"; character: CharacterView } | { outcome: "refused"; message: string; status: VersionStatus };
 
 /**
- * Replace a character's scoped preparation section wholesale. Carries the
- * character's write version like every mutation; `request_id` makes the
- * save idempotent under retry (a crash between save and ack returns the
- * saved result and changes nothing).
- */
-export interface PrepSaveRequest {
-    request_id: string;
-    version: number;
-    expected_state: LifecycleState;
-    choices: ScopedChoice[];
-}
-
-/**
  * Request body for the version-resolution routes (re-pin / accept /
  * keep-old / resolve-errors). Carries the draft version like every write.
  */
@@ -247,20 +224,6 @@ export interface WireTypeExports {
     quick_build_result: QuickBuildResult;
     fill_remaining_request: FillRemainingRequest;
     fill_remaining_outcome: FillRemainingOutcome;
-    prep_save_request: PrepSaveRequest;
-    prep_save_outcome: PrepSaveOutcome;
-}
-
-/**
- * The engine's verdict on a scoped choice set: the scoped slots rendered
- * exactly like wizard slots, plus the checklist entries the set produces.
- * Total by design — a hand-edited section (unknown slot, malformed pick,
- * choices on a class with no such slots) comes back as Illegal entries,
- * never as an error that blocks loading.
- */
-export interface ScopedProjection {
-    slots: SlotView[];
-    checklist: ChecklistEntry[];
 }
 
 /**
@@ -268,13 +231,6 @@ export interface ScopedProjection {
  * infers state from weaker signals (decision presence, entry absence).
  */
 export type SlotStatus = "locked" | "empty" | "partial" | "complete" | "illegal";
-
-/**
- * The lifecycle state a scoped save expects to act on. A stale UI holding
- * the wrong lifecycle (a draft tab after finalize, or vice versa) is
- * rejected with the current state, never coerced.
- */
-export type LifecycleState = "draft" | "finalized";
 
 /**
  * The quick-build response: a normal draft view (review state, NOT
@@ -508,13 +464,6 @@ export interface SlotView {
      * The catalog as of the current log (empty for text slots).
      */
     options: OptionView[];
-    /**
-     * True for a slot in a scoped section (preparation): its selection is
-     * saved through the scoped-save route as part of a wholesale
-     * replacement, never confirmed into the decision log. The UI switches
-     * the save path on this flag and nothing else.
-     */
-    scoped?: boolean;
 }
 
 export interface StepRequest {
@@ -533,7 +482,7 @@ export type ChecklistSeverity = "incomplete" | "illegal";
 
 export type ClearOutcome = { outcome: "cleared"; draft: DraftView; preview: ClearPreview } | { outcome: "conflict"; current: DraftView };
 
-export type EngineRequest = { request: "project"; log: Decision[]; prep?: ScopedChoice[] } | { request: "preview"; log: Decision[]; candidate: DecisionInput; prep?: ScopedChoice[] } | { request: "preview_prep"; log: Decision[]; prep: ScopedChoice[] } | { request: "clear_preview"; log: Decision[]; slot: SlotId; prep?: ScopedChoice[] };
+export type EngineRequest = { request: "project"; log: Decision[] } | { request: "preview"; log: Decision[]; candidate: DecisionInput } | { request: "clear_preview"; log: Decision[]; slot: SlotId };
 
 export type EngineResponse = { response: "projection"; projection: ProjectionView } | { response: "clear_preview"; preview: ClearPreview } | { response: "error"; message: string };
 
@@ -542,8 +491,6 @@ export type FillRemainingOutcome = { outcome: "filled"; draft: DraftView; unreso
 export type FinalizeOutcome = { outcome: "finalized"; sheet: SheetView } | { outcome: "blocked"; reasons: ChecklistEntry[] } | { outcome: "conflict"; current: DraftView };
 
 export type MeterState = "ok" | "short" | "exceeded";
-
-export type PrepSaveOutcome = { outcome: "saved"; character: CharacterView } | { outcome: "conflict"; character: CharacterView } | { outcome: "rejected"; reasons: ChecklistEntry[]; character: CharacterView };
 
 export type RosterCharacterState = { state: "draft"; resume_label: string } | { state: "finalized" };
 

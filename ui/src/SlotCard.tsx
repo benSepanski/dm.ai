@@ -58,6 +58,23 @@ function useOptionFilter(options: OptionView[]): {
 
 export type TentativeSelection = Selection | null;
 
+/** Bag picks grouped for the tray: one row per distinct item ("×N"),
+ * removing one instance at a time. */
+export function groupPicks(
+  picked: string[],
+): { id: string; count: number; firstIndex: number }[] {
+  const groups: { id: string; count: number; firstIndex: number }[] = [];
+  picked.forEach((id, index) => {
+    const existing = groups.find((g) => g.id === id);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      groups.push({ id, count: 1, firstIndex: index });
+    }
+  });
+  return groups;
+}
+
 export function SlotCard({
   slot,
   live,
@@ -67,6 +84,7 @@ export function SlotCard({
   onRequestChange,
   busy,
   ack = null,
+  error = null,
 }: {
   slot: SlotView;
   /** The previewed twin of this slot (meters/status track tentative picks). */
@@ -78,6 +96,10 @@ export function SlotCard({
   busy: boolean;
   /** Transient save acknowledgment ("Saved — 1 skill choice left"). */
   ack?: string | null;
+  /** A refusal or failure for THIS slot, shown at the card (every confirm
+   * outcome is visible where the player is looking, never only in a
+   * notice scrolled out of view). */
+  error?: string | null;
 }) {
   const gauges = (live ?? slot).meters;
   if (slot.status === 'locked') {
@@ -91,11 +113,16 @@ export function SlotCard({
     );
   }
   const confirmed = slot.decision ?? null;
-  // Partial slots stay editable: the editor opens preloaded with the
-  // confirmed picks, and Confirm amends in place.
-  const editing = confirmed === null || slot.status === 'partial';
+  // Partial AND illegal slots stay editable: the editor opens preloaded
+  // with the confirmed picks so the fix happens in place, and Confirm
+  // amends.
+  const editing =
+    confirmed === null || slot.status === 'partial' || slot.status === 'illegal';
   const effectiveTentative =
-    tentative ?? (slot.status === 'partial' ? (confirmed?.selection ?? null) : null);
+    tentative ??
+    (slot.status === 'partial' || slot.status === 'illegal'
+      ? (confirmed?.selection ?? null)
+      : null);
   return (
     <section
       className={`slot status-${slot.status} ${confirmed !== null && !editing ? 'confirmed' : ''}`}
@@ -129,6 +156,11 @@ export function SlotCard({
       {ack !== null && (
         <p className="slot-ack" role="status">
           ✓ {ack}
+        </p>
+      )}
+      {error !== null && (
+        <p className="slot-error" role="alert">
+          ✗ {error}
         </p>
       )}
       {editing ? (
@@ -610,19 +642,29 @@ function ListEditor({
     <div>
       {picked.length > 0 && (
         <ul className="shopping-list">
-          {picked.map((id, index) => {
+          {groupPicks(picked).map(({ id, count, firstIndex }) => {
             const option = slot.options.find((o) => o.id === id);
             return (
-              <li key={`${id}-${index}`}>
-                {option?.label ?? id}
-                {option && option.summary !== '' && (
-                  // Per-item cost (price · Bulk) so an over-budget basket
-                  // can be trimmed by removing the right items.
-                  <span className="shopping-item-cost" data-testid="item-cost">
-                    {option.summary}
+              <li key={id}>
+                <span className="shopping-item-body">
+                  <span className="shopping-item-label">
+                    {option?.label ?? id}
+                    {count > 1 && <span className="shopping-item-count"> ×{count}</span>}
                   </span>
-                )}
-                <button type="button" onClick={() => removeAt(index)} disabled={busy}>
+                  {option && option.summary !== '' && (
+                    // Per-item cost (price · Bulk) so an over-budget basket
+                    // can be trimmed by removing the right items.
+                    <span className="shopping-item-cost" data-testid="item-cost">
+                      {option.summary}
+                    </span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  className="shopping-item-remove"
+                  onClick={() => removeAt(firstIndex)}
+                  disabled={busy}
+                >
                   remove
                 </button>
               </li>

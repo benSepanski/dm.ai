@@ -84,3 +84,62 @@ together on this branch once gathering is done.
    chosen class's name. Also affects the sheet's per-skill detail line
    ("from Fighter"). Fix: resolve the class record's name (state has only
    the id — thread the class name through state or resolve in callers).
+
+---
+
+# Resolutions (rework landed 2026-08-30, commit series through this branch)
+
+The findings triggered a contract revision: spec + architecture rewritten
+and re-approved (spec 5a2924b1, arch 4d89c0b2), preparation moved out of
+the epoch entirely (vision: Epoch 8 rung 5 owns it), and the wizard rebuilt
+to build-decisions-only. Per-finding outcome:
+
+1. **"from Fighter" label** — fixed. `Pf2eState.class_name` is resolved
+   from the chosen class record at apply; both hardcoded literals (skill
+   resolution + trained-skills apply) removed, plus a "Choose Acrobatics or
+   Athletics" message that named Fighter's choices. Now structural: the
+   `checks/class_isolation.rs` lint fails the build on any shipped record
+   name appearing as a ruleset source literal, and the contamination sweep
+   builds a complete character per class and asserts other classes'
+   vocabulary is absent from projection and sheet.
+
+2. **Tray overflow / hidden removes** — fixed and generalized. Tray rows
+   are grouped with clamped text and always-visible removes; the core
+   property is now enforced: `ui/e2e/layout.ts` (`expectSaneLayout`) checks
+   page overflow, element overflow, starved columns, and clipped/offscreen
+   enabled controls — wired into the shared helpers so EVERY step visit in
+   every e2e walk sweeps the screen, plus a wordiest-content stress spec at
+   desktop and tablet widths (`ui/e2e/layout.spec.ts`). The sweep also
+   caught a real tablet-width bug during hands-on testing (main column
+   starved to a sliver), fixed with a responsive single-column stack.
+
+3. **Duplicate picks** — resolved by the set/bag rule (architecture):
+   checkbox sets make duplicates unrepresentable (spellbook is a set);
+   bag trays (equipment) group as "×N" with per-group removes. A UI unit
+   suite pins kind→control mapping. Prepared-slot duplicates left with
+   preparation (Epoch 8).
+
+4. **Prep at chargen feels wrong** — Ben chose (c): no preparation in
+   character creation at all. The sheet states "Preparation: at the table".
+   The validated scoped-choice design is recorded in the vision for
+   Epoch 8; the engine machinery for it was fully reverted.
+
+5. **Disproportionate cascade** — moot for prep (gone); for the school:
+   the school slot has NO dependents. Changing school destroys nothing;
+   the curriculum validator simply re-judges the standing book (checklist
+   entry, fix in place). Pinned by `changing_school_rejudges_instead_of_
+   clearing` and the changed-mind e2e story.
+
+6. **Unsatisfiable curriculum slot** — impossible by construction: the
+   unified picker never greys curriculum options; the requirement is a
+   validator over the one slot ("at least 2 of these 7 from the
+   curriculum"), so any full book with ≥2 curriculum picks is legal.
+   `every_school_has_a_satisfiable_spellbook_and_no_dead_ends` proves it
+   for every shipped school. Partial/illegal confirms now persist at the
+   card (`slot-error`), not as a 5-second ack.
+
+7. **Three-slot bookkeeping** — the spellbook is ONE slot per rank:
+   cantrips Multi{10}, rank-1 Multi{5 or 7, school-dependent} with
+   curriculum options sorted first and badged, a Curriculum meter, and the
+   minimum enforced in place. No player-side tracking of which pick "is
+   curriculum".

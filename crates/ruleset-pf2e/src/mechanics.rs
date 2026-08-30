@@ -826,10 +826,10 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         });
     }
 
-    // Spellcasting (prepared casters). Every value derived from the
-    // class's printed spellcasting entry and the folded build choices;
-    // prepared spells are scoped choices and never appear here — the
-    // scoped sheet sections carry them on *displayed* sheets only.
+    // Spellcasting (prepared casters): every value derived from the
+    // class's printed spellcasting entry and the folded build choices.
+    // Slot and per-day counts are stated facts; which spells are prepared
+    // is session state and no business of this sheet.
     if let Some((c, sc)) = class.and_then(|c| c.spellcasting.as_ref().map(|sc| (c, sc))) {
         let attr = state
             .key_attribute

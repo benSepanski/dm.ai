@@ -139,9 +139,8 @@ pub fn load_index() -> Result<Index, String> {
             let partition = match fixed {
                 Some(p) => Some(p),
                 None if pack == "spells" => match record.item_type() {
-                    // Rituals live in the same pack tree but are not
-                    // preparation-relevant records; the school/spellbook
-                    // subset never references them.
+                    // Rituals share the pack tree but are out of scope;
+                    // the school/spellbook subset never references them.
                     "spell" => Some(Partition::Spell),
                     _ => None,
                 },

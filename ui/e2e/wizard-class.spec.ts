@@ -1,7 +1,8 @@
 // The chargen-wizard spec's user stories, walked against the real server
 // binary and the built UI: the first wizard (Sylvenne end to end), illegal
-// prep caught and fixed, the changed mind (school cascade), the crash at
-// the class step, and the pencil edit on the finalized sheet.
+// picks caught at the card, the changed mind (school re-judge, nothing
+// destroyed), and the crash at the class step. Every step visit runs the
+// layout sweep via the shared helpers.
 import { expect, type Page, test } from '@playwright/test';
 import {
   confirmBoosts,
@@ -11,6 +12,7 @@ import {
   sheetEntry,
   slot,
 } from './helpers';
+import { expectSaneLayout } from './layout';
 import { TestServer } from './server';
 
 let server: TestServer;
@@ -35,29 +37,23 @@ async function confirmMultiExact(page: Page, slotId: string, labels: string[]) {
     if ((await counter.textContent())?.includes('All choices made') === true) {
       break;
     }
-    await card.locator(`.option-list li:has(.option-label:text-is("${label}")) input`).check();
+    await checkExact(page, slotId, label);
   }
   await expect(counter).toHaveText(/All choices made/);
   await card.getByRole('button', { name: /confirm/i }).click();
   await expect(card.locator('.slot-confirmed-value')).toBeVisible();
 }
 
-/** Add options to a List slot (the prep picker) by label, then confirm. */
-async function confirmListAdds(page: Page, slotId: string, labels: string[]) {
-  const card = slot(page, slotId);
-  await card.scrollIntoViewIfNeeded();
-  for (const label of labels) {
-    // The Add button's accessible name starts with the option label.
-    await addButton(card, label).click();
-  }
-  await card.getByRole('button', { name: /confirm/i }).click();
-  await expect(card.locator('.slot-confirmed-value')).toBeVisible();
+async function checkExact(page: Page, slotId: string, label: string) {
+  await slot(page, slotId)
+    .locator(`.option-list li:has(.option-label:text-is("${label}")) input`)
+    .check();
 }
 
-function addButton(card: ReturnType<typeof slot>, label: string) {
-  return card.getByRole('button', {
-    name: new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} `),
-  });
+async function uncheckExact(page: Page, slotId: string, label: string) {
+  await slot(page, slotId)
+    .locator(`.option-list li:has(.option-label:text-is("${label}")) input`)
+    .uncheck();
 }
 
 const SPELLBOOK_CANTRIPS = [
@@ -72,9 +68,18 @@ const SPELLBOOK_CANTRIPS = [
   'Message',
   'Shield',
 ];
-const SPELLBOOK_RANK1 = ['Command', 'Fear', 'Grease', 'Jump', 'Sleep'];
+// Five free picks + the two Battle Magic curriculum additions.
+const SPELLBOOK_RANK1 = [
+  'Breathe Fire',
+  'Force Barrage',
+  'Command',
+  'Fear',
+  'Grease',
+  'Jump',
+  'Sleep',
+];
 
-/** Sylvenne through the whole class step (spellbook + initial prep). */
+/** Sylvenne through the whole class step (build decisions only). */
 async function buildSylvenneThroughClass(page: Page) {
   await createCharacter(page, server, 'Sylvenne');
   await gotoStep(page, 'Ancestry');
@@ -93,25 +98,12 @@ async function buildSylvenneThroughClass(page: Page) {
   await expect(slot(page, 'pf2e.class.feat')).toHaveCount(0);
   await confirmOption(page, 'pf2e.class.thesis', 'Spell Substitution');
   await confirmOption(page, 'pf2e.class.school', 'School of Battle Magic');
+  // The rank-1 picker announces the curriculum requirement in place.
+  await expect(
+    slot(page, 'pf2e.class.spellbook.rank1').getByTestId('meter-Curriculum'),
+  ).toBeVisible();
   await confirmMultiExact(page, 'pf2e.class.spellbook.cantrips', SPELLBOOK_CANTRIPS);
   await confirmMultiExact(page, 'pf2e.class.spellbook.rank1', SPELLBOOK_RANK1);
-  await confirmMultiExact(page, 'pf2e.class.spellbook.curriculum', [
-    'Breathe Fire',
-    'Force Barrage',
-  ]);
-  // The preparation picker: List slots for the book slots, Single for the
-  // school preparations — which come straight from the curriculum
-  // (Telekinetic Projectile and Mystic Armor are NOT in her book).
-  await confirmListAdds(page, 'pf2e.prep.cantrips', [
-    'Shield',
-    'Ignition',
-    'Electric Arc',
-    'Detect Magic',
-    'Light',
-  ]);
-  await confirmListAdds(page, 'pf2e.prep.rank1', ['Fear', 'Command']);
-  await confirmOption(page, 'pf2e.prep.school-cantrip', 'Telekinetic Projectile');
-  await confirmOption(page, 'pf2e.prep.school-rank1', 'Mystic Armor');
 }
 
 async function finishSylvenne(page: Page) {
@@ -152,6 +144,7 @@ async function finishSylvenne(page: Page) {
   await expect(finalize).toBeEnabled();
   await finalize.click();
   await expect(page.locator('.sheet-page')).toBeVisible();
+  await expectSaneLayout(page);
 }
 
 test('the first wizard: Sylvenne end to end, sheet hand-checkable', async ({ page }) => {
@@ -162,66 +155,71 @@ test('the first wizard: Sylvenne end to end, sheet hand-checkable', async ({ pag
   await expect(sheetEntry(page, 'Spell attack')).toHaveText('+7');
   await expect(sheetEntry(page, 'Spell DC')).toHaveText('17');
   await expect(sheetEntry(page, 'Rank 1 slots')).toHaveText('3');
-  await expect(sheetEntry(page, 'Cantrips').first()).toHaveText('6 prepared');
+  await expect(sheetEntry(page, 'Cantrips').first()).toHaveText('6/day');
   await expect(sheetEntry(page, 'Focus pool')).toHaveText('1 Focus Point');
-  // Book vs prepared, clearly distinguished: the prepared section carries
-  // the school preparations from the curriculum.
-  await expect(page.getByRole('heading', { name: 'Prepared Spells' })).toBeVisible();
-  await expect(sheetEntry(page, 'School cantrip')).toHaveText('Telekinetic Projectile');
-  await expect(sheetEntry(page, 'School slot (rank 1)')).toHaveText('Mystic Armor');
-  // The pencil affordance exists; build choices offer no edit.
-  await expect(page.getByRole('button', { name: 'Change prepared spells' })).toBeVisible();
+  // The one rank-1 book line carries the curriculum additions; preparation
+  // is plainly a table matter, and no prepared section exists.
+  await expect(sheetEntry(page, 'Spellbook (rank 1)')).toContainText('Breathe Fire');
+  await expect(sheetEntry(page, 'Preparation')).toHaveText('at the table');
+  await expect(page.getByText('Prepared Spells')).toHaveCount(0);
 });
 
-test('illegal prep, caught: overfilling a rank is refused and fixable', async ({ page }) => {
+test('illegal picks are flagged at the card and clear in place', async ({ page }) => {
   await buildSylvenneThroughClass(page);
-  const card = slot(page, 'pf2e.prep.rank1');
-  // Reopen the confirmed slot: change → the dialog previews only itself.
+  const card = slot(page, 'pf2e.class.spellbook.rank1');
+  // Reopen the confirmed picker and swap a curriculum spell out: the
+  // curriculum meter goes short where the player is looking.
   await card.getByRole('button', { name: 'Change…' }).click();
   await page.getByRole('button', { name: /clear/i }).click();
-  await expect(card.locator('.slot-confirmed-value')).toHaveCount(0);
-  // Overfill: three picks into two slots. The meter flags it live…
-  for (const label of ['Fear', 'Command', 'Sleep']) {
-    await addButton(card, label).click();
+  for (const label of [
+    'Command',
+    'Fear',
+    'Grease',
+    'Jump',
+    'Sleep',
+    'Illusory Disguise',
+    'Breathe Fire',
+  ]) {
+    await checkExact(page, 'pf2e.class.spellbook.rank1', label);
   }
-  await expect(card.getByTestId('meter-Prepared')).toContainText('over the limit');
-  // …and the server refuses the save, naming the rule.
+  await expect(card.getByTestId('meter-Curriculum')).toContainText('1 of 2');
   await card.getByRole('button', { name: /confirm/i }).click();
-  await expect(page.locator('.notice')).toContainText('only 2 can be prepared');
-  // Fix it: remove one, confirm, and the entry clears.
-  await card.locator('.shopping-list li', { hasText: 'Sleep' }).getByRole('button', { name: 'remove' }).click();
+  // Saved (an illegal state is still durable — the engine judges, the UI
+  // never blocks) — and the card says what is wrong right there.
+  await expect(card.getByText(/at least 2 .*curriculum/)).toBeVisible();
+  // Fix in place: swap back to a curriculum spell.
+  await uncheckExact(page, 'pf2e.class.spellbook.rank1', 'Illusory Disguise');
+  await checkExact(page, 'pf2e.class.spellbook.rank1', 'Force Barrage');
   await card.getByRole('button', { name: /confirm/i }).click();
   await expect(card.locator('.slot-confirmed-value')).toBeVisible();
+  await expect(card.getByText(/at least 2 .*curriculum/)).toHaveCount(0);
 });
 
-test('the changed mind: swapping schools lists and clears exactly the curriculum-derived choices', async ({
-  page,
-}) => {
+test('the changed mind: swapping schools destroys nothing and re-judges', async ({ page }) => {
   await buildSylvenneThroughClass(page);
   const school = slot(page, 'pf2e.class.school');
   await school.getByRole('button', { name: 'Change…' }).click();
-  // The confirmation lists everything curriculum-derived — and the
-  // school-independent cantrip preparation is NOT on the list.
+  // The confirmation lists only the school itself — nothing else clears.
   const dialog = page.locator('.modal');
-  await expect(dialog).toContainText('Spellbook: curriculum spells');
-  await expect(dialog).toContainText('School cantrip');
-  await expect(dialog).toContainText('School slot (rank 1)');
-  await expect(dialog).toContainText('Prepared rank-1 spells');
-  await expect(dialog).not.toContainText('Prepared cantrips');
+  await expect(dialog.locator('.clear-list li')).toHaveCount(1);
+  await expect(dialog).toContainText('Arcane school');
   await page.getByRole('button', { name: /clear/i }).click();
-
-  // The cleared slots reopen; the cantrip preparation survives.
-  await expect(slot(page, 'pf2e.class.school').locator('.slot-confirmed-value')).toHaveCount(0);
-  await expect(
-    slot(page, 'pf2e.prep.cantrips').locator('.slot-confirmed-value'),
-  ).toBeVisible();
-  // Pick the other school: the sidebar sheet swaps to it, the cantrip
-  // preparation still shows, and the curriculum-derived entries are empty.
   await confirmOption(page, 'pf2e.class.school', 'School of Protean Form');
-  const side = page.locator('.wizard-side');
-  await expect(side).toContainText('School of Protean Form');
-  await expect(side).toContainText('Shield, Ignition, Electric Arc, Detect Magic, Light');
-  await expect(side).toContainText('none chosen yet');
+
+  // The spellbook stands — now flagged illegal, so the picker reopens
+  // preloaded with every pick intact (fix-in-place); the focus spell
+  // follows the school.
+  const rank1 = slot(page, 'pf2e.class.spellbook.rank1');
+  await expect(
+    rank1.locator('.option-list li:has(.option-label:text-is("Breathe Fire")) input'),
+  ).toBeChecked();
+  await expect(
+    rank1.locator('.option-list li:has(.option-label:text-is("Command")) input'),
+  ).toBeChecked();
+  // (The focus spell's name lives in the entry detail, which the compact
+  // sidebar omits — the engine golden pins Scramble Body.)
+  await expect(page.locator('.wizard-side')).toContainText('School of Protean Form');
+  await expect(page.locator('.wizard-side')).toContainText('must come from the');
 });
 
 test('the crash: kill -9 at the class step resumes with the spellbook intact', async ({
@@ -230,7 +228,6 @@ test('the crash: kill -9 at the class step resumes with the spellbook intact', a
   await buildSylvenneThroughClass(page);
   server.killNine();
   await server.start(server.port);
-  await page.goto(`${server.url}/#/c/${await characterId(page)}`);
   await page.reload();
   await expect(page.locator('.wizard')).toBeVisible();
   await gotoStep(page, 'Class');
@@ -238,40 +235,6 @@ test('the crash: kill -9 at the class step resumes with the spellbook intact', a
     slot(page, 'pf2e.class.spellbook.cantrips').locator('.slot-confirmed-value'),
   ).toBeVisible();
   await expect(
-    slot(page, 'pf2e.prep.school-rank1').locator('.slot-confirmed-value'),
-  ).toHaveText('Mystic Armor');
-});
-
-async function characterId(page: Page): Promise<string> {
-  const hash = await page.evaluate(() => window.location.hash);
-  const match = /^#\/c\/([^/]+)/.exec(hash);
-  if (match?.[1] === undefined) {
-    throw new Error(`no character id in hash: ${hash}`);
-  }
-  return decodeURIComponent(match[1]);
-}
-
-test('the pencil edit: prepared spells change from the finalized sheet and survive a restart', async ({
-  page,
-}) => {
-  await buildSylvenneThroughClass(page);
-  await finishSylvenne(page);
-
-  await page.getByRole('button', { name: 'Change prepared spells' }).click();
-  const card = slot(page, 'pf2e.prep.cantrips');
-  // The picker opens preloaded with the current preparation; swap one.
-  await card.locator('.shopping-list li', { hasText: 'Ignition' }).getByRole('button', { name: 'remove' }).click();
-  await addButton(card, 'Frostbite').click();
-  await card.getByRole('button', { name: /confirm/i }).click();
-  await expect(page.locator('.prep-editor .notice')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Done' }).click();
-
-  // The displayed sheet reflects the swap (pick order preserved)…
-  const swapped = 'Shield, Electric Arc, Detect Magic, Light, Frostbite';
-  await expect(page.getByText(swapped)).toBeVisible();
-  // …and it survives a full server restart (durably saved).
-  server.killNine();
-  await server.start(server.port);
-  await page.reload();
-  await expect(page.getByText(swapped)).toBeVisible();
+    slot(page, 'pf2e.class.spellbook.rank1').locator('.slot-confirmed-value'),
+  ).toContainText('Breathe Fire');
 });

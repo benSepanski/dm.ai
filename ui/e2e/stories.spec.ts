@@ -349,9 +349,9 @@ test('a confirm while the server is down explains itself and retries cleanly', a
   server.killNine();
 
   await card.getByRole('button', { name: /confirm/i }).click();
-  // The failure is explained where the user can see it, and the tentative
-  // pick survives.
-  await expect(page.locator('.notice')).toContainText('did not save');
+  // The failure is explained AT THE CARD (feedback renders where the
+  // player is looking), and the tentative pick survives.
+  await expect(card.locator('.slot-error')).toContainText('did not save');
   await expect(card.locator('label:has-text("Dwarf") input')).toBeChecked();
 
   // Server comes back on the same port; the same button now succeeds.

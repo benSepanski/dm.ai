@@ -339,8 +339,8 @@ pub struct SpellRecord {
     pub name: String,
     /// 0 = cantrip.
     pub rank: u32,
-    /// Focus spells never appear in spellbook or prep catalogs; they are
-    /// granted (by a school) and cast from the focus pool.
+    /// Focus spells never appear in spellbook catalogs; they are granted
+    /// (by a school) and cast from the focus pool.
     #[serde(default)]
     pub focus: bool,
     pub traditions: Vec<String>,
@@ -949,7 +949,7 @@ impl RulesData {
 
     /// Spell/thesis/school integrity: every cross-reference resolves to a
     /// shipped spell of the right rank and kind; heightening entries carry
-    /// text; focus spells stay out of the prep/spellbook catalogs by
+    /// text; focus spells stay out of the spellbook catalogs by
     /// construction (the `focus` flag).
     fn check_spells(&self) -> Result<(), DataError> {
         for s in &self.spells.spells {

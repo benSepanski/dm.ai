@@ -1,190 +1,151 @@
-# Chargen slice 3: PF2e Wizard — report
+# chargen-wizard — report
 
 Checkpoint: `chargen-wizard` · Branch: `checkpoint/chargen-wizard` · Status: delivered
 
 ## What changed and why
 
-The creation wizard now builds a **PF2e Wizard**: arcane thesis, arcane
-school, the spellbook (10 cantrips + 5 rank-1 spells of your choice, plus 2
-rank-1 spells added from your school's curriculum), and the daily
-preparation — 5 cantrips and 2 rank-1 slots prepared from the book, plus
-one curriculum cantrip and one curriculum rank-1 spell prepared straight
-from the school (the printed rule; neither needs to be in your book). The
-finalized sheet shows the whole spellcasting block — spell attack/DC,
-slots, focus pool with the school's focus spell, book vs prepared clearly
-split — and carries the slice's one post-finalize affordance: **Change
-prepared spells**, which reopens just the prep picker while every build
-choice stays locked.
+You can now build a Wizard start to finish: pick the class, an arcane
+thesis, an arcane school, and a spellbook — ten cantrips and a rank-1 book
+chosen in **one picker per rank**, with the school's curriculum spells
+sorted first, badged, and the "at least 2 from your curriculum" minimum
+enforced right in the picker by a meter and an in-card message. The
+finalized sheet shows the full spellcasting block (spell attack, DC, slots,
+cantrips per day, focus pool, the spellbook) and states plainly:
+**"Preparation: at the table."**
 
-Under the hood this is the first exercise of the vision's
-scope-agnostic-choice commitment: prepared spells live in a **play-scoped
-section** of the character file, beside — never inside — the decision log.
-The engine validates them with the same slot machinery as build choices
-(one driver), the stored sheet remains a pure function of the log, and the
-prep save is the first-ever write path to finalized files — carrying the
-full idempotency/stale-view/crash discipline, and byte-leaving the log and
-sheet untouched. Changing your arcane school cascades across the scope
-boundary: the confirmation lists exactly the curriculum-derived choices
-(spellbook curriculum additions, both school preparations, and the rank-1
-preparation whose book shrinks), clears them in one durable write, and
-leaves the school-independent cantrip preparation standing.
+This is the second version. Your review of the first (findings 1–7 in
+[findings.md](findings.md)) triggered a contract revision — spec and
+architecture rewritten and re-approved, and **daily preparation moved out
+of character creation entirely** (the vision now assigns it to Epoch 8,
+where the sheet becomes interactive; the validated design for it is
+recorded there). The wizard dialog holds build decisions only.
 
-Rules data moved to `pf2e-pc.0.3.0`: 29 spells, 2 theses (Spell Blending,
-Spell Substitution), 2 schools (Battle Magic, Protean Form) and the Wizard
-class + kit, every record's mechanical fields (action cost, defense,
-range/area/targets, duration, traits, heightening entries) transcribed as
-structured data and machine-verified against the pinned Foundry snapshot —
-zero unwaived mismatches — with pages and names cross-checked against
-Archives of Nethys. Existing characters re-pin quietly (additive data).
+**The class-addition experiment result is as clean as it gets:** adding the
+Wizard changed the engine by **zero lines**. `crates/engine-core`,
+`crates/types`, the persistence layer, the routes, and the version guard
+are byte-identical to the branch point — the whole class is rules data
+(29 spells, 2 theses, 2 schools, the class record) plus ruleset slot
+definitions. The storage schema is untouched (still v2).
+
+Every one of your findings also became a structural guard, not just a fix:
+
+- "from Fighter" on a Wizard → class names come from the chosen record, and
+  a new build-failing lint bans any shipped record name appearing as a
+  source literal in the ruleset, plus a sweep that builds a complete
+  character of every class and asserts no other class's vocabulary leaks
+  into what you see.
+- The overflow you spotted → a general layout sweep (no page scroll, no
+  element overflow, no starved columns, no clipped controls) now runs on
+  **every screen visit in every e2e walk**, plus a wordiest-content stress
+  test at desktop and tablet widths. Hands-on testing with it found and
+  fixed a real tablet-width bug (the main column starved to a sliver) and
+  two feedback bugs (an illegal-confirmed card collapsing shut; a green
+  "Saved" ack carrying an illegal save).
+- Repeatable Adds → an explicit rule: checkboxes are sets (duplicates
+  unrepresentable — the spellbook), Add-trays are bags (grouped ×N rows
+  with always-visible removes — equipment), pinned by a UI unit suite.
+- The curriculum dead-end and three-slot bookkeeping → dissolved by the
+  unified picker; a property test proves every shipped school has a
+  satisfiable spellbook with no dead-end pick order.
+- The disproportionate clear-cascade → the school slot has no dependents:
+  changing school destroys nothing; the curriculum rule simply re-judges
+  your standing book and tells you what to swap.
 
 ## How to verify
 
-Run the app on your own campaign directory:
+Serve your real campaign as usual, then walk these on your own data:
 
 ```bash
-cargo run --release -p server -- --data-dir ./campaign
+cargo run -p server -- --data-dir ./campaign --port 8080
 ```
 
-1. **The first wizard.** Create a character, walk Ancestry and Background
-   as usual, then pick **Wizard** at the Class step. Walk thesis → school →
-   spellbook (watch the counters) → preparation (the school slots offer the
-   curriculum, including spells you did NOT put in your book). Finalize and
-   hand-check the spellcasting block against the Player Core: spell attack
-   = 3 (trained) + Int, spell DC = 10 + that, cantrips "5+1 prepared",
-   rank-1 slots "2+1", focus pool 1 with the school's focus spell named.
-2. **The pencil edit.** On the finalized sheet, press *Change prepared
-   spells*, swap a cantrip, press Done. Restart the server, reopen the
-   sheet: the swap survived. Open the character's JSON in an editor: the
-   `log` array is untouched; only the small `prep` section changed.
-3. **Illegal prep, caught.** In the prep picker, overfill a rank (add a
-   third rank-1 spell): the meter flags it live and Confirm is refused with
-   the rule spelled out. Remove one; it saves.
-4. **The changed mind.** Mid-wizard with book and prep set, press Change…
-   on the arcane school: the prompt lists exactly what will clear (the
-   curriculum spellbook additions, the school cantrip and school slot, the
-   rank-1 preparation) — your prepared cantrips are not on the list, and
-   after the swap they are still there while the new school's focus spell
-   shows on the sheet.
-5. **The crash.** Kill the server mid-class-step (`kill -9`), restart,
-   reopen: resume lands where you were, spellbook and confirmed prep
-   intact.
-6. **Nothing else moved.** Open one of your existing Fighters — it loads
-   unchanged (a quiet re-pin to the new data version is offered, no review
-   flags). Create a new Fighter: no spell steps anywhere, no class-feat
-   slot missing.
-7. **The skeptical inspection.** Hand-edit a wizard's `prep` section (put
-   in a spell that isn't in the book, or mangle the JSON), then:
-
-```bash
-cargo run --release -p server -- --data-dir ./campaign verify
-```
-
-   `PREP-BAD` names the rule (or reports the section unreadable); the
-   character still loads either way, and the prep picker offers wholesale
-   replacement.
-8. **Spot-check three spell records** (suggested: Ignition — heightening
-   cantrip; Breathe Fire — save spell; Force Bolt — the Battle Magic focus
-   spell) in `rules-data/spells.json` against Archives of Nethys, including
-   the structured fields, not just the text.
-9. **Intent check — the experiment.** Read "Decisions made inside the
-   contract" below and the engine-core listing: does "adding a class is
-   data + slot definitions" feel true, with the two sanctioned engine
-   amendments honestly bounded?
-10. **Intent check — the feel.** Is the spellbook-then-prep flow something
-    you would hand a new wizard player at a table?
+1. **The first wizard.** Create a character, pick any ancestry/background,
+   then Class → Wizard. Intent checks: there is **no** class-feat card (a
+   level-1 Wizard has none — that was the Fighter's slot); trained-skill
+   sources say "from Wizard"; the spellbook is one card per rank, cantrips
+   and rank 1, with your school's curriculum spells listed first and
+   badged. Fill everything, finalize, and read the sheet: does the
+   spellcasting block match your hand math (with Int +4: spell attack +7,
+   DC 17, 3 rank-1 slots, 6 cantrips/day for Battle Magic), and does
+   "Preparation — at the table" match what you meant by keeping daily
+   state out of chargen?
+2. **Illegal picks stay yours.** In the rank-1 picker, fill the book with
+   only one curriculum spell and confirm. The card keeps your picks, shows
+   the shortfall right there in red, and the Curriculum meter reads
+   "1 of 2". Swap one spell in place and confirm — no clear-and-restart.
+3. **The changed mind.** Change the school on that character. The
+   confirmation dialog lists only the school itself; afterwards your whole
+   spellbook is still checked in the reopened picker, with the new
+   curriculum re-judged (fix by swapping, not rebuilding). Intent check:
+   is "destroys nothing, re-judges" the behavior you wanted from finding 5?
+4. **Nothing else moved.** Open one of your existing finalized Fighters —
+   sheet unchanged. Resize the window down to tablet width anywhere in the
+   wizard: the layout stacks to one column, nothing overflows or hides.
+5. **The feature map.** Skim [docs/feature-map.md](../../../docs/feature-map.md)
+   — each user-visible flow mapped to its UI file, engine code, and pinning
+   tests. Intent check: is this the maintenance aid you had in mind?
 
 ## Constraints now enforced
 
-All slice-1/2 rows still run. New rows, all green in `cargo test -p checks`:
+Every row of the revised architecture's Constraints emitted table is green
+in the repo's own tooling (`cargo test --workspace` + `npm test` + Playwright):
 
-| Rule | Lives at |
+| Rule | Where it lives |
 |---|---|
-| Replay ignores prep (same log ± any prep → byte-identical stored sheet) | `checks/replay.rs::stored_sheet_is_pure_over_prep` |
-| Prep-save writes only prep (+ v2 schema-envelope carve-out fixture) | `checks/prep.rs::prep_save_writes_only_prep` |
-| Prep-save idempotency, stale rejection, lifecycle rejection | `checks/prep.rs::prep_save_idempotency_and_stale_rejection` |
-| Crash safety: draft-prep, finalized-prep, and school-cascade SIGKILL cycles | `checks/crash_harness.rs::prep_writes_under_sigkill_are_none_or_all` |
-| Finalized writers serialize (no lost update) | `checks/prep.rs::finalized_writers_serialize` |
-| Prep routes respect the version guard | `checks/version_guard.rs::prep_saves_on_older_pinned_characters_are_rejected` |
-| Server authority over raw prep (not-in-book / overfill / non-curriculum / unknown slot / prep-on-Fighter) | `checks/api_authority.rs::raw_illegal_prep_is_rejected_and_writes_nothing` |
-| `verify` re-validates prep (illegal / unknown ID / wrong class / broken section; absent silent) | `checks/prep.rs::verify_revalidates_prep` |
-| One validation driver, observable (route ↔ verify parity) | `checks/prep.rs::one_validation_driver_route_and_verify_agree` |
-| Cascade clears exactly the previewed set | `checks/replay.rs::changing_school_cascades_exactly_as_previewed` |
-| Storage v3 (v2 reads, upgrades on first write incl. the prep-save path; v4 refused; absence valid) | `checks/persistence.rs` |
-| Broken prep degrades, never quarantines | `checks/persistence.rs::v2_documents_read_and_broken_prep_degrades` |
-| Spell records: schema + bounded heightening + curriculum/focus cross-refs | ruleset integrity + `checks/rules_data.rs` |
-| Attestation covers the spell partition (zero unwaived mismatches) | `checks/attestation.rs` + `rules-data/attestation.json` |
-| Goldens: Sylvenne per school, cascade fixture, revised-prep fixture | `checks/replay.rs` |
-| Wizard projection incl. prep < 5 ms | `checks/perf.rs::wizard_fold_with_prep_is_under_5ms` |
+| engine-core byte-identical (the experiment's zero) | evidence below: empty diff over `crates/engine-core`, `crates/types`, persistence, routes, version guard; layering/purity rows guard the boundary |
+| Spellbook satisfiability, every school, no dead ends | `checks/replay.rs` (`every_school_has_a_satisfiable_spellbook_and_no_dead_ends`) |
+| School change destroys nothing, re-judges | `checks/replay.rs` (`changing_school_rejudges_instead_of_clearing`) + changed-mind e2e story |
+| Class-feat slot hidden; class-named skill sources | Sylvenne + Torvald goldens, `checks/replay.rs` |
+| Spell-record lint: bounded heightening, stable IDs, license, cross-refs | `checks/rules_data.rs` + ruleset integrity tests |
+| Attestation: spell + class-feature partitions, zero unwaived | `checks/attestation.rs` |
+| Layout sweep on every step visit + wordiest-content stress at 2 widths | `ui/e2e/layout.ts` wired into `helpers.ts`; `ui/e2e/layout.spec.ts` |
+| Card-local confirm feedback (refusal, offline, illegal-saved) | `ui/e2e/wizard-class.spec.ts` illegal-picks story; `stories.spec.ts` server-down story |
+| No shipped-record name as a ruleset source literal | `checks/class_isolation.rs` (build-failing lint) |
+| Cross-class contamination sweep, automatic for every future class | `checks/class_isolation.rs` |
+| Kind→control mapping total and exclusive (sets vs bags) | `ui/src/SlotCard.test.tsx` + `SlotCard.grid.test.tsx` |
+| Storage untouched: schema v2, no new write paths | `checks/persistence.rs`, `checks/no_rewrite_on_load.rs` (unchanged) |
+| Golden per shipped school + re-judge fixture | `checks/replay.rs` (Sylvenne/Battle Magic golden; Protean re-judge) |
+| Wizard projection < 5 ms | `checks/perf.rs` |
 
 ## Decisions made inside the contract
 
-- **Engine-core diff (the experiment's deliverable).** Exactly the two
-  architected amendments, in full: (1) the scoped-choice machinery —
-  `with_scoped` construction, the shared per-slot driver serving both
-  scopes, `scoped_projection`/`apply_scoped` (total over hand-edited
-  sections), and the existing dependent-clearing/`clear`/`amend`/preview
-  operations widened so their reach crosses the scope boundary (no second
-  tracker); (2) projection input widening — `project` takes the scoped
-  set, scoped slots render into steps flagged `scoped`, and displayed
-  sheets append ruleset-supplied scoped sections while `Engine::sheet`
-  stays `fold(log)`. No game vocabulary entered the crate (the purity and
-  layering checks run over all of it). Everything Wizard-specific lives in
-  `ruleset-pf2e` (a `spells` kind module + slot definitions) and data.
-- **The concurrency token is the file's write version**, not a separate
-  prep-section counter: strictly stronger (any concurrent mutation
-  invalidates a stale prep save) and it reuses the slice-1 conflict
-  machinery; idempotency rides a `last_request_id` stored in the section.
-- **One prep route for both lifecycles** with `expected_state` in the
-  request — the architecture's lifecycle-mismatch rejection, without two
-  routes duplicating the discipline.
-- **Finalized prep saves also reject incomplete sets** (a finished sheet
-  stays table-ready); draft saves reject only illegal ones, so the wizard
-  can save progress step by step.
-- **School preparations come straight from the curriculum** — the printed
-  wizard-spellcasting rule ("as well as one extra curriculum cantrip and
-  one extra curriculum spell … from your arcane school") — and the
-  spellbook gained the printed fourth slot ("you also add two 1st-rank
-  spells from the curriculum"). Both are deliberately exercised in goldens
-  and e2e with spells that are NOT in the book.
-- **Changing schools also clears the rank-1 preparation** (its book loses
-  the curriculum additions). The spec's story named the curriculum slot
-  and focus spell; the implemented cascade is the honest transitive
-  closure, the confirmation lists all of it exactly, and the cantrip
-  preparation survives — the property the story was protecting.
-- **The Wizard ships `quick_build_deferred: true`** instead of a
-  suggested-build block (spec defers its quick build to `wizard-content`);
-  data integrity now demands a block *or* that explicit marker, so the
-  Fighter's guarantee is undiluted and the marker's removal is
-  `wizard-content`'s forcing function.
-- **WASM-side parity is structural**, mirroring slice-1's client/server
-  posture: the observable parity row pins route ↔ verify on the same
-  driver; the browser runs the identical engine function from the same
-  commit under the bindings-freshness gate.
+- **Wizard quick build is deferred** (`quick_build_deferred: true` on the
+  class record): a one-click wizard would have to invent a spellbook; the
+  roster's quick-build stays Fighter-only until a curated build ships.
+- **Curriculum minimum message fires only when the book is full** — while
+  picking, the meter carries the state; the red message appears at confirm
+  time so it never nags mid-selection.
+- **Illegal-confirmed slots stay open, preloaded** (fix where the problem
+  is); the closed-summary-with-Change presentation is reserved for legal
+  complete slots. The status-grid unit test now pins this.
+- **Bounded bags** (per-item max in a tray) have no consumer yet; the
+  vocabulary extension is deferred to Epoch 8's first real need.
+- Sheet wording for the non-prep note: a `Preparation` row valued
+  "at the table" with one explanatory detail line.
+- Legacy-language sweep run over the final diff (no detour vocabulary or
+  transitional comments survive; the restore was done with
+  `git restore --source`, not by hand-unediting).
 
 ## Agent evidence
 
-- `cargo test --workspace`: **131 passed, 0 failed** (engine-core 24 incl.
-  7 scoped; ruleset 31; checks 76 across 12 binaries incl. the new
-  `prep.rs` five).
-- Playwright e2e: **25 passed** — the 20 existing Fighter walks unchanged
-  plus 5 new wizard stories (first wizard with hand-checked spellcasting
-  block, illegal prep caught+fixed, changed mind with exact cascade list,
-  crash at the class step, pencil edit surviving SIGKILL restart). UI unit
-  tests 32 passed; `tsc`/eslint clean; clippy zero warnings.
-- Budgets: suite execution wall time **15 s** (< 20 s, CI-gated);
-  wizard projection incl. prep asserted **< 5 ms**; warm-rebuild gate
-  unchanged (CI-measured).
-- Deltas: rules-data 0.2.0 → 0.3.0 (+33 records, 450 total IDs in the
-  lineage record); WASM binary 908 KB → 1 061 KB (+153 KB, embedded spell
-  data + scoped machinery); attestation: **zero unwaived mismatches, zero
-  stale waivers** (one new reviewed waiver: `kit.wizard`, book-only like
-  the Fighter kit).
-- Reference verification: all 29 spells match the pinned Foundry snapshot
-  on rank/traditions/traits/actions/defense/range/area/targets/duration
-  and heightening shape; pages and Player-Core-only membership (Ray of
-  Frost, Mage Hand, Feather Fall correctly excluded as legacy-only)
-  cross-checked against the Archives of Nethys index.
+- `cargo test --workspace`: **116 passed, 0 failed** (includes the new
+  `class_isolation` binary, replay 16, perf 2); `cargo clippy
+  --workspace --all-targets`: **0 warnings**; `cargo fmt` clean.
+  Wall time 13 s.
+- UI: vitest **36 passed** (5 files), `tsc --noEmit` clean, eslint clean.
+- Playwright e2e: **26 passed in ~36 s** — 20 Fighter walks/stories
+  (unchanged, the regression net), 4 Wizard stories, 2 layout-stress —
+  every step visit swept by `expectSaneLayout`.
+- Engine byte-identity: `git diff main...HEAD --stat -- crates/engine-core
+  crates/types crates/server/src/persistence crates/server/src/routes.rs
+  crates/server/src/version.rs` → **empty** (0 files, 0 lines).
+- Hands-on browser passes (Playwright-driven, screenshots reviewed):
+  found → fixed the tablet starved-column bug, the illegal-slot collapse,
+  and the green-ack-on-illegal-save; final finalized sheet visually
+  verified at desktop and tablet widths.
 
 ## Complaints logged
 
-None — no harness friction this checkpoint.
+One from the first round of this checkpoint (2026-08-28, implement stage):
+no clear channel for iterative human feedback during report review — the
+findings-gathering flow used here was improvised. Nothing new this round.
