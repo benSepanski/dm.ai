@@ -7,8 +7,9 @@ use serde::{Deserialize, Serialize};
 use types::{Decision, SheetDiff, SheetView, StepId};
 
 /// Current schema, stamped on every write. v2 = v1 plus the `suggested`
-/// decision source (quick build); structurally identical otherwise.
-pub(crate) const SCHEMA_VERSION: u32 = 2;
+/// decision source (quick build); v3 = v2 plus the `random` and `clone`
+/// decision sources (roster ergonomics); structurally identical otherwise.
+pub(crate) const SCHEMA_VERSION: u32 = 3;
 /// Oldest schema this binary still reads. v1 files are accepted on load,
 /// never rewritten by loading, and upgraded on their next ordinary write.
 pub(crate) const MIN_SCHEMA_VERSION: u32 = 1;

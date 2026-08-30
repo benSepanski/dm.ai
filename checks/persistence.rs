@@ -69,7 +69,7 @@ fn documents_round_trip_a_versioned_schema() {
     // The document on disk carries the schema version and parses.
     let path = dir.path().join(format!("characters/{id}.json"));
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(doc["schema_version"], 2);
+    assert_eq!(doc["schema_version"], 3);
     assert_eq!(doc["rules_version"], "pf2e-pc.0.3.1");
     assert_eq!(doc["log"].as_array().unwrap().len(), 2); // name + ancestry
 
@@ -84,9 +84,10 @@ fn documents_round_trip_a_versioned_schema() {
     assert_eq!(character["state"], "draft");
 }
 
-/// Storage schema v2 (architecture: chargen-content): a v1 file reads, is
-/// never rewritten by loading, and upgrades to v2 on its first ordinary
-/// write.
+/// Storage schema discipline (architecture: chargen-content, extended by
+/// roster-ergonomics): an old-schema file reads, is never rewritten by
+/// loading, and upgrades to the current schema on its first ordinary
+/// write. Exercised for v1 (the oldest readable schema).
 #[test]
 fn v1_documents_read_untouched_and_upgrade_on_first_write() {
     let dir = tempfile::tempdir().unwrap();
@@ -136,7 +137,7 @@ fn v1_documents_read_untouched_and_upgrade_on_first_write() {
     }
     let upgraded: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(
-        upgraded["schema_version"], 2,
+        upgraded["schema_version"], 3,
         "first write after load upgrades v1 to the current schema"
     );
 }

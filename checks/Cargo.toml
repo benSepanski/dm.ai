@@ -63,6 +63,14 @@ path = "quick_build.rs"
 name = "class_isolation"
 path = "class_isolation.rs"
 
+[[test]]
+name = "random_mint"
+path = "random_mint.rs"
+
+[[test]]
+name = "clone"
+path = "clone.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }

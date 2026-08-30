@@ -28,6 +28,13 @@ pub enum DecisionSource {
     /// build. Inert for derivation; editing the slot later records the
     /// player as the new source. (Storage schema v2.)
     Suggested,
+    /// Sampled by the random-mint planner from the slot's legal options.
+    /// Inert for derivation, like `Suggested`. (Storage schema v3.)
+    Random,
+    /// The re-minted name decision of a cloned character — the one
+    /// decision a clone does not share verbatim with its source.
+    /// (Storage schema v3.)
+    Clone,
 }
 
 /// A confirmed choice as recorded in the log.

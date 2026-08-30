@@ -83,6 +83,8 @@ pub fn rules_version(data: &RulesData) -> &str {
 /// The class-selection slot ID — lets the server steer fill-remaining to
 /// the chosen class's suggested build without hardcoding game vocabulary.
 pub use mechanics::SLOT_CLASS as CLASS_SLOT_ID;
+pub use mechanics::SLOT_ANCESTRY as ANCESTRY_SLOT_ID;
+pub use mechanics::SLOT_NAME as NAME_SLOT_ID;
 
 /// Every class's suggested build, resolved into the planner's shape:
 /// (class record ID, slot → suggestion). The planner interprets the class

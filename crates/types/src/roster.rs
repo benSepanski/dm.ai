@@ -13,6 +13,18 @@ pub struct RosterView {
     pub problems: Vec<RosterProblem>,
     /// The ORC attribution notice, displayed in the app.
     pub license_notice: String,
+    /// Shipped classes, for the random-mint class picker.
+    #[serde(default)]
+    pub classes: Vec<ClassOption>,
+}
+
+/// One shipped class, as the random-mint picker offers it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct ClassOption {
+    /// The class record ID (a class-slot option ID).
+    pub id: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -104,7 +104,7 @@ fn complete_character(engine: &ruleset_pf2e::Pf2eEngine, class_id: &str) -> Vec<
         let plan = engine
             .expand_suggestions(
                 &log,
-                &|slot| map.get(slot).cloned(),
+                &mut |ctx: &engine_core::SuggestionContext| map.get(ctx.slot).cloned(),
                 &|slot| DecisionId::new(format!("iso-qb.{slot}")),
                 DecisionSource::Suggested,
             )

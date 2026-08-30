@@ -1,0 +1,56 @@
+{
+  "comment": "Own-authored random-name pools (roster-ergonomics spec req 4). App data, not rules content: no license metadata, excluded from attestation by living outside rules-data/. Keyed by ancestry record ID; 'default' backs any ancestry without a pool. Every name here is invented for dm.ai — no real-world figures, no published-setting names. Editing is a data change: grow a pool, restart the server, done.",
+  "default": [
+    "Ashka", "Brenwick", "Corvale", "Dessamy", "Eryndor", "Fenwild",
+    "Galopa", "Hestrin", "Ilvane", "Jorekka", "Kaspian", "Lunet",
+    "Morvyn", "Nerissa", "Oskavel", "Pryn"
+  ],
+  "pools": {
+    "ancestry.dwarf": [
+      "Borgun Emberbrow", "Thraki Stonevein", "Dagna Hearthammer", "Urgan Deepdelve",
+      "Katla Ironmantle", "Brundis Cragfast", "Veyga Anvilborn", "Torvik Graniteshoulder",
+      "Hilda Coalbraid", "Ragnvi Oreheart", "Sten Bouldergrip", "Yrsa Flintbeard",
+      "Korgan Tunnelwright", "Dvala Gemcounter"
+    ],
+    "ancestry.elf": [
+      "Aelithera", "Syvarran", "Ilyndrel", "Caethlin", "Vaelor", "Miriseth",
+      "Thalindra", "Erevanne", "Lorquil", "Sylfaen", "Naethirel", "Quelisar",
+      "Yavienne", "Faelor"
+    ],
+    "ancestry.gnome": [
+      "Fizzlewink Toppleberry", "Nimna Sparkgather", "Boddyn Whirlpost", "Quilla Fernwhistle",
+      "Zibbo Cogsworth", "Pemmily Dewhopper", "Wrenkin Puddlejump", "Tiksa Marvelmoss",
+      "Ollprim Thistledown", "Genna Wobblewright", "Snib Latchkey", "Vimsy Copperkettle",
+      "Dabbin Mossmutter", "Prilla Glimmerharp"
+    ],
+    "ancestry.goblin": [
+      "Skitch", "Vrukka", "Nagbit", "Zermy", "Grash", "Plikka",
+      "Mordle", "Squick", "Ekkni", "Bozzit", "Ratchak", "Yipnek",
+      "Snarla", "Krivvo"
+    ],
+    "ancestry.halfling": [
+      "Marlow Underbough", "Pippa Greenhollow", "Corbin Teakettle", "Elsie Barleybrook",
+      "Finnan Softstep", "Rosa Thornapple", "Wilbo Merryfield", "Tansy Riverbend",
+      "Oswin Puddlefoot", "Greta Honeymead", "Davin Shortfellow", "Lily Duskmeadow",
+      "Bram Quickstitch", "Nella Warmhearth"
+    ],
+    "ancestry.human": [
+      "Adren Vale", "Maressa Corl", "Teodric Hane", "Ysolde Marchbanks",
+      "Corwin Ash", "Brenna Halloway", "Dorian Vess", "Kessa Rowanfield",
+      "Aldous Trent", "Ivara Stone", "Marek Dunhollow", "Selia Fairwater",
+      "Garrick Poole", "Runa Calloway"
+    ],
+    "ancestry.leshy": [
+      "Burl of the Old Stump", "Petalfall", "Mosswhisper", "Rootling Vess",
+      "Thistlewane", "Sporeling Puff", "Bramblecoat", "Wiltwatch",
+      "Fernfriend", "Barkhollow", "Seedsong", "Loamkeeper",
+      "Duskbloom", "Galltender"
+    ],
+    "ancestry.orc": [
+      "Ursak Grimtusk", "Mahra Bonecarver", "Drogash Stormfist", "Vesha Redmaw",
+      "Kargh Ironhide", "Zula Warbraid", "Thurk Ashenjaw", "Ogra Steelbrow",
+      "Ruknar Bloodpine", "Sharn Cleftfang", "Muzga Stonetooth", "Vrogh Skullkeeper",
+      "Yazka Emberfang", "Groth Hillbreaker"
+    ]
+  }
+}

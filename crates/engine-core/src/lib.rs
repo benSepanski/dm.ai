@@ -8,9 +8,11 @@
 #![forbid(unsafe_code)]
 
 mod engine;
+mod sampler;
 mod slot;
 
 pub use engine::*;
+pub use sampler::*;
 pub use slot::*;
 
 #[cfg(test)]

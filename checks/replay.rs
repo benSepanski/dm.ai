@@ -1144,7 +1144,7 @@ fn garrek_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
     let plan = engine
         .expand_suggestions(
             &[],
-            &|slot| map.get(slot).cloned(),
+            &mut |ctx: &engine_core::SuggestionContext| map.get(ctx.slot).cloned(),
             &|slot| DecisionId::new(format!("qb.{slot}")),
             types::DecisionSource::Suggested,
         )

@@ -203,3 +203,47 @@ pub enum FillRemainingOutcome {
     /// The submitted version is stale — reload from `current`.
     Conflict { current: DraftView },
 }
+
+// ---- Random mint & clone (roster-ergonomics spec reqs 1-5) ----
+
+/// One-tap random character: create a draft and fill every required slot
+/// with random legal picks (never the published suggested build).
+/// `request_id` is client-generated and doubles as the entropy source —
+/// the same request always mints the same character, so a retry after a
+/// crash returns the already-saved draft and appends nothing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct RandomMintRequest {
+    pub request_id: String,
+    /// Class record ID to mint, or `None` for "any" (sampled uniformly
+    /// over shipped classes). A chosen class is recorded as a player
+    /// decision; a sampled one as a random decision.
+    pub class_id: Option<String>,
+    /// Optional player-typed name; recorded as a player decision and
+    /// never overwritten by the generator.
+    pub name: Option<String>,
+}
+
+/// The clone request: duplicate `source_id` as a new character whose only
+/// log difference is the name decision (clone provenance, this `name`).
+/// `request_id` follows the quick-build idempotency scheme; a retried
+/// request returns the already-created character and ignores a changed
+/// `name` (first write wins).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct CloneRequest {
+    pub request_id: String,
+    pub source_id: CharacterId,
+    pub name: String,
+}
+
+/// A successful clone: the new character's roster identity. The client
+/// refreshes the roster or opens the character by ID.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct CloneResult {
+    pub id: CharacterId,
+    pub name: String,
+    /// True when the clone is finalized (source was finalized).
+    pub finalized: bool,
+}
