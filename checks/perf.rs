@@ -113,3 +113,37 @@ fn wizard_projection_is_under_5ms() {
         "wizard projection took {per_run:?} per run — budget is 5 ms"
     );
 }
+
+/// roster-ergonomics: a random mint — request to saved draft, driven
+/// through the real server the way the idempotency harness drives it —
+/// lands in under 250 ms over shipped data (architecture, performance
+/// budgets). Measured across several mints so one warm-up outlier can't
+/// pass or fail it alone.
+#[test]
+#[allow(clippy::disallowed_methods)] // timing a budget needs a clock
+fn random_mint_is_under_250ms() {
+    let dir = tempfile::tempdir().unwrap();
+    let server = checks::TestServer::spawn(dir.path());
+    let client = reqwest::blocking::Client::new();
+    let mint = |request_id: &str| {
+        let response = client
+            .post(format!("{}/api/characters/random-mint", server.url))
+            .json(&serde_json::json!({
+                "request_id": request_id, "class_id": null, "name": null
+            }))
+            .send()
+            .unwrap();
+        assert!(response.status().is_success());
+    };
+    mint("perf-warmup");
+    let runs = 5u32;
+    let start = std::time::Instant::now();
+    for i in 0..runs {
+        mint(&format!("perf-mint-{i}"));
+    }
+    let per_run = start.elapsed() / runs;
+    assert!(
+        per_run < std::time::Duration::from_millis(250),
+        "a random mint took {per_run:?} — budget is 250 ms"
+    );
+}
