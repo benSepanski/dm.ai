@@ -974,14 +974,58 @@ async fn random_mint(
                 }
             }
         };
-        app.engine
+        let mut plan = app
+            .engine
             .expand_suggestions(
                 &log,
                 &mut random_source,
                 &|slot| suggestion_decision_id(&request_id, slot),
                 DecisionSource::Random,
             )
-            .map_err(|e| Failure::Internal(e.to_string()))?
+            .map_err(|e| Failure::Internal(e.to_string()))?;
+        // Two situations leave a flagged slot behind: a sampled pick can
+        // grow a later count (boosting Intelligence raises the language
+        // and trained-skill counts) after those slots were filled, and a
+        // set-level validator can flag a confirmed selection (the
+        // Wizard's curriculum floor judges at the checklist, not at
+        // append). The planner never overwrites, so re-open OUR OWN
+        // generated decisions that got flagged and resample them at the
+        // settled counts. Bounded; player decisions are never touched.
+        for _ in 0..8 {
+            let projection = app
+                .engine
+                .project(&plan.log)
+                .map_err(|e| Failure::Internal(e.to_string()))?;
+            let incomplete: Vec<SlotId> = projection
+                .checklist
+                .iter()
+                .map(|e| e.slot.clone())
+                .filter(|slot| {
+                    plan.log
+                        .iter()
+                        .any(|d| d.slot == *slot && d.source == DecisionSource::Random)
+                })
+                .collect();
+            if incomplete.is_empty() {
+                break;
+            }
+            let mut cleared = plan.log.clone();
+            for slot in &incomplete {
+                if let Ok(new_log) = app.engine.clear(&cleared, slot) {
+                    cleared = new_log;
+                }
+            }
+            plan = app
+                .engine
+                .expand_suggestions(
+                    &cleared,
+                    &mut random_source,
+                    &|slot| suggestion_decision_id(&request_id, slot),
+                    DecisionSource::Random,
+                )
+                .map_err(|e| Failure::Internal(e.to_string()))?;
+        }
+        plan
     };
     log = plan.log;
     // Name the character from the sampled ancestry's pool (typed names
@@ -1087,9 +1131,19 @@ async fn clone_character(
             finalized: existing.state == DocState::Finalized,
         }));
     }
-    // A trashed or quarantined source loads as NotFound/corrupt — the
-    // refusal falls out of the store; nothing is written.
-    let source = store.load(&request.source_id)?;
+    // A trashed source is NotFound; a quarantined one refuses typed —
+    // either way nothing is written.
+    let source = match store.load(&request.source_id) {
+        Ok(source) => source,
+        Err(StoreError::Storage(message)) => {
+            return Err(Failure::Unprocessable(format!(
+                "'{}' cannot be cloned — its file is quarantined ({message}); \
+                 nothing was created",
+                request.source_id
+            )))
+        }
+        Err(e) => return Err(e.into()),
+    };
     let status = status_for(&app.engine, &app.known, &source);
     if let VersionStatus::Unknown { pinned, .. } = &status {
         return Err(Failure::Unprocessable(format!(

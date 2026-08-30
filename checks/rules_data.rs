@@ -264,3 +264,59 @@ fn shipped_ids_are_immutable_and_lineage_is_recorded() {
         }
     }
 }
+
+/// Name pools (roster-ergonomics req 4): own-authored app data living
+/// OUTSIDE rules-data/ (which keeps it out of attestation and
+/// reference-check by construction). Every shipped ancestry has a pool of
+/// at least a dozen usable names, the default pool is non-empty, no name
+/// is blank, and no record carries license metadata — pools are not rules
+/// content.
+#[test]
+fn name_pools_cover_every_shipped_ancestry() {
+    let root = checks::workspace_root();
+    let pools_path = root.join("app-data/name-pools.json");
+    assert!(
+        pools_path.starts_with(root.join("app-data")),
+        "pools live outside rules-data/"
+    );
+    let pools: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&pools_path).unwrap())
+            .expect("app-data/name-pools.json parses");
+    let default = pools["default"].as_array().expect("default pool");
+    assert!(!default.is_empty(), "the default pool backs every fallback");
+
+    let text = serde_json::to_string(&pools).unwrap();
+    assert!(
+        !text.contains("\"license\"") && !text.contains("\"attribution\""),
+        "name pools are app data — no license machinery"
+    );
+
+    let ancestries: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(root.join("rules-data/ancestries.json")).unwrap())
+            .unwrap();
+    let by_ancestry = pools["pools"].as_object().expect("pools map");
+    for record in ancestries.as_array().unwrap() {
+        let id = record["id"].as_str().unwrap();
+        let pool = by_ancestry
+            .get(id)
+            .and_then(|p| p.as_array())
+            .unwrap_or_else(|| panic!("shipped ancestry '{id}' has no name pool"));
+        assert!(
+            pool.len() >= 12,
+            "ancestry '{id}' pool has {} names — at least a dozen required",
+            pool.len()
+        );
+    }
+    for (pool_id, pool) in by_ancestry {
+        for name in pool.as_array().expect("pool is a list") {
+            let name = name.as_str().expect("names are strings");
+            assert!(
+                !name.trim().is_empty(),
+                "blank name in pool '{pool_id}'"
+            );
+        }
+    }
+    for name in default {
+        assert!(!name.as_str().unwrap().trim().is_empty(), "blank default name");
+    }
+}
