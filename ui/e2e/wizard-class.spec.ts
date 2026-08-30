@@ -212,9 +212,13 @@ test('illegal picks are flagged at the card and clear in place', async ({ page }
   // Saved (an illegal state is still durable — the engine judges, the UI
   // never blocks) — and the card says what is wrong right there.
   await expect(card.getByText(/at least 2 .*curriculum/)).toBeVisible();
-  // Fix in place: swap back to a curriculum spell.
+  await expect(card).toHaveClass(/status-illegal/);
+  // Fix in place: swap back to a curriculum spell. The red frame lifts
+  // with the live preview — while the fix is still unconfirmed — the
+  // same way the meters and the message do.
   await uncheckExact(page, 'pf2e.class.spellbook.rank1', 'Illusory Disguise');
   await checkExact(page, 'pf2e.class.spellbook.rank1', 'Force Barrage');
+  await expect(card).not.toHaveClass(/status-illegal/);
   await card.getByRole('button', { name: /confirm/i }).click();
   await expect(card.locator('.slot-confirmed-value')).toBeVisible();
   await expect(card.getByText(/at least 2 .*curriculum/)).toHaveCount(0);

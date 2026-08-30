@@ -123,9 +123,14 @@ export function SlotCard({
     (slot.status === 'partial' || slot.status === 'illegal'
       ? (confirmed?.selection ?? null)
       : null);
+  // Status STYLING tracks the live preview, like the meters and the error
+  // register do: the red frame lifts the moment the tentative picks are
+  // legal again, not only after Confirm. Behavior (which editor opens,
+  // what counts as confirmed) stays on the server-confirmed slot.
+  const liveStatus = (live ?? slot).status;
   return (
     <section
-      className={`slot status-${slot.status} ${confirmed !== null && !editing ? 'confirmed' : ''}`}
+      className={`slot status-${liveStatus} ${confirmed !== null && !editing ? 'confirmed' : ''}`}
       data-slot={slot.id}
     >
       <header>
