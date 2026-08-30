@@ -39,6 +39,37 @@ function badge(status: StepStatus): string {
   }
 }
 
+/** Semantic selection equality: option lists compare as sets, so
+ * unchecking and re-checking a box (which reorders the array) is a no-op,
+ * not an "unconfirmed change". */
+export function sameSelection(a: Selection, b: Selection): boolean {
+  if (a.kind !== b.kind) {
+    return false;
+  }
+  if (a.kind === 'options' && b.kind === 'options') {
+    return (
+      a.value.length === b.value.length &&
+      [...a.value].sort().join('\u0000') === [...b.value].sort().join('\u0000')
+    );
+  }
+  return a.value === b.value;
+}
+
+/** An empty tentative selection on a slot with nothing saved is also a
+ * no-op: typing into a field and deleting it all must not arm anything. */
+export function isRealEdit(saved: Selection | undefined, selection: Selection): boolean {
+  if (saved !== undefined) {
+    return !sameSelection(saved, selection);
+  }
+  if (selection.kind === 'text') {
+    return selection.value.trim() !== '';
+  }
+  if (selection.kind === 'options') {
+    return selection.value.length > 0;
+  }
+  return true;
+}
+
 export function Wizard({
   initial,
   onFinalized,
@@ -65,6 +96,8 @@ export function Wizard({
   // A refusal pinned to its card: outcomes render where the player is
   // looking, never only in the top-of-step notice.
   const [cardError, setCardError] = useState<{ slot: string; message: string } | null>(null);
+  // Guard against silently discarding real unconfirmed edits on exit.
+  const [leaveDialog, setLeaveDialog] = useState(false);
 
   useEffect(() => {
     if (ack === null) {
@@ -91,6 +124,35 @@ export function Wizard({
   }, []);
 
   const serverLog = useMemo(() => logFromProjection(draft.projection), [draft]);
+
+  // A tentative edit identical to the confirmed selection is not an edit.
+  // Pruning on every draft change keeps `pending` meaning exactly "differs
+  // from what is saved" — the finalize gate and the unconfirmed-changes
+  // chip both rely on that.
+  useEffect(() => {
+    setPending((p) => {
+      const confirmed = new Map(
+        logFromProjection(draft.projection).map((d) => [d.slot, d.selection]),
+      );
+      const kept = Object.entries(p).filter(([slot, selection]) =>
+        isRealEdit(confirmed.get(slot), selection),
+      );
+      return kept.length === Object.keys(p).length ? p : Object.fromEntries(kept);
+    });
+  }, [draft]);
+
+  // The slots with real unconfirmed edits, with labels for the chip.
+  const pendingSlots = useMemo(() => {
+    const bySlot = new Map(
+      draft.projection.steps.flatMap((st) =>
+        st.slots.map((sl) => [sl.id, { label: sl.label, step: st.id }] as const),
+      ),
+    );
+    return Object.keys(pending).flatMap((id) => {
+      const found = bySlot.get(id);
+      return found === undefined ? [] : [{ id, label: found.label, step: found.step }];
+    });
+  }, [pending, draft]);
 
   // The displayed projection: server state plus every tentative selection,
   // recomputed by the local engine. Falls back to the server's projection
@@ -192,8 +254,9 @@ export function Wizard({
           break;
         }
         case 'conflict':
+          // Reload the truth but keep in-progress edits: the prune effect
+          // drops any that now match, and the chip shows the rest.
           setDraft(outcome.current);
-          setPending({});
           setNotice(
             'This draft was changed from another tab — the latest confirmed state has been reloaded.',
           );
@@ -301,7 +364,6 @@ export function Wizard({
           break;
         case 'conflict':
           setDraft(outcome.current);
-          setPending({});
           setNotice('This draft was changed from another tab — reloaded.');
           break;
       }
@@ -315,7 +377,11 @@ export function Wizard({
   return (
     <div className="wizard">
       <nav className="wizard-steps">
-        <button type="button" className="wizard-back" onClick={onExit}>
+        <button
+          type="button"
+          className="wizard-back"
+          onClick={() => (pendingSlots.length > 0 ? setLeaveDialog(true) : onExit())}
+        >
           ← Roster
         </button>
         <ol>
@@ -334,32 +400,71 @@ export function Wizard({
             </li>
           ))}
         </ol>
-        <button
-          type="button"
-          className="fill-remaining"
-          disabled={displayed.can_finalize || busy}
-          onClick={() => void fillWithSuggestions()}
-          title={
-            displayed.can_finalize
-              ? 'Nothing left to fill'
-              : "Fill every open choice with dm.ai's suggested build — your confirmed choices never move"
-          }
-        >
-          Fill remaining with suggestions
-        </button>
+        {!displayed.can_finalize && (
+          // Hidden (not disabled-with-no-reason) once there is nothing
+          // left to fill: a dead control the player can't explain is a
+          // banned state.
+          <button
+            type="button"
+            className="fill-remaining"
+            disabled={busy}
+            data-busy={busy || undefined}
+            onClick={() => void fillWithSuggestions()}
+            title="Fill every open choice with dm.ai's suggested build — your confirmed choices never move"
+          >
+            Fill remaining with suggestions
+          </button>
+        )}
         <button
           type="button"
           className="finalize confirm"
-          disabled={!displayed.can_finalize || Object.keys(pending).length > 0 || busy}
+          disabled={!draft.projection.can_finalize || pendingSlots.length > 0 || busy}
+          data-busy={busy || undefined}
+          aria-describedby={
+            !draft.projection.can_finalize || pendingSlots.length > 0
+              ? 'finalize-blockers'
+              : undefined
+          }
           onClick={() => void finalize()}
           title={
-            displayed.can_finalize
+            draft.projection.can_finalize && pendingSlots.length === 0
               ? 'Lock in this character'
-              : 'Resolve every checklist item to finalize'
+              : undefined
           }
         >
           Finalize character
         </button>
+        {pendingSlots.length > 0 ? (
+          <div className="finalize-blockers pending-chip" id="finalize-blockers" role="status">
+            <p>Unconfirmed changes:</p>
+            <ul>
+              {pendingSlots.map((entry) => (
+                <li key={entry.id}>
+                  <button
+                    type="button"
+                    className="pending-jump"
+                    onClick={() => {
+                      gotoStep(entry.step);
+                      requestAnimationFrame(() => {
+                        document
+                          .querySelector(`[data-slot="${entry.id}"]`)
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      });
+                    }}
+                  >
+                    {entry.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          !draft.projection.can_finalize && (
+            <p className="finalize-blockers" id="finalize-blockers">
+              Resolve every checklist item to finalize.
+            </p>
+          )
+        )}
       </nav>
 
       <main className="wizard-main">
@@ -379,7 +484,7 @@ export function Wizard({
             tentative={pending[slot.id] ?? null}
             onTentative={(selection) =>
               setPending((p) => {
-                if (selection === null) {
+                if (selection === null || !isRealEdit(slot.decision?.selection, selection)) {
                   return Object.fromEntries(
                     Object.entries(p).filter(([k]) => k !== slot.id),
                   );
@@ -391,16 +496,56 @@ export function Wizard({
             onRequestChange={() => requestChange(slot.id, slot.label)}
             busy={busy}
             ack={ack !== null && ack.slot === slot.id ? ack.message : null}
-            error={cardError !== null && cardError.slot === slot.id ? cardError.message : null}
+            error={
+              cardError !== null && cardError.slot === slot.id
+                ? cardError.message
+                : // A slot made illegal from elsewhere (a school change, a
+                  // background grant) explains itself at the card too, not
+                  // only in the sidebar checklist.
+                  (displayed.checklist.find(
+                    (e) => e.slot === slot.id && e.severity === 'illegal',
+                  )?.message ?? null)
+            }
           />
         ))}
       </main>
 
       <aside className="wizard-side">
-        <Checklist entries={displayed.checklist} onJump={jumpToEntry} />
+        <Checklist
+          entries={displayed.checklist}
+          onJump={jumpToEntry}
+          pendingCount={pendingSlots.length}
+        />
         <Sheet sheet={displayed.sheet} compact />
       </aside>
 
+      {leaveDialog && (
+        <div className="modal-backdrop">
+          <div className="modal" role="dialog" aria-modal="true">
+            <h3>Unconfirmed changes</h3>
+            <p>
+              You have unconfirmed changes in:{' '}
+              {pendingSlots.map((entry) => entry.label).join(', ')}. Leaving
+              discards them (your confirmed choices are safe).
+            </p>
+            <div className="modal-actions">
+              <button type="button" onClick={() => setLeaveDialog(false)}>
+                Stay
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={() => {
+                  setLeaveDialog(false);
+                  onExit();
+                }}
+              >
+                Discard changes and leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {clearDialog !== null && (
         <ClearConfirmDialog
           preview={clearDialog.preview}

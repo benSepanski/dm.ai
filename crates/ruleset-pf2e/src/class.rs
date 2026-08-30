@@ -70,6 +70,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     ],
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 })
                 .collect()
         }),
@@ -130,6 +132,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     details: vec![],
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 })
                 .collect()
         }),

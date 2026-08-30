@@ -10,8 +10,7 @@ use crate::data::{BackgroundRecord, RulesData};
 use crate::mechanics::{
     attribute_options, describe_selection, illegal, incomplete, lore_name_from_text, sel_attribute,
     sel_single, sel_text, Pf2eState, SkillGrant, SLOT_BACKGROUND, SLOT_BACKGROUND_BOOST_CHOICE,
-    SLOT_BACKGROUND_BOOST_FREE, SLOT_BACKGROUND_LORE, SLOT_BACKGROUND_SKILL, SLOT_REPLACEMENT_1,
-    SLOT_REPLACEMENT_2, SLOT_REPLACEMENT_3,
+    SLOT_BACKGROUND_BOOST_FREE, SLOT_BACKGROUND_LORE, SLOT_BACKGROUND_SKILL,
 };
 
 const STEP: &str = crate::mechanics::STEP_BACKGROUND;
@@ -59,9 +58,6 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
             SlotId::new(SLOT_BACKGROUND_BOOST_FREE),
             SlotId::new(SLOT_BACKGROUND_SKILL),
             SlotId::new(SLOT_BACKGROUND_LORE),
-            SlotId::new(SLOT_REPLACEMENT_1),
-            SlotId::new(SLOT_REPLACEMENT_2),
-            SlotId::new(SLOT_REPLACEMENT_3),
         ],
         options: Box::new(move |_| {
             d.backgrounds
@@ -107,6 +103,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                         ],
                         available: true,
                         unavailable_reason: None,
+                        group: None,
+                        badge: None,
                     }
                 })
                 .collect()
@@ -185,6 +183,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     details: vec![],
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 })
                 .collect()
         }),
@@ -292,8 +292,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
     // --- Background skill sub-choice (Scholar pattern) ---
     // Exists only while a background with a skill_choice list is chosen;
     // clearing/changing the background clears it via the dependents
-    // cascade. The pick lands as a fixed grant, so it feeds the same
-    // collision/replacement machinery as a fixed background skill.
+    // cascade. The pick lands as a fixed grant, so it owns its skill the
+    // same way a fixed background skill does.
     let d = data.clone();
     let d_unlock = data.clone();
     let d_apply = data.clone();
@@ -313,11 +313,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 Availability::Hidden
             }
         }),
-        dependents: vec![
-            SlotId::new(SLOT_REPLACEMENT_1),
-            SlotId::new(SLOT_REPLACEMENT_2),
-            SlotId::new(SLOT_REPLACEMENT_3),
-        ],
+        dependents: vec![],
         options: Box::new(move |state| {
             let Some(b) = background_with_skill_choice(&d, state) else {
                 return vec![];
@@ -332,6 +328,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     details: vec![],
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 })
                 .collect()
         }),

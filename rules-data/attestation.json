@@ -2,7 +2,7 @@
   "claims_full_breadth": true,
   "foundry_sha256": "b0a649e6f9859350f7eca86e85082ac68b20309f4335c77bf6e1643aff009c8a",
   "foundry_tag": "pf2e-8.4.1",
-  "generated": "2026-08-29",
+  "generated": "2026-08-30",
   "missing_from_data": {
     "ancestries": {
       "count": 0,
@@ -6401,6 +6401,6 @@
       "waiver": null
     }
   },
-  "rules_version": "pf2e-pc.0.3.0",
+  "rules_version": "pf2e-pc.0.3.1",
   "tool_version": "0.1.0"
 }

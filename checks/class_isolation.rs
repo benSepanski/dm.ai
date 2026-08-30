@@ -201,3 +201,42 @@ fn no_cross_class_vocabulary_in_projections() {
         }
     }
 }
+
+/// Meter semantics live in the `MeterView` constructors (requirement /
+/// exact / budget) so a meter's displayed numbers and its state can never
+/// disagree — "3 of 2" on a satisfied minimum was a real bug. No code
+/// outside the types crate may build a `MeterView` literal.
+#[test]
+fn meters_are_built_only_through_their_constructors() {
+    let root = checks::workspace_root();
+    let mut violations = Vec::new();
+    for dir in [
+        "crates/engine-core",
+        "crates/ruleset-pf2e",
+        "crates/server",
+        "crates/wasm",
+    ] {
+        let mut stack = vec![root.join(dir)];
+        while let Some(d) = stack.pop() {
+            for entry in std::fs::read_dir(&d).into_iter().flatten().flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    if path.file_name().is_some_and(|n| n == "target") {
+                        continue;
+                    }
+                    stack.push(path);
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    let src = std::fs::read_to_string(&path).unwrap();
+                    if src.contains("MeterView {") {
+                        violations.push(path.display().to_string());
+                    }
+                }
+            }
+        }
+    }
+    assert!(
+        violations.is_empty(),
+        "raw MeterView literal outside crates/types (use MeterView::requirement / \
+         ::exact / ::budget so display and state stay coherent): {violations:?}"
+    );
+}

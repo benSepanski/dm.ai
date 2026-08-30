@@ -200,20 +200,66 @@ function MetersRow({ meters }: { meters: MeterView[] }) {
 }
 
 function ConfirmedSummary({ slot, decision }: { slot: SlotView; decision: Decision }) {
+  const [expanded, setExpanded] = useState(false);
   const label = (id: string) => slot.options.find((o) => o.id === id)?.label ?? id;
   let text: string;
+  let chosenIds: string[] = [];
   switch (decision.selection.kind) {
     case 'option':
       text = label(decision.selection.value);
+      chosenIds = [decision.selection.value];
       break;
     case 'options':
       text = decision.selection.value.map(label).join(', ');
+      chosenIds = decision.selection.value;
       break;
     case 'text':
       text = decision.selection.value;
       break;
   }
-  return <p className="slot-confirmed-value">{text}</p>;
+  // A confirmed choice keeps its details readable — committing to an
+  // option must never mean losing the ability to re-read what it does.
+  const chosen = chosenIds
+    .map((id) => slot.options.find((o) => o.id === id))
+    .filter((o): o is OptionView => o !== undefined)
+    .filter((o) => o.summary !== '' || o.details.length > 0);
+  return (
+    <div className="slot-confirmed-body">
+      <p className="slot-confirmed-value">{text}</p>
+      {chosen.length > 0 && (
+        <button
+          type="button"
+          className="confirmed-details-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((e) => !e)}
+        >
+          {expanded ? 'Hide details ▲' : 'Details ▼'}
+        </button>
+      )}
+      {expanded && (
+        <ul className="confirmed-details">
+          {chosen.map((option) => (
+            <li key={option.id}>
+              <span className="confirmed-detail-name">
+                {option.label}
+                {option.badge != null && (
+                  <span className="option-badge">{option.badge}</span>
+                )}
+              </span>
+              {option.summary !== '' && (
+                <span className="option-summary">{option.summary}</span>
+              )}
+              {option.details.map((d, i) => (
+                <span key={i} className="option-detail">
+                  {d}
+                </span>
+              ))}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function SlotEditor({
@@ -284,6 +330,7 @@ function SlotEditor({
     case 'text':
       return (
         <TextEditor
+          slotId={slot.id}
           multiline={slot.kind.multiline}
           tentative={tentative}
           onTentative={onTentative}
@@ -292,6 +339,100 @@ function SlotEditor({
         />
       );
   }
+}
+
+/** The one confirm footer: when the button is disabled for a reason the
+ * player controls, that reason renders right next to it — a disabled
+ * control with no visible explanation is a banned state (layout sweep). */
+function ConfirmButton({
+  slotId,
+  label,
+  disabledReason,
+  busy,
+  onClick,
+}: {
+  slotId: string;
+  label: string;
+  disabledReason: string | null;
+  busy: boolean;
+  onClick: () => void;
+}) {
+  const hintId = `confirm-hint-${slotId}`;
+  return (
+    <footer className="slot-actions">
+      {disabledReason !== null && (
+        <p className="confirm-hint" id={hintId}>
+          {disabledReason}
+        </p>
+      )}
+      <button
+        type="button"
+        className="confirm"
+        disabled={disabledReason !== null || busy}
+        data-busy={busy || undefined}
+        aria-describedby={disabledReason !== null ? hintId : undefined}
+        onClick={onClick}
+      >
+        Confirm {label}
+      </button>
+    </footer>
+  );
+}
+
+/** Interleave group headings into a visible option list. Headings render
+ * only when the full catalog spans more than one labeled group, and they
+ * ride with the rows, so a filtered list stays labeled. */
+export function groupedRows(
+  all: OptionView[],
+  visible: OptionView[],
+): (OptionView | string)[] {
+  const distinct = new Set(
+    all.map((o) => o.group).filter((g): g is string => g != null),
+  );
+  if (distinct.size < 2) {
+    return visible;
+  }
+  const rows: (OptionView | string)[] = [];
+  let current: string | null = null;
+  for (const option of visible) {
+    if (option.group != null && option.group !== current) {
+      rows.push(option.group);
+    }
+    current = option.group ?? current;
+    rows.push(option);
+  }
+  return rows;
+}
+
+function OptionRows({
+  slot,
+  visible,
+  control,
+  selected,
+}: {
+  slot: SlotView;
+  visible: OptionView[];
+  control: (option: OptionView) => React.ReactNode;
+  selected: (option: OptionView) => boolean;
+}) {
+  return (
+    <>
+      {groupedRows(slot.options, visible).map((row) =>
+        typeof row === 'string' ? (
+          <li key={`heading-${row}`} className="option-group-heading">
+            {row}
+          </li>
+        ) : (
+          <OptionRow
+            key={row.id}
+            option={row}
+            selected={selected(row)}
+            control={control(row)}
+          />
+        ),
+      )}
+    </>
+  );
 }
 
 function OptionRow({
@@ -309,7 +450,12 @@ function OptionRow({
       <label>
         {control}
         <span className="option-body">
-          <span className="option-label">{option.label}</span>
+          <span className="option-label">
+            {option.label}
+            {option.badge != null && (
+              <span className="option-badge">{option.badge}</span>
+            )}
+          </span>
           {option.summary !== '' && <span className="option-summary">{option.summary}</span>}
           {!option.available && option.unavailable_reason != null && (
             <span className="option-unavailable">{option.unavailable_reason}</span>
@@ -355,33 +501,28 @@ function SingleEditor({
     <div>
       {filterBox}
       <ul className="option-list">
-        {visible.map((option) => (
-          <OptionRow
-            key={option.id}
-            option={option}
-            selected={picked === option.id}
-            control={
-              <input
-                type="radio"
-                name={slot.id}
-                checked={picked === option.id}
-                disabled={!option.available || busy}
-                onChange={() => onTentative({ kind: 'option', value: option.id })}
-              />
-            }
-          />
-        ))}
+        <OptionRows
+          slot={slot}
+          visible={visible}
+          selected={(option) => picked === option.id}
+          control={(option) => (
+            <input
+              type="radio"
+              name={slot.id}
+              checked={picked === option.id}
+              disabled={!option.available || busy}
+              onChange={() => onTentative({ kind: 'option', value: option.id })}
+            />
+          )}
+        />
       </ul>
-      <footer className="slot-actions">
-        <button
-          type="button"
-          className="confirm"
-          disabled={picked === null || busy}
-          onClick={() => picked !== null && onConfirm({ kind: 'option', value: picked })}
-        >
-          Confirm {slot.label.toLowerCase()}
-        </button>
-      </footer>
+      <ConfirmButton
+        slotId={slot.id}
+        label={slot.label.toLowerCase()}
+        disabledReason={picked === null ? 'Pick one to continue.' : null}
+        busy={busy}
+        onClick={() => picked !== null && onConfirm({ kind: 'option', value: picked })}
+      />
     </div>
   );
 }
@@ -410,7 +551,7 @@ function MultiEditor({
   const { filterBox, visible } = useOptionFilter(slot.options);
   return (
     <div>
-      <p className="multi-counter" data-testid={`counter-${slot.id}`}>
+      <p className="multi-counter" id={`counter-${slot.id}`} data-testid={`counter-${slot.id}`}>
         {remaining > 0
           ? `${remaining} of ${count} choice${count === 1 ? '' : 's'} left`
           : remaining === 0
@@ -419,32 +560,27 @@ function MultiEditor({
       </p>
       {filterBox}
       <ul className="option-list">
-        {visible.map((option) => (
-          <OptionRow
-            key={option.id}
-            option={option}
-            selected={picked.includes(option.id)}
-            control={
-              <input
-                type="checkbox"
-                checked={picked.includes(option.id)}
-                disabled={(!option.available && !picked.includes(option.id)) || busy}
-                onChange={() => toggle(option.id)}
-              />
-            }
-          />
-        ))}
+        <OptionRows
+          slot={slot}
+          visible={visible}
+          selected={(option) => picked.includes(option.id)}
+          control={(option) => (
+            <input
+              type="checkbox"
+              checked={picked.includes(option.id)}
+              disabled={(!option.available && !picked.includes(option.id)) || busy}
+              onChange={() => toggle(option.id)}
+            />
+          )}
+        />
       </ul>
-      <footer className="slot-actions">
-        <button
-          type="button"
-          className="confirm"
-          disabled={picked.length === 0 || busy}
-          onClick={() => onConfirm({ kind: 'options', value: picked })}
-        >
-          Confirm {slot.label.toLowerCase()}
-        </button>
-      </footer>
+      <ConfirmButton
+        slotId={slot.id}
+        label={slot.label.toLowerCase()}
+        disabledReason={picked.length === 0 ? 'Pick at least one to save.' : null}
+        busy={busy}
+        onClick={() => onConfirm({ kind: 'options', value: picked })}
+      />
     </div>
   );
 }
@@ -489,16 +625,13 @@ function SingleBoostEditor({
           </select>
         </label>
       </div>
-      <footer className="slot-actions">
-        <button
-          type="button"
-          className="confirm"
-          disabled={picked === '' || busy}
-          onClick={() => picked !== '' && onConfirm({ kind: 'option', value: picked })}
-        >
-          Confirm {slot.label.toLowerCase()}
-        </button>
-      </footer>
+      <ConfirmButton
+        slotId={slot.id}
+        label={slot.label.toLowerCase()}
+        disabledReason={picked === '' ? 'Pick one to continue.' : null}
+        busy={busy}
+        onClick={() => picked !== '' && onConfirm({ kind: 'option', value: picked })}
+      />
     </div>
   );
 }
@@ -528,7 +661,7 @@ function BoostsEditor({
   const remaining = count - picked.length;
   return (
     <div>
-      <p className="multi-counter" data-testid={`counter-${slot.id}`}>
+      <p className="multi-counter" id={`counter-${slot.id}`} data-testid={`counter-${slot.id}`}>
         {remaining > 0
           ? `${remaining} of ${count} boost${count === 1 ? '' : 's'} left`
           : 'All boosts assigned'}
@@ -553,16 +686,13 @@ function BoostsEditor({
           </label>
         ))}
       </div>
-      <footer className="slot-actions">
-        <button
-          type="button"
-          className="confirm"
-          disabled={picked.length === 0 || busy}
-          onClick={() => onConfirm({ kind: 'options', value: picked })}
-        >
-          Confirm {slot.label.toLowerCase()}
-        </button>
-      </footer>
+      <ConfirmButton
+        slotId={slot.id}
+        label={slot.label.toLowerCase()}
+        disabledReason={picked.length === 0 ? 'Pick at least one to save.' : null}
+        busy={busy}
+        onClick={() => onConfirm({ kind: 'options', value: picked })}
+      />
     </div>
   );
 }
@@ -696,12 +826,14 @@ function ListEditor({
 }
 
 function TextEditor({
+  slotId,
   multiline,
   tentative,
   onTentative,
   onConfirm,
   busy,
 }: {
+  slotId: string;
   multiline: boolean;
   tentative: TentativeSelection;
   onTentative: (selection: TentativeSelection) => void;
@@ -726,16 +858,13 @@ function TextEditor({
           disabled={busy}
         />
       )}
-      <footer className="slot-actions">
-        <button
-          type="button"
-          className="confirm"
-          disabled={value.trim() === '' || busy}
-          onClick={() => onConfirm({ kind: 'text', value })}
-        >
-          Confirm
-        </button>
-      </footer>
+      <ConfirmButton
+        slotId={slotId}
+        label=""
+        disabledReason={value.trim() === '' ? 'Type something to save.' : null}
+        busy={busy}
+        onClick={() => onConfirm({ kind: 'text', value })}
+      />
     </div>
   );
 }

@@ -380,6 +380,11 @@ textarea {
   margin-top: 0.7rem;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+}
+.slot-actions .confirm {
+  flex-shrink: 0;
 }
 
 /* ---- Sidebar ---- */
@@ -744,4 +749,90 @@ textarea {
     position: static;
     max-height: none;
   }
+}
+
+/* --- Round 2: curriculum badges, confirmed details, pending chip --- */
+
+/* A badge chip stays on its row through filtering, unlike position. */
+.option-badge {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent, #7a3306);
+  border: 1px solid currentcolor;
+  border-radius: 0.6rem;
+  vertical-align: 0.08em;
+}
+
+li.option-group-heading {
+  list-style: none;
+}
+
+/* Confirmed choices keep their details readable. */
+.confirmed-details-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.confirmed-details {
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+.confirmed-details li {
+  display: grid;
+  gap: 0.15rem;
+}
+.confirmed-detail-name {
+  font-weight: 600;
+}
+
+/* Why a disabled confirm is disabled, right next to it. */
+.confirm-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+/* The finalize gate explains itself: either the checklist line, or the
+ * unconfirmed-changes chip with jump links. */
+.finalize-blockers {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.pending-chip {
+  border: 1px solid var(--warn);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  background: var(--paper);
+}
+.pending-chip p {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+  color: var(--warn);
+}
+.pending-chip ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pending-jump {
+  background: none;
+  border: none;
+  padding: 0.1rem 0;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 0.85rem;
 }

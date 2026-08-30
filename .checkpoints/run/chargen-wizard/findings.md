@@ -143,3 +143,146 @@ to build-decisions-only. Per-finding outcome:
    curriculum options sorted first and badged, a Curriculum meter, and the
    minimum enforced in place. No player-side tracking of which pick "is
    curriculum".
+
+---
+
+# Round 2 findings (Ben's interactive review, 2026-08-30 — gathering, not yet actioned)
+
+8. **Curriculum marking too subtle.** The only in-list signals are sort
+   order (invisible as a signal — nothing separates the curriculum group)
+   and a plain-prose prefix at the head of the soft-gray summary line,
+   easy to read past while scanning names. Direction: make curriculum
+   spells stand out — a visible badge/chip next to the name and/or a
+   labeled group header ("Battle Magic curriculum" / "Other arcane
+   spells"); must survive filtering.
+
+9. **Confirmed selections hide their details.** A confirmed slot collapses
+   to name + "Change…"; the chosen option's details (school curriculum,
+   thesis text, spell stats) are unreachable without undoing the
+   selection. Direction: hovertip and/or an expand affordance on confirmed
+   values so details stay readable after commitment.
+
+10. **"Curriculum 3 of 2" reads as an error.** The meter shows the raw
+    tally of curriculum spells in the book against the minimum, so
+    exceeding the minimum renders as overfill ("3 of 2") and looks like an
+    illegal selection. A requirement meter must cap at its target:
+    min(count, need) of need ("2 of 2" once satisfied — generally N of N).
+    Conceptually the first two curriculum picks fill the school's added
+    slots; further curriculum spells are just free picks. Consider also
+    marking which chosen spells count as the curriculum picks.
+
+11. **Skill collision attribution is backwards.** With Acrobatics chosen
+    as a free class skill, changing background to Acrobat left Acrobatics
+    attributed "from Wizard" and spawned a fourth "replacement skill"
+    card for the background's grant. Direction: fixed grants win ownership
+    and attribution (sheet says "from Acrobat"); the player's free pick is
+    what becomes redundant and re-judges in the trained-skills card they
+    already know. Design note for actioning: fixed-vs-fixed collisions
+    (background granting Arcana on a Wizard) have no free pick to hand
+    back — the unified model is likely "any collision adds one to the free
+    trained-skills count", dissolving the replacement-slot machinery
+    rather than flipping its precedence. Mechanically identical to RAW's
+    "select another skill".
+
+12. **Finalize dead while the checklist says "ready" (blocker).** Repro:
+    all slots confirmed, sidebar shows "Everything checks out — ready to
+    finalize", Finalize disabled; going back to the roster and re-entering
+    un-sticks it. Diagnosed root cause: the button gates on unconfirmed
+    tentative edits — `disabled={!can_finalize || pending.length > 0 ||
+    busy}` (Wizard.tsx) — and `pending` leaks: ANY interaction with an
+    open editor (toggle a checkbox off and on, touch a preloaded picker,
+    keystroke in a text field) records a pending entry that only a confirm
+    of THAT slot clears. A no-op edit equal to the confirmed selection
+    still counts, is visually indistinguishable from no edit, may live on
+    another step, and nothing on screen explains the dead button. The
+    roster roundtrip works because remounting the wizard resets the
+    in-memory pending map. Fix directions: (a) clear a pending entry when
+    the tentative selection equals the confirmed one; (b) when pending
+    edits do block finalize, say so and where ("unconfirmed changes in
+    Spellbook: rank-1 spells", click-to-jump) instead of a silently
+    disabled button; (c) testing gap — no e2e story drives a no-op edit
+    then finalizes; the layout sweep can't catch dead-control semantics.
+
+    **Agreed design for 10 (Ben, 2026-08-30): abstract meter semantics
+    into code, not just a test.** Two constructors on `MeterView` in the
+    types crate — `requirement(label, have, need)` (progress toward a
+    minimum: displays min(have,need) of need, Ok at threshold; over-
+    satisfaction invisible — curriculum) and `capacity(label, used, cap)`
+    (bounded resource: displays the true value, explicit Over state the
+    UI styles as an error, never clamped — book size, budgets, counters).
+    Rulesets stop hand-formatting; display and state can no longer
+    disagree. Property test covers the constructors once; a checks/ lint
+    bans raw `MeterView { … }` literals outside the types crate.
+
+---
+
+# Round 2 resolutions (landed 2026-08-30, same branch)
+
+Root-cause classes from the post-assessment: goal-directed testing bias,
+invisible state gating distant controls, presence≠salience, resting states
+under-designed, implementation order as silent policy. Every fix below
+pairs the visible change with the structural guard for its class.
+
+8. **Curriculum visibility** — options carry structured `group` + `badge`
+   fields (types crate); the rank-1 picker splits under labeled headers
+   ("School of Battle Magic curriculum" / "Other arcane spells") with a
+   CURRICULUM chip on each curriculum row. The chip rides the row, so it
+   survives filtering; the prose prefix is gone. Pinned by the
+   first-wizard story and `groupedRows` unit tests.
+
+9. **Details after commitment** — confirmed cards grow a "Details ▼"
+   expansion listing each chosen option's summary and full details (the
+   school card shows its curriculum and focus spell in place). Pinned by
+   the details-stay-readable story.
+
+10. **Meter semantics in code** — `MeterView::requirement/exact/budget`
+    constructors in the types crate compute display and state together
+    ("3 of 2" is unrepresentable; capacity/budget overshoot always shows
+    true numbers). All three call sites converted; a checks lint bans raw
+    `MeterView` literals outside types; constructor property tests in the
+    types crate. Pinned by the overshoot story ("8 of 7 — over the
+    limit") and the capped "2 of 2" assert.
+
+11. **Skill ownership policy** — `skill_resolution` now resolves fixed
+    grants FIRST: grants own a skill and its attribution ("from
+    Background: Street Urchin"); a redundant grant or class skill
+    converts into one extra free trained pick (the printed "select
+    another skill instead" rule); a free pick landing on an owned skill
+    re-judges in its own card ("Thievery now comes from … — pick a
+    different skill"). The replacement-slot machinery is deleted. Because
+    stored logs could reference the removed slots, rules-data bumped to
+    pf2e-pc.0.3.1 (supersedes 0.3.0; the version guard's repair flow
+    covers older drafts — no live campaign log contained a replacement
+    decision). Krivvy's golden rebuilt as the ownership story; ruleset
+    unit tests cover grant-owns and redundant-class-skill, and the new
+    owned-skill e2e story walks it in the UI.
+
+12. **Finalize gate made honest** — three layers:
+    (a) no-op edits are unrepresentable: option lists compare as sets and
+        an emptied field on an unconfirmed slot is a no-op
+        (`sameSelection`/`isRealEdit`, unit-tested), with pending entries
+        pruned against every draft reload;
+    (b) real unconfirmed edits are visible: an "Unconfirmed changes" chip
+        under Finalize lists each slot with a jump link, the sidebar
+        banner says "confirm your unconfirmed changes" instead of "ready
+        to finalize", and leaving to the roster warns before discarding
+        (a conflict reload now keeps in-progress edits too);
+    (c) the class is banned: the layout sweep gained a dead-control
+        invariant — a disabled action button with no visible explanation
+        (aria-describedby → rendered text) fails every walk on every
+        screen; every confirm button now renders its reason ("Pick one to
+        continue."), and "Fill remaining" hides when moot instead of
+        disabling silently.
+    Pinned by the meander story (no-op → enabled; real edit → chip,
+    banner, leave-guard; confirm → finalize).
+
+    Bonus from the owned-skill story: a slot made illegal *indirectly*
+    (school change, background grant) now shows its checklist message at
+    the card, not only in the sidebar.
+
+Predictions verified: (d) Int-shrink re-judge existed and is now pinned
+(`shrinking_intelligence_rejudges_over_count_skill_picks`); (f) budget
+meter shows negative remaining, never clamped; (g) quick-build is honest
+("Quick build a Fighter"); (j) language duplicates blocked by data
+integrity + dedup validator. Deferred to Epoch 8: sheet-side spell
+details (same resting-state class as finding 9).

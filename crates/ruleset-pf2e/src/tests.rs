@@ -20,7 +20,7 @@ use crate::mechanics::{
     SLOT_BACKGROUND, SLOT_BACKGROUND_BOOST_CHOICE, SLOT_BACKGROUND_BOOST_FREE,
     SLOT_BACKGROUND_LORE, SLOT_BACKGROUND_SKILL, SLOT_CLASS, SLOT_CLASS_SKILL, SLOT_FEAT_LORE,
     SLOT_FEAT_SKILLS, SLOT_FREE_BOOSTS, SLOT_HERITAGE, SLOT_HERITAGE_GENERAL_FEAT,
-    SLOT_REPLACEMENT_1, SLOT_TRAINED_SKILLS,
+    SLOT_TRAINED_SKILLS,
 };
 
 // ---- Synthetic dataset -------------------------------------------------
@@ -729,7 +729,7 @@ fn background_subchoice_clears_with_the_background() {
 }
 
 #[test]
-fn background_subchoice_feeds_the_replacement_machinery() {
+fn a_grant_owns_its_skill_and_the_free_pick_rejudges_in_place() {
     let engine = engine();
     let mut log = Vec::new();
     confirm(&engine, &mut log, SLOT_CLASS, one("class.fighter"));
@@ -752,12 +752,116 @@ fn background_subchoice_feeds_the_replacement_machinery() {
         SLOT_BACKGROUND_SKILL,
         one("skill.religion"),
     );
+    // The grant owns Religion — attribution names Scholar, and the free
+    // pick that duplicated it re-judges in its own slot, not a fresh one.
+    let state = engine.fold(&log).unwrap();
+    let resolution = state.skill_resolution();
+    let (_, owner) = resolution
+        .trained
+        .iter()
+        .find(|(id, _)| id == "skill.religion")
+        .expect("religion trained");
+    assert_eq!(owner, "Background: Scholar");
     let p = engine.project(&log).unwrap();
-    let replacement = slot_view(&p, SLOT_REPLACEMENT_1).expect("collision opens a replacement");
-    assert!(replacement.locked_reason.is_none());
     assert!(p.checklist.iter().any(|e| {
-        e.slot.as_str() == SLOT_REPLACEMENT_1 && e.message.contains("already trained")
+        e.slot.as_str() == SLOT_TRAINED_SKILLS
+            && e.message
+                .contains("Religion now comes from Background: Scholar")
     }));
+}
+
+#[test]
+fn shrinking_intelligence_rejudges_over_count_skill_picks() {
+    // The growing direction is walked everywhere; the shrink direction —
+    // boosts amended down AFTER skills were confirmed against the higher
+    // count — must re-judge as illegal, never silently truncate.
+    let engine = engine();
+    let mut log = Vec::new();
+    confirm(&engine, &mut log, SLOT_CLASS, one("class.fighter"));
+    confirm(
+        &engine,
+        &mut log,
+        SLOT_FREE_BOOSTS,
+        many(&["attr.int", "attr.str", "attr.dex", "attr.wis"]),
+    );
+    confirm(&engine, &mut log, SLOT_CLASS_SKILL, one("skill.acrobatics"));
+    // Int +1 -> base 3 + 1 = 4 picks.
+    confirm(
+        &engine,
+        &mut log,
+        SLOT_TRAINED_SKILLS,
+        many(&[
+            "skill.athletics",
+            "skill.arcana",
+            "skill.nature",
+            "skill.religion",
+        ]),
+    );
+    assert!(engine
+        .project(&log)
+        .unwrap()
+        .checklist
+        .iter()
+        .all(|e| { e.slot.as_str() != SLOT_TRAINED_SKILLS }));
+    // Boosts move off Int: the four confirmed picks are now one too many.
+    let out = engine
+        .amend(
+            &log,
+            DecisionInput {
+                id: DecisionId::new("shrink-int"),
+                slot: SlotId::new(SLOT_FREE_BOOSTS),
+                selection: many(&["attr.str", "attr.dex", "attr.wis", "attr.cha"]),
+                source: DecisionSource::Player,
+            },
+        )
+        .unwrap();
+    let engine_core::AppendOutcome::Appended(log) = out else {
+        panic!("boost amend must append");
+    };
+    let p = engine.project(&log).unwrap();
+    assert!(
+        p.checklist.iter().any(|e| {
+            e.slot.as_str() == SLOT_TRAINED_SKILLS
+                && e.message.contains("4 skills selected but only 3 allowed")
+        }),
+        "checklist: {:#?}",
+        p.checklist
+    );
+}
+
+#[test]
+fn a_redundant_class_skill_converts_into_an_extra_free_pick() {
+    let engine = engine();
+    let mut log = Vec::new();
+    confirm(&engine, &mut log, SLOT_CLASS, one("class.fighter"));
+    confirm(&engine, &mut log, SLOT_ANCESTRY, one("ancestry.elf"));
+    confirm(
+        &engine,
+        &mut log,
+        SLOT_HERITAGE,
+        one("heritage.elf.war-taught"),
+    );
+    // War-Taught grants Athletics; choosing Athletics as the class skill
+    // is legal per the printed rule — the class instead adds a free pick.
+    confirm(&engine, &mut log, SLOT_CLASS_SKILL, one("skill.athletics"));
+    let state = engine.fold(&log).unwrap();
+    let resolution = state.skill_resolution();
+    assert_eq!(resolution.extra_free_picks.len(), 1);
+    assert!(resolution.illegal_choice_dupes.is_empty());
+    let p = engine.project(&log).unwrap();
+    let trained = slot_view(&p, SLOT_TRAINED_SKILLS).expect("trained slot open");
+    // Fighter base 3 + Int 0 + 1 redundancy = 4 picks.
+    assert!(matches!(
+        trained.kind,
+        types::SlotViewKind::Multi { count: 4 }
+    ));
+    // Attribution stays with the grant.
+    let (_, owner) = resolution
+        .trained
+        .iter()
+        .find(|(id, _)| id == "skill.athletics")
+        .expect("athletics trained");
+    assert_eq!(owner, "War-Taught Elf");
 }
 
 #[test]

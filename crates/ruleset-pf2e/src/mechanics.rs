@@ -164,7 +164,7 @@ pub struct SkillGrant {
     pub source: String,
 }
 
-/// A player-chosen set of skills (class picks, chooser slots, replacements).
+/// A player-chosen set of skills (class picks, chooser slots).
 #[derive(Debug, Clone)]
 pub struct SkillChoice {
     pub slot: &'static str,
@@ -243,39 +243,45 @@ impl Pf2eState {
         m - self.flaws.iter().filter(|f| **f == attr).count() as i32
     }
 
-    /// Trained skills in canonical precedence order plus the grant
-    /// collisions that open replacement slots. Choices count first (they
-    /// were picked against catalogs that excluded trained skills); fixed
-    /// grants landing on an already-trained skill collide and demand a
-    /// replacement pick, per the PF2e replacement rule.
+    /// Trained skills under the ownership policy: **fixed grants own a
+    /// skill and its attribution; player picks flex around them.** Grants
+    /// resolve first, so a sheet always names the granting source. A grant
+    /// (or the class skill) landing on an already-trained skill converts
+    /// into one extra free trained pick — the printed "select another
+    /// skill instead" rule — while a free/chooser pick landing on an
+    /// owned skill is the player's to re-judge in place.
     pub fn skill_resolution(&self) -> SkillResolution {
         let mut trained: Vec<(String, String)> = Vec::new();
-        let mut illegal_choice_dupes: Vec<(&'static str, String)> = Vec::new();
+        let mut extra_free_picks: Vec<String> = Vec::new();
+        let mut illegal_choice_dupes: Vec<(&'static str, String, String)> = Vec::new();
 
+        for grant in &self.skill_grants {
+            if trained.iter().any(|(t, _)| t == &grant.skill) {
+                extra_free_picks.push(grant.source.clone());
+            } else {
+                trained.push((grant.skill.clone(), grant.source.clone()));
+            }
+        }
         if let Some(s) = &self.class_skill_choice {
             let source = self.class_name.clone().unwrap_or_else(|| "Class".into());
-            trained.push((s.clone(), source));
+            if trained.iter().any(|(t, _)| t == s) {
+                extra_free_picks.push(source);
+            } else {
+                trained.push((s.clone(), source));
+            }
         }
         for choice in &self.skill_choices {
             for s in &choice.skills {
-                if trained.iter().any(|(t, _)| t == s) {
-                    illegal_choice_dupes.push((choice.slot, s.clone()));
+                if let Some((_, owner)) = trained.iter().find(|(t, _)| t == s) {
+                    illegal_choice_dupes.push((choice.slot, s.clone(), owner.clone()));
                 } else {
                     trained.push((s.clone(), choice.source.clone()));
                 }
             }
         }
-        let mut collisions: Vec<String> = Vec::new();
-        for grant in &self.skill_grants {
-            if trained.iter().any(|(t, _)| t == &grant.skill) {
-                collisions.push(grant.source.clone());
-            } else {
-                trained.push((grant.skill.clone(), grant.source.clone()));
-            }
-        }
         SkillResolution {
             trained,
-            collisions,
+            extra_free_picks,
             illegal_choice_dupes,
         }
     }
@@ -311,14 +317,15 @@ impl Pf2eState {
 }
 
 pub struct SkillResolution {
-    /// (skill id, source label), in precedence order.
+    /// (skill id, source label), grants first (they own attribution).
     pub trained: Vec<(String, String)>,
-    /// One entry per fixed grant that landed on an already-trained skill —
-    /// each opens a replacement-skill slot, in order.
-    pub collisions: Vec<String>,
-    /// A chooser slot re-picked an already-trained skill (stale after an
-    /// upstream change): (slot id, skill id) — flagged Illegal there.
-    pub illegal_choice_dupes: Vec<(&'static str, String)>,
+    /// One extra free trained pick per entry — a grant or the class skill
+    /// that landed on an already-trained skill (the printed "select
+    /// another skill instead" rule). Entries name the redundant source.
+    pub extra_free_picks: Vec<String>,
+    /// A free or chooser pick landing on an owned skill, the player's to
+    /// re-judge in place: (slot id, skill id, owning source label).
+    pub illegal_choice_dupes: Vec<(&'static str, String, String)>,
 }
 
 /// Everything owned, derived from kit + extras: (item id, source label).
@@ -1531,6 +1538,8 @@ pub fn attribute_options(
                 details: vec![],
                 available: note.is_none(),
                 unavailable_reason: note,
+                group: None,
+                badge: None,
             }
         })
         .collect()
@@ -1566,9 +1575,6 @@ pub const SLOT_CLASS_SKILL: &str = "pf2e.skills.class-choice";
 pub const SLOT_TRAINED_SKILLS: &str = "pf2e.skills.trained";
 pub const SLOT_HERITAGE_SKILLS: &str = "pf2e.skills.heritage-choice";
 pub const SLOT_FEAT_SKILLS: &str = "pf2e.skills.feat-choice";
-pub const SLOT_REPLACEMENT_1: &str = "pf2e.skills.replacement-1";
-pub const SLOT_REPLACEMENT_2: &str = "pf2e.skills.replacement-2";
-pub const SLOT_REPLACEMENT_3: &str = "pf2e.skills.replacement-3";
 pub const SLOT_FEAT_LORE: &str = "pf2e.skills.feat-lore";
 pub const SLOT_PROFICIENCY_CHOICE: &str = "pf2e.feats.proficiency-choice";
 pub const SLOT_HERITAGE_GENERAL_FEAT: &str = "pf2e.feats.general.heritage";
@@ -1608,9 +1614,6 @@ pub fn known_slot_ids() -> &'static [&'static str] {
         SLOT_TRAINED_SKILLS,
         SLOT_HERITAGE_SKILLS,
         SLOT_FEAT_SKILLS,
-        SLOT_REPLACEMENT_1,
-        SLOT_REPLACEMENT_2,
-        SLOT_REPLACEMENT_3,
         SLOT_FEAT_LORE,
         SLOT_PROFICIENCY_CHOICE,
         SLOT_HERITAGE_GENERAL_FEAT,

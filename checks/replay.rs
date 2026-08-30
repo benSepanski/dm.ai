@@ -264,8 +264,9 @@ fn elyse_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
 }
 
 /// Krivvy, an Unbreakable Goblin street urchin, built out of order so the
-/// background's Thievery grant collides with an existing skill pick and
-/// forces the replacement rule.
+/// background's Thievery grant lands on an existing free pick: the grant
+/// owns the skill (the sheet says so), the free pick goes illegal in its
+/// own slot, and Krivvy fixes it in place by amending the picks.
 fn krivvy_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
     let mut log = Vec::new();
     let n = &mut 0;
@@ -334,14 +335,23 @@ fn krivvy_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
         "pf2e.boosts.background-free",
         one("attr.str"),
     );
-    // The background granted Thievery, already trained above: replacement.
-    confirm(
-        engine,
-        &mut log,
-        n,
-        "pf2e.skills.replacement-1",
-        one("skill.society"),
-    );
+    // The background's grant now owns Thievery, so the earlier free pick
+    // is flagged in its own slot; Krivvy swaps it for Society in place.
+    let out = engine
+        .amend(
+            &log,
+            DecisionInput {
+                id: DecisionId::new("golden-krivvy-skill-fix"),
+                slot: SlotId::new("pf2e.skills.trained"),
+                selection: many(&["skill.society", "skill.stealth", "skill.deception"]),
+                source: DecisionSource::Player,
+            },
+        )
+        .unwrap();
+    let AppendOutcome::Appended(amended) = out else {
+        panic!("trained-skills amend must append");
+    };
+    log = amended;
     confirm(
         engine,
         &mut log,
@@ -1260,7 +1270,7 @@ fn golden_elyse_human_archer() {
 }
 
 #[test]
-fn golden_krivvy_goblin_replacement() {
+fn golden_krivvy_goblin_grant_ownership() {
     let engine = engine();
     let log = krivvy_log(&engine);
     let projection = engine.project(&log).unwrap();
@@ -1278,10 +1288,18 @@ fn golden_krivvy_goblin_replacement() {
     assert!(sheet.summary[1].contains("darkvision"));
     // AC 17 = 10 + 3 Dex (leather cap +4) + 1 leather + 3 trained.
     assert_entry(sheet, "Defense", "Armor Class", "17");
-    // Replacement rule: Thievery stayed trained from the class picks, and
-    // the background's collision was replaced with Society.
+    // Ownership rule: the background's grant owns Thievery, and the freed
+    // pick landed on Society.
     assert_entry(sheet, "Skills", "Thievery", "+6");
     assert_entry(sheet, "Skills", "Society", "+3");
+    let state = engine.fold(&log).unwrap();
+    let resolution = state.skill_resolution();
+    let (_, owner) = resolution
+        .trained
+        .iter()
+        .find(|(id, _)| id == "skill.thievery")
+        .expect("thievery trained");
+    assert!(owner.contains("Street Urchin"), "owner: {owner}");
     // Shortsword: finesse, Dex +3 > Str +2 -> +8 to hit, Str to damage.
     assert_entry(sheet, "Attacks", "Shortsword", "+8 · 1d6 P+2");
     // Sling: propulsive, half Str (+1) to damage.

@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use engine_core::{ApplyError, Availability, SlotRegistration};
-use types::{MeterState, MeterView, OptionId, OptionView, SlotId, SlotViewKind, StepId};
+use types::{MeterView, OptionId, OptionView, SlotId, SlotViewKind, StepId};
 
 use crate::data::{RulesData, SpellRecord, SpellcastingDef};
 use crate::mechanics::{
@@ -49,19 +49,19 @@ fn spell_option(s: &SpellRecord, curriculum_of: Option<&str>) -> OptionView {
         details.push(format!("Duration: {d}"));
     }
     details.push(format!("Traits: {}", s.traits.join(", ")));
-    // Curriculum membership is render-ready text the picker shows in
-    // place, so the player never cross-references a second card.
-    let summary = match curriculum_of {
-        Some(school) => format!("{school} curriculum · {}", s.text),
-        None => s.text.clone(),
-    };
+    // Curriculum membership rides as structured group + badge: the group
+    // header labels the curriculum block, and the badge chip stays on the
+    // row through filtering, so the player never cross-references a
+    // second card.
     OptionView {
         id: OptionId::new(&s.id),
         label: s.name.clone(),
-        summary,
+        summary: s.text.clone(),
         details,
         available: true,
         unavailable_reason: None,
+        group: None,
+        badge: curriculum_of.map(|_| "Curriculum".to_string()),
     }
 }
 
@@ -84,14 +84,24 @@ fn rank1_options(data: &RulesData, state: &Pf2eState) -> Vec<OptionView> {
     spells
         .into_iter()
         .map(|s| {
-            spell_option(
+            let mut option = spell_option(
                 s,
                 if in_curriculum(s) {
                     school.map(|sc| sc.name.as_str())
                 } else {
                     None
                 },
-            )
+            );
+            // With a school chosen the list splits under two headers; with
+            // none there is a single unlabeled group (no header renders).
+            if let Some(sc) = school {
+                option.group = Some(if in_curriculum(s) {
+                    format!("{} curriculum", sc.name)
+                } else {
+                    "Other arcane spells".to_string()
+                });
+            }
+            option
         })
         .collect()
 }
@@ -140,6 +150,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                     details: vec![],
                     available: true,
                     unavailable_reason: None,
+                    group: None,
+                    badge: None,
                 })
                 .collect()
         }),
@@ -215,6 +227,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                         ],
                         available: true,
                         unavailable_reason: None,
+                        group: None,
+                        badge: None,
                     }
                 })
                 .collect()
@@ -403,16 +417,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                 .filter(|id| school.curriculum_rank1.contains(id))
                 .count();
             let need = sc.spellbook_curriculum_rank1 as usize;
-            vec![MeterView {
-                label: "Curriculum".into(),
-                current: have.to_string(),
-                limit: Some(need.to_string()),
-                state: if have >= need {
-                    MeterState::Ok
-                } else {
-                    MeterState::Short
-                },
-            }]
+            vec![MeterView::requirement("Curriculum", have, need)]
         }),
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     });

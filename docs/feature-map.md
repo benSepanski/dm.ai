@@ -16,7 +16,12 @@ ships.
 | Change a confirmed choice (dependent-clearing prompt) | `SlotCard.tsx` `ClearConfirmDialog` | `Engine::clear_preview`/`clear` dependents graph | `stories.spec.ts` change-ancestry; `wizard-class.spec.ts` changed-mind |
 | Checklist: incomplete vs against-the-rules, jump-to-slot | `ui/src/Checklist.tsx` | slot validators → `ChecklistEntry` | walk specs; engine goldens |
 | Wizard class step: thesis, school, spellbook per rank, curriculum meter | `SlotCard.tsx` (generic) | `crates/ruleset-pf2e/src/spells.rs` | `checks/replay.rs` Sylvenne goldens; `wizard-class.spec.ts` |
-| Curriculum badging + curriculum-first ordering in the rank-1 picker | option `summary`/order (render-ready from ruleset) | `spells.rs` `rank1_options` | golden + first-wizard story |
+| Curriculum badges + labeled group split in the rank-1 picker | `SlotCard.tsx` `groupedRows`/`OptionRow` (badge chip) | `spells.rs` `rank1_options` sets `group`/`badge` | first-wizard story; `pending.test.ts` groupedRows suite |
+| Meters (requirement clamps; capacity/budget show true overshoot) | `SlotCard.tsx` `MetersRow` | `MeterView::requirement/exact/budget` in `crates/types/src/wizard.rs` | types constructor tests; overshoot story; `checks/class_isolation.rs` literal lint |
+| Confirmed cards keep details readable ("Details ▼") | `SlotCard.tsx` `ConfirmedSummary` | option catalogs (render-ready) | details-stay-readable story |
+| Finalize gate: unconfirmed-changes chip, no-op edit pruning, leave guard | `Wizard.tsx` (`sameSelection`/`isRealEdit`, pending chip) | server draft is the confirmed truth | meander story; `pending.test.ts` |
+| Disabled actions always explain themselves | `SlotCard.tsx` `ConfirmButton`; finalize blockers | — | `ui/e2e/layout.ts` dead-control invariant (every walk) |
+| Skill ownership: grants own skills/attribution; collisions add a free pick | `SlotCard.tsx` (generic; message at card) | `mechanics.rs` `skill_resolution`; `skills.rs` | Krivvy golden; ruleset unit tests; owned-skill story |
 | School change re-judges the book (destroys nothing) | — (falls out of validators) | `spells.rs` (school has no dependents; validator re-judges) | `checks/replay.rs` re-judge test; changed-mind story |
 | Class-conditional slots (class feat hidden for Wizard) | — | `feats.rs` unlock reads `level1_class_feat` | golden assertions |
 | Skill source labels ("from Wizard") | — | `mechanics.rs` `skill_resolution` ← `state.class_name` | `checks/class_isolation.rs`; goldens |

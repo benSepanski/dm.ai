@@ -43,6 +43,8 @@ fn class_feat_options(
                 details,
                 available: !already,
                 unavailable_reason: already.then(|| "already selected".to_string()),
+                group: None,
+                badge: None,
             }
         })
         .collect()
@@ -68,6 +70,8 @@ fn general_feat_options(data: &RulesData, state: &Pf2eState) -> Vec<OptionView> 
                 details,
                 available: unavailable.is_none(),
                 unavailable_reason: unavailable,
+                group: None,
+                badge: None,
             }
         })
         .collect()
@@ -324,6 +328,8 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
                         details: vec![],
                         available: true,
                         unavailable_reason: None,
+                        group: None,
+                        badge: None,
                     }
                 })
                 .collect()

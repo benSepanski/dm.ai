@@ -109,6 +109,34 @@ export async function layoutViolations(page: Page): Promise<LayoutViolation[]> {
         });
       }
     }
+
+    // (e) No dead controls: a disabled action button must explain itself
+    // with visible text (aria-describedby → a rendered, non-empty
+    // element). A control the player cannot use and cannot explain is a
+    // bug even when the layout is pristine — the app marks transient
+    // in-flight disables with data-busy, which are exempt.
+    const actionButtons = document.querySelectorAll<HTMLButtonElement>(
+      'button.confirm[disabled]:not([data-busy]), button.fill-remaining[disabled]:not([data-busy])',
+    );
+    for (const el of Array.from(actionButtons)) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        continue;
+      }
+      const describedBy = el.getAttribute('aria-describedby');
+      const target = describedBy !== null ? document.getElementById(describedBy) : null;
+      const explained =
+        target !== null &&
+        (target.textContent ?? '').trim() !== '' &&
+        target.getBoundingClientRect().height > 0;
+      if (!explained) {
+        violations.push({
+          kind: 'dead-control',
+          path: pathOf(el),
+          detail: `disabled action "${(el.textContent ?? '').trim()}" has no visible explanation (aria-describedby)`,
+        });
+      }
+    }
     return violations;
   });
 }

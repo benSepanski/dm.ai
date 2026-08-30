@@ -364,6 +364,17 @@ export interface OptionView {
      * Why it is unavailable, e.g. "requires a spellcasting class feature".
      */
     unavailable_reason: string | undefined;
+    /**
+     * Render-ready group heading. Consecutive options sharing a group are
+     * rendered under one labeled header ("School of Battle Magic
+     * curriculum"); `None` options fall in the unlabeled remainder.
+     */
+    group?: string | undefined;
+    /**
+     * Short render-ready badge shown as a chip next to the name
+     * ("Curriculum"); survives filtering, unlike position or grouping.
+     */
+    badge?: string | undefined;
 }
 
 export interface RosterEntry {

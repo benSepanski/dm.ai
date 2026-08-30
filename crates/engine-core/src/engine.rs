@@ -6,9 +6,8 @@ use std::collections::BTreeSet;
 
 use types::{
     ChecklistEntry, ChecklistSeverity, ClearPreview, ClearedDecision, Decision, DecisionId,
-    DecisionInput, DecisionSource, MeterState, MeterView, OptionId, ProjectionView, Selection,
-    SheetView, SlotId, SlotStatus, SlotView, SlotViewKind, StepId, StepStatus, StepView,
-    UnresolvedSuggestion,
+    DecisionInput, DecisionSource, MeterView, OptionId, ProjectionView, Selection, SheetView,
+    SlotId, SlotStatus, SlotView, SlotViewKind, StepId, StepStatus, StepView, UnresolvedSuggestion,
 };
 
 use crate::{Availability, SlotRegistration};
@@ -192,16 +191,7 @@ impl<S> Engine<S> {
                         Some(_) => 1,
                         None => 0,
                     };
-                    meters.push(MeterView {
-                        label: "Chosen".to_string(),
-                        current: picked.to_string(),
-                        limit: Some(count.to_string()),
-                        state: match (picked as u64).cmp(&u64::from(count)) {
-                            std::cmp::Ordering::Less => MeterState::Short,
-                            std::cmp::Ordering::Equal => MeterState::Ok,
-                            std::cmp::Ordering::Greater => MeterState::Exceeded,
-                        },
-                    });
+                    meters.push(MeterView::exact("Chosen", picked, count as usize));
                 }
                 meters.extend((reg.meters)(&state, decision));
             }

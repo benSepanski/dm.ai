@@ -70,7 +70,7 @@ fn documents_round_trip_a_versioned_schema() {
     let path = dir.path().join(format!("characters/{id}.json"));
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(doc["schema_version"], 2);
-    assert_eq!(doc["rules_version"], "pf2e-pc.0.3.0");
+    assert_eq!(doc["rules_version"], "pf2e-pc.0.3.1");
     assert_eq!(doc["log"].as_array().unwrap().len(), 2); // name + ancestry
 
     // A fresh server round-trips it.

@@ -68,19 +68,21 @@ const SPELLBOOK_CANTRIPS = [
   'Message',
   'Shield',
 ];
-// Five free picks + the two Battle Magic curriculum additions.
+// Four free picks + the two curriculum additions — plus a third
+// curriculum spell as a free pick, so the build over-satisfies the
+// minimum (the meter must read "2 of 2", never "3 of 2").
 const SPELLBOOK_RANK1 = [
   'Breathe Fire',
   'Force Barrage',
+  'Mystic Armor',
   'Command',
   'Fear',
   'Grease',
   'Jump',
-  'Sleep',
 ];
 
-/** Sylvenne through the whole class step (build decisions only). */
-async function buildSylvenneThroughClass(page: Page) {
+/** Sylvenne to a confirmed school, rank-1 picker open. */
+async function buildSylvenneToSchool(page: Page) {
   await createCharacter(page, server, 'Sylvenne');
   await gotoStep(page, 'Ancestry');
   await confirmOption(page, 'pf2e.ancestry', 'Elf');
@@ -102,11 +104,31 @@ async function buildSylvenneThroughClass(page: Page) {
   await expect(
     slot(page, 'pf2e.class.spellbook.rank1').getByTestId('meter-Curriculum'),
   ).toBeVisible();
-  await confirmMultiExact(page, 'pf2e.class.spellbook.cantrips', SPELLBOOK_CANTRIPS);
-  await confirmMultiExact(page, 'pf2e.class.spellbook.rank1', SPELLBOOK_RANK1);
 }
 
-async function finishSylvenne(page: Page) {
+/** Sylvenne through the whole class step (build decisions only). */
+async function buildSylvenneThroughClass(page: Page) {
+  await buildSylvenneToSchool(page);
+  const rank1 = slot(page, 'pf2e.class.spellbook.rank1');
+  // Curriculum spells stand out: a labeled group split plus a badge chip
+  // on each curriculum row (the chip survives filtering, unlike order).
+  await expect(
+    rank1.locator('.option-group-heading', { hasText: 'School of Battle Magic curriculum' }),
+  ).toBeVisible();
+  await expect(
+    rank1.locator('.option-group-heading', { hasText: 'Other arcane spells' }),
+  ).toBeVisible();
+  await expect(
+    rank1.locator('li:has(.option-label:text-is("Breathe Fire")) .option-badge'),
+  ).toHaveText('Curriculum');
+  await confirmMultiExact(page, 'pf2e.class.spellbook.cantrips', SPELLBOOK_CANTRIPS);
+  await confirmMultiExact(page, 'pf2e.class.spellbook.rank1', SPELLBOOK_RANK1);
+  // Three curriculum picks over a minimum of two: a requirement meter
+  // caps at its target instead of reading like an error.
+  await expect(rank1.getByTestId('meter-Curriculum')).toContainText('2 of 2');
+}
+
+async function completeSylvenne(page: Page) {
   // Boosts first: the trained-skill and language counts grow with Int.
   await gotoStep(page, 'Attribute Boosts');
   await confirmBoosts(page, 'pf2e.boosts.free', [
@@ -140,9 +162,12 @@ async function finishSylvenne(page: Page) {
     await card.getByRole('button', { name: /confirm/i }).click();
     await expect(card.locator('.slot-confirmed-value')).toBeVisible();
   }
-  const finalize = page.getByRole('button', { name: 'Finalize character' });
-  await expect(finalize).toBeEnabled();
-  await finalize.click();
+  await expect(page.getByRole('button', { name: 'Finalize character' })).toBeEnabled();
+}
+
+async function finishSylvenne(page: Page) {
+  await completeSylvenne(page);
+  await page.getByRole('button', { name: 'Finalize character' }).click();
   await expect(page.locator('.sheet-page')).toBeVisible();
   await expectSaneLayout(page);
 }
@@ -237,4 +262,104 @@ test('the crash: kill -9 at the class step resumes with the spellbook intact', a
   await expect(
     slot(page, 'pf2e.class.spellbook.rank1').locator('.slot-confirmed-value'),
   ).toContainText('Breathe Fire');
+});
+
+test('the meander: no-op edits never block finalize, real ones explain themselves', async ({
+  page,
+}) => {
+  await buildSylvenneThroughClass(page);
+  await completeSylvenne(page);
+  const finalize = page.getByRole('button', { name: 'Finalize character' });
+
+  // Typing into an optional field and thinking better of it is a no-op.
+  await gotoStep(page, 'Details');
+  const notes = slot(page, 'pf2e.details.description');
+  await notes.locator('textarea, input[type=text]').first().fill('x');
+  await expect(finalize).toBeDisabled();
+  await notes.locator('textarea, input[type=text]').first().fill('');
+  await expect(finalize).toBeEnabled();
+  await expect(page.locator('.pending-chip')).toHaveCount(0);
+
+  // A real unconfirmed edit blocks — and says so, with a jump link.
+  await notes.locator('textarea, input[type=text]').first().fill('Brave and curious');
+  await expect(finalize).toBeDisabled();
+  const chip = page.locator('.pending-chip');
+  await expect(chip).toContainText('Unconfirmed changes');
+  await expect(chip).toContainText('Appearance & notes');
+  // The sidebar must not claim "ready to finalize" while an edit hangs.
+  await expect(page.getByTestId('checklist')).toContainText('confirm your unconfirmed changes');
+
+  // Leaving warns instead of silently discarding.
+  await page.getByRole('button', { name: '← Roster' }).click();
+  const dialog = page.locator('.modal', { hasText: 'Unconfirmed changes' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Stay' }).click();
+
+  // Confirming the edit unblocks finalize.
+  await notes.getByRole('button', { name: /confirm/i }).click();
+  await expect(page.locator('.pending-chip')).toHaveCount(0);
+  await expect(finalize).toBeEnabled();
+  await finalize.click();
+  await expect(page.locator('.sheet-page')).toBeVisible();
+});
+
+test('the overshoot: over-filling a picker shows the true count as a violation', async ({
+  page,
+}) => {
+  await buildSylvenneToSchool(page);
+  const rank1 = slot(page, 'pf2e.class.spellbook.rank1');
+  for (const label of SPELLBOOK_RANK1) {
+    await checkExact(page, 'pf2e.class.spellbook.rank1', label);
+  }
+  await checkExact(page, 'pf2e.class.spellbook.rank1', 'Sleep');
+  // Eight picks in a seven-slot book: the counter and the Chosen meter
+  // both show the real number and flag it — capacity never clamps.
+  await expect(rank1.getByTestId(`counter-pf2e.class.spellbook.rank1`)).toContainText(
+    '1 too many',
+  );
+  await expect(rank1.getByTestId('meter-Chosen')).toContainText('8 of 7');
+  await expect(rank1.getByTestId('meter-Chosen')).toContainText('over the limit');
+  await uncheckExact(page, 'pf2e.class.spellbook.rank1', 'Sleep');
+  await expect(rank1.getByTestId('meter-Chosen')).toContainText('7 of 7');
+});
+
+test('the details stay readable after commitment', async ({ page }) => {
+  await buildSylvenneToSchool(page);
+  const school = slot(page, 'pf2e.class.school');
+  // The school is confirmed and closed — its details must still open in
+  // place, without undoing the choice.
+  await school.getByRole('button', { name: /details/i }).click();
+  await expect(school.locator('.confirmed-details')).toContainText('School of Battle Magic');
+  await expect(school.getByRole('button', { name: 'Change…' })).toBeVisible();
+});
+
+test('the owned skill: a background grant claims the skill and the free pick re-judges', async ({
+  page,
+}) => {
+  await createCharacter(page, server, 'Grix');
+  await gotoStep(page, 'Class');
+  await confirmOption(page, 'pf2e.class', 'Fighter');
+  await confirmBoosts(page, 'pf2e.class.key-attribute', ['Strength']);
+  await confirmOption(page, 'pf2e.skills.class-choice', 'Acrobatics');
+  await confirmMultiExact(page, 'pf2e.skills.trained', [
+    'Thievery',
+    'Stealth',
+    'Deception',
+  ]);
+  // Street Urchin grants Thievery — the grant owns it now.
+  await gotoStep(page, 'Background');
+  await confirmOption(page, 'pf2e.background', 'Street Urchin');
+  await gotoStep(page, 'Class');
+  const trained = slot(page, 'pf2e.skills.trained');
+  // No surprise "replacement" card: the free pick re-judges where it was
+  // made, editable in place with the picks preloaded.
+  await expect(page.locator('[data-slot="pf2e.skills.replacement-1"]')).toHaveCount(0);
+  await expect(trained.getByText(/Thievery now comes from Background: Street Urchin/)).toBeVisible();
+  await expect(
+    trained.locator('.option-list li:has(.option-label:text-is("Thievery")) input'),
+  ).toBeChecked();
+  await uncheckExact(page, 'pf2e.skills.trained', 'Thievery');
+  await checkExact(page, 'pf2e.skills.trained', 'Society');
+  await trained.getByRole('button', { name: /confirm/i }).click();
+  await expect(trained.getByText(/now comes from/)).toHaveCount(0);
 });

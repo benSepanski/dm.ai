@@ -46,3 +46,16 @@ carrying an illegal save.
 ## R6 — tests green, feature map, report  [x]
 cargo workspace 116 passed / clippy 0 / fmt clean; UI 36 unit, tsc, eslint
 clean; e2e 26 passed (~36 s). `docs/feature-map.md` added. Report rewritten.
+
+## Round 2 (findings 8–12 from Ben's interactive review)  [x]
+
+- [x] R2.1 meter constructors in types + call-site conversion + literal lint + tests
+- [x] R2.2 option `group`/`badge` fields; rank-1 headers + chips; groupedRows unit tests
+- [x] R2.3 confirmed-card Details expansion
+- [x] R2.4 pending honesty: no-op pruning, chip + jump links, honest banner, leave guard, conflict keeps edits
+- [x] R2.5 dead-control invariant in layout sweep; confirm hints; fill-remaining hides when moot
+- [x] R2.6 skill ownership: grants-first resolution, extra-free-pick rule, replacement slots deleted, rules-data 0.3.1, Krivvy golden + fixtures regen
+- [x] R2.7 indirect-illegal messages render at the card
+- [x] R2.8 prediction sweep: shrink test pinned; (f)/(g)/(j) verified
+- [x] R2.9 four new e2e stories; hands-on visual pass (screenshots 30–39)
+

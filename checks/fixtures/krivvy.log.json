@@ -30,20 +30,6 @@
     "order": 2
   },
   {
-    "id": "golden-4",
-    "slot": "pf2e.skills.trained",
-    "selection": {
-      "kind": "options",
-      "value": [
-        "skill.thievery",
-        "skill.stealth",
-        "skill.deception"
-      ]
-    },
-    "source": "player",
-    "order": 3
-  },
-  {
     "id": "golden-5",
     "slot": "pf2e.ancestry",
     "selection": {
@@ -51,7 +37,7 @@
       "value": "ancestry.goblin"
     },
     "source": "player",
-    "order": 4
+    "order": 3
   },
   {
     "id": "golden-6",
@@ -61,7 +47,7 @@
       "value": "heritage.goblin.unbreakable"
     },
     "source": "player",
-    "order": 5
+    "order": 4
   },
   {
     "id": "golden-7",
@@ -71,7 +57,7 @@
       "value": "feat.ancestry.goblin.goblin-song"
     },
     "source": "player",
-    "order": 6
+    "order": 5
   },
   {
     "id": "golden-8",
@@ -83,7 +69,7 @@
       ]
     },
     "source": "player",
-    "order": 7
+    "order": 6
   },
   {
     "id": "golden-9",
@@ -93,7 +79,7 @@
       "value": "background.street-urchin"
     },
     "source": "player",
-    "order": 8
+    "order": 7
   },
   {
     "id": "golden-10",
@@ -103,7 +89,7 @@
       "value": "attr.con"
     },
     "source": "player",
-    "order": 9
+    "order": 8
   },
   {
     "id": "golden-11",
@@ -113,30 +99,34 @@
       "value": "attr.str"
     },
     "source": "player",
+    "order": 9
+  },
+  {
+    "id": "golden-krivvy-skill-fix",
+    "slot": "pf2e.skills.trained",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "skill.society",
+        "skill.stealth",
+        "skill.deception"
+      ]
+    },
+    "source": "player",
     "order": 10
   },
   {
     "id": "golden-12",
-    "slot": "pf2e.skills.replacement-1",
-    "selection": {
-      "kind": "option",
-      "value": "skill.society"
-    },
-    "source": "player",
-    "order": 11
-  },
-  {
-    "id": "golden-13",
     "slot": "pf2e.class.feat",
     "selection": {
       "kind": "option",
       "value": "feat.class.fighter.exacting-strike"
     },
     "source": "player",
-    "order": 12
+    "order": 11
   },
   {
-    "id": "golden-14",
+    "id": "golden-13",
     "slot": "pf2e.boosts.free",
     "selection": {
       "kind": "options",
@@ -148,20 +138,20 @@
       ]
     },
     "source": "player",
-    "order": 13
+    "order": 12
   },
   {
-    "id": "golden-15",
+    "id": "golden-14",
     "slot": "pf2e.equipment.kit",
     "selection": {
       "kind": "option",
       "value": "equipment.no-kit"
     },
     "source": "player",
-    "order": 14
+    "order": 13
   },
   {
-    "id": "golden-16",
+    "id": "golden-15",
     "slot": "pf2e.equipment.extra",
     "selection": {
       "kind": "options",
@@ -174,16 +164,16 @@
       ]
     },
     "source": "player",
-    "order": 15
+    "order": 14
   },
   {
-    "id": "golden-17",
+    "id": "golden-16",
     "slot": "pf2e.details.name",
     "selection": {
       "kind": "text",
       "value": "Krivvy"
     },
     "source": "player",
-    "order": 16
+    "order": 15
   }
 ]

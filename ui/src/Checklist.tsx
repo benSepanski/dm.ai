@@ -5,14 +5,22 @@ import type { ChecklistEntry } from './engine';
 export function Checklist({
   entries,
   onJump,
+  pendingCount = 0,
 }: {
   entries: ChecklistEntry[];
   onJump: (entry: ChecklistEntry) => void;
+  /** Slots with unconfirmed edits — a clean checklist is not "ready to
+   * finalize" while any exist, and the banner must not claim it is. */
+  pendingCount?: number;
 }) {
   if (entries.length === 0) {
     return (
       <div className="checklist checklist-clear" data-testid="checklist">
-        <p className="checklist-done">✓ Everything checks out — ready to finalize.</p>
+        <p className="checklist-done">
+          {pendingCount === 0
+            ? '✓ Everything checks out — ready to finalize.'
+            : '✓ Everything checks out — confirm your unconfirmed changes to finalize.'}
+        </p>
       </div>
     );
   }

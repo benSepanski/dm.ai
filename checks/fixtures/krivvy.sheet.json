@@ -166,7 +166,7 @@
         {
           "label": "Society",
           "value": "+3",
-          "detail": "3 trained + 0 Int · from replacement (already trained)"
+          "detail": "3 trained + 0 Int · from Fighter"
         },
         {
           "label": "Stealth",
@@ -181,7 +181,7 @@
         {
           "label": "Thievery",
           "value": "+6",
-          "detail": "3 trained + 3 Dex · from Fighter"
+          "detail": "3 trained + 3 Dex · from Background: Street Urchin"
         }
       ]
     },
