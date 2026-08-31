@@ -37,42 +37,42 @@ report.
 
 ## Tickets
 
-- [ ] 1. Constraints wiring: register `checks/random_mint.rs` and
+- [x] 1. Constraints wiring: register `checks/random_mint.rs` and
   `checks/clone.rs` in the checks crate; name-pool lint section in
   `checks/rules_data.rs`; note rows carried by existing tooling
   (layering, quick-build-unchanged) — each later ticket lists the rows it
   turns green.
-- [ ] 2. types + storage: `DecisionSource::{Random, Clone}`; mint/clone
+- [x] 2. types + storage: `DecisionSource::{Random, Clone}`; mint/clone
   API types; `RosterView.classes` catalog for the picker; schema v3
   (persistence fixtures updated; v1/v2 load fixtures kept byte-identical).
-- [ ] 3. engine-core: `Sampler`; `SuggestionContext`; state-aware
+- [x] 3. engine-core: `Sampler`; `SuggestionContext`; state-aware
   source signature + bounded resampling in `expand_suggestions` /
   `unresolved_suggestions`; migrate existing callers (quick-build route,
   fill-remaining, engine tests). Quick-build behavior byte-identical
   (goldens in `checks/quick_build.rs`, `checks/replay.rs` untouched and
   green).
-- [ ] 4. server: `app-data/name-pools.json` + loader; random-mint route
+- [x] 4. server: `app-data/name-pools.json` + loader; random-mint route
   (idempotent, crash-safe, typed failures, no partial writes); classes in
   roster response.
-- [ ] 5. server: clone route (idempotent, creation-only, refusals:
+- [x] 5. server: clone route (idempotent, creation-only, refusals:
   trashed/quarantined/divergent/pin-unloadable; first-write-wins on
   retried name).
-- [ ] 6. checks: `random_mint.rs` (seed-sweep soundness, determinism,
+- [x] 6. checks: `random_mint.rs` (seed-sweep soundness, determinism,
   variety, pool failure fixtures); `clone.rs` (fidelity for draft/
   finalized/old-pin, refusal fixtures); extend `confirm_idempotency.rs`
   (both routes, per-route prefixes), `crash_harness.rs` (both write
   paths), `persistence.rs` (v3 + old-file fixtures),
   `no_rewrite_on_load.rs` (creation-only sweep over new routes).
-- [ ] 7. `pf2e_random_walk` in `checks/replay.rs` consumes the Sampler
+- [x] 7. `pf2e_random_walk` in `checks/replay.rs` consumes the Sampler
   with the legality filter off (fuzz-seam proof row).
-- [ ] 8. perf: mint benchmark < 250 ms in `checks/perf.rs` driving the
+- [x] 8. perf: mint benchmark < 250 ms in `checks/perf.rs` driving the
   route in-process; fold budget unchanged.
-- [ ] 9. UI: roster Random button + class picker ("any" default), Clone
+- [x] 9. UI: roster Random button + class picker ("any" default), Clone
   dialog (prefilled "<name> (copy)"), pending-state button disable,
   provenance badges on decided cards at review; unit tests.
-- [ ] 10. e2e `ui/e2e/roster.spec.ts`: mint walk (variety visible),
+- [x] 10. e2e `ui/e2e/roster.spec.ts`: mint walk (variety visible),
   typed-name preserved, clone dialog walk, badges — under the generic
   layout sweep.
-- [ ] 11. All gates green: `cargo fmt --check`, clippy, full checks
+- [x] 11. All gates green: `cargo fmt --check`, clippy, full checks
   suite, UI unit tests, e2e, suite-time ceiling.
-- [ ] 12. Report `.checkpoints/run/roster-ergonomics/report.md`; commit.
+- [x] 12. Report `.checkpoints/run/roster-ergonomics/report.md`; commit.
