@@ -46,7 +46,17 @@ export class TestServer {
     }
     const child = spawn(
       serverBinary(),
-      ['--data-dir', this.dataDir, '--port', String(port), ...this.extraArgs],
+      [
+        '--data-dir',
+        this.dataDir,
+        '--port',
+        String(port),
+        // The harness's cwd is not the repo root, so the name-pools
+        // default would miss; point at the repo's file explicitly.
+        '--name-pools',
+        join(repoRoot, 'app-data/name-pools.json'),
+        ...this.extraArgs,
+      ],
       {
         stdio: ['ignore', 'pipe', 'inherit'],
       },

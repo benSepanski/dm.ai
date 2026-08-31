@@ -3,6 +3,7 @@
 //! storage documents.
 
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::extract::{Path as AxumPath, State};
@@ -10,17 +11,17 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use engine_core::{AppendOutcome, EngineError, SlotSuggestion};
+use engine_core::{AppendOutcome, EngineError, Sampler, SlotSuggestion, SuggestionContext};
 use ruleset_pf2e::Pf2eEngine;
 use tokio::sync::Mutex;
 use types::{
-    ApiError, CharacterId, CharacterView, ChecklistEntry, ChecklistSeverity, ClearOutcome,
-    ClearRequest, ConfirmOutcome, ConfirmRequest, CreateCharacterRequest, Decision, DecisionId,
-    DecisionInput, DecisionSource, DraftView, FillRemainingOutcome, FillRemainingRequest,
-    FinalizeOutcome, FinalizeRequest, QuickBuildRequest, QuickBuildResult, ReplayOutcome,
-    RosterCharacterState, RosterEntry, RosterProblem, RosterView, Selection, SlotId, StepId,
-    StepRequest, VersionActionRequest, VersionFlaggedError, VersionResolutionOutcome,
-    VersionStatus,
+    ApiError, CharacterId, CharacterView, ChecklistEntry, ChecklistSeverity, ClassOption,
+    ClearOutcome, ClearRequest, CloneRequest, CloneResult, ConfirmOutcome, ConfirmRequest,
+    CreateCharacterRequest, Decision, DecisionId, DecisionInput, DecisionSource, DraftView,
+    FillRemainingOutcome, FillRemainingRequest, FinalizeOutcome, FinalizeRequest,
+    QuickBuildRequest, QuickBuildResult, RandomMintRequest, ReplayOutcome, RosterCharacterState,
+    RosterEntry, RosterProblem, RosterView, Selection, SlotId, StepId, StepRequest,
+    VersionActionRequest, VersionFlaggedError, VersionResolutionOutcome, VersionStatus,
 };
 
 use crate::clock;
@@ -36,6 +37,10 @@ pub(crate) struct App {
     /// Per-class suggested builds (class record ID → slot → suggestion),
     /// resolved from the class records' suggested_build blocks at startup.
     pub suggested: Vec<(String, BTreeMap<SlotId, SlotSuggestion>)>,
+    /// The random-name pools file (app data, not rules content). Read at
+    /// mint time so editing it is a data change, not a rebuild; a
+    /// malformed file fails the mint, never the server.
+    pub name_pools: PathBuf,
 }
 
 pub(crate) type SharedApp = Arc<App>;
@@ -45,6 +50,8 @@ pub(crate) fn router(app: SharedApp) -> Router {
         .route("/api/roster", get(roster))
         .route("/api/characters", post(create_character))
         .route("/api/characters/quick-build", post(quick_build))
+        .route("/api/characters/random-mint", post(random_mint))
+        .route("/api/characters/clone", post(clone_character))
         .route("/api/characters/{id}/fill-remaining", post(fill_remaining))
         .route(
             "/api/characters/{id}",
@@ -225,7 +232,30 @@ async fn roster(State(app): State<SharedApp>) -> Result<Json<RosterView>, Failur
             .map(|(file, message)| RosterProblem { file, message })
             .collect(),
         license_notice: app.license_notice.clone(),
+        classes: class_catalog(&app)?,
     }))
+}
+
+/// The shipped classes, for the random-mint picker: the class slot's
+/// available options against an empty log (a projection query — the
+/// engine stays the only authority on what is offered).
+fn class_catalog(app: &App) -> Result<Vec<ClassOption>, Failure> {
+    let projection = app
+        .engine
+        .project(&[])
+        .map_err(|e| Failure::Internal(e.to_string()))?;
+    Ok(projection
+        .steps
+        .iter()
+        .flat_map(|s| s.slots.iter())
+        .filter(|slot| slot.id.as_str() == ruleset_pf2e::CLASS_SLOT_ID)
+        .flat_map(|slot| slot.options.iter())
+        .filter(|o| o.available)
+        .map(|o| ClassOption {
+            id: o.id.as_str().to_string(),
+            name: o.label.clone(),
+        })
+        .collect())
 }
 
 async fn create_character(
@@ -607,7 +637,7 @@ async fn quick_build(
             .engine
             .unresolved_suggestions(
                 &loaded.log,
-                &|slot| suggest.get(slot).cloned(),
+                &mut |ctx: &SuggestionContext| suggest.get(ctx.slot).cloned(),
                 DecisionSource::Suggested,
             )
             .map_err(|e| Failure::Internal(e.to_string()))?;
@@ -643,7 +673,7 @@ async fn quick_build(
         .engine
         .expand_suggestions(
             &log,
-            &|slot| suggest_owned.get(slot).cloned(),
+            &mut |ctx: &SuggestionContext| suggest_owned.get(ctx.slot).cloned(),
             &|slot| suggestion_decision_id(&request_id, slot),
             DecisionSource::Suggested,
         )
@@ -702,7 +732,7 @@ async fn fill_remaining(
             "the chosen class carries no suggested build".into(),
         ));
     };
-    let suggest_fn = |slot: &SlotId| suggest.get(slot).cloned();
+    let mut suggest_fn = |ctx: &SuggestionContext| suggest.get(ctx.slot).cloned();
     // Idempotency first (like confirm): a decision minted by this request
     // ID already in the log means the expansion committed — return the
     // saved state, append nothing, even under a now-stale version.
@@ -714,7 +744,7 @@ async fn fill_remaining(
     {
         let unresolved = app
             .engine
-            .unresolved_suggestions(&loaded.log, &suggest_fn, DecisionSource::Suggested)
+            .unresolved_suggestions(&loaded.log, &mut suggest_fn, DecisionSource::Suggested)
             .map_err(|e| Failure::Internal(e.to_string()))?;
         return Ok(Json(FillRemainingOutcome::Filled {
             draft: draft_view(&app, &loaded)?,
@@ -731,7 +761,7 @@ async fn fill_remaining(
         .engine
         .expand_suggestions(
             &loaded.log,
-            &suggest_fn,
+            &mut suggest_fn,
             &|slot| suggestion_decision_id(&request_id, slot),
             DecisionSource::Suggested,
         )
@@ -748,6 +778,454 @@ async fn fill_remaining(
     Ok(Json(FillRemainingOutcome::Filled {
         draft: draft_view(&app, &loaded)?,
         unresolved: plan.unresolved,
+    }))
+}
+
+// ---- Random mint & clone (roster-ergonomics spec reqs 1-5) ----
+//
+// Both follow the quick-build shape: the character ID derives from the
+// client request ID under a per-route prefix, so the file's existence is
+// the durable idempotency marker; each is one engine transaction and one
+// crash-safe write; any failure writes nothing.
+
+const RANDOM_MINT_ID_PREFIX: &str = "c-rn-";
+const CLONE_ID_PREFIX: &str = "c-cl-";
+
+/// Free-text lore topics for slots that ask the player to name a Lore
+/// skill. Own-authored app vocabulary, not rules content.
+const LORE_TOPICS: &[&str] = &[
+    "Farming Lore",
+    "Fishing Lore",
+    "Milling Lore",
+    "Tanning Lore",
+    "Caravan Lore",
+    "Brewing Lore",
+    "Stonework Lore",
+    "Herbalism Lore",
+];
+
+/// The name-pools document (`app-data/name-pools.json`).
+#[derive(serde::Deserialize)]
+struct NamePools {
+    default: Vec<String>,
+    #[serde(default)]
+    pools: BTreeMap<String, Vec<String>>,
+}
+
+/// Read and parse the pools file at mint time. A malformed (or missing)
+/// file is a typed mint failure naming the file — never a crash, and the
+/// mint writes nothing.
+fn load_name_pools(app: &App) -> Result<NamePools, Failure> {
+    let path = &app.name_pools;
+    let text = std::fs::read_to_string(path).map_err(|e| {
+        Failure::Unprocessable(format!(
+            "the name-pools file '{}' could not be read ({e}) — random minting \
+             needs it; nothing was created",
+            path.display()
+        ))
+    })?;
+    serde_json::from_str(&text).map_err(|e| {
+        Failure::Unprocessable(format!(
+            "the name-pools file '{}' is malformed ({e}) — fix it and mint \
+             again; nothing was created",
+            path.display()
+        ))
+    })
+}
+
+impl NamePools {
+    /// The pool for an ancestry record ID; a missing or empty pool falls
+    /// back to the default pool (which the data lint keeps non-empty).
+    fn for_ancestry(&self, ancestry: Option<&str>) -> &[String] {
+        ancestry
+            .and_then(|a| self.pools.get(a))
+            .filter(|p| !p.is_empty())
+            .map_or(&self.default[..], |p| &p[..])
+    }
+}
+
+/// The ancestry record ID chosen in a log, if any.
+fn chosen_ancestry(log: &[Decision]) -> Option<String> {
+    log.iter()
+        .rev()
+        .find(|d| d.slot.as_str() == ruleset_pf2e::ANCESTRY_SLOT_ID)
+        .and_then(|d| match &d.selection {
+            Selection::Option(id) => Some(id.as_str().to_string()),
+            _ => None,
+        })
+}
+
+async fn random_mint(
+    State(app): State<SharedApp>,
+    Json(request): Json<RandomMintRequest>,
+) -> Result<Json<QuickBuildResult>, Failure> {
+    if !valid_request_id(&request.request_id) {
+        return Err(Failure::Unprocessable(
+            "random-mint needs a request_id of 1-64 letters, digits, '-' or '_' \
+             (it makes the request safely retryable)"
+                .into(),
+        ));
+    }
+    let store = app.store.lock().await;
+    let id = CharacterId::new(format!("{RANDOM_MINT_ID_PREFIX}{}", request.request_id));
+    // Replay: the file already exists — return the saved result, append
+    // nothing (crash-between-save-and-ack contract; a changed class or
+    // name in the retried request is ignored — first write wins).
+    if let Ok(loaded) = store.load(&id) {
+        if loaded.state == DocState::Finalized {
+            return Err(Failure::Unprocessable(
+                "this random-mint request was already completed and finalized".into(),
+            ));
+        }
+        guard_wizard_write(&app, &loaded)?;
+        return Ok(Json(QuickBuildResult {
+            draft: draft_view(&app, &loaded)?,
+            unresolved: Vec::new(),
+        }));
+    }
+    // Everything that can refuse does so before any write: pools first
+    // (spec: a malformed pool file fails the mint, nothing written).
+    let pools = load_name_pools(&app)?;
+    // The request ID is the entropy: same request, same character —
+    // deterministic, reproducible, replay-safe.
+    let mut sampler = Sampler::from_key(&request.request_id);
+    let catalog = class_catalog(&app)?;
+    let (class_id, class_source) = match &request.class_id {
+        Some(wanted) => {
+            if !catalog.iter().any(|c| c.id == *wanted) {
+                return Err(Failure::Unprocessable(format!(
+                    "unknown class '{wanted}' — the shipped classes are: {}",
+                    catalog
+                        .iter()
+                        .map(|c| c.id.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )));
+            }
+            // The player picked the class; the provenance says so.
+            (wanted.clone(), DecisionSource::Player)
+        }
+        None => match sampler.pick(&catalog) {
+            Some(class) => (class.id.clone(), DecisionSource::Random),
+            None => {
+                return Err(Failure::Internal(
+                    "no classes are shipped — cannot mint".into(),
+                ))
+            }
+        },
+    };
+    let mut log = Vec::new();
+    // A typed name is a player decision the generator never overwrites —
+    // same contract as quick build.
+    if let Some(name) = request.name.as_ref().filter(|n| !n.trim().is_empty()) {
+        let input = DecisionInput {
+            id: DecisionId::new(format!("{}.initial-name", request.request_id)),
+            slot: SlotId::new(ruleset_pf2e::NAME_SLOT_ID),
+            selection: Selection::Text(name.clone()),
+            source: DecisionSource::Player,
+        };
+        if let Ok(AppendOutcome::Appended(new_log)) = app.engine.append(&log, input) {
+            log = new_log;
+        }
+    }
+    let class_input = DecisionInput {
+        id: DecisionId::new(format!("{}.class-pick", request.request_id)),
+        slot: SlotId::new(ruleset_pf2e::CLASS_SLOT_ID),
+        selection: Selection::Option(types::OptionId::new(class_id)),
+        source: class_source,
+    };
+    match app.engine.append(&log, class_input) {
+        Ok(AppendOutcome::Appended(new_log)) => log = new_log,
+        Ok(AppendOutcome::AlreadyPresent) => {}
+        Err(e) => {
+            return Err(Failure::Internal(format!(
+                "the class decision did not apply: {e}"
+            )))
+        }
+    }
+    // The random suggestion source: every option slot gets a fresh shuffle
+    // of its LEGAL options (the mint path's legality filter — the Sampler
+    // itself filters nothing); required free-text slots get a sampled lore
+    // topic; the name slot is left for the pool step below, where the
+    // sampled ancestry is known.
+    let request_id = request.request_id.clone();
+    let plan = {
+        let sampler = &mut sampler;
+        let mut random_source = |ctx: &SuggestionContext| -> Option<SlotSuggestion> {
+            if ctx.slot.as_str() == ruleset_pf2e::NAME_SLOT_ID {
+                return None;
+            }
+            match ctx.kind {
+                types::SlotViewKind::Text { .. } => {
+                    let topic = sampler.pick(LORE_TOPICS)?;
+                    Some(SlotSuggestion::Text((*topic).to_string()))
+                }
+                _ => {
+                    let legal: Vec<types::OptionId> = ctx
+                        .options
+                        .iter()
+                        .filter(|o| o.available)
+                        .map(|o| o.id.clone())
+                        .collect();
+                    if legal.is_empty() {
+                        return None;
+                    }
+                    Some(SlotSuggestion::Candidates(sampler.shuffled(&legal)))
+                }
+            }
+        };
+        let mut plan = app
+            .engine
+            .expand_suggestions(
+                &log,
+                &mut random_source,
+                &|slot| suggestion_decision_id(&request_id, slot),
+                DecisionSource::Random,
+            )
+            .map_err(|e| Failure::Internal(e.to_string()))?;
+        // Two situations leave a flagged slot behind: a sampled pick can
+        // grow a later count (boosting Intelligence raises the language
+        // and trained-skill counts) after those slots were filled, and a
+        // set-level validator can flag a confirmed selection (the
+        // Wizard's curriculum floor judges at the checklist, not at
+        // append). The planner never overwrites, so re-open OUR OWN
+        // generated decisions that got flagged and resample them at the
+        // settled counts. Bounded; player decisions are never touched.
+        for _ in 0..8 {
+            let projection = app
+                .engine
+                .project(&plan.log)
+                .map_err(|e| Failure::Internal(e.to_string()))?;
+            let incomplete: Vec<SlotId> = projection
+                .checklist
+                .iter()
+                .map(|e| e.slot.clone())
+                .filter(|slot| {
+                    plan.log
+                        .iter()
+                        .any(|d| d.slot == *slot && d.source == DecisionSource::Random)
+                })
+                .collect();
+            if incomplete.is_empty() {
+                break;
+            }
+            let mut cleared = plan.log.clone();
+            for slot in &incomplete {
+                if let Ok(new_log) = app.engine.clear(&cleared, slot) {
+                    cleared = new_log;
+                }
+            }
+            plan = app
+                .engine
+                .expand_suggestions(
+                    &cleared,
+                    &mut random_source,
+                    &|slot| suggestion_decision_id(&request_id, slot),
+                    DecisionSource::Random,
+                )
+                .map_err(|e| Failure::Internal(e.to_string()))?;
+        }
+        plan
+    };
+    log = plan.log;
+    // Name the character from the sampled ancestry's pool (typed names
+    // already occupy the slot and stand).
+    if !log
+        .iter()
+        .any(|d| d.slot.as_str() == ruleset_pf2e::NAME_SLOT_ID)
+    {
+        let ancestry = chosen_ancestry(&log);
+        let pool = pools.for_ancestry(ancestry.as_deref());
+        let Some(name) = sampler.pick(pool) else {
+            return Err(Failure::Unprocessable(format!(
+                "the name-pools file '{}' has an empty default pool — random \
+                 minting needs at least one name; nothing was created",
+                app.name_pools.display()
+            )));
+        };
+        let input = DecisionInput {
+            id: DecisionId::new(format!("{}.random-name", request.request_id)),
+            slot: SlotId::new(ruleset_pf2e::NAME_SLOT_ID),
+            selection: Selection::Text(name.clone()),
+            source: DecisionSource::Random,
+        };
+        match app.engine.append(&log, input) {
+            Ok(AppendOutcome::Appended(new_log)) => log = new_log,
+            Ok(AppendOutcome::AlreadyPresent) => {}
+            Err(e) => {
+                return Err(Failure::Internal(format!(
+                    "the sampled name did not apply: {e}"
+                )))
+            }
+        }
+    }
+    let sheet = app
+        .engine
+        .sheet(&log)
+        .map_err(|e| Failure::Internal(e.to_string()))?;
+    // Unresolved is expected empty over shipped data; recomputed here so
+    // future data reports honestly (same surface as quick build).
+    let unresolved = app
+        .engine
+        .unresolved_suggestions(
+            &log,
+            &mut |_ctx: &SuggestionContext| None,
+            DecisionSource::Random,
+        )
+        .map_err(|e| Failure::Internal(e.to_string()))?
+        .into_iter()
+        .map(|mut u| {
+            u.reason = "the random mint could not fill this slot — finish it in the wizard".into();
+            u
+        })
+        .collect();
+    let loaded = Loaded {
+        id,
+        state: DocState::Draft,
+        // Review state: resume lands on the final step, like quick build.
+        current_step: app
+            .engine
+            .steps()
+            .last()
+            .map(|(id, _)| id.clone())
+            .unwrap_or_else(|| StepId::new("concept")),
+        draft_version: 1,
+        sheet,
+        log,
+        rules_version: app.rules_version.clone(),
+        version_history: Vec::new(),
+        keep_old: None,
+    };
+    store.save(&loaded)?;
+    Ok(Json(QuickBuildResult {
+        draft: draft_view(&app, &loaded)?,
+        unresolved,
+    }))
+}
+
+async fn clone_character(
+    State(app): State<SharedApp>,
+    Json(request): Json<CloneRequest>,
+) -> Result<Json<CloneResult>, Failure> {
+    if !valid_request_id(&request.request_id) {
+        return Err(Failure::Unprocessable(
+            "clone needs a request_id of 1-64 letters, digits, '-' or '_' \
+             (it makes the request safely retryable)"
+                .into(),
+        ));
+    }
+    let new_name = request.name.trim().to_string();
+    if new_name.is_empty() || new_name.len() > 200 {
+        return Err(Failure::Unprocessable(
+            "the clone needs a name (1-200 characters)".into(),
+        ));
+    }
+    let store = app.store.lock().await;
+    let id = CharacterId::new(format!("{CLONE_ID_PREFIX}{}", request.request_id));
+    // Replay: already created — return it, ignore the retried parameters
+    // (first write wins).
+    if let Ok(existing) = store.load(&id) {
+        return Ok(Json(CloneResult {
+            id: existing.id.clone(),
+            name: display_name(&existing),
+            finalized: existing.state == DocState::Finalized,
+        }));
+    }
+    // A trashed source is NotFound; a quarantined one refuses typed —
+    // either way nothing is written.
+    let source = match store.load(&request.source_id) {
+        Ok(source) => source,
+        Err(StoreError::Storage(message)) => {
+            return Err(Failure::Unprocessable(format!(
+                "'{}' cannot be cloned — its file is quarantined ({message}); \
+                 nothing was created",
+                request.source_id
+            )))
+        }
+        Err(e) => return Err(e.into()),
+    };
+    let status = status_for(&app.engine, &app.known, &source);
+    if let VersionStatus::Unknown { pinned, .. } = &status {
+        return Err(Failure::Unprocessable(format!(
+            "'{}' is pinned to rules-data version '{pinned}', which this \
+             server does not know — it cannot be replayed, so it cannot be \
+             cloned; nothing was created",
+            display_name(&source)
+        )));
+    }
+    // A current-pin source must replay to its stored sheet — clones are
+    // born verify-clean, and a tampered source refuses instead of
+    // propagating. (An older-known pin cannot be replayed under today's
+    // data; its stored sheet is copied verbatim and the established
+    // version flag meets the clone on first open, exactly as it would the
+    // source.)
+    let current_pin = source.rules_version == app.rules_version;
+    if current_pin {
+        let replayed = app.engine.sheet(&source.log).map_err(|e| {
+            Failure::Unprocessable(format!(
+                "'{}' does not replay cleanly ({e}) — run `verify`; nothing \
+                 was created",
+                display_name(&source)
+            ))
+        })?;
+        if replayed != source.sheet {
+            return Err(Failure::Unprocessable(format!(
+                "'{}' diverges from its decision log — run `verify` and \
+                 resolve it before cloning; nothing was created",
+                display_name(&source)
+            )));
+        }
+    }
+    // The clone's log: the source's, verbatim, except the name decision —
+    // re-minted with clone provenance and the clone-time name (appended
+    // when the source never named itself).
+    let name_decision_at = source
+        .log
+        .iter()
+        .rposition(|d| d.slot.as_str() == ruleset_pf2e::NAME_SLOT_ID);
+    let mut log = source.log.clone();
+    let minted = |order: u32| Decision {
+        id: DecisionId::new(format!("{}.clone-name", request.request_id)),
+        slot: SlotId::new(ruleset_pf2e::NAME_SLOT_ID),
+        selection: Selection::Text(new_name.clone()),
+        source: DecisionSource::Clone,
+        order,
+    };
+    match name_decision_at {
+        Some(at) => log[at] = minted(log[at].order),
+        None => {
+            let order = log.len() as u32;
+            log.push(minted(order));
+        }
+    }
+    // The sheet: re-derived by replay for a current pin; for an
+    // older-known pin, the stored sheet with the one field the changed
+    // decision projects (the name) updated.
+    let sheet = if current_pin {
+        app.engine
+            .sheet(&log)
+            .map_err(|e| Failure::Internal(format!("the cloned log does not replay: {e}")))?
+    } else {
+        let mut sheet = source.sheet.clone();
+        sheet.name = new_name.clone();
+        sheet
+    };
+    let loaded = Loaded {
+        id,
+        state: source.state,
+        current_step: source.current_step.clone(),
+        draft_version: source.draft_version,
+        sheet,
+        log,
+        rules_version: source.rules_version.clone(),
+        version_history: source.version_history.clone(),
+        keep_old: source.keep_old.clone(),
+    };
+    store.save(&loaded)?;
+    Ok(Json(CloneResult {
+        id: loaded.id.clone(),
+        name: display_name(&loaded),
+        finalized: loaded.state == DocState::Finalized,
     }))
 }
 

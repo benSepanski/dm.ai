@@ -70,6 +70,25 @@ pub struct SuggestionPlan {
     pub unresolved: Vec<UnresolvedSuggestion>,
 }
 
+/// What a suggestion source sees when asked about one open slot: the
+/// slot's identity plus its current kind and option views against the
+/// folded state. A published-build source keys on `slot` alone; a
+/// sampling source shuffles `options` (choosing its own legality filter —
+/// `available`-only for a mint, everything for a fuzz driver).
+pub struct SuggestionContext<'a> {
+    pub slot: &'a SlotId,
+    pub label: &'a str,
+    pub kind: SlotViewKind,
+    pub options: &'a [types::OptionView],
+}
+
+/// A suggestion that resolves but is refused by `append` (a set-level
+/// constraint, say) is re-asked from the source up to this many times per
+/// slot per pass — a sampling source yields a fresh shuffle each ask; a
+/// deterministic source repeats itself and the loop stops early on the
+/// first repeat.
+const RESAMPLE_LIMIT: u32 = 64;
+
 impl<S> Engine<S> {
     /// Assemble an engine. Panics on duplicate slot IDs, an unknown step in
     /// a slot, or an unknown slot in a dependents list — these are ruleset
@@ -414,17 +433,22 @@ impl<S> Engine<S> {
 
     /// Expand suggestions over a draft log: walk the open required slots in
     /// registration (unlock/dependency) order against the folded state,
-    /// resolve each slot's suggestion, append through the normal validated
-    /// `append` path with the given provenance `source`, refold, and repeat
-    /// until no open required slot has an applicable suggestion. Never
-    /// overwrites an existing decision; deterministic (registration order ×
-    /// candidate order, no randomness). A suggestion that cannot apply is
-    /// skipped and reported in `unresolved` — the legal prefix is kept,
-    /// never rolled back.
+    /// ask the source for each slot (handing it the slot's kind and option
+    /// views — a sampling source shuffles them, a published-build source
+    /// ignores them), append through the normal validated `append` path
+    /// with the given provenance `source`, refold, and repeat until no open
+    /// required slot has an applicable suggestion. A refused suggestion is
+    /// re-asked up to `RESAMPLE_LIMIT` times (stopping early when the
+    /// source repeats itself — the deterministic-source case). Never
+    /// overwrites an existing decision; deterministic given the source
+    /// (registration order × whatever the source returns — the engine
+    /// itself has no randomness). A suggestion that cannot apply is skipped
+    /// and reported in `unresolved` — the legal prefix is kept, never
+    /// rolled back.
     pub fn expand_suggestions(
         &self,
         log: &[Decision],
-        suggest: &dyn Fn(&SlotId) -> Option<SlotSuggestion>,
+        suggest: &mut dyn FnMut(&SuggestionContext) -> Option<SlotSuggestion>,
         mint_id: &dyn Fn(&SlotId) -> DecisionId,
         source: DecisionSource,
     ) -> Result<SuggestionPlan, EngineError> {
@@ -440,27 +464,47 @@ impl<S> Engine<S> {
                 if (reg.unlock)(&state) != Availability::Open {
                     continue;
                 }
-                let Some(suggestion) = suggest(&reg.id) else {
-                    continue;
+                let options = (reg.options)(&state);
+                let ctx = SuggestionContext {
+                    slot: &reg.id,
+                    label: &reg.label,
+                    kind: (reg.kind)(&state),
+                    options: &options,
                 };
-                let Ok(selection) = self.suggested_selection(reg, &state, &suggestion) else {
-                    continue;
-                };
-                let input = DecisionInput {
-                    id: mint_id(&reg.id),
-                    slot: reg.id.clone(),
-                    selection,
-                    source,
-                };
-                if let Ok(AppendOutcome::Appended(new_log)) = self.append(&log, input) {
-                    appended.push(
-                        new_log
-                            .last()
-                            .cloned()
-                            .expect("append grew the log by one decision"),
-                    );
-                    log = new_log;
-                    progressed = true;
+                let mut last_tried: Option<SlotSuggestion> = None;
+                for _ in 0..RESAMPLE_LIMIT {
+                    let Some(suggestion) = suggest(&ctx) else {
+                        break;
+                    };
+                    // A source that repeats itself is deterministic —
+                    // retrying the identical suggestion cannot succeed.
+                    if last_tried.as_ref() == Some(&suggestion) {
+                        break;
+                    }
+                    let Ok(selection) = self.suggested_selection(reg, &state, &suggestion) else {
+                        last_tried = Some(suggestion);
+                        continue;
+                    };
+                    last_tried = Some(suggestion);
+                    let input = DecisionInput {
+                        id: mint_id(&reg.id),
+                        slot: reg.id.clone(),
+                        selection,
+                        source,
+                    };
+                    if let Ok(AppendOutcome::Appended(new_log)) = self.append(&log, input) {
+                        appended.push(
+                            new_log
+                                .last()
+                                .cloned()
+                                .expect("append grew the log by one decision"),
+                        );
+                        log = new_log;
+                        progressed = true;
+                        break;
+                    }
+                }
+                if progressed {
                     // Refold before the next slot: counts, catalogs, and
                     // unlocks may all have changed under this decision.
                     break;
@@ -486,7 +530,7 @@ impl<S> Engine<S> {
     pub fn unresolved_suggestions(
         &self,
         log: &[Decision],
-        suggest: &dyn Fn(&SlotId) -> Option<SlotSuggestion>,
+        suggest: &mut dyn FnMut(&SuggestionContext) -> Option<SlotSuggestion>,
         source: DecisionSource,
     ) -> Result<Vec<UnresolvedSuggestion>, EngineError> {
         let state = self.fold(log)?;
@@ -498,7 +542,14 @@ impl<S> Engine<S> {
             if (reg.unlock)(&state) != Availability::Open {
                 continue;
             }
-            let reason = match suggest(&reg.id) {
+            let options = (reg.options)(&state);
+            let ctx = SuggestionContext {
+                slot: &reg.id,
+                label: &reg.label,
+                kind: (reg.kind)(&state),
+                options: &options,
+            };
+            let reason = match suggest(&ctx) {
                 None => "the suggested build has no entry for this slot".to_string(),
                 Some(suggestion) => match self.suggested_selection(reg, &state, &suggestion) {
                     Err(reason) => reason,

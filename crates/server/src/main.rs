@@ -70,6 +70,10 @@ struct Cli {
     /// Port to serve on; taken ports walk to the next free one. 0 = OS pick.
     #[arg(long, default_value_t = 8080)]
     port: u16,
+    /// The random-name pools file (app data; read at mint time so edits
+    /// need no rebuild). Default resolves against the working directory.
+    #[arg(long, default_value = "app-data/name-pools.json")]
+    name_pools: PathBuf,
     /// TEST-SUPPORT ONLY (hidden): a JSON file of extra versions to treat
     /// as older-known, same shape as rules-data/shipped-versions.json. The
     /// checks suite uses it to fabricate a prior shipped version; nothing
@@ -110,7 +114,7 @@ fn main() {
     };
     match cli.command {
         Some(Command::Verify) => verify(cli.data_dir, rules, known),
-        None => serve(cli.data_dir, cli.port, rules, known),
+        None => serve(cli.data_dir, cli.port, rules, known, cli.name_pools),
     }
 }
 
@@ -242,6 +246,7 @@ fn serve(
     port: u16,
     rules: ruleset_pf2e::RulesData,
     known: version::KnownVersions,
+    name_pools: PathBuf,
 ) {
     if let Err(e) = std::fs::create_dir_all(&data_dir) {
         eprintln!("cannot create data directory: {e}");
@@ -286,6 +291,7 @@ fn serve(
         known,
         license_notice,
         suggested,
+        name_pools,
     });
 
     println!("Serving at {url}");

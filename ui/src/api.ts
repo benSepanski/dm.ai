@@ -3,6 +3,7 @@
 import type {
   CharacterView,
   ClearOutcome,
+  CloneResult,
   ConfirmOutcome,
   DecisionInput,
   DraftView,
@@ -57,6 +58,28 @@ export function quickBuild(name: string | null): Promise<QuickBuildResult> {
   return request('/api/characters/quick-build', {
     method: 'POST',
     body: JSON.stringify({ request_id: newDecisionId(), name }),
+  });
+}
+
+/** One tap to a random, legal, named draft — every slot rolled from its
+ * legal options (never the published suggested build). The client-minted
+ * request ID doubles as the entropy and makes retries safe. */
+export function randomMint(
+  classId: string | null,
+  name: string | null,
+): Promise<QuickBuildResult> {
+  return request('/api/characters/random-mint', {
+    method: 'POST',
+    body: JSON.stringify({ request_id: newDecisionId(), class_id: classId, name }),
+  });
+}
+
+/** Duplicate a character as a new file and identity; the clone's only log
+ * difference is the name decision. Retries are safe (first write wins). */
+export function cloneCharacter(sourceId: string, name: string): Promise<CloneResult> {
+  return request('/api/characters/clone', {
+    method: 'POST',
+    body: JSON.stringify({ request_id: newDecisionId(), source_id: sourceId, name }),
   });
 }
 

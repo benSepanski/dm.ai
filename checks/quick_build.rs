@@ -24,7 +24,7 @@ fn suggested_build_folds_clean_with_empty_checklist_and_finalizes() {
         let plan = engine
             .expand_suggestions(
                 &[],
-                &|slot| map.get(slot).cloned(),
+                &mut |ctx: &engine_core::SuggestionContext| map.get(ctx.slot).cloned(),
                 &|slot| types::DecisionId::new(format!("lint.{slot}")),
                 types::DecisionSource::Suggested,
             )
@@ -66,7 +66,7 @@ fn suggested_build_folds_clean_with_empty_checklist_and_finalizes() {
         let again = engine
             .expand_suggestions(
                 &[],
-                &|slot| map.get(slot).cloned(),
+                &mut |ctx: &engine_core::SuggestionContext| map.get(ctx.slot).cloned(),
                 &|slot| types::DecisionId::new(format!("lint.{slot}")),
                 types::DecisionSource::Suggested,
             )

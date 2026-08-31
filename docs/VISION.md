@@ -106,7 +106,17 @@ next epoch's slices are commitments-in-waiting; everything later is sketch.
 
 The first vertical slice cuts through the whole stack — UI, validation,
 persistence, ruleset boundary — so the architecture is real before it is big.
-System order is chosen to stress the abstraction hardest, earliest:
+System order is chosen to stress the abstraction hardest, earliest.
+
+Two standing decisions (2026-08-30) frame the epoch's back half. **The
+level-3 world:** Epoch 1 commits to character levels 1–3 only; more levels,
+more classes, and content breadth are a standing *growth track* of
+data-mostly slices scheduled between feature work as depth is actually
+needed — growth never blocks features. **One dialog machine:** every
+slot-filling flow — creation, level-up, later retraining — reuses the
+chargen wizard's guided-dialog machinery (checklist, live validation,
+per-confirm durability, resume) rather than growing its own; each new flow
+is a new view over open choice slots, not a new wizard.
 
 1. **chargen-fighter**: guided level-1 character creation for the **PF2e
    Fighter**, in a real web UI, durably saved per confirmed step, resumable
@@ -136,9 +146,29 @@ System order is chosen to stress the abstraction hardest, earliest:
    the whole preparation flow lives in Epoch 8's daily-maintenance rung.
    A freshly created caster's prepared column is simply empty, like a
    fresh paper sheet.
-4. **chargen-dnd**: **D&D 5.5e Champion Fighter** (SRD 5.2-safe) — the
+4. **roster-ergonomics**: two small roster features that make iterating on
+   characters cheap before level-up needs exactly that: **random level-1
+   character** (one tap → a legal, named character — quick-build
+   suggestions where the rules publish them, random legal picks elsewhere,
+   a random name generator) and **clone character** (duplicate any
+   character as a new file and identity). Product value beyond testing:
+   pregens, quick NPCs, variants.
+5. **level-up**: the level-up wizard as appended decisions on newly
+   unlocked slots — placed ahead of the 5.5e slice so that slice can reach
+   the Fighter's defining choice, its level-3 subclass, instead of
+   stress-testing around it. Proves the one-dialog-machine claim by
+   reusing the creation machinery. Scope per the level-3 world: Fighter
+   and Wizard through level 3 with representative feat subsets —
+   exercising every new slot type (class feat, skill feat, general feat,
+   skill increase) and the Wizard's new-spell-rank machinery. Higher
+   levels are growth-track data slices; retraining moves to
+   edits-and-exceptions (it is log editing); staged level-ups with
+   DM-gated activation wait for a slice with a table.
+6. **chargen-dnd**: **D&D 5.5e Champion Fighter** (SRD 5.2-safe) — the
    cross-system stress test: binary proficiency vs ranks, background-coupled
-   ability scores vs boosts, subclass at 3 vs 1, weight vs Bulk. If the core
+   ability scores vs boosts, subclass at 3 vs 1, weight vs Bulk. With
+   level-up landed, the slice creates the Fighter at 1 and levels him to
+   3, so the Champion subclass is a real slot, not a footnote. If the core
    survives PF2e Fighter → 5.5e Fighter without a rewrite, the abstraction is
    real. Expect the boundary to bend; budget for revising it deliberately.
    This slice also brings the first **dice** (rolled ability scores): rolls
@@ -148,14 +178,12 @@ System order is chosen to stress the abstraction hardest, earliest:
    policy (e.g. "reroll if total modifiers below X") is table policy the
    DM configures, not app opinion; the details are that slice's spec
    dialogue, not settled here.
-5. **level-up**: the level-up wizard as appended decisions on newly unlocked
-   slots; retraining as log edits with replay revalidation; staged level-ups
-   with DM-gated activation as a table setting.
-6. **edits-and-exceptions**: editing tiers (free narrative fields / logged
+7. **edits-and-exceptions**: editing tiers (free narrative fields / logged
    play-state / locked build mechanics with a fix-request flow), DM exceptions
-   recorded as first-class override decisions, per-table trust mode
-   (locked vs free-with-audit), and the change-history view.
-7. **chargen-starfinder**: SF2e (e.g. Soldier) — deliberately last: it shares
+   recorded as first-class override decisions, retraining as log edits with
+   replay revalidation, per-table trust mode (locked vs free-with-audit),
+   and the change-history view.
+8. **chargen-starfinder**: SF2e (e.g. Soldier) — deliberately last: it shares
    PF2e's engine, so it validates little about system-independence but is the
    payoff test. If it costs more than rules-data entry plus a small plugin
    delta (skills roster, credits, equipment traits), the PF2e plugin

@@ -147,6 +147,118 @@ fn quick_build_under_sigkill_is_none_or_all() {
     }
 }
 
+/// The two roster-ergonomics write paths under SIGKILL: a random mint and
+/// a clone are each one durable write, so a kill leaves either nothing or
+/// the complete character — never a torn file — and the retried request
+/// converges on exactly one character.
+#[test]
+fn random_mint_and_clone_under_sigkill_are_none_or_all() {
+    let dir = tempfile::tempdir().unwrap();
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+        .unwrap();
+
+    // A stable clone source, created before any killing starts.
+    let source_id;
+    {
+        let server = TestServer::spawn(dir.path());
+        let build: Value = client
+            .post(format!("{}/api/characters/quick-build", server.url))
+            .json(&json!({ "request_id": "crash-clone-src", "name": "Crash Source" }))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        source_id = build["draft"]["id"].as_str().unwrap().to_string();
+    }
+
+    for (cycle, delay_ms) in [0u64, 6].into_iter().enumerate() {
+        let mint_request = format!("mint-crash-{cycle}");
+        let clone_request = format!("clone-crash-{cycle}");
+        let mut server = TestServer::spawn(dir.path());
+        let fire = std::thread::spawn({
+            let client = client.clone();
+            let mint_url = format!("{}/api/characters/random-mint", server.url);
+            let clone_url = format!("{}/api/characters/clone", server.url);
+            let mint_request = mint_request.clone();
+            let clone_request = clone_request.clone();
+            let source_id = source_id.clone();
+            move || {
+                let _ = client
+                    .post(&mint_url)
+                    .json(&json!({ "request_id": mint_request, "class_id": null, "name": null }))
+                    .send();
+                let _ = client
+                    .post(&clone_url)
+                    .json(
+                        &json!({ "request_id": clone_request, "source_id": source_id,
+                                   "name": "Crash Copy" }),
+                    )
+                    .send();
+            }
+        });
+        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        server.kill(); // SIGKILL, possibly mid-expansion or mid-write
+        fire.join().unwrap();
+
+        let server = TestServer::spawn(dir.path());
+        let roster: Value = client
+            .get(format!("{}/api/roster", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert!(
+            roster["problems"].as_array().unwrap().is_empty(),
+            "no torn or corrupt files after a mint/clone kill: {:?}",
+            roster["problems"]
+        );
+
+        // Retry both; each must converge on exactly one character.
+        let mint: Value = client
+            .post(format!("{}/api/characters/random-mint", server.url))
+            .json(&json!({ "request_id": mint_request, "class_id": null, "name": null }))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(
+            mint["draft"]["id"].as_str().unwrap(),
+            format!("c-rn-{mint_request}")
+        );
+        assert!(mint["draft"]["projection"]["can_finalize"]
+            .as_bool()
+            .unwrap());
+        let clone: Value = client
+            .post(format!("{}/api/characters/clone", server.url))
+            .json(
+                &json!({ "request_id": clone_request, "source_id": source_id,
+                           "name": "Crash Copy" }),
+            )
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(
+            clone["id"].as_str().unwrap(),
+            format!("c-cl-{clone_request}")
+        );
+        let expected = 1 /* source */ + 2 * (cycle as u64 + 1);
+        let roster: Value = client
+            .get(format!("{}/api/roster", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(
+            roster["entries"].as_array().unwrap().len() as u64,
+            expected,
+            "each cycle nets exactly one mint and one clone"
+        );
+    }
+}
+
 #[test]
 fn kill_dash_nine_loses_no_acknowledged_confirm() {
     let dir = tempfile::tempdir().unwrap();

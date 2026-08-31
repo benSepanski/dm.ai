@@ -149,6 +149,76 @@ fn replayed_quick_build_request_ids_append_nothing() {
     );
 }
 
+/// The mint and clone routes inherit the quick-build scheme (per-route ID
+/// prefixes, file existence as the durable marker): a replayed request
+/// returns the saved character, appends nothing, and never creates a
+/// second one. Clone's first-write-wins name semantics live in
+/// checks/clone.rs.
+#[test]
+fn replayed_mint_and_clone_request_ids_append_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let server = TestServer::spawn(dir.path());
+    let client = reqwest::blocking::Client::new();
+    let mint_url = format!("{}/api/characters/random-mint", server.url);
+    let mint_body = json!({"request_id": "mint-idem-1", "class_id": null, "name": null});
+
+    let first: Value = client
+        .post(&mint_url)
+        .json(&mint_body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    let id = first["draft"]["id"].as_str().unwrap().to_string();
+    assert!(id.starts_with("c-rn-"), "per-route prefix: {id}");
+    let version = first["draft"]["version"].as_u64().unwrap();
+    let len = log_len(&first["draft"]);
+    let retry: Value = client
+        .post(&mint_url)
+        .json(&mint_body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(retry["draft"]["id"].as_str().unwrap(), id);
+    assert_eq!(retry["draft"]["version"].as_u64().unwrap(), version);
+    assert_eq!(log_len(&retry["draft"]), len, "nothing was appended");
+
+    let clone_url = format!("{}/api/characters/clone", server.url);
+    let clone_body = json!({"request_id": "cl-idem-1", "source_id": id, "name": "Clone Idem"});
+    let first_clone: Value = client
+        .post(&clone_url)
+        .json(&clone_body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert!(
+        first_clone["id"].as_str().unwrap().starts_with("c-cl-"),
+        "per-route prefix: {first_clone}"
+    );
+    let retry_clone: Value = client
+        .post(&clone_url)
+        .json(&clone_body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(retry_clone["id"], first_clone["id"]);
+
+    let roster: Value = client
+        .get(format!("{}/api/roster", server.url))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(
+        roster["entries"].as_array().unwrap().len(),
+        2,
+        "one mint + one clone, no replays: {roster}"
+    );
+}
+
 #[test]
 fn stale_confirms_conflict_with_current_state() {
     let dir = tempfile::tempdir().unwrap();

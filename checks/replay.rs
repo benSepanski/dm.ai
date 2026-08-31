@@ -1144,7 +1144,7 @@ fn garrek_log(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
     let plan = engine
         .expand_suggestions(
             &[],
-            &|slot| map.get(slot).cloned(),
+            &mut |ctx: &engine_core::SuggestionContext| map.get(ctx.slot).cloned(),
             &|slot| DecisionId::new(format!("qb.{slot}")),
             types::DecisionSource::Suggested,
         )
@@ -1914,9 +1914,16 @@ mod properties {
         /// projection (as a client would be): whatever happens, projection
         /// stays deterministic, orders stay dense, at most one decision per
         /// slot, and can_finalize tracks the checklist.
+        ///
+        /// This is the fuzz seam's living proof (roster-ergonomics): the
+        /// walk consumes the same `Sampler` the mint uses, with the
+        /// legality filter OFF — selections are drawn from the full option
+        /// list, unavailable options included, so the engine's refusal
+        /// paths get hit on purpose.
         #[test]
-        fn pf2e_random_walk(ops in ops()) {
+        fn pf2e_random_walk(ops in ops(), seed in proptest::prelude::any::<u64>()) {
             let engine = engine();
+            let mut sampler = engine_core::Sampler::new(seed);
             let mut log: Vec<Decision> = vec![];
             let mut n = 0u32;
             for op in ops {
@@ -1936,26 +1943,29 @@ mod properties {
                         if slot_view.decision.is_some() {
                             continue;
                         }
-                        let available: Vec<_> =
-                            slot_view.options.iter().filter(|o| o.available).collect();
+                        // Filter OFF: every option is a candidate, legal or
+                        // not; the sampler orders them.
+                        let candidates: Vec<types::OptionId> = sampler
+                            .shuffled(&slot_view.options)
+                            .into_iter()
+                            .map(|o| o.id)
+                            .collect();
                         let selection = match &slot_view.kind {
                             types::SlotViewKind::Single => {
-                                if available.is_empty() { continue; }
-                                Selection::Option(available[pick % available.len()].id.clone())
+                                match sampler.pick(&candidates) {
+                                    Some(id) => Selection::Option(id.clone()),
+                                    None => continue,
+                                }
                             }
                             types::SlotViewKind::Multi { count } => {
-                                if available.is_empty() { continue; }
+                                if candidates.is_empty() { continue; }
                                 // Sometimes under- or over-pick on purpose.
-                                let take = (pick % (*count as usize + 2)).min(available.len());
-                                Selection::Options(
-                                    available.iter().cycle().skip(pick % available.len()).take(take).map(|o| o.id.clone()).collect(),
-                                )
+                                let take = (pick % (*count as usize + 2)).min(candidates.len());
+                                Selection::Options(candidates.into_iter().take(take).collect())
                             }
                             types::SlotViewKind::List => {
                                 let take = pick % 3;
-                                Selection::Options(
-                                    available.iter().take(take).map(|o| o.id.clone()).collect(),
-                                )
+                                Selection::Options(candidates.into_iter().take(take).collect())
                             }
                             types::SlotViewKind::Text { .. } => {
                                 Selection::Text(format!("text-{pick}"))

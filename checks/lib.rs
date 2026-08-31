@@ -82,7 +82,16 @@ impl TestServer {
     /// Spawn with extra CLI arguments (e.g. the version-guard tests pass the
     /// hidden test-support flag `--extra-known-versions <file>`).
     pub fn spawn_with_args(data_dir: &std::path::Path, extra_args: &[&str]) -> TestServer {
-        let mut child = Command::new(server_binary())
+        // Tests run with the package dir as cwd, so the server's relative
+        // name-pools default would miss; point it at the workspace file
+        // unless the caller overrides (the pool-failure fixtures do).
+        let mut command = Command::new(server_binary());
+        if !extra_args.contains(&"--name-pools") {
+            command
+                .arg("--name-pools")
+                .arg(workspace_root().join("app-data/name-pools.json"));
+        }
+        let mut child = command
             .args(["--data-dir"])
             .arg(data_dir)
             .args(["--port", "0"])

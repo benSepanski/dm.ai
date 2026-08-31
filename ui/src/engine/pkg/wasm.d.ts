@@ -110,6 +110,19 @@ export type CharacterView = ({ state: "draft" } & DraftView) | { state: "finaliz
 export type OptionId = string;
 
 /**
+ * A successful clone: the new character's roster identity. The client
+ * refreshes the roster or opens the character by ID.
+ */
+export interface CloneResult {
+    id: CharacterId;
+    name: string;
+    /**
+     * True when the clone is finalized (source was finalized).
+     */
+    finalized: boolean;
+}
+
+/**
  * A wizard step grouping slots, e.g. `ancestry` or `equipment`.
  */
 export type StepId = string;
@@ -166,6 +179,17 @@ export interface SheetDiff {
 }
 
 /**
+ * One shipped class, as the random-mint picker offers it.
+ */
+export interface ClassOption {
+    /**
+     * The class record ID (a class-slot option ID).
+     */
+    id: string;
+    name: string;
+}
+
+/**
  * One-tap quick build: create a draft and fill every required slot from
  * the class's suggested build. `request_id` is client-generated and makes
  * the request idempotent: a retry after a crash between save and ack
@@ -176,6 +200,28 @@ export interface QuickBuildRequest {
     /**
      * Optional working name; seeds the name slot as a player decision (the
      * planner never overwrites it).
+     */
+    name: string | undefined;
+}
+
+/**
+ * One-tap random character: create a draft and fill every required slot
+ * with random legal picks (never the published suggested build).
+ * `request_id` is client-generated and doubles as the entropy source —
+ * the same request always mints the same character, so a retry after a
+ * crash returns the already-saved draft and appends nothing.
+ */
+export interface RandomMintRequest {
+    request_id: string;
+    /**
+     * Class record ID to mint, or `None` for "any" (sampled uniformly
+     * over shipped classes). A chosen class is recorded as a player
+     * decision; a sampled one as a random decision.
+     */
+    class_id: string | undefined;
+    /**
+     * Optional player-typed name; recorded as a player decision and
+     * never overwritten by the generator.
      */
     name: string | undefined;
 }
@@ -224,6 +270,19 @@ export interface WireTypeExports {
     quick_build_result: QuickBuildResult;
     fill_remaining_request: FillRemainingRequest;
     fill_remaining_outcome: FillRemainingOutcome;
+}
+
+/**
+ * The clone request: duplicate `source_id` as a new character whose only
+ * log difference is the name decision (clone provenance, this `name`).
+ * `request_id` follows the quick-build idempotency scheme; a retried
+ * request returns the already-created character and ignores a changed
+ * `name` (first write wins).
+ */
+export interface CloneRequest {
+    request_id: string;
+    source_id: CharacterId;
+    name: string;
 }
 
 /**
@@ -284,7 +343,7 @@ export type VersionStatus = { status: "current" } | { status: "older_known"; pin
  * Who (or what) made a decision. DM exceptions and auto-mode arrive in
  * later epochs as new variants.
  */
-export type DecisionSource = "player" | "suggested";
+export type DecisionSource = "player" | "suggested" | "random" | "clone";
 
 export interface ChecklistEntry {
     severity: ChecklistSeverity;
@@ -413,6 +472,10 @@ export interface RosterView {
      * The ORC attribution notice, displayed in the app.
      */
     license_notice: string;
+    /**
+     * Shipped classes, for the random-mint class picker.
+     */
+    classes?: ClassOption[];
 }
 
 export interface SheetEntry {

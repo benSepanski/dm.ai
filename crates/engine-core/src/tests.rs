@@ -711,9 +711,9 @@ mod status_and_amend {
 
 // ---- The suggestion planner (quick build) ----
 
-fn toy_suggestions(slot: &SlotId) -> Option<crate::SlotSuggestion> {
+fn toy_suggestions(ctx: &crate::SuggestionContext) -> Option<crate::SlotSuggestion> {
     use crate::SlotSuggestion::{Candidates, Text};
-    match slot.as_str() {
+    match ctx.slot.as_str() {
         "primary" => Some(Candidates(vec![OptionId::new("a")])),
         "secondary" => Some(Candidates(vec![OptionId::new("a1"), OptionId::new("a2")])),
         // Longer than needed: Multi{2} takes the first legal 2.
@@ -735,7 +735,7 @@ fn mint(slot: &SlotId) -> DecisionId {
 fn planner_fills_open_required_slots_in_dependency_order() {
     let engine = toy_engine();
     let plan = engine
-        .expand_suggestions(&[], &toy_suggestions, &mint, DecisionSource::Suggested)
+        .expand_suggestions(&[], &mut toy_suggestions, &mint, DecisionSource::Suggested)
         .unwrap();
     assert!(plan.unresolved.is_empty(), "{:?}", plan.unresolved);
     let projection = engine.project(&plan.log).unwrap();
@@ -764,7 +764,7 @@ fn planner_fills_open_required_slots_in_dependency_order() {
     );
     // Deterministic: a second run is identical.
     let again = engine
-        .expand_suggestions(&[], &toy_suggestions, &mint, DecisionSource::Suggested)
+        .expand_suggestions(&[], &mut toy_suggestions, &mint, DecisionSource::Suggested)
         .unwrap();
     assert_eq!(plan.log, again.log);
 }
@@ -776,7 +776,7 @@ fn planner_never_overwrites_and_keeps_the_legal_prefix() {
     // b's catalog, so it stays open — while everything else still fills.
     let log = append(&engine, &[], one("p1", "primary", "b"));
     let plan = engine
-        .expand_suggestions(&log, &toy_suggestions, &mint, DecisionSource::Suggested)
+        .expand_suggestions(&log, &mut toy_suggestions, &mint, DecisionSource::Suggested)
         .unwrap();
     // The confirmed decision is untouched, in place.
     assert_eq!(plan.log[0], log[0]);
@@ -801,15 +801,15 @@ fn planner_never_overwrites_and_keeps_the_legal_prefix() {
 #[test]
 fn planner_reports_slots_without_suggestions() {
     let engine = toy_engine();
-    let no_secondary = |slot: &SlotId| {
-        if slot.as_str() == "secondary" {
+    let mut no_secondary = |ctx: &crate::SuggestionContext| {
+        if ctx.slot.as_str() == "secondary" {
             None
         } else {
-            toy_suggestions(slot)
+            toy_suggestions(ctx)
         }
     };
     let plan = engine
-        .expand_suggestions(&[], &no_secondary, &mint, DecisionSource::Suggested)
+        .expand_suggestions(&[], &mut no_secondary, &mint, DecisionSource::Suggested)
         .unwrap();
     assert_eq!(plan.unresolved.len(), 1);
     assert_eq!(plan.unresolved[0].slot.as_str(), "secondary");
