@@ -131,10 +131,25 @@ textarea {
   align-items: center;
   font-size: 0.9rem;
 }
+.roster-clone-confirm {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.roster-clone-confirm input {
+  max-width: 12rem;
+}
 .roster-create {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
   margin: 1rem 0 2rem;
+}
+.roster-random {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
 }
 .license-notice {
   border-top: 1px solid var(--line);

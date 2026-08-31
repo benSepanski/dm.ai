@@ -1161,14 +1161,13 @@ async fn clone_character(
     // source.)
     let current_pin = source.rules_version == app.rules_version;
     if current_pin {
-        let replayed = app
-            .engine
-            .sheet(&source.log)
-            .map_err(|e| Failure::Unprocessable(format!(
+        let replayed = app.engine.sheet(&source.log).map_err(|e| {
+            Failure::Unprocessable(format!(
                 "'{}' does not replay cleanly ({e}) — run `verify`; nothing \
                  was created",
                 display_name(&source)
-            )))?;
+            ))
+        })?;
         if replayed != source.sheet {
             return Err(Failure::Unprocessable(format!(
                 "'{}' diverges from its decision log — run `verify` and \

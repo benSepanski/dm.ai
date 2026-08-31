@@ -4,11 +4,13 @@
 // resolution panel instead of the wizard.
 import { useCallback, useEffect, useState } from 'react';
 import {
+  cloneCharacter,
   createCharacter,
   deleteCharacter,
   fetchCharacter,
   fetchRoster,
   quickBuild,
+  randomMint,
   resolveVersion,
   type VersionAction,
 } from './api';
@@ -114,6 +116,20 @@ export function App() {
               setError(String(e instanceof Error ? e.message : e));
             });
         }}
+        onRandom={(classId, name) =>
+          randomMint(classId, name)
+            .then((result) => goto(`#/c/${result.draft.id}`))
+            .catch((e: unknown) => {
+              setError(String(e instanceof Error ? e.message : e));
+            })
+        }
+        onClone={(id, cloneName) =>
+          cloneCharacter(id, cloneName)
+            .then((result) => goto(`#/c/${result.id}`))
+            .catch((e: unknown) => {
+              setError(String(e instanceof Error ? e.message : e));
+            })
+        }
         onOpen={(id) => goto(`#/c/${id}`)}
         onDelete={(id) => {
           void deleteCharacter(id).then(() => loadRoute({ view: 'roster' }));

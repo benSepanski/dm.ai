@@ -291,9 +291,10 @@ fn name_pools_cover_every_shipped_ancestry() {
         "name pools are app data — no license machinery"
     );
 
-    let ancestries: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(root.join("rules-data/ancestries.json")).unwrap())
-            .unwrap();
+    let ancestries: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(root.join("rules-data/ancestries.json")).unwrap(),
+    )
+    .unwrap();
     let by_ancestry = pools["pools"].as_object().expect("pools map");
     for record in ancestries.as_array().unwrap() {
         let id = record["id"].as_str().unwrap();
@@ -310,13 +311,13 @@ fn name_pools_cover_every_shipped_ancestry() {
     for (pool_id, pool) in by_ancestry {
         for name in pool.as_array().expect("pool is a list") {
             let name = name.as_str().expect("names are strings");
-            assert!(
-                !name.trim().is_empty(),
-                "blank name in pool '{pool_id}'"
-            );
+            assert!(!name.trim().is_empty(), "blank name in pool '{pool_id}'");
         }
     }
     for name in default {
-        assert!(!name.as_str().unwrap().trim().is_empty(), "blank default name");
+        assert!(
+            !name.as_str().unwrap().trim().is_empty(),
+            "blank default name"
+        );
     }
 }

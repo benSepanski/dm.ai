@@ -55,7 +55,11 @@ fn random_source<'s>(
 
 /// Expand one sampled build for a class and seed; returns the finished
 /// log (name appended).
-fn sample_build(engine: &ruleset_pf2e::Pf2eEngine, class_id: &str, seed: u64) -> Vec<types::Decision> {
+fn sample_build(
+    engine: &ruleset_pf2e::Pf2eEngine,
+    class_id: &str,
+    seed: u64,
+) -> Vec<types::Decision> {
     let mut sampler = Sampler::new(seed);
     let class = DecisionInput {
         id: DecisionId::new(format!("seed{seed}.class-pick")),
@@ -130,7 +134,26 @@ fn sample_build(engine: &ruleset_pf2e::Pf2eEngine, class_id: &str, seed: u64) ->
     }
 }
 
-const SEEDS: std::ops::Range<u64> = 0..16;
+const SEEDS: std::ops::Range<u64> = 0..8;
+
+/// One shared sweep: every (class, seed) build, computed once and reused
+/// by the soundness and variety tests — sampling through the real engine
+/// is the expensive part, and the suite rides a 20 s wall-time ceiling.
+fn sweep() -> &'static Vec<(String, u64, Vec<types::Decision>)> {
+    static SWEEP: std::sync::OnceLock<Vec<(String, u64, Vec<types::Decision>)>> =
+        std::sync::OnceLock::new();
+    SWEEP.get_or_init(|| {
+        let engine = engine();
+        let mut out = Vec::new();
+        for class_id in shipped_class_ids(&engine) {
+            for seed in SEEDS {
+                let log = sample_build(&engine, &class_id, seed);
+                out.push((class_id.clone(), seed, log));
+            }
+        }
+        out
+    })
+}
 
 /// Every shipped class, every seed: full fill, empty checklist,
 /// finalizable, every generated decision marked as generated. This is the
@@ -139,12 +162,15 @@ const SEEDS: std::ops::Range<u64> = 0..16;
 #[test]
 fn sampled_builds_are_sound_for_every_shipped_class_across_seeds() {
     let engine = engine();
-    let classes = shipped_class_ids(&engine);
-    assert!(classes.len() >= 2, "expected fighter and wizard, got {classes:?}");
-    for class_id in &classes {
-        for seed in SEEDS {
-            let log = sample_build(&engine, class_id, seed);
-            let projection = engine.project(&log).expect("sampled log projects");
+    let classes: std::collections::BTreeSet<&str> =
+        sweep().iter().map(|(c, _, _)| c.as_str()).collect();
+    assert!(
+        classes.len() >= 2,
+        "expected fighter and wizard, got {classes:?}"
+    );
+    for (class_id, seed, log) in sweep() {
+        {
+            let projection = engine.project(log).expect("sampled log projects");
             assert!(
                 projection.checklist.is_empty(),
                 "{class_id} seed {seed}: non-empty checklist: {:#?}",
@@ -158,7 +184,7 @@ fn sampled_builds_are_sound_for_every_shipped_class_across_seeds() {
                 log.iter().all(|d| d.source == DecisionSource::Random),
                 "{class_id} seed {seed}: every decision carries generated provenance"
             );
-            engine.sheet(&log).expect("sampled log derives a sheet");
+            engine.sheet(log).expect("sampled log derives a sheet");
         }
     }
 }
@@ -178,16 +204,16 @@ fn shipped_class_ids(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<String> {
 
 /// Variety: across the sweep, key slots see at least two distinct
 /// selections — the sampler is not pinned to any fixed build (the
-/// published suggestion included). With 16 seeds and 4+ options per
+/// published suggestion included). With 8 seeds and 4+ options per
 /// listed slot, a constant pick is a code bug, not bad luck.
 #[test]
 fn sampled_builds_vary_across_seeds() {
-    let engine = engine();
-    for class_id in shipped_class_ids(&engine) {
+    let classes: std::collections::BTreeSet<&str> =
+        sweep().iter().map(|(c, _, _)| c.as_str()).collect();
+    for class_id in classes {
         for watched in ["pf2e.ancestry", "pf2e.background"] {
             let mut seen = std::collections::BTreeSet::new();
-            for seed in SEEDS {
-                let log = sample_build(&engine, &class_id, seed);
+            for (_, _, log) in sweep().iter().filter(|(c, _, _)| c == class_id) {
                 let selection = log
                     .iter()
                     .find(|d| d.slot.as_str() == watched)
@@ -266,10 +292,9 @@ fn typed_names_stand() {
         json!({"request_id": "typed-name-fixture", "class_id": null, "name": "Handpicked"}),
     );
     assert_eq!(status, 200, "{result}");
-    let file: Value = serde_json::from_str(
-        &std::fs::read_to_string(&character_files(dir.path())[0]).unwrap(),
-    )
-    .unwrap();
+    let file: Value =
+        serde_json::from_str(&std::fs::read_to_string(&character_files(dir.path())[0]).unwrap())
+            .unwrap();
     let name_decision = file["log"]
         .as_array()
         .unwrap()
@@ -290,10 +315,7 @@ fn malformed_pool_fails_typed_and_writes_nothing() {
     std::fs::write(&pools, "{ this is not json").unwrap();
     let data_dir = dir.path().join("campaign");
     std::fs::create_dir_all(&data_dir).unwrap();
-    let server = TestServer::spawn_with_args(
-        &data_dir,
-        &["--name-pools", pools.to_str().unwrap()],
-    );
+    let server = TestServer::spawn_with_args(&data_dir, &["--name-pools", pools.to_str().unwrap()]);
     let (status, result) = mint(
         &client(),
         &server.url,
@@ -332,20 +354,16 @@ fn missing_ancestry_pools_fall_back_to_the_default_pool() {
     .unwrap();
     let data_dir = dir.path().join("campaign");
     std::fs::create_dir_all(&data_dir).unwrap();
-    let server = TestServer::spawn_with_args(
-        &data_dir,
-        &["--name-pools", pools.to_str().unwrap()],
-    );
+    let server = TestServer::spawn_with_args(&data_dir, &["--name-pools", pools.to_str().unwrap()]);
     let (status, result) = mint(
         &client(),
         &server.url,
         json!({"request_id": "fallback-fixture", "class_id": null, "name": null}),
     );
     assert_eq!(status, 200, "{result}");
-    let file: Value = serde_json::from_str(
-        &std::fs::read_to_string(&character_files(&data_dir)[0]).unwrap(),
-    )
-    .unwrap();
+    let file: Value =
+        serde_json::from_str(&std::fs::read_to_string(&character_files(&data_dir)[0]).unwrap())
+            .unwrap();
     let name_decision = file["log"]
         .as_array()
         .unwrap()

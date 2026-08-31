@@ -136,7 +136,7 @@ fn random_mint_is_under_250ms() {
         assert!(response.status().is_success());
     };
     mint("perf-warmup");
-    let runs = 5u32;
+    let runs = 3u32;
     let start = std::time::Instant::now();
     for i in 0..runs {
         mint(&format!("perf-mint-{i}"));

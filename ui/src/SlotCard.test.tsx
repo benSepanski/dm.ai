@@ -175,7 +175,7 @@ describe('SlotCard boost counter', () => {
 });
 
 describe('SlotCard suggested-provenance badge', () => {
-  function confirmedSlot(source: 'player' | 'suggested'): SlotView {
+  function confirmedSlot(source: 'player' | 'suggested' | 'random' | 'clone'): SlotView {
     const base = boostSlot();
     return {
       ...base,
@@ -190,7 +190,7 @@ describe('SlotCard suggested-provenance badge', () => {
     };
   }
 
-  function renderConfirmed(source: 'player' | 'suggested') {
+  function renderConfirmed(source: 'player' | 'suggested' | 'random' | 'clone') {
     return render(
       <SlotCard
         slot={confirmedSlot(source)}
@@ -211,6 +211,15 @@ describe('SlotCard suggested-provenance badge', () => {
   it('shows no badge on a player decision (editing re-confirms as player)', () => {
     const { container } = renderConfirmed('player');
     expect(container.querySelector('.badge-suggested')).toBeNull();
+  });
+
+  it('badges generated decisions by their provenance (random, clone)', () => {
+    expect(
+      renderConfirmed('random').container.querySelector('.badge-suggested'),
+    ).toHaveTextContent('random');
+    expect(
+      renderConfirmed('clone').container.querySelector('.badge-suggested'),
+    ).toHaveTextContent('clone');
   });
 });
 

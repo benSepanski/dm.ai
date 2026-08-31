@@ -130,8 +130,13 @@ fn cloned_finalized_character_differs_only_in_id_and_name() {
     let source_bytes_before =
         std::fs::read(dir.path().join(format!("characters/{source_id}.json"))).unwrap();
 
-    let (status, result) =
-        clone_request(&client, &server.url, "fixture-final", &source_id, "Copyling");
+    let (status, result) = clone_request(
+        &client,
+        &server.url,
+        "fixture-final",
+        &source_id,
+        "Copyling",
+    );
     assert_eq!(status, 200, "{result}");
     assert_eq!(result["finalized"], true);
     assert_eq!(result["name"], "Copyling");
@@ -182,8 +187,13 @@ fn cloned_draft_resumes_at_the_same_step_and_diverges_independently() {
         .unwrap();
     assert_eq!(confirm["outcome"], "confirmed");
 
-    let (status, result) =
-        clone_request(&client, &server.url, "fixture-draft", &source_id, "Forkful B");
+    let (status, result) = clone_request(
+        &client,
+        &server.url,
+        "fixture-draft",
+        &source_id,
+        "Forkful B",
+    );
     assert_eq!(status, 200, "{result}");
     assert_eq!(result["finalized"], false);
     let clone_id = result["id"].as_str().unwrap().to_string();
@@ -195,7 +205,8 @@ fn cloned_draft_resumes_at_the_same_step_and_diverges_independently() {
     );
 
     // Divergence: a confirm in the clone never touches the source.
-    let source_bytes = std::fs::read(dir.path().join(format!("characters/{source_id}.json"))).unwrap();
+    let source_bytes =
+        std::fs::read(dir.path().join(format!("characters/{source_id}.json"))).unwrap();
     let clone_doc = read_doc(dir.path(), &clone_id);
     let clone_version = clone_doc["draft_version"].as_u64().unwrap();
     let confirm: Value = client
@@ -269,13 +280,18 @@ fn trashed_and_quarantined_sources_refuse_to_clone() {
         "{ not json at all",
     )
     .unwrap();
-    let (status, result) = clone_request(&client, &server.url, "fixture-corrupt", "c-broken", "Copy");
+    let (status, result) =
+        clone_request(&client, &server.url, "fixture-corrupt", "c-broken", "Copy");
     assert_eq!(status, 422, "{result}");
     assert!(
         result["message"].as_str().unwrap().contains("quarantined"),
         "{result}"
     );
-    assert_eq!(character_count(dir.path()), before + 1, "only the corrupt file itself");
+    assert_eq!(
+        character_count(dir.path()),
+        before + 1,
+        "only the corrupt file itself"
+    );
 }
 
 #[test]
@@ -285,13 +301,23 @@ fn clone_retries_return_the_first_write_and_ignore_new_names() {
     let client = client();
     let source_id = finalized_character(&client, &server.url, "clone-src-retry");
 
-    let (status, first) =
-        clone_request(&client, &server.url, "fixture-retry", &source_id, "First Name");
+    let (status, first) = clone_request(
+        &client,
+        &server.url,
+        "fixture-retry",
+        &source_id,
+        "First Name",
+    );
     assert_eq!(status, 200, "{first}");
     let before = character_count(dir.path());
     // The retry carries a DIFFERENT name — first write wins.
-    let (status, retry) =
-        clone_request(&client, &server.url, "fixture-retry", &source_id, "Second Name");
+    let (status, retry) = clone_request(
+        &client,
+        &server.url,
+        "fixture-retry",
+        &source_id,
+        "Second Name",
+    );
     assert_eq!(status, 200, "{retry}");
     assert_eq!(retry["id"], first["id"]);
     assert_eq!(retry["name"], "First Name");

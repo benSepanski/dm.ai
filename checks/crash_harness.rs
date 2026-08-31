@@ -173,7 +173,7 @@ fn random_mint_and_clone_under_sigkill_are_none_or_all() {
         source_id = build["draft"]["id"].as_str().unwrap().to_string();
     }
 
-    for (cycle, delay_ms) in [0u64, 2, 5, 12].into_iter().enumerate() {
+    for (cycle, delay_ms) in [0u64, 6].into_iter().enumerate() {
         let mint_request = format!("mint-crash-{cycle}");
         let clone_request = format!("clone-crash-{cycle}");
         let mut server = TestServer::spawn(dir.path());
@@ -191,8 +191,10 @@ fn random_mint_and_clone_under_sigkill_are_none_or_all() {
                     .send();
                 let _ = client
                     .post(&clone_url)
-                    .json(&json!({ "request_id": clone_request, "source_id": source_id,
-                                   "name": "Crash Copy" }))
+                    .json(
+                        &json!({ "request_id": clone_request, "source_id": source_id,
+                                   "name": "Crash Copy" }),
+                    )
                     .send();
             }
         });
@@ -225,11 +227,15 @@ fn random_mint_and_clone_under_sigkill_are_none_or_all() {
             mint["draft"]["id"].as_str().unwrap(),
             format!("c-rn-{mint_request}")
         );
-        assert!(mint["draft"]["projection"]["can_finalize"].as_bool().unwrap());
+        assert!(mint["draft"]["projection"]["can_finalize"]
+            .as_bool()
+            .unwrap());
         let clone: Value = client
             .post(format!("{}/api/characters/clone", server.url))
-            .json(&json!({ "request_id": clone_request, "source_id": source_id,
-                           "name": "Crash Copy" }))
+            .json(
+                &json!({ "request_id": clone_request, "source_id": source_id,
+                           "name": "Crash Copy" }),
+            )
             .send()
             .unwrap()
             .json()

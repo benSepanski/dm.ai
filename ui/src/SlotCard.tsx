@@ -145,6 +145,16 @@ export function SlotCard({
               suggested
             </span>
           )}
+          {confirmed?.source === 'random' && (
+            <span className="badge-suggested" title="Rolled by the random mint — edit to make it yours">
+              random
+            </span>
+          )}
+          {confirmed?.source === 'clone' && (
+            <span className="badge-suggested" title="Set when this character was cloned">
+              clone
+            </span>
+          )}
         </h3>
         {confirmed !== null && !editing && (
           <button
