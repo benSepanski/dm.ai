@@ -146,10 +146,37 @@ textarea {
   gap: 0.6rem;
   margin: 1rem 0 2rem;
 }
+/* One attached control: the class picker is a parameter of the Random
+   button, not a standalone toggle. The WRAPPER owns the border and the
+   rounding — inside it, button and select are borderless halves split by
+   one divider, so no hard corner ever shows. */
 .roster-random {
   display: inline-flex;
-  gap: 0.6rem;
-  align-items: center;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+}
+.roster-random button {
+  border: none;
+  border-radius: 6px 0 0 6px;
+  background: transparent;
+}
+.roster-random select {
+  font: inherit;
+  color: var(--ink);
+  border: none;
+  border-left: 1px solid var(--line);
+  border-radius: 0 6px 6px 0;
+  padding: 0.35rem 1.5rem 0.35rem 0.55rem;
+  cursor: pointer;
+  /* Safari keeps native select chrome (its own pill + stepper) unless
+     appearance is reset — which also drops the chevron, so draw our own. */
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b6156' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 0.5rem center;
 }
 .license-notice {
   border-top: 1px solid var(--line);

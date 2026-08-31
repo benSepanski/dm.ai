@@ -158,18 +158,6 @@ export function Roster({
           Quick build a Fighter
         </button>
         <span className="roster-random">
-          <select
-            aria-label="random character class"
-            value={randomClass}
-            onChange={(e) => setRandomClass(e.target.value)}
-          >
-            <option value="any">Any class</option>
-            {(roster.classes ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
           <button
             type="button"
             className="quick-build"
@@ -186,6 +174,19 @@ export function Roster({
           >
             {minting ? 'Rolling…' : 'Random character'}
           </button>
+          <select
+            aria-label="random character class"
+            title="Which class the random character rolls (part of Random character)"
+            value={randomClass}
+            onChange={(e) => setRandomClass(e.target.value)}
+          >
+            <option value="any">any class</option>
+            {(roster.classes ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </span>
       </form>
 
