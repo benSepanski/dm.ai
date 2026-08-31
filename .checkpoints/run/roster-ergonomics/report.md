@@ -163,6 +163,16 @@ constraint-exposure API.
   build (count growth after fill; checklist-judged set constraints) —
   both now handled and pinned by the same test.
 
+## Review feedback folded (2026-08-31)
+
+Ben's review of the first presentation: the class picker beside the
+Random button read as a standalone toggle. Reworked into a split-button
+(one bordered pill, internal divider), with the select's native chrome
+reset so Safari renders the same control as Chromium — the first pass
+looked right only in Chromium because Safari ignores select borders
+without `appearance: none`. Verified in the live preview; roster and
+layout e2e re-run green.
+
 ## Complaints logged
 
 None — no harness friction this checkpoint.
