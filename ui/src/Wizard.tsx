@@ -517,6 +517,12 @@ export function Wizard({
         {draft.level_up !== undefined && (
           <section className="level-gains" aria-label="level gains">
             <h2>At level {draft.level_up.level} you gain…</h2>
+            <p className="level-gains-intro">
+              These change on their own the moment you reach level{' '}
+              {draft.level_up.level} — before any choice below. Every value on
+              the sheet derives from your level and your choices; the Why column
+              is each value's own formula.
+            </p>
             {draft.level_up.gains.length === 0 ? (
               <p>Only the choices below — nothing changes on its own.</p>
             ) : (
@@ -571,9 +577,13 @@ export function Wizard({
           onJump={jumpToEntry}
           pendingCount={pendingSlots.length}
         />
-        {draft.level_up !== undefined && draft.level_up.deltas.length > 0 && (
+        {draft.level_up !== undefined &&
+          draft.level_up.deltas.length > 0 &&
+          JSON.stringify(draft.level_up.deltas) !== JSON.stringify(draft.level_up.gains) && (
+          // Shown once the level's choices changed something beyond the
+          // automatic gains — until then it would only repeat the panel.
           <section className="level-deltas" aria-label="level changes so far">
-            <h3>Changes so far</h3>
+            <h3>Changes so far (with your choices)</h3>
             <SheetDiffTable
               differences={draft.level_up.deltas}
               oldHeading="Before"

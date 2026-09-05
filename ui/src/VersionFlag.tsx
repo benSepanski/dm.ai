@@ -18,6 +18,9 @@ export function SheetDiffTable({
   oldHeading: string;
   newHeading: string;
 }) {
+  // The explanation column appears whenever the server sent one: each
+  // "why" is the sheet entry's own detail line, never computed here.
+  const explained = differences.some((d) => d.why !== undefined && d.why !== null);
   return (
     <table className="version-diff">
       <thead>
@@ -25,16 +28,18 @@ export function SheetDiffTable({
           <th scope="col">Value</th>
           <th scope="col">{oldHeading}</th>
           <th scope="col">{newHeading}</th>
+          {explained && <th scope="col">Why</th>}
         </tr>
       </thead>
       <tbody>
         {differences.map((d, i) => (
           <tr key={i}>
             <th scope="row">
-              {d.section} — {d.label}
+              <span className="diff-section">{d.section}</span> {d.label}
             </th>
             <td className="version-old">{d.old}</td>
             <td className="version-new">{d.new}</td>
+            {explained && <td className="diff-why">{d.why ?? ''}</td>}
           </tr>
         ))}
       </tbody>

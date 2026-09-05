@@ -906,3 +906,19 @@ li.option-group-heading {
 .abandon-level {
   margin-top: 0.4rem;
 }
+
+.level-gains-intro {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin: 0 0 0.6rem;
+}
+.diff-section {
+  color: var(--ink-soft);
+  font-weight: 400;
+  font-size: 0.8rem;
+  display: block;
+}
+.diff-why {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}

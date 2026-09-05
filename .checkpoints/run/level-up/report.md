@@ -202,6 +202,20 @@ only, through the prefix accessor.
   caught by the suite and fixed; the reference-check tool's hardcoded
   "fighter" trait was a latent slice-2 bug this slice's data exposed.
 
+## Review feedback folded
+
+- **Ben (first review, 2026-09-05): "the table at the top is confusing — no
+  explanations for why."** Folded: every sheet diff now carries the changed
+  entry's own detail line as a `why` (an additive, optional field on
+  `SheetDiff` — the version-review table gains it for free), the gains
+  table shows it as a **Why** column ("8 ancestry + (10 class + 2 Con) × 2
+  levels", "6 expert + 2 Con", "4 trained + 2 Wis"), the panel opens with
+  one sentence saying these change on their own before any choice, and the
+  "Changes so far" sidebar only appears once a choice changed something
+  beyond the automatic gains (until then it merely repeated the panel).
+  The gains property row compares the four value fields and treats `why`
+  as presentation.
+
 ## Agent evidence
 
 - Full workspace suite green: 27 test targets, 0 failures; warm wall time
@@ -216,9 +230,10 @@ only, through the prefix accessor.
 - Attestation: 450 → 471 records, zero unwaived mismatches, zero stale
   waivers (four overrides added for shared-class wizard feats).
 - Live visual verification: quick-built Fighter finalized, Level up to 2
-  opened the gains panel (HP 20→32, all proficiency-based values +1), the
-  single Level 2 step with class-feat and skill-feat cards, Finalize gated
-  by the checklist, Abandon offered, Changes-so-far sidebar.
+  opened the gains panel (HP 20→32, all proficiency-based values +1, each
+  with its formula in the Why column after the review fold), the single
+  Level 2 step with class-feat and skill-feat cards, Finalize gated by the
+  checklist, Abandon offered.
 - HTTP smoke of the full flow before the check rows were written: level 1 →
   2 → 3 with the gains diff, guard refusals (below-marker, raw advance,
   fill-remaining), abandon, cap refusal, and a v4 file with marker = log

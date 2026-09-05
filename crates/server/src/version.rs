@@ -162,6 +162,7 @@ pub fn sheet_diffs(old: &SheetView, new: &SheetView) -> Vec<SheetDiff> {
             label: "Name".into(),
             old: old.name.clone(),
             new: new.name.clone(),
+            why: None,
         });
     }
     if old.summary != new.summary {
@@ -170,8 +171,14 @@ pub fn sheet_diffs(old: &SheetView, new: &SheetView) -> Vec<SheetDiff> {
             label: "Summary".into(),
             old: old.summary.join(" · "),
             new: new.summary.join(" · "),
+            why: None,
         });
     }
+    // The explanation rides with the value: the new sheet entry's own
+    // detail line, so a diff reader sees why a number moved.
+    let why_of = |section: &str, label: &str| -> Option<String> {
+        new.entry(section, label).and_then(|e| e.detail.clone())
+    };
     for section in &old.sections {
         for entry in &section.entries {
             let new_value = new
@@ -183,6 +190,7 @@ pub fn sheet_diffs(old: &SheetView, new: &SheetView) -> Vec<SheetDiff> {
                     label: entry.label.clone(),
                     old: entry.value.clone(),
                     new: new_value.unwrap_or(ABSENT).to_string(),
+                    why: why_of(&section.title, &entry.label),
                 });
             }
         }
@@ -195,6 +203,7 @@ pub fn sheet_diffs(old: &SheetView, new: &SheetView) -> Vec<SheetDiff> {
                     label: entry.label.clone(),
                     old: ABSENT.to_string(),
                     new: entry.value.clone(),
+                    why: why_of(&section.title, &entry.label),
                 });
             }
         }

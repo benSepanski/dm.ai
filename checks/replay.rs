@@ -2827,9 +2827,15 @@ fn gains_and_deltas_are_the_sheet_diff_between_folds() {
     assert_eq!(sorted(deltas), sorted(diff_sheets(&stored, &full)));
 }
 
-fn sorted(mut diffs: Vec<types::SheetDiff>) -> Vec<types::SheetDiff> {
+/// The comparable core of a diff — section, label, old, new. The `why`
+/// explanation is presentation (the sheet entry's detail line) and not part
+/// of the contract these rows judge.
+fn sorted(mut diffs: Vec<types::SheetDiff>) -> Vec<(String, String, String, String)> {
     diffs.sort_by(|a, b| (&a.section, &a.label).cmp(&(&b.section, &b.label)));
     diffs
+        .into_iter()
+        .map(|d| (d.section, d.label, d.old, d.new))
+        .collect()
 }
 
 /// The checks' own before/after diff — the same contract as the server's
@@ -2843,6 +2849,7 @@ fn diff_sheets(old: &types::SheetView, new: &types::SheetView) -> Vec<types::She
             label: "Name".into(),
             old: old.name.clone(),
             new: new.name.clone(),
+            why: None,
         });
     }
     if old.summary != new.summary {
@@ -2851,6 +2858,7 @@ fn diff_sheets(old: &types::SheetView, new: &types::SheetView) -> Vec<types::She
             label: "Summary".into(),
             old: old.summary.join(" · "),
             new: new.summary.join(" · "),
+            why: None,
         });
     }
     let mut seen = std::collections::BTreeSet::new();
@@ -2866,6 +2874,7 @@ fn diff_sheets(old: &types::SheetView, new: &types::SheetView) -> Vec<types::She
                     label: entry.label.clone(),
                     old: before.unwrap_or_else(|| "(absent)".to_string()),
                     new: entry.value.clone(),
+                    why: None,
                 });
             }
         }
@@ -2878,6 +2887,7 @@ fn diff_sheets(old: &types::SheetView, new: &types::SheetView) -> Vec<types::She
                     label: entry.label.clone(),
                     old: entry.value.clone(),
                     new: "(absent)".to_string(),
+                    why: None,
                 });
             }
         }
