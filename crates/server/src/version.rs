@@ -107,7 +107,9 @@ pub fn status_for(engine: &Pf2eEngine, known: &KnownVersions, loaded: &Loaded) -
             current: known.current.clone(),
         };
     }
-    let outcome = match engine.sheet(&loaded.log) {
+    // Only the finalized prefix is judged: a pending tail is never part
+    // of the stored sheet (the prefix invariant).
+    let outcome = match engine.sheet(loaded.finalized_prefix()) {
         Ok(replayed) if replayed == loaded.sheet => ReplayOutcome::Identical,
         Ok(replayed) => ReplayOutcome::Divergent {
             differences: sheet_diffs(&loaded.sheet, &replayed),

@@ -93,6 +93,8 @@ fn pin_to_test_version(dir: &std::path::Path, id: &str, finalize: bool) {
         doc["rules_version"] = Value::from(TEST_VERSION);
         if finalize {
             doc["state"] = Value::from("finalized");
+            // A finalized file's stored sheet reflects its whole log.
+            doc["finalized_through"] = Value::from(doc["log"].as_array().map_or(0, Vec::len));
         }
     });
 }
@@ -608,4 +610,200 @@ fn verify_distinguishes_older_known_from_unknown() {
         out.contains("OLD-BROKE") && out.contains(&format!("{ident_id}-fixture-ancestry")),
         "replay error must name the failing decision: {out}"
     );
+}
+
+// ---- level-up under the version guard (level-up architecture) ----
+
+#[path = "leveling_helpers.rs"]
+mod leveling;
+
+/// A leveling file pinned to an older known version flags on load,
+/// byte-identical; start / tail confirms / finalize-pending on a flagged
+/// character return 409 with the flag and write nothing; abandon succeeds
+/// on a flagged character and the guard re-judges the prefix; re-pin over
+/// a pending tail moves only the pin (never marker or log) and preserves
+/// the prefix invariant; a character on a pre-slice pin (kept old) cannot
+/// level — the refusal carries the flag.
+#[test]
+fn leveling_is_a_wizard_write_under_the_version_guard() {
+    let dir = tempfile::tempdir().unwrap();
+    let client = reqwest::blocking::Client::new();
+    let (id, current) = {
+        let server = TestServer::spawn(dir.path());
+        let id = leveling::finalized_fighter(&client, &server.url, "guard-lvl");
+        let pending = leveling::start_level(&client, &server.url, &id);
+        let feat = leveling::slot_view(&pending, "pf2e.level.2.class-feat").unwrap();
+        let option = feat["options"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["available"] == true)
+            .unwrap()["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let c = leveling::confirm_option(
+            &client,
+            &server.url,
+            &id,
+            pending["version"].as_u64().unwrap(),
+            "g-cf",
+            "pf2e.level.2.class-feat",
+            &option,
+        );
+        assert_eq!(c["outcome"], "confirmed", "{c}");
+        let current = pending["rules_version"].as_str().unwrap().to_string();
+        (id, current)
+    };
+    // Pin the leveling file to the fabricated prior version (its log
+    // replays identically under current data).
+    edit_doc(dir.path(), &id, |doc| {
+        doc["rules_version"] = Value::from(TEST_VERSION);
+    });
+    let extra = extra_versions_file(dir.path());
+    let server = TestServer::spawn_with_args(
+        dir.path(),
+        &["--extra-known-versions", extra.to_str().unwrap()],
+    );
+    let url = server.url.as_str();
+    let before = dir_bytes(&dir.path().join("characters"));
+
+    // Load: flagged, byte-identical; the view is the finalized sheet (a
+    // flagged pin never projects the pending tail).
+    let roster: Value = client
+        .get(format!("{url}/api/roster"))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(roster["entries"][0]["version"]["status"], "older_known");
+    let view = leveling::character(&client, url, &id);
+    assert_eq!(view["state"], "finalized", "{view}");
+    assert_eq!(view["version_status"]["status"], "older_known");
+    assert!(view["next_level"].is_null(), "no level-up while flagged");
+    assert_eq!(
+        before,
+        dir_bytes(&dir.path().join("characters")),
+        "load wrote nothing"
+    );
+    let version = view["version"].as_u64().unwrap();
+
+    // Start, a tail confirm, finalize-pending: all 409 with the flag.
+    let (status, body) = leveling::post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/level-up"),
+        json!({"version": version}),
+    );
+    assert_eq!(status, 409, "{body}");
+    assert_eq!(body["status"]["status"], "older_known");
+    let c = leveling::confirm_option(
+        &client,
+        url,
+        &id,
+        version,
+        "flag-cf",
+        "pf2e.level.2.skill-feat",
+        "feat.skill.additional-lore",
+    );
+    assert!(
+        c["outcome"].is_null(),
+        "a tail confirm on a flagged character is refused: {c}"
+    );
+    let (status, body) = leveling::post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/finalize"),
+        json!({"version": version}),
+    );
+    assert_eq!(status, 409, "{body}");
+    assert_eq!(
+        before,
+        dir_bytes(&dir.path().join("characters")),
+        "refusals wrote nothing"
+    );
+
+    // Re-pin over the pending tail: pin moves, marker and log do not, the
+    // prefix invariant holds, and the tail resumes.
+    let before_doc = read_doc(dir.path(), &id);
+    let resolved = post(
+        &client,
+        &format!("{url}/api/characters/{id}/version/repin"),
+        json!({ "version": version }),
+    );
+    assert_eq!(resolved["outcome"], "resolved", "{resolved}");
+    let after_doc = read_doc(dir.path(), &id);
+    assert_eq!(after_doc["rules_version"], current);
+    assert_eq!(
+        after_doc["finalized_through"],
+        before_doc["finalized_through"]
+    );
+    assert_eq!(after_doc["log"], before_doc["log"]);
+    assert_eq!(after_doc["sheet"], before_doc["sheet"]);
+    let view = leveling::character(&client, url, &id);
+    assert_eq!(
+        view["state"], "leveling",
+        "the tail resumes once the pin is current"
+    );
+
+    // Abandon on a flagged character always succeeds (the exit): re-pin
+    // the file back to the old version, abandon, and the guard judges the
+    // prefix alone afterwards.
+    drop(server);
+    edit_doc(dir.path(), &id, |doc| {
+        doc["rules_version"] = Value::from(TEST_VERSION);
+    });
+    let server = TestServer::spawn_with_args(
+        dir.path(),
+        &["--extra-known-versions", extra.to_str().unwrap()],
+    );
+    let url = server.url.as_str();
+    let view = leveling::character(&client, url, &id);
+    let (status, body) = leveling::post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/level-up/abandon"),
+        json!({"version": view["version"]}),
+    );
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["outcome"], "abandoned");
+    let doc = read_doc(dir.path(), &id);
+    assert_eq!(
+        doc["finalized_through"].as_u64().unwrap() as usize,
+        doc["log"].as_array().unwrap().len()
+    );
+    assert_eq!(
+        doc["version_history"].as_array().map(Vec::len).unwrap_or(0),
+        1,
+        "abandon recorded no version event"
+    );
+    let view = leveling::character(&client, url, &id);
+    assert_eq!(
+        view["version_status"]["status"], "older_known",
+        "the guard judges the prefix"
+    );
+
+    // Keep-old: the character stays on its old pin and cannot level.
+    let kept = post(
+        &client,
+        &format!("{url}/api/characters/{id}/version/keep-old"),
+        json!({ "version": view["version"] }),
+    );
+    assert_eq!(kept["outcome"], "resolved", "{kept}");
+    let view = leveling::character(&client, url, &id);
+    assert_eq!(view["version_status"]["status"], "kept_old");
+    assert!(view["next_level"].is_null());
+    let (status, body) = leveling::post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/level-up"),
+        json!({"version": view["version"]}),
+    );
+    assert_eq!(status, 409, "{body}");
+    assert_eq!(body["status"]["status"], "kept_old");
+    let (code, output) = TestServer::run_verify(
+        dir.path(),
+        &["--extra-known-versions", extra.to_str().unwrap()],
+    );
+    assert_eq!(code, 0, "{output}");
 }

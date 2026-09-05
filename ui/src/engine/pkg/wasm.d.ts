@@ -54,6 +54,12 @@ export interface DraftView {
      * `CharacterView::FlaggedDraft` instead, never with a projection).
      */
     version_status: VersionStatus;
+    /**
+     * Present while this draft is a pending level on a finalized
+     * character: what the level grants, the finalize deltas, and the
+     * choices an abandon would discard. Absent on creation drafts.
+     */
+    level_up?: LevelUpView;
 }
 
 /**
@@ -102,7 +108,7 @@ export type SlotId = string;
 /**
  * A single character as fetched by ID.
  */
-export type CharacterView = ({ state: "draft" } & DraftView) | { state: "finalized"; id: CharacterId; sheet: SheetView; version_status: VersionStatus; version: number } | { state: "flagged_draft"; id: CharacterId; name: string; sheet: SheetView; version: number; status: VersionStatus };
+export type CharacterView = ({ state: "draft" } & DraftView) | { state: "finalized"; id: CharacterId; sheet: SheetView; version_status: VersionStatus; version: number; next_level?: number } | { state: "leveling"; id: CharacterId; sheet: SheetView; draft: DraftView } | { state: "flagged_draft"; id: CharacterId; name: string; sheet: SheetView; version: number; status: VersionStatus };
 
 /**
  * A stable rules-data record ID, e.g. `ancestry.dwarf`.
@@ -126,6 +132,14 @@ export interface CloneResult {
  * A wizard step grouping slots, e.g. `ancestry` or `equipment`.
  */
 export type StepId = string;
+
+/**
+ * Abandon the pending level: the tail is discarded (atomically), the
+ * finalized state stands untouched.
+ */
+export interface AbandonLevelRequest {
+    version: number;
+}
 
 /**
  * Client-minted per confirm; a replayed ID appends nothing (idempotency).
@@ -246,6 +260,15 @@ export interface VersionActionRequest {
 }
 
 /**
+ * Start (or resume) a level-up; carries the write version like every
+ * wizard write. Idempotent: a character already leveling returns its
+ * pending level.
+ */
+export interface LevelUpRequest {
+    version: number;
+}
+
+/**
  * The HTTP wire types aren't referenced by the engine boundary, but the UI
  * needs their TypeScript declarations from the same generated `.d.ts`.
  * This carrier keeps them alive through code generation; it is never
@@ -290,6 +313,32 @@ export interface CloneRequest {
  * infers state from weaker signals (decision presence, entry absence).
  */
 export type SlotStatus = "locked" | "empty" | "partial" | "complete" | "illegal";
+
+/**
+ * The pending level's derived companions (spec req 4): every value here
+ * comes from the sheet diff between folds — nothing is hand-authored.
+ */
+export interface LevelUpView {
+    /**
+     * The level being gained.
+     */
+    level: number;
+    /**
+     * "At level N you gain…": the finalized sheet vs the sheet folded
+     * through the advance decision alone (before any choice).
+     */
+    gains: SheetDiff[];
+    /**
+     * Before/after for the values the level changed so far: the
+     * finalized sheet vs the sheet folded through the whole tail.
+     */
+    deltas: SheetDiff[];
+    /**
+     * The tail's decisions, described — what abandon discards (the
+     * clear-confirmation shape, so the existing dialog renders it).
+     */
+    pending: ClearedDecision[];
+}
 
 /**
  * The quick-build response: a normal draft view (review state, NOT
@@ -552,6 +601,8 @@ export interface StepView {
     slots: SlotView[];
 }
 
+export type AbandonLevelOutcome = { outcome: "abandoned"; character: CharacterView } | { outcome: "conflict"; character: CharacterView };
+
 export type ChecklistSeverity = "incomplete" | "illegal";
 
 export type ClearOutcome = { outcome: "cleared"; draft: DraftView; preview: ClearPreview } | { outcome: "conflict"; current: DraftView };
@@ -564,9 +615,11 @@ export type FillRemainingOutcome = { outcome: "filled"; draft: DraftView; unreso
 
 export type FinalizeOutcome = { outcome: "finalized"; sheet: SheetView } | { outcome: "blocked"; reasons: ChecklistEntry[] } | { outcome: "conflict"; current: DraftView };
 
+export type LevelUpOutcome = { outcome: "started"; draft: DraftView } | { outcome: "conflict"; character: CharacterView };
+
 export type MeterState = "ok" | "short" | "exceeded";
 
-export type RosterCharacterState = { state: "draft"; resume_label: string } | { state: "finalized" };
+export type RosterCharacterState = { state: "draft"; resume_label: string } | { state: "finalized" } | { state: "leveling"; resume_label: string };
 
 export type StepStatus = "complete" | "incomplete" | "waiting" | "illegal";
 

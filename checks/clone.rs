@@ -323,3 +323,92 @@ fn clone_retries_return_the_first_write_and_ignore_new_names() {
     assert_eq!(retry["name"], "First Name");
     assert_eq!(character_count(dir.path()), before, "no second clone");
 }
+
+/// level-up: cloning a leveling character copies the log AND the marker;
+/// the clone's sheet is the fold of its finalized prefix (the pending tail
+/// stays pending), fidelity holds (id, file, name decision only), the
+/// clone is verify-clean, and a confirm into the clone's tail leaves the
+/// source byte-identical.
+#[test]
+fn cloned_leveling_character_keeps_its_pending_level_independently() {
+    #[path = "leveling_helpers.rs"]
+    mod leveling;
+    let dir = tempfile::tempdir().unwrap();
+    let server = TestServer::spawn(dir.path());
+    let client = client();
+    let url = server.url.as_str();
+    let source_id = leveling::finalized_fighter(&client, url, "clone-lvl-src");
+    let pending = leveling::start_level(&client, url, &source_id);
+    let feat = leveling::slot_view(&pending, "pf2e.level.2.class-feat").unwrap();
+    let option = feat["options"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["available"] == true)
+        .unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let c = leveling::confirm_option(
+        &client,
+        url,
+        &source_id,
+        pending["version"].as_u64().unwrap(),
+        "cl-cf",
+        "pf2e.level.2.class-feat",
+        &option,
+    );
+    assert_eq!(c["outcome"], "confirmed", "{c}");
+    let source_bytes =
+        std::fs::read(dir.path().join(format!("characters/{source_id}.json"))).unwrap();
+
+    let (status, result) =
+        clone_request(&client, url, "fixture-leveling", &source_id, "Leveled Copy");
+    assert_eq!(status, 200, "{result}");
+    let clone_id = result["id"].as_str().unwrap().to_string();
+    let source_doc = read_doc(dir.path(), &source_id);
+    let clone_doc = read_doc(dir.path(), &clone_id);
+    assert_fidelity(&source_doc, &clone_doc, "Leveled Copy", "fixture-leveling");
+    assert_eq!(
+        clone_doc["finalized_through"],
+        source_doc["finalized_through"]
+    );
+    assert!(
+        clone_doc["sheet"]["summary"][0]
+            .as_str()
+            .unwrap()
+            .contains("Fighter 1"),
+        "the clone's sheet is its finalized prefix"
+    );
+    let view = leveling::character(&client, url, &clone_id);
+    assert_eq!(view["state"], "leveling", "the pending level clones along");
+
+    // A confirm into the clone's tail never touches the source.
+    let clone_draft = view["draft"].clone();
+    let sf = leveling::slot_view(&clone_draft, "pf2e.level.2.skill-feat").unwrap();
+    let sf_option = sf["options"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["available"] == true)
+        .unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let c = leveling::confirm_option(
+        &client,
+        url,
+        &clone_id,
+        clone_draft["version"].as_u64().unwrap(),
+        "cl-sf",
+        "pf2e.level.2.skill-feat",
+        &sf_option,
+    );
+    assert_eq!(c["outcome"], "confirmed", "{c}");
+    assert_eq!(
+        std::fs::read(dir.path().join(format!("characters/{source_id}.json"))).unwrap(),
+        source_bytes
+    );
+    let (code, output) = TestServer::run_verify(dir.path(), &[]);
+    assert_eq!(code, 0, "{output}");
+}

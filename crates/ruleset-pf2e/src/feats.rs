@@ -23,27 +23,94 @@ fn class_feat_options(
     state: &Pf2eState,
     exclude: &[&Option<String>],
 ) -> Vec<OptionView> {
+    class_feat_options_up_to(data, state, exclude, 1)
+}
+
+/// Class feats of level ≤ `max_level` for the chosen class, with feats the
+/// build already holds (level-1 slot, bonus feats, earlier level-ups)
+/// unavailable and prerequisites judged against the leveled state.
+fn class_feat_options_up_to(
+    data: &RulesData,
+    state: &Pf2eState,
+    exclude: &[&Option<String>],
+    max_level: u32,
+) -> Vec<OptionView> {
     let Some(class) = &state.class else {
         return vec![];
     };
     data.class_feats
         .iter()
-        .filter(|f| &f.class == class && f.level == 1)
+        .filter(|f| &f.class == class && f.level <= max_level)
         .map(|f| {
             let already = exclude.iter().any(|e| e.as_deref() == Some(f.id.as_str()))
-                || state.bonus_class_feats.contains(&f.id);
+                || state.bonus_class_feats.contains(&f.id)
+                || state.class_feat.as_deref() == Some(f.id.as_str())
+                || state.level_class_feats.iter().any(|(_, id)| *id == f.id);
+            let unavailable = if already {
+                Some("already selected".to_string())
+            } else {
+                prereq_unavailable(data, &f.prerequisites, state)
+            };
             let mut details = vec![format!("{} · {}", f.actions, f.text)];
             if let Some(req) = &f.requirements {
                 details.push(format!("Requirements (at time of use): {req}"));
+            }
+            for p in &f.prerequisites {
+                details.push(format!("Prerequisite: {}", prereq_description(data, p)));
             }
             OptionView {
                 id: OptionId::new(&f.id),
                 label: f.name.clone(),
                 summary: String::new(),
                 details,
-                available: !already,
-                unavailable_reason: already.then(|| "already selected".to_string()),
-                group: None,
+                available: unavailable.is_none(),
+                unavailable_reason: unavailable,
+                group: if max_level > 1 {
+                    Some(format!("Level {} feats", f.level))
+                } else {
+                    None
+                },
+                badge: None,
+            }
+        })
+        .collect()
+}
+
+/// Whether a general-feat record is a skill feat: the catalog's ID
+/// convention (`feat.skill.*` vs `feat.general.*`).
+fn is_skill_feat(id: &str) -> bool {
+    id.starts_with("feat.skill.")
+}
+
+/// General-feat-catalog options up to a level, optionally restricted to
+/// skill feats, prerequisites judged against the leveled state.
+fn general_catalog_options(
+    data: &RulesData,
+    state: &Pf2eState,
+    max_level: u32,
+    skill_only: bool,
+) -> Vec<OptionView> {
+    data.general_feats
+        .iter()
+        .filter(|f| f.level <= max_level && (!skill_only || is_skill_feat(&f.id)))
+        .map(|f| {
+            let unavailable = if state.chosen_general_feats.contains(&f.id) {
+                Some("already selected".to_string())
+            } else {
+                prereq_unavailable(data, &f.prerequisites, state)
+            };
+            let mut details = vec![f.text.clone()];
+            for p in &f.prerequisites {
+                details.push(format!("Prerequisite: {}", prereq_description(data, p)));
+            }
+            OptionView {
+                id: OptionId::new(&f.id),
+                label: f.name.clone(),
+                summary: String::new(),
+                details,
+                available: unavailable.is_none(),
+                unavailable_reason: unavailable,
+                group: Some(format!("Level {} feats", f.level)),
                 badge: None,
             }
         })
@@ -140,6 +207,7 @@ fn apply_general_feat(
 
 pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> {
     let mut regs = Vec::new();
+    regs.extend(level_registrations(data));
 
     // --- The class feat ---
     let d = data.clone();
@@ -440,5 +508,177 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     });
 
+    regs
+}
+
+// ---- Level-up feat slots (level 2 and up) ----
+//
+// Each level's feat slots are distinct registrations, hidden until the
+// character has advanced to that level and required from then on. They
+// live in the level's rendered step; the published class rhythm
+// (`level_grants`) says which a level opens.
+
+fn level_registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> {
+    use crate::mechanics::{
+        level_grants, slot_level_class_feat, slot_level_general_feat, slot_level_skill_feat,
+        step_level,
+    };
+    let mut regs = Vec::new();
+    for level in 2..=data.max_advancement_level() {
+        let grants = level_grants(level);
+        let step = step_level(level);
+        let at_level = move |state: &Pf2eState| {
+            if state.level() as u32 >= level {
+                Availability::Open
+            } else {
+                Availability::Hidden
+            }
+        };
+
+        if grants.class_feat {
+            let slot = slot_level_class_feat(level);
+            let (d, d_apply, d_desc) = (data.clone(), data.clone(), data.clone());
+            let (slot_v, step_v, slot_a) = (slot.clone(), step.clone(), slot.clone());
+            regs.push(SlotRegistration::<Pf2eState> {
+                id: SlotId::new(&slot),
+                step: StepId::new(&step),
+                label: format!("Class feat (level {level})"),
+                required: true,
+                presentation_hint: None,
+                kind: Box::new(|_| SlotViewKind::Single),
+                unlock: Box::new(at_level),
+                dependents: vec![],
+                options: Box::new(move |state| class_feat_options_up_to(&d, state, &[], level)),
+                apply: Box::new(move |state, decision| {
+                    let id = sel_single(&decision.selection)?;
+                    let record = d_apply
+                        .class_feat(id.as_str())
+                        .ok_or_else(|| ApplyError::new(format!("unknown class feat '{id}'")))?;
+                    if state.class.as_deref() != Some(record.class.as_str()) {
+                        return Err(ApplyError::new(format!(
+                            "feat '{}' does not belong to the chosen class",
+                            record.name
+                        )));
+                    }
+                    if record.level > level {
+                        return Err(ApplyError::new(format!(
+                            "'{}' is a level-{} feat",
+                            record.name, record.level
+                        )));
+                    }
+                    if let Some(reason) = prereq_unavailable(&d_apply, &record.prerequisites, state)
+                    {
+                        return Err(ApplyError::new(format!(
+                            "'{}' is not available: {reason}",
+                            record.name
+                        )));
+                    }
+                    let _ = &slot_a;
+                    state.level_class_feats.push((level, record.id.clone()));
+                    Ok(())
+                }),
+                validate: Box::new(move |state, decision| {
+                    if state.level() as u32 >= level && decision.is_none() {
+                        vec![incomplete(
+                            &slot_v,
+                            &step_v,
+                            "Class feat",
+                            &format!("Choose a class feat (level {level})"),
+                            &format!("from Level {level}"),
+                        )]
+                    } else {
+                        vec![]
+                    }
+                }),
+                meters: Box::new(|_, _| vec![]),
+                describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
+            });
+        }
+
+        if grants.skill_feat {
+            let slot = slot_level_skill_feat(level);
+            let (d, d_apply, d_desc) = (data.clone(), data.clone(), data.clone());
+            let (slot_v, step_v) = (slot.clone(), step.clone());
+            regs.push(SlotRegistration::<Pf2eState> {
+                id: SlotId::new(&slot),
+                step: StepId::new(&step),
+                label: format!("Skill feat (level {level})"),
+                required: true,
+                presentation_hint: None,
+                kind: Box::new(|_| SlotViewKind::Single),
+                unlock: Box::new(at_level),
+                dependents: vec![],
+                options: Box::new(move |state| general_catalog_options(&d, state, level, true)),
+                apply: Box::new(move |state, decision| {
+                    let id = sel_single(&decision.selection)?.as_str().to_string();
+                    if !is_skill_feat(&id) {
+                        return Err(ApplyError::new(format!("'{id}' is not a skill feat")));
+                    }
+                    if d_apply.general_feat(&id).is_some_and(|f| f.level > level) {
+                        return Err(ApplyError::new(format!("'{id}' is above level {level}")));
+                    }
+                    apply_general_feat(&d_apply, state, &decision.selection)?;
+                    state.level_skill_feats.push((level, id));
+                    Ok(())
+                }),
+                validate: Box::new(move |state, decision| {
+                    if state.level() as u32 >= level && decision.is_none() {
+                        vec![incomplete(
+                            &slot_v,
+                            &step_v,
+                            "Skill feat",
+                            &format!("Choose a skill feat (level {level})"),
+                            &format!("from Level {level}"),
+                        )]
+                    } else {
+                        vec![]
+                    }
+                }),
+                meters: Box::new(|_, _| vec![]),
+                describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
+            });
+        }
+
+        if grants.general_feat {
+            let slot = slot_level_general_feat(level);
+            let (d, d_apply, d_desc) = (data.clone(), data.clone(), data.clone());
+            let (slot_v, step_v) = (slot.clone(), step.clone());
+            regs.push(SlotRegistration::<Pf2eState> {
+                id: SlotId::new(&slot),
+                step: StepId::new(&step),
+                label: format!("General feat (level {level})"),
+                required: true,
+                presentation_hint: None,
+                kind: Box::new(|_| SlotViewKind::Single),
+                unlock: Box::new(at_level),
+                dependents: vec![],
+                options: Box::new(move |state| general_catalog_options(&d, state, level, false)),
+                apply: Box::new(move |state, decision| {
+                    let id = sel_single(&decision.selection)?.as_str().to_string();
+                    if d_apply.general_feat(&id).is_some_and(|f| f.level > level) {
+                        return Err(ApplyError::new(format!("'{id}' is above level {level}")));
+                    }
+                    apply_general_feat(&d_apply, state, &decision.selection)?;
+                    state.level_general_feats.push((level, id));
+                    Ok(())
+                }),
+                validate: Box::new(move |state, decision| {
+                    if state.level() as u32 >= level && decision.is_none() {
+                        vec![incomplete(
+                            &slot_v,
+                            &step_v,
+                            "General feat",
+                            &format!("Choose a general feat (level {level})"),
+                            &format!("from Level {level}"),
+                        )]
+                    } else {
+                        vec![]
+                    }
+                }),
+                meters: Box::new(|_, _| vec![]),
+                describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
+            });
+        }
+    }
     regs
 }

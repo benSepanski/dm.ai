@@ -140,6 +140,8 @@ test('walk 9 — the bump: divergent replay flags for review, accept; identical 
   doctor(divergentId, (doc) => {
     doc['rules_version'] = TEST_VERSION;
     doc['state'] = 'finalized';
+    // A finalized file's stored sheet reflects its whole log (schema v4).
+    doc['finalized_through'] = (doc['log'] as unknown[]).length;
     // The stored sheet holds a value current data does not derive — as if
     // the record changed under the old pin.
     const sheet = doc['sheet'] as {
@@ -155,6 +157,7 @@ test('walk 9 — the bump: divergent replay flags for review, accept; identical 
   doctor(identicalId, (doc) => {
     doc['rules_version'] = TEST_VERSION;
     doc['state'] = 'finalized';
+    doc['finalized_through'] = (doc['log'] as unknown[]).length;
   });
   const extraPath = join(server.dataDir, 'extra-known-versions.json');
   writeFileSync(extraPath, JSON.stringify({ versions: { [TEST_VERSION]: [] } }));

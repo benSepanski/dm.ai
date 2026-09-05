@@ -8,8 +8,10 @@ use types::{Decision, SheetDiff, SheetView, StepId};
 
 /// Current schema, stamped on every write. v2 = v1 plus the `suggested`
 /// decision source (quick build); v3 = v2 plus the `random` and `clone`
-/// decision sources (roster ergonomics); structurally identical otherwise.
-pub(crate) const SCHEMA_VERSION: u32 = 3;
+/// decision sources (roster ergonomics); v4 = v3 plus `finalized_through`
+/// (level-up: how much of the log the stored sheet reflects). Structurally
+/// identical otherwise; absent fields are fixed up on read.
+pub(crate) const SCHEMA_VERSION: u32 = 4;
 /// Oldest schema this binary still reads. v1 files are accepted on load,
 /// never rewritten by loading, and upgraded on their next ordinary write.
 pub(crate) const MIN_SCHEMA_VERSION: u32 = 1;
@@ -31,6 +33,12 @@ pub(crate) struct CharacterDoc {
     pub(crate) sheet: SheetView,
     /// The ordered decision log — the source of truth under replay.
     pub(crate) log: Vec<Decision>,
+    /// How many decisions of the log the stored sheet reflects (level-up):
+    /// the finalized prefix. Decisions past it are a pending level. Absent
+    /// on pre-v4 files and fixed up on read (draft → 0, finalized → the
+    /// log length); written on every save from v4 on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) finalized_through: Option<usize>,
     /// Explicit version-resolution actions, oldest first. Written only by
     /// the version routes (re-pin / accept / keep-old / resolve-errors) —
     /// never by loading. Absent entirely on files that never resolved.
@@ -113,6 +121,13 @@ pub(crate) fn parse_doc(text: &str) -> ParsedDoc {
     }
     match serde_json::from_value::<CharacterDoc>(value) {
         Ok(doc) if (MIN_SCHEMA_VERSION..=SCHEMA_VERSION).contains(&doc.schema_version) => {
+            // A marker past the log's end is structural corruption, not a
+            // pending level.
+            if doc.finalized_through.is_some_and(|m| m > doc.log.len()) {
+                return ParsedDoc::Corrupt {
+                    message: "schema-invalid: finalized_through exceeds the decision log".into(),
+                };
+            }
             ParsedDoc::Ok(Box::new(doc))
         }
         Ok(doc) => ParsedDoc::Corrupt {

@@ -1,6 +1,7 @@
 // Typed fetch wrappers over the server API. All shapes come from the
 // generated engine types — the single source of truth for the wire.
 import type {
+  AbandonLevelOutcome,
   CharacterView,
   ClearOutcome,
   CloneResult,
@@ -9,6 +10,7 @@ import type {
   DraftView,
   FillRemainingOutcome,
   FinalizeOutcome,
+  LevelUpOutcome,
   QuickBuildResult,
   RosterView,
   SlotId,
@@ -139,6 +141,23 @@ export function setStep(id: string, version: number, step: StepId): Promise<Draf
 
 export function finalizeCharacter(id: string, version: number): Promise<FinalizeOutcome> {
   return request(`/api/characters/${encodeURIComponent(id)}/finalize`, {
+    method: 'POST',
+    body: JSON.stringify({ version }),
+  });
+}
+
+/** Start (or resume) a level-up on a finalized character: appends the
+ * level's advance decision as the pending tail's head. Idempotent. */
+export function levelUp(id: string, version: number): Promise<LevelUpOutcome> {
+  return request(`/api/characters/${encodeURIComponent(id)}/level-up`, {
+    method: 'POST',
+    body: JSON.stringify({ version }),
+  });
+}
+
+/** Discard the pending level; the finalized character stands untouched. */
+export function abandonLevel(id: string, version: number): Promise<AbandonLevelOutcome> {
+  return request(`/api/characters/${encodeURIComponent(id)}/level-up/abandon`, {
     method: 'POST',
     body: JSON.stringify({ version }),
   });

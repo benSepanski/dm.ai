@@ -132,6 +132,9 @@ pub struct Prerequisite {
     pub value: Option<i32>,
     #[serde(default)]
     pub skill: Option<String>,
+    /// For the `skill_rank` kind: the rank the skill must reach ("expert").
+    #[serde(default)]
+    pub rank: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -261,7 +264,46 @@ pub struct ClassRecord {
     /// shipped class to carry one. See [`SuggestedBuild`].
     #[serde(default)]
     pub suggested_build: Option<SuggestedBuild>,
+    /// The class's advancement table past level 1: per level, the fixed
+    /// features gained (records with IDs, so a feature name never lives in
+    /// source). Which choice slots a level grants is the published class
+    /// rhythm, registered by the kind modules, not per-class data. The
+    /// highest level listed is the class's shipped cap.
+    #[serde(default)]
+    pub advancement: Vec<AdvancementLevel>,
     pub source: SourceRef,
+}
+
+/// One level of a class's advancement table (level 2 and up).
+#[derive(Debug, Clone, Deserialize)]
+pub struct AdvancementLevel {
+    pub level: u32,
+    #[serde(default)]
+    pub features: Vec<ClassFeature>,
+}
+
+/// A fixed class feature gained at a level: a record with an ID (the
+/// class-isolation scan keeps its name out of source), its printed text,
+/// and any mechanical effects it carries (Bravery's Will → expert).
+#[derive(Debug, Clone, Deserialize)]
+pub struct ClassFeature {
+    pub id: String,
+    pub name: String,
+    pub text: String,
+    #[serde(default)]
+    pub effects: Vec<Effect>,
+}
+
+impl ClassRecord {
+    /// The highest level this class's advancement table defines — the
+    /// shipped cap (1 when the table is empty).
+    pub fn level_cap(&self) -> u32 {
+        self.advancement.iter().map(|a| a.level).max().unwrap_or(1)
+    }
+
+    pub fn advancement_at(&self, level: u32) -> Option<&AdvancementLevel> {
+        self.advancement.iter().find(|a| a.level == level)
+    }
 }
 
 /// The suggested-build block: dm.ai-curated choices (spec req 7 **[call]**
@@ -315,6 +357,15 @@ pub struct SpellcastingDef {
     pub spellbook_cantrips: u32,
     pub spellbook_rank1: u32,
     pub spellbook_curriculum_rank1: u32,
+    /// Spell slots per rank by character level (index 0 = rank 1), as the
+    /// printed spells-per-day table states them: `{"2": [3], "3": [3, 2]}`.
+    /// Level 1 falls back to `rank1_slots` when absent.
+    #[serde(default)]
+    pub slots_by_level: std::collections::BTreeMap<u32, Vec<u32>>,
+    /// Spells added to the spellbook at each level past the first (the
+    /// printed "two spells per level" rule). Defaults to 2.
+    #[serde(default = "default_spells_per_level")]
+    pub spells_per_level: u32,
     /// Whether the arcane school grants the extra curriculum-only
     /// preparations (one cantrip, one spell of each castable rank — the
     /// printed wizard-spellcasting rule).
@@ -606,6 +657,34 @@ pub enum Effect {
     /// Extra bonus-language picks (Nomadic Halfling's +2, Multilingual):
     /// raises the "pf2e.ancestry.languages" chooser's count.
     BonusLanguages { count: u32 },
+}
+
+fn default_spells_per_level() -> u32 {
+    2
+}
+
+impl SpellcastingDef {
+    /// Slots per rank at a character level (index 0 = rank 1).
+    pub fn slots_at(&self, level: u32) -> Vec<u32> {
+        match self.slots_by_level.get(&level) {
+            Some(slots) => slots.clone(),
+            None if level <= 1 => vec![self.rank1_slots],
+            // Past the table: the highest level listed carries forward
+            // (the lint keeps the table complete through the cap).
+            None => self
+                .slots_by_level
+                .iter()
+                .filter(|(l, _)| **l < level)
+                .max_by_key(|(l, _)| **l)
+                .map(|(_, s)| s.clone())
+                .unwrap_or_else(|| vec![self.rank1_slots]),
+        }
+    }
+
+    /// The highest spell rank with a slot at this level.
+    pub fn max_rank_at(&self, level: u32) -> u32 {
+        self.slots_at(level).len() as u32
+    }
 }
 
 /// The raw JSON file contents, as shipped.
@@ -1036,10 +1115,53 @@ impl RulesData {
                 c.id
             )));
         }
-        let known_slots = crate::mechanics::known_slot_ids();
+        // Advancement tables: contiguous from level 2, feature IDs unique
+        // and namespaced, every class defines every level through the
+        // shipped cap (a Fighter could not reach 3 while a Wizard stops at
+        // 2 without this), spell slot tables contiguous through the cap.
+        let cap = self.max_advancement_level();
+        let mut feature_ids = std::collections::BTreeSet::new();
+        for class in &self.classes {
+            for (expected, adv) in (2..).zip(class.advancement.iter()) {
+                if adv.level != expected {
+                    return Err(DataError::Integrity(format!(
+                        "class '{}' advancement table must run contiguously from level 2 (found level {} where {expected} was expected)",
+                        class.id, adv.level
+                    )));
+                }
+                for feature in &adv.features {
+                    if !feature.id.starts_with("feature.")
+                        || !feature_ids.insert(feature.id.clone())
+                    {
+                        return Err(DataError::Integrity(format!(
+                            "class '{}' level {} feature '{}' must have a unique 'feature.' ID",
+                            class.id, adv.level, feature.id
+                        )));
+                    }
+                }
+            }
+            if cap > 1 && class.level_cap() != cap {
+                return Err(DataError::Integrity(format!(
+                    "class '{}' defines levels through {} but the shipped cap is {cap} — every class must reach the cap",
+                    class.id,
+                    class.level_cap()
+                )));
+            }
+            if let Some(sc) = &class.spellcasting {
+                for level in 2..=cap {
+                    if !sc.slots_by_level.contains_key(&level) {
+                        return Err(DataError::Integrity(format!(
+                            "class '{}' spellcasting has no slot table entry for level {level}",
+                            class.id
+                        )));
+                    }
+                }
+            }
+        }
+        let known_slots = crate::mechanics::known_slot_ids(self.max_advancement_level());
         let mut seen_slots: BTreeSet<&str> = BTreeSet::new();
         for entry in &block.entries {
-            if !known_slots.contains(&entry.slot.as_str()) {
+            if !known_slots.contains(&entry.slot) {
                 return Err(DataError::Integrity(format!(
                     "class '{}' suggested_build references unknown slot '{}'",
                     c.id, entry.slot
@@ -1144,6 +1266,16 @@ impl RulesData {
     pub fn background(&self, id: &str) -> Option<&BackgroundRecord> {
         self.backgrounds.iter().find(|r| r.id == id)
     }
+    /// The highest level any shipped class's advancement table defines —
+    /// the level slots the ruleset registers.
+    pub fn max_advancement_level(&self) -> u32 {
+        self.classes
+            .iter()
+            .map(|c| c.level_cap())
+            .max()
+            .unwrap_or(1)
+    }
+
     pub fn class(&self, id: &str) -> Option<&ClassRecord> {
         self.classes.iter().find(|r| r.id == id)
     }

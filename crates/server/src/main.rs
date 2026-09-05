@@ -198,7 +198,33 @@ fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData, known: version::Kno
             }
             continue;
         }
-        match engine.sheet(&c.log) {
+        // A pending level's tail must fold cleanly on top of the prefix,
+        // and must be one level's decisions: an advance at its head, and
+        // only one. The stored sheet is judged against the prefix alone.
+        if c.has_pending_tail() {
+            let tail = c.pending_tail();
+            let advances = tail
+                .iter()
+                .filter(|d| ruleset_pf2e::advance_level_of(d.slot.as_str()).is_some())
+                .count();
+            let head_is_advance = tail
+                .first()
+                .is_some_and(|d| ruleset_pf2e::advance_level_of(d.slot.as_str()).is_some());
+            if !head_is_advance || advances != 1 {
+                failures += 1;
+                println!(
+                    "TAIL-BAD  {} ({}): the pending level-up's decisions do not start with exactly one level advance — abandon the level-up to recover",
+                    c.id, c.sheet.name
+                );
+            } else if let Err(e) = engine.fold(&c.log) {
+                failures += 1;
+                println!(
+                    "TAIL-BROKE {} ({}): the pending level-up no longer replays: {e} — abandon the level-up to recover",
+                    c.id, c.sheet.name
+                );
+            }
+        }
+        match engine.sheet(c.finalized_prefix()) {
             Ok(replayed) if replayed == c.sheet => {
                 println!("OK        {} ({})", c.id, c.sheet.name);
             }
@@ -273,7 +299,8 @@ fn serve(
     // Per-class suggested builds, resolved from the class records before the
     // data moves into the engine.
     let suggested = ruleset_pf2e::suggested_builds(&rules);
-    let engine = ruleset_pf2e::engine(Arc::new(rules));
+    let rules = Arc::new(rules);
+    let engine = ruleset_pf2e::engine(rules.clone());
 
     // Bind: with the lock held, a taken port walks to the next free one
     // (never silently fail to serve). Port 0 lets the OS pick.
@@ -286,6 +313,7 @@ fn serve(
 
     let app = Arc::new(App {
         engine,
+        rules,
         store: Mutex::new(store),
         rules_version,
         known,

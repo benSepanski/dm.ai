@@ -1077,6 +1077,219 @@
         "license": "ORC",
         "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
       }
+    },
+    {
+      "id": "spell.acid-grip",
+      "name": "Acid Grip",
+      "rank": 2,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "acid",
+        "concentrate",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": "basic Reflex",
+      "range": "120 feet",
+      "area": null,
+      "targets": "1 creature",
+      "duration": null,
+      "text": "A caustic grip seizes the target: it takes 2d8 acid damage with a basic Reflex save, and on a failure it is also moved 5 feet in a direction of your choice (10 feet on a critical failure). This is forced movement.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 2,
+          "text": "The damage increases by 2d8."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 316,
+        "url": "https://2e.aonprd.com/Search.aspx?query=Acid+Grip",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.blazing-bolt",
+      "name": "Blazing Bolt",
+      "rank": 2,
+      "traditions": [
+        "arcane",
+        "primal"
+      ],
+      "traits": [
+        "attack",
+        "concentrate",
+        "fire",
+        "manipulate"
+      ],
+      "actions": "1 to 3",
+      "defense": "AC",
+      "range": "60 feet",
+      "area": null,
+      "targets": "1 or more creatures",
+      "duration": null,
+      "text": "You fire a ray of heat and flame at a creature: make a spell attack roll; on a hit the target takes 2d6 fire damage, doubled on a critical hit. Spending two or three actions instead lets you fire rays at up to two or three targets respectively, each dealing 4d6 fire damage, with a separate attack roll per target that counts toward your multiple attack penalty only after all the rays are fired.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 1,
+          "text": "The damage of the single-action ray increases by 1d6, and the damage of the two- and three-action rays increases by 2d6."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 319,
+        "url": "https://2e.aonprd.com/Search.aspx?query=Blazing+Bolt",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.blur",
+      "name": "Blur",
+      "rank": 2,
+      "traditions": [
+        "arcane",
+        "occult"
+      ],
+      "traits": [
+        "concentrate",
+        "illusion",
+        "manipulate",
+        "visual"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "touch",
+      "area": null,
+      "targets": "1 creature",
+      "duration": "1 minute",
+      "text": "The target's form appears blurred, shifting, and wavering, making it concealed. Because the effect is on the creature, it stays concealed however it is seen, though effects that let a creature see through concealment still apply.",
+      "heightening": [],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 319,
+        "url": "https://2e.aonprd.com/Search.aspx?query=Blur",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.invisibility",
+      "name": "Invisibility",
+      "rank": 2,
+      "traditions": [
+        "arcane",
+        "occult"
+      ],
+      "traits": [
+        "illusion",
+        "manipulate",
+        "subtle"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "touch",
+      "area": null,
+      "targets": "1 creature",
+      "duration": "10 minutes",
+      "text": "Cloaked in illusion, the target becomes invisible. The spell ends when the target uses a hostile action.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 4,
+          "text": "The spell lasts 1 minute, but it doesn't end if the target uses a hostile action."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 338,
+        "url": "https://2e.aonprd.com/Search.aspx?query=Invisibility",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.noise-blast",
+      "name": "Noise Blast",
+      "rank": 2,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult"
+      ],
+      "traits": [
+        "concentrate",
+        "manipulate",
+        "sonic"
+      ],
+      "actions": "2",
+      "defense": "Fortitude",
+      "range": "30 feet",
+      "area": "10-foot burst",
+      "targets": null,
+      "duration": null,
+      "text": "A blast of sound explodes outward: each creature in the area takes 2d10 sonic damage and must attempt a Fortitude save — half damage on a success; full damage and deafened for 1 round on a failure; double damage and deafened for 1 minute on a critical failure.",
+      "heightening": [
+        {
+          "kind": "per_rank",
+          "step": 1,
+          "text": "The damage increases by 1d10."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 348,
+        "url": "https://2e.aonprd.com/Search.aspx?query=Noise+Blast",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
+    },
+    {
+      "id": "spell.resist-energy",
+      "name": "Resist Energy",
+      "rank": 2,
+      "traditions": [
+        "arcane",
+        "divine",
+        "occult",
+        "primal"
+      ],
+      "traits": [
+        "concentrate",
+        "manipulate"
+      ],
+      "actions": "2",
+      "defense": null,
+      "range": "touch",
+      "area": null,
+      "targets": "1 creature",
+      "duration": "10 minutes",
+      "text": "Choose acid, cold, electricity, fire, or sonic when you cast the spell: the target and its gear gain resistance 5 against damage of that type for the duration.",
+      "heightening": [
+        {
+          "kind": "fixed",
+          "rank": 4,
+          "text": "The resistance increases to 10, and you can target up to 2 creatures."
+        },
+        {
+          "kind": "fixed",
+          "rank": 7,
+          "text": "The resistance increases to 15, and you can target up to 5 creatures."
+        }
+      ],
+      "source": {
+        "book": "Pathfinder Player Core",
+        "page": 355,
+        "url": "https://2e.aonprd.com/Search.aspx?query=Resist+Energy",
+        "license": "ORC",
+        "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+      }
     }
   ],
   "theses": [

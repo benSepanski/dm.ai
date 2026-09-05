@@ -310,3 +310,82 @@ fn storage_documents_stay_private_to_persistence() {
         }
     }
 }
+
+// ---- level-up architecture rows: level is derived; the marker is storage-private; one dialog machine ----
+
+/// Level is a fact of the log, never a constant: the ruleset carries no
+/// `const LEVEL` / `LEVEL:` token, and the wire types carry no
+/// `finalized_through` (the marker is storage-private to persistence).
+#[test]
+fn level_is_derived_and_the_marker_is_storage_private() {
+    let root = checks::workspace_root();
+    for (path, src) in rust_sources(&root.join("crates/ruleset-pf2e/src")) {
+        for token in ["const LEVEL", "LEVEL:"] {
+            assert!(
+                !src.contains(token),
+                "{} contains '{token}': level is derived from the log's advance decisions, never a constant",
+                path.display()
+            );
+        }
+    }
+    for (path, src) in rust_sources(&root.join("crates/types/src")) {
+        assert!(
+            !src.contains("finalized_through"),
+            "{} names the finalized marker: it is storage-private, never on the wire",
+            path.display()
+        );
+    }
+}
+
+/// One dialog machine, structural half: no level-specific wizard exists.
+/// No `ui/src` file is named after level-up, no component named LevelUp*
+/// is exported, and the wizard component contains no phase/level branch
+/// token — it renders whatever steps the projection says are live.
+#[test]
+fn ui_has_no_level_specific_wizard() {
+    let root = checks::workspace_root().join("ui/src");
+    let mut stack = vec![root.clone()];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if path.file_name().is_some_and(|n| n == "pkg") {
+                    continue;
+                }
+                stack.push(path);
+                continue;
+            }
+            let name = path.file_name().unwrap().to_string_lossy().to_string();
+            if !(name.ends_with(".ts") || name.ends_with(".tsx")) {
+                continue;
+            }
+            assert!(
+                !name.contains("LevelUp") && !name.to_lowercase().contains("level-up"),
+                "{name}: no level-specific UI file — the wizard renders live steps"
+            );
+            let src = std::fs::read_to_string(&path).unwrap();
+            for token in [
+                "export function LevelUp",
+                "export const LevelUp",
+                "export class LevelUp",
+            ] {
+                assert!(
+                    !src.contains(token),
+                    "{name} exports a LevelUp component — one dialog machine"
+                );
+            }
+        }
+    }
+    let wizard = std::fs::read_to_string(root.join("Wizard.tsx")).unwrap();
+    for token in ["phase", "level ===", "isLeveling"] {
+        assert!(
+            !wizard.contains(token),
+            "Wizard.tsx contains '{token}': the wizard never branches on a phase or level"
+        );
+    }
+    // Gains and deltas render through the one shared diff table.
+    assert!(
+        wizard.contains("SheetDiffTable"),
+        "the level-up gains render through the shared SheetDiffTable, not a new diff component"
+    );
+}

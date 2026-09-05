@@ -321,3 +321,71 @@ fn name_pools_cover_every_shipped_ancestry() {
         );
     }
 }
+
+/// Advancement data (level-up architecture): every shipped class defines
+/// every level through the shipped cap (the ruleset's integrity check
+/// refuses otherwise — asserted here as data facts), fixed features are
+/// records with namespaced IDs, a caster's slot table reaches the cap, and
+/// the level-3 world's cap is exactly 3.
+#[test]
+fn advancement_tables_reach_the_shipped_cap() {
+    let data = checks::load_rules_data();
+    let cap = data.max_advancement_level();
+    assert_eq!(
+        cap, 3,
+        "the level-3 world: every class advances to exactly 3"
+    );
+    for class in &data.classes {
+        let levels: Vec<u32> = class.advancement.iter().map(|a| a.level).collect();
+        assert_eq!(
+            levels,
+            (2..=cap).collect::<Vec<_>>(),
+            "{}: advancement must run 2..={cap}",
+            class.id
+        );
+        for adv in &class.advancement {
+            for feature in &adv.features {
+                assert!(
+                    feature.id.starts_with("feature."),
+                    "{}: feature '{}' must carry a 'feature.' ID",
+                    class.id,
+                    feature.id
+                );
+            }
+        }
+        if let Some(sc) = &class.spellcasting {
+            for level in 2..=cap {
+                assert!(
+                    sc.slots_by_level.contains_key(&level),
+                    "{}: spell slot table must define level {level}",
+                    class.id
+                );
+            }
+        }
+    }
+    // The level-2 and level-3 catalogs exist for both classes: at least one
+    // level-2 class feat per class, at least one level-2 skill feat, at
+    // least one level-3 general feat, and rank-2 arcane spells.
+    for class in &data.classes {
+        assert!(
+            data.class_feats
+                .iter()
+                .any(|f| f.class == class.id && f.level == 2),
+            "{}: ships no level-2 class feat",
+            class.id
+        );
+    }
+    assert!(data
+        .general_feats
+        .iter()
+        .any(|f| f.id.starts_with("feat.skill.") && f.level == 2));
+    assert!(data
+        .general_feats
+        .iter()
+        .any(|f| f.id.starts_with("feat.general.") && f.level == 3));
+    assert!(data
+        .spells
+        .spells
+        .iter()
+        .any(|s| s.rank == 2 && s.traditions.iter().any(|t| t == "arcane")));
+}

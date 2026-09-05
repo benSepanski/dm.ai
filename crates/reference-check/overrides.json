@@ -23,7 +23,11 @@
     "weapon.arrows": "equipment/arrows.json",
     "weapon.blowgun-darts": "equipment/blowgun-darts.json",
     "weapon.bolts": "equipment/bolts.json",
-    "weapon.sling-bullets": "equipment/sling-bullets.json"
+    "weapon.sling-bullets": "equipment/sling-bullets.json",
+    "feat.class.wizard.cantrip-expansion": "feats/class/shared-class-feats/level-2/cantrip-expansion.json",
+    "feat.class.wizard.conceal-spell": "feats/class/shared-class-feats/level-2/conceal-spell.json",
+    "feat.class.wizard.energy-ablation": "feats/class/wizard/level-2/energy-ablation.json",
+    "feat.class.wizard.nonlethal-spell": "feats/class/wizard/level-2/nonlethal-spell.json"
   },
   "spec_exclusions": [
     {

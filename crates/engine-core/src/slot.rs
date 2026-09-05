@@ -48,6 +48,28 @@ pub type ValidateFn<S> = Box<dyn Fn(&S, Option<&Decision>) -> Vec<ChecklistEntry
 /// what the engine cannot know.
 pub type MetersFn<S> = Box<dyn Fn(&S, Option<&Decision>) -> Vec<MeterView> + Send + Sync>;
 
+/// A wizard step: an ordered, titled container for slots, live under some
+/// folded states and not others (creation steps while creating; a level's
+/// step while that level is pending). Dead steps render nothing and
+/// validate nothing; their slots stay appendable. Liveness is the
+/// step-level twin of a slot's unlock.
+pub struct StepRegistration<S> {
+    pub id: StepId,
+    pub title: String,
+    pub live: Box<dyn Fn(&S) -> bool + Send + Sync>,
+}
+
+impl<S> StepRegistration<S> {
+    /// A step that is always live (the creation-only default).
+    pub fn always(id: impl Into<String>, title: impl Into<String>) -> Self {
+        Self {
+            id: StepId::new(id),
+            title: title.into(),
+            live: Box::new(|_| true),
+        }
+    }
+}
+
 /// Everything a ruleset says about one slot. `S` is the ruleset's folded
 /// character state; the engine never looks inside it.
 pub struct SlotRegistration<S> {

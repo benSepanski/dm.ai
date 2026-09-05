@@ -8,7 +8,13 @@
     "prerequisites": [],
     "requirements": null,
     "text": "Make a melee Strike. On a hit, you immediately attempt a check to Recall Knowledge about the target (+2 circumstance bonus on a critical hit). The target is then temporarily immune to Combat Assessment for 1 day.",
-    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4768", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 140,
+      "url": "https://2e.aonprd.com/Feats.aspx?ID=4768",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "feat.class.fighter.double-slice",
@@ -19,7 +25,13 @@
     "prerequisites": [],
     "requirements": "You are wielding two melee weapons, one in each hand.",
     "text": "Make two Strikes against the same target, one with each required weapon, at your current multiple attack penalty. The second Strike takes a –2 penalty if its weapon doesn't have the agile trait. If both hit, combine their damage. This counts as two attacks toward your multiple attack penalty.",
-    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4769", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 140,
+      "url": "https://2e.aonprd.com/Feats.aspx?ID=4769",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "feat.class.fighter.exacting-strike",
@@ -30,7 +42,13 @@
     "prerequisites": [],
     "requirements": null,
     "text": "You make a controlled attack, accounting fully for your momentum. Make a Strike; it gains the following failure effect: this attack doesn't count toward your multiple attack penalty.",
-    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4770", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 140,
+      "url": "https://2e.aonprd.com/Feats.aspx?ID=4770",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "feat.class.fighter.point-blank-stance",
@@ -41,7 +59,13 @@
     "prerequisites": [],
     "requirements": "You are wielding a ranged weapon.",
     "text": "While in this stance, you take no penalty from the volley trait, and ranged weapons without the volley trait deal +2 circumstance damage against targets within the weapon's first range increment.",
-    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4771", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 140,
+      "url": "https://2e.aonprd.com/Feats.aspx?ID=4771",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "feat.class.fighter.reactive-shield",
@@ -52,7 +76,13 @@
     "prerequisites": [],
     "requirements": "You are wielding a shield.",
     "text": "Trigger: an enemy hits you with a melee Strike. You can snap your shield into place just as you would take a blow: you immediately use the Raise a Shield action, gaining your shield's bonus to AC against the triggering attack.",
-    "source": { "book": "Pathfinder Player Core", "page": 140, "url": "https://2e.aonprd.com/Feats.aspx?ID=4772", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 140,
+      "url": "https://2e.aonprd.com/Feats.aspx?ID=4772",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "feat.class.fighter.snagging-strike",
@@ -63,7 +93,13 @@
     "prerequisites": [],
     "requirements": "You have one hand free, and your target is within reach of that hand.",
     "text": "Make a Strike while keeping one hand free to snag your opponent. On a hit, the target is off-guard until the start of your next turn or until it's no longer within reach of your free hand, whichever comes first.",
-    "source": { "book": "Pathfinder Player Core", "page": 141, "url": "https://2e.aonprd.com/Feats.aspx?ID=4773", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 141,
+      "url": "https://2e.aonprd.com/Feats.aspx?ID=4773",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "feat.class.fighter.sudden-charge",
@@ -74,7 +110,13 @@
     "prerequisites": [],
     "requirements": null,
     "text": "With a quick sprint, you dash up to your foe and swing: Stride twice, and if you end your movement within melee reach of at least one enemy, make a melee Strike against that enemy. You can use Sudden Charge while Burrowing, Climbing, Flying, or Swimming instead of Striding if you have the corresponding movement type.",
-    "source": { "book": "Pathfinder Player Core", "page": 141, "url": "https://2e.aonprd.com/Feats.aspx?ID=4774", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 141,
+      "url": "https://2e.aonprd.com/Feats.aspx?ID=4774",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   },
   {
     "id": "feat.class.fighter.vicious-swing",
@@ -85,6 +127,182 @@
     "prerequisites": [],
     "requirements": null,
     "text": "You unleash a particularly powerful attack. Make a melee Strike; it counts as two attacks for your multiple attack penalty. On a hit, deal one extra die of weapon damage.",
-    "source": { "book": "Pathfinder Player Core", "page": 141, "url": "https://2e.aonprd.com/Feats.aspx?ID=4775", "license": "ORC", "attribution": "Pathfinder Player Core © 2023 Paizo Inc." }
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 141,
+      "url": "https://2e.aonprd.com/Feats.aspx?ID=4775",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.fighter.aggressive-block",
+    "class": "class.fighter",
+    "level": 2,
+    "name": "Aggressive Block",
+    "actions": "Free action",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "Trigger: you use the Shield Block reaction, and the opponent that triggered it is adjacent to you and is your size or smaller. You push back as you block: the triggering creature is automatically pushed 5 feet away from you or becomes off-guard until the start of your next turn — its choice — and it can't be pushed into a wall or another creature. If the push would move it into a hazard or off a cliff, it is off-guard instead.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 141,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Aggressive+Block",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.fighter.brutish-shove",
+    "class": "class.fighter",
+    "level": 2,
+    "name": "Brutish Shove",
+    "actions": "1 action (press)",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "Throwing your weight behind your attack, you make a Strike with a two-handed melee weapon. If you hit a target your size or smaller, it becomes off-guard until the end of your current turn, and you can also automatically Shove it with the same benefits as a Shove action; on a failure, the target is off-guard until the end of your turn.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 141,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Brutish+Shove",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.fighter.combat-grab",
+    "class": "class.fighter",
+    "level": 2,
+    "name": "Combat Grab",
+    "actions": "1 action (press)",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "Make a melee Strike with a one-handed weapon while your other hand is free. If the Strike hits, you grab the target with your free hand; it is grabbed until the end of your next turn or until it escapes or moves out of your reach. You can release it as a free action.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 141,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Combat+Grab",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.fighter.dueling-parry",
+    "class": "class.fighter",
+    "level": 2,
+    "name": "Dueling Parry",
+    "actions": "1 action",
+    "prerequisites": [],
+    "requirements": "wielding a single one-handed melee weapon, other hand free",
+    "text": "Requirements: you are wielding only a single one-handed melee weapon and have your other hand free. You use your weapon to fend off blows, gaining a +2 circumstance bonus to AC until the start of your next turn while you keep meeting the requirements.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 141,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Dueling+Parry",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.fighter.intimidating-strike",
+    "class": "class.fighter",
+    "level": 2,
+    "name": "Intimidating Strike",
+    "actions": "2 actions",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "Your blow not only wounds but frightens. Make a melee Strike; if you hit and deal damage, the target is frightened 1, or frightened 2 on a critical hit.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 141,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Intimidating+Strike",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.fighter.lunge",
+    "class": "class.fighter",
+    "level": 2,
+    "name": "Lunge",
+    "actions": "1 action",
+    "prerequisites": [],
+    "requirements": "wielding a melee weapon",
+    "text": "Requirements: you are wielding a melee weapon. Extending your body to its limits, you attack an opponent that would otherwise be out of reach: make a melee Strike with a reach 5 feet greater than normal.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 141,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Lunge",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.wizard.cantrip-expansion",
+    "class": "class.wizard",
+    "level": 2,
+    "name": "Cantrip Expansion",
+    "actions": "passive",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "A greater understanding of your magic broadens your array of simple spells. You can prepare one additional cantrip each day.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 198,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Cantrip+Expansion",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.wizard.conceal-spell",
+    "class": "class.wizard",
+    "level": 2,
+    "name": "Conceal Spell",
+    "actions": "1 action (spellshape)",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "Spellshape. If your next action is to Cast a Spell, the spell gains the subtle trait, hiding the shining runes, sparks of magic, and other manifestations that would usually give away your spellcasting. The spell doesn't gain the subtle trait if it comes from a magic item.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 198,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Conceal+Spell",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.wizard.energy-ablation",
+    "class": "class.wizard",
+    "level": 2,
+    "name": "Energy Ablation",
+    "actions": "1 action (spellshape)",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "Spellshape. If the next action you use is to Cast a Spell that deals energy damage, you draw off some of that energy as a barrier: until the start of your next turn you gain resistance to one damage type the spell dealt (acid, cold, electricity, fire, or sonic) equal to the spell's rank.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 198,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Energy+Ablation",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.class.wizard.nonlethal-spell",
+    "class": "class.wizard",
+    "level": 2,
+    "name": "Nonlethal Spell",
+    "actions": "1 action (spellshape)",
+    "prerequisites": [],
+    "requirements": null,
+    "text": "Spellshape. You can pull your punches with a spell: if the next action you use is to Cast a Spell that deals damage and doesn't have the death trait, the spell gains the nonlethal trait.",
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 198,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Nonlethal+Spell",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   }
 ]
