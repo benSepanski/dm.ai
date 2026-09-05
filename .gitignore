@@ -6,3 +6,7 @@ ui/playwright-report/
 
 # reference-check ground-truth cache: fetched at tool-time, never committed
 .reference-cache/
+
+# live app data in the repo root (scratch campaigns) — never committed
+campaign/
+campaign.backup-pre-0.2.0/
