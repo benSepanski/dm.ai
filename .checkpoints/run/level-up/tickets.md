@@ -40,32 +40,32 @@ every row green before the report.
 
 ## Tickets
 
-- [ ] 1. Constraints wiring: token scans in `checks/crate_layering.rs`
+- [x] 1. Constraints wiring: token scans in `checks/crate_layering.rs`
   (`const LEVEL`/`LEVEL:` absent from ruleset src; `finalized_through`/level
   fields absent from types; ui `LevelUp*`/phase tokens); leveled sections
   stubbed in `checks/random_mint.rs`, `checks/clone.rs`, `checks/persistence.rs`,
   `checks/version_guard.rs`, `checks/api_authority.rs`, `checks/crash_harness.rs`,
   `checks/replay.rs`, `checks/perf.rs`, `checks/rules_data.rs`; `ui/e2e/level-up.spec.ts`.
-- [ ] 2. engine-core: `StepRegistration` with liveness; `live_steps`;
+- [x] 2. engine-core: `StepRegistration` with liveness; `live_steps`;
   project emits live steps only and skips dead-step slots; `describe_decision`.
-- [ ] 3. ruleset: `state.level`; LEVEL removed; advancement kind module +
+- [x] 3. ruleset: `state.level`; LEVEL removed; advancement kind module +
   advance slots; per-level feat/skill-feat/general-feat/skill-increase/
   spellbook slots; skill ranks with increases; spell slot table by level;
   advancement blocks + cap; `feat` prerequisite kind; exports
   (`advance_slot_id`, `advance_level_of`, `level_cap`, `is_advance_slot`).
-- [ ] 4. rules-data 0.4.0: advancement blocks (Fighter L3 Bravery with
+- [x] 4. rules-data 0.4.0: advancement blocks (Fighter L3 Bravery with
   Will→expert effect), wizard slot table, Fighter/Wizard level-2 class feats,
   level-2 skill feats, level-3 general feats, rank-2 spells; lineage;
   attestation regenerated; existing goldens unchanged.
-- [ ] 5. types: leveling views, LevelUpView, requests/outcomes.
-- [ ] 6. server: schema v4 + marker fixup + prefix accessor; verify/status/
+- [x] 5. types: leveling views, LevelUpView, requests/outcomes.
+- [x] 6. server: schema v4 + marker fixup + prefix accessor; verify/status/
   accept/clone on the prefix; start/abandon routes; finalize-pending; wizard
   write guards (finalized-no-tail, below-marker, advance-slot, fill-remaining
   during tail, ordering); live-step resume labels; views + gains.
-- [ ] 7. checks green: all rows of ticket 1 implemented for real.
-- [ ] 8. UI: api.ts, App router + sheet Level-up button/cap note, Wizard
+- [x] 7. checks green: all rows of ticket 1 implemented for real.
+- [x] 8. UI: api.ts, App router + sheet Level-up button/cap note, Wizard
   gains/deltas/abandon, SheetDiffTable extraction, unit tests; bindings.
-- [ ] 9. e2e level-up.spec.ts walks.
-- [ ] 10. Gates: fmt, clippy -D warnings, deny, full suite (< 20 s),
+- [x] 9. e2e level-up.spec.ts walks.
+- [x] 10. Gates: fmt, clippy -D warnings, deny, full suite (< 20 s),
   ui tests, e2e, bindings fresh.
-- [ ] 11. Report.
+- [x] 11. Report.
