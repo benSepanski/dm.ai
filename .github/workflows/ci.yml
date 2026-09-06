@@ -34,7 +34,13 @@ jobs:
         run: cargo deny check
 
       - name: Build tests
-        run: cargo test --workspace --no-run
+        # `--no-run` builds the test binaries but NOT the server bin the
+        # checks spawn; without the second command the first test binary
+        # (api_authority, alphabetically) pays that link inside the timed
+        # window below — 6–13 s on the runner, enough to breach the budget.
+        run: |
+          cargo test --workspace --no-run
+          cargo build -p server
       - name: Test suite (includes checks/) with wall-time budget
         # < 20 s execution budget (architecture perf table). Compilation is
         # excluded — the suite was built in the previous step.

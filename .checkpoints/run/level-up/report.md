@@ -220,7 +220,11 @@ only, through the prefix accessor.
 
 - Full workspace suite green: 27 test targets, 0 failures; warm wall time
   18 s against the 20 s ceiling (execution only, CI's measurement; the
-  crash cycles were trimmed to hold it).
+  crash cycles were trimmed to hold it). PR CI then exposed a measurement
+  bug: `cargo test --no-run` leaves the server bin unbuilt, so the first
+  test binary paid its link inside the timed window (6–13 s on the
+  runner; one of two runs on the same commit clocked 20 s and failed).
+  Fixed in `ci.yml` by building the server in the untimed build step.
 - `cargo fmt --check`, `cargo clippy --workspace --all-targets -D warnings`,
   `cargo deny check`: clean. `tsc`, `eslint`: clean; 44 UI unit tests green.
 - All 39 Playwright e2e specs green (6 new level-up walks; every prior walk
