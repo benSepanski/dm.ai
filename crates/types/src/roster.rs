@@ -14,6 +14,10 @@ pub struct RosterView {
     /// Shipped classes, for the random-mint class picker.
     #[serde(default)]
     pub classes: Vec<ClassOption>,
+    /// Whether this campaign's game publishes a suggested build the
+    /// quick-build control can offer; false when the rules publish none.
+    #[serde(default)]
+    pub quick_build_available: bool,
 }
 
 /// One shipped class, as the random-mint picker offers it.
