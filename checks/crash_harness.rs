@@ -771,15 +771,41 @@ fn rolls_under_sigkill_are_prior_or_next_state() {
     let leveler;
     {
         let server = TestServer::spawn(dir.path());
-        let (status, mint) = leveling::post_json(
+        // Brannock from the committed fixture through the API (confirms
+        // are cheap; a mint samples).
+        let (status, created) = leveling::post_json(
             &client,
             &server.url,
-            "/api/characters/random-mint",
-            json!({"request_id": "crash-hd", "class_id": null, "name": "Hit Die"}),
+            "/api/characters",
+            json!({"name": "Hit Die"}),
         );
-        assert_eq!(status, 200, "{mint}");
-        leveler = mint["draft"]["id"].as_str().unwrap().to_string();
-        let v = mint["draft"]["version"].as_u64().unwrap();
+        assert_eq!(status, 200, "{created}");
+        leveler = created["id"].as_str().unwrap().to_string();
+        let mut v = created["version"].as_u64().unwrap();
+        let fixture: Value = serde_json::from_str(
+            &std::fs::read_to_string(
+                checks::workspace_root().join("checks/fixtures/brannock.log.json"),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        for (n, d) in fixture.as_array().unwrap().iter().enumerate() {
+            if d["slot"] == "dnd5e.details.name" {
+                continue;
+            }
+            let (status, outcome) = leveling::post_json(
+                &client,
+                &server.url,
+                &format!("/api/characters/{leveler}/confirm"),
+                json!({"version": v, "decision": {
+                    "id": format!("hd-fixture-{n}"), "slot": d["slot"],
+                    "selection": d["selection"], "source": "player"
+                }}),
+            );
+            assert_eq!(status, 200, "{outcome}");
+            assert_eq!(outcome["outcome"], "confirmed", "{outcome}");
+            v = outcome["draft"]["version"].as_u64().unwrap();
+        }
         let (status, fin) = leveling::post_json(
             &client,
             &server.url,

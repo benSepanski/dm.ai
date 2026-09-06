@@ -836,6 +836,7 @@ fn seeded_dice_reproduce_across_copies_and_wear_the_badge() {
         }
         dir
     };
+    let second_faces: std::cell::RefCell<Option<Value>> = std::cell::RefCell::new(None);
     let faces_under = |dir: &std::path::Path, args: &[&str]| -> (bool, Value) {
         let server = TestServer::spawn_with_args(dir, args);
         let campaign: Value = client
@@ -863,6 +864,30 @@ fn seeded_dice_reproduce_across_copies_and_wear_the_badge() {
             .find(|d| d["slot"] == "dnd5e.scores.roll")
             .unwrap()["selection"]["value"][0]["groups"]
             .clone();
+        if args == ["--dice-seed", "7"] && second_faces.borrow().is_none() {
+            // In the first seeded copy, a second roll under a new id.
+            let v = outcome["draft"]["version"].as_u64().unwrap();
+            let (_, again) = roll_raw(
+                &client,
+                &server.url,
+                &id,
+                json!({"slot": "dnd5e.scores.roll", "version": v, "decision_id": "rep-r2"}),
+            );
+            assert_eq!(again["outcome"], "confirmed", "{again}");
+            let doc: Value = serde_json::from_str(
+                &std::fs::read_to_string(dir.join(format!("characters/{id}.json"))).unwrap(),
+            )
+            .unwrap();
+            let sets = doc["log"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|d| d["slot"] == "dnd5e.scores.roll")
+                .unwrap()["selection"]["value"]
+                .clone();
+            assert_eq!(sets.as_array().unwrap().len(), 2);
+            *second_faces.borrow_mut() = Some(sets[1]["groups"].clone());
+        }
         (campaign["seeded_dice"].as_bool().unwrap(), faces)
     };
     let a = copy("a");
@@ -870,6 +895,7 @@ fn seeded_dice_reproduce_across_copies_and_wear_the_badge() {
     let c = copy("c");
     let d = copy("d");
     let (badge_a, faces_a) = faces_under(a.path(), &["--dice-seed", "7"]);
+    let second_faces = second_faces.borrow().clone();
     let (badge_b, faces_b) = faces_under(b.path(), &["--dice-seed", "7"]);
     let (badge_c, faces_c) = faces_under(c.path(), &["--dice-seed", "8"]);
     let (badge_d, faces_d) = faces_under(d.path(), &[]);
@@ -881,36 +907,12 @@ fn seeded_dice_reproduce_across_copies_and_wear_the_badge() {
     );
     assert_ne!(faces_a, faces_c, "a different seed differs");
     assert_ne!(faces_a, faces_d, "the operating system differs");
-    // A different decision id under the same seed is an independent stream.
-    {
-        let server = TestServer::spawn_with_args(a.path(), &["--dice-seed", "7"]);
-        let view: Value = client
-            .get(format!("{}/api/characters/{id}", server.url))
-            .send()
-            .unwrap()
-            .json()
-            .unwrap();
-        let v = view["version"].as_u64().unwrap();
-        let (_, outcome) = roll_raw(
-            &client,
-            &server.url,
-            &id,
-            json!({"slot": "dnd5e.scores.roll", "version": v, "decision_id": "rep-r2"}),
-        );
-        let doc: Value = serde_json::from_str(
-            &std::fs::read_to_string(a.path().join(format!("characters/{id}.json"))).unwrap(),
-        )
-        .unwrap();
-        let sets = doc["log"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|d| d["slot"] == "dnd5e.scores.roll")
-            .unwrap()["selection"]["value"]
-            .clone();
-        assert_eq!(sets.as_array().unwrap().len(), 2, "{outcome}");
-        assert_ne!(sets[0]["groups"], sets[1]["groups"]);
-    }
+    // A different decision id under the same seed is an independent stream
+    // (rolled in copy a's session, above).
+    assert_ne!(
+        second_faces.as_ref().expect("a second roll in copy a"),
+        &faces_a
+    );
     // No seed reaches any file written under the flag.
     for dir in [a.path(), b.path(), c.path()] {
         for entry in walk(dir) {
