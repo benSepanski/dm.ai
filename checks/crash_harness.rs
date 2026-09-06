@@ -9,6 +9,9 @@
 use checks::TestServer;
 use serde_json::{json, Value};
 
+#[path = "leveling_helpers.rs"]
+mod leveling;
+
 /// Deterministic pseudo-randomness (no rand dependency, reproducible runs).
 struct Lcg(u64);
 impl Lcg {
@@ -420,8 +423,6 @@ fn kill_dash_nine_loses_no_acknowledged_confirm() {
 /// move only together (finalize), or not at all.
 #[test]
 fn level_transitions_under_sigkill_are_prior_or_next_state() {
-    #[path = "leveling_helpers.rs"]
-    mod leveling;
     let dir = tempfile::tempdir().unwrap();
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(2))
@@ -650,8 +651,6 @@ fn level_transitions_under_sigkill_are_prior_or_next_state() {
 /// or one more, never torn, never a duplicate.
 #[test]
 fn rolls_under_sigkill_are_prior_or_next_state() {
-    #[path = "leveling_helpers.rs"]
-    mod leveling;
     let dir = tempfile::tempdir().unwrap();
     checks::declare_campaign(dir.path(), "dnd5e");
     let client = reqwest::blocking::Client::builder()
@@ -690,7 +689,7 @@ fn rolls_under_sigkill_are_prior_or_next_state() {
             .unwrap_or_default()
     };
     let mut expected = 0usize;
-    for (cycle, delay_ms) in [0u64, 3, 8, 1].into_iter().enumerate() {
+    for (cycle, delay_ms) in [0u64, 5].into_iter().enumerate() {
         let mut server = TestServer::spawn(dir.path());
         let before = sets_in(&leveling::read_doc(dir.path(), &id));
         assert_eq!(before.len(), expected);

@@ -52,7 +52,11 @@ fn confirm(
         Selection::Option(id) => id.as_str().to_string(),
         Selection::Options(ids) => ids.iter().map(|i| i.as_str()).collect::<Vec<_>>().join("+"),
         Selection::Text(t) => t.clone(),
-        Selection::Rolled(sets) => format!("rolled{}", sets.len()),
+        Selection::Rolled(sets) => format!(
+            "rolled{}:{:?}",
+            sets.len(),
+            sets.iter().map(|s| &s.groups).collect::<Vec<_>>()
+        ),
     };
     let input = DecisionInput {
         id: DecisionId::new(format!("{slot}={key}")),
@@ -262,12 +266,141 @@ fn value(sheet: &types::SheetView, section: &str, label: &str) -> String {
 
 type GoldenBuild = fn(&ruleset_dnd5e::Dnd5eEngine) -> Vec<Decision>;
 
-fn golden_names() -> [(&'static str, GoldenBuild); 3] {
+fn golden_names() -> [(&'static str, GoldenBuild); 4] {
     [
         ("brannock", brannock_log),
         ("brannock-3", brannock_3_log),
         ("nell-gold", gold_log),
+        ("ysolde", ysolde_log),
     ]
+}
+
+fn rolled_set(groups: &[[u8; 4]], origin: types::RollOrigin) -> types::RolledSet {
+    types::RolledSet {
+        groups: groups.iter().map(|g| g.to_vec()).collect(),
+        origin,
+    }
+}
+
+/// Ysolde (dnd-dice): Brannock's picks with the rolling method — an app
+/// roll first, then an entered set that supersedes it with duplicate
+/// twelves and an 18, so Strength reaches the cap with the Soldier's +2.
+/// The history keeps both sets; the assignment uses the entered one:
+/// Str 18, Dex 12, Con 12, Wis 10, Int 9, Cha 8.
+fn ysolde_log(engine: &ruleset_dnd5e::Dnd5eEngine) -> Vec<Decision> {
+    let mut log = Vec::new();
+    confirm(engine, &mut log, "dnd5e.class", one("class.fighter"));
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.background",
+        one("background.soldier"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.background.increase",
+        one("increase.str2-con1"),
+    );
+    confirm(engine, &mut log, "dnd5e.species", one("species.human"));
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.species.skill",
+        one("skill.perception"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.species.feat",
+        one("feat.origin.alert"),
+    );
+    confirm(engine, &mut log, "dnd5e.scores.method", one("method.roll"));
+    // The app's first roll: 9, 8, 8, 7, 11, 6.
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.scores.roll",
+        Selection::Rolled(vec![rolled_set(
+            &[
+                [3, 3, 3, 1],
+                [4, 2, 2, 1],
+                [3, 3, 2, 2],
+                [5, 1, 1, 1],
+                [6, 4, 1, 1],
+                [2, 2, 2, 1],
+            ],
+            types::RollOrigin::App,
+        )]),
+    );
+    // Entered by hand, superseding it: 18, 12, 12, 10, 9, 8 (the confirm
+    // helper amends, and the engine appends the set onto the history).
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.scores.roll",
+        Selection::Rolled(vec![rolled_set(
+            &[
+                [6, 6, 6, 1],
+                [4, 4, 4, 1],
+                [5, 4, 3, 3],
+                [4, 3, 3, 2],
+                [3, 3, 3, 1],
+                [6, 1, 1, 1],
+            ],
+            types::RollOrigin::Entered,
+        )]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.scores.assign",
+        many(&[
+            &score("str", 18),
+            &score("dex", 12),
+            &score("con", 12),
+            &score("wis", 10),
+            &score("int", 9),
+            &score("cha", 8),
+        ]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.class.skills",
+        many(&["skill.acrobatics", "skill.insight"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.class.style",
+        one("feat.style.defense"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.class.masteries",
+        many(&["weapon.greatsword", "weapon.flail", "weapon.javelin"]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.equipment.package",
+        one("package.fighter.a"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.background.equipment",
+        one("background-equipment.package"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        "dnd5e.details.name",
+        Selection::Text("Ysolde".into()),
+    );
+    log
 }
 
 /// Hand-verified goldens: the committed fixtures equal the walks, replay
@@ -875,4 +1008,397 @@ fn confirm_and_finalize_pending_under_sigkill_are_prior_or_next_state() {
         let doc = lv::read_doc(dir.path(), &id);
         assert!(doc["state"] == "finalized", "never torn: {}", doc["state"]);
     }
+}
+
+// ---- dnd-dice rows ---------------------------------------------------------
+
+/// Ysolde's golden by hand (SRD 5.2.1): the file holds both sets in order
+/// with their tags; Strength 18 + 2 = 20 (the cap, reached and not
+/// exceeded) → +5, save +7 with proficiency; Con 12 + 1 = 13 → +1, HP 11;
+/// the two twelves each name their own faces.
+#[test]
+fn ysolde_golden_keeps_the_history_and_reaches_the_cap() {
+    let engine = engine();
+    let log = ysolde_log(&engine);
+    let roll = log
+        .iter()
+        .find(|d| d.slot.as_str() == "dnd5e.scores.roll")
+        .unwrap();
+    let Selection::Rolled(sets) = &roll.selection else {
+        panic!("a rolled selection")
+    };
+    assert_eq!(sets.len(), 2);
+    assert_eq!(sets[0].origin, types::RollOrigin::App);
+    assert_eq!(sets[1].origin, types::RollOrigin::Entered);
+    let fixture =
+        std::fs::read_to_string(checks::workspace_root().join("checks/fixtures/ysolde.log.json"))
+            .unwrap();
+    assert!(fixture.contains("\"origin\": \"app\"") && fixture.contains("\"origin\": \"entered\""));
+    let sheet = engine.sheet(&log).unwrap();
+    assert_eq!(value(&sheet, "Ability Scores", "Strength"), "20 (+5)");
+    assert_eq!(value(&sheet, "Ability Scores", "Dexterity"), "12 (+1)");
+    assert_eq!(value(&sheet, "Ability Scores", "Constitution"), "13 (+1)");
+    assert_eq!(value(&sheet, "Saving Throws", "Strength"), "+7");
+    assert_eq!(value(&sheet, "Combat", "Hit Points"), "11");
+    assert_eq!(value(&sheet, "Combat", "Armor Class"), "17");
+    let detail = |label: &str| {
+        sheet
+            .entry("Ability Scores", label)
+            .unwrap()
+            .detail
+            .clone()
+            .unwrap_or_default()
+    };
+    assert_eq!(
+        detail("Strength"),
+        "18 (Random Generation: 6, 6, 6, 1 → 18, entered) +2 (Soldier)"
+    );
+    assert_eq!(
+        detail("Dexterity"),
+        "12 (Random Generation: 4, 4, 4, 1 → 12, entered)"
+    );
+    assert_eq!(
+        detail("Constitution"),
+        "12 (Random Generation: 5, 4, 3, 3 → 12, entered) +1 (Soldier)"
+    );
+    let projection = engine.project(&log).unwrap();
+    assert!(projection.can_finalize, "{:#?}", projection.checklist);
+}
+
+/// Assignment multiplicity, swept: over rolled sets with repeats, each
+/// total is assignable exactly as often as it was rolled, one per ability,
+/// and one use too many is Illegal with the rule named; the array path's
+/// by-count rule equals its old by-value behaviour on distinct values.
+#[test]
+fn rolled_totals_assign_as_often_as_rolled_across_a_seed_sweep() {
+    let engine = engine();
+    let abilities = ["str", "dex", "con", "int", "wis", "cha"];
+    let spec = data()
+        .scores
+        .methods
+        .iter()
+        .find(|m| m.is_roll())
+        .and_then(|m| m.roll)
+        .expect("the rolling method");
+    for seed in 0..40u64 {
+        let mut sampler = engine_core::Sampler::new(seed.wrapping_mul(7919) + 1);
+        // A set with deliberate repeats: faces drawn from a narrow range.
+        let faces: Vec<Vec<u8>> = (0..6)
+            .map(|_| {
+                (0..4)
+                    .map(|_| 1 + (sampler.pick_index(3).unwrap() as u8))
+                    .collect()
+            })
+            .collect();
+        let mut log = Vec::new();
+        confirm(&engine, &mut log, "dnd5e.scores.method", one("method.roll"));
+        confirm(
+            &engine,
+            &mut log,
+            "dnd5e.scores.roll",
+            Selection::Rolled(vec![types::RolledSet {
+                groups: faces.clone(),
+                origin: types::RollOrigin::Entered,
+            }]),
+        );
+        let totals: Vec<u32> = faces
+            .iter()
+            .map(|g| {
+                let mut s = g.clone();
+                s.sort_unstable_by(|a, b| b.cmp(a));
+                s.iter().take(spec.keep as usize).map(|f| *f as u32).sum()
+            })
+            .collect();
+        // Legal: each rolled total used exactly as often as rolled (a
+        // permutation of the totals over the abilities).
+        let mut order: Vec<usize> = (0..6).collect();
+        for i in (1..6).rev() {
+            let j = sampler.pick_index(i + 1).unwrap();
+            order.swap(i, j);
+        }
+        let picks: Vec<String> = order
+            .iter()
+            .enumerate()
+            .map(|(a, &t)| score(abilities[a], totals[t]))
+            .collect();
+        confirm(
+            &engine,
+            &mut log,
+            "dnd5e.scores.assign",
+            many(&picks.iter().map(String::as_str).collect::<Vec<_>>()),
+        );
+        let p = engine.project(&log).unwrap();
+        assert!(
+            !p.checklist.iter().any(|e| e.step.as_str() == "scores"),
+            "seed {seed}: {:?}",
+            p.checklist
+        );
+        // Illegal: the most common total used once more than rolled.
+        let most = *totals
+            .iter()
+            .max_by_key(|t| totals.iter().filter(|x| x == t).count())
+            .unwrap();
+        let count = totals.iter().filter(|t| **t == most).count();
+        let mut over: Vec<String> = Vec::new();
+        for (a, t) in order.iter().enumerate() {
+            if over
+                .iter()
+                .filter(|p| p.ends_with(&format!(".{most}")))
+                .count()
+                <= count
+                && totals[*t] != most
+            {
+                over.push(score(abilities[a], most));
+            } else {
+                over.push(score(abilities[a], totals[*t]));
+            }
+        }
+        let used = over
+            .iter()
+            .filter(|p| p.ends_with(&format!(".{most}")))
+            .count();
+        if used > count {
+            let outcome = engine
+                .amend(
+                    &log,
+                    DecisionInput {
+                        id: DecisionId::new(format!("over-{seed}")),
+                        slot: SlotId::new("dnd5e.scores.assign"),
+                        selection: many(&over.iter().map(String::as_str).collect::<Vec<_>>()),
+                        source: DecisionSource::Player,
+                    },
+                )
+                .unwrap();
+            let engine_core::AppendOutcome::Appended(over_log) = outcome else {
+                panic!()
+            };
+            let p = engine.project(&over_log).unwrap();
+            let entry = p
+                .checklist
+                .iter()
+                .find(|e| {
+                    e.slot.as_str() == "dnd5e.scores.assign"
+                        && e.severity == types::ChecklistSeverity::Illegal
+                })
+                .unwrap_or_else(|| {
+                    panic!(
+                        "seed {seed}: over-assignment not flagged: {:?}",
+                        p.checklist
+                    )
+                });
+            assert_eq!(entry.rule, "Random Generation");
+            assert!(
+                entry
+                    .message
+                    .contains(&format!("{most} assigned {used} times, rolled {count}")),
+                "{}",
+                entry.message
+            );
+        }
+    }
+}
+
+/// Fold of a level-3 log whose roll slot holds a thousand sets stays under
+/// the 5 ms budget.
+#[test]
+#[allow(clippy::disallowed_methods)] // a perf check reads the clock on purpose
+fn fold_with_a_thousand_set_history_is_under_5ms() {
+    let engine = engine();
+    let mut log = ysolde_log(&engine);
+    advance(&engine, &mut log, 2);
+    advance(&engine, &mut log, 3);
+    confirm(
+        &engine,
+        &mut log,
+        &ruleset_dnd5e::slot_level_subclass(3),
+        one("subclass.fighter.champion"),
+    );
+    // Grow the stored history to 1,000 sets by rewriting the decision in
+    // place (the engine composes; here the fixture is built directly).
+    let index = log
+        .iter()
+        .position(|d| d.slot.as_str() == "dnd5e.scores.roll")
+        .unwrap();
+    let Selection::Rolled(sets) = &log[index].selection else {
+        panic!()
+    };
+    let live = sets.last().unwrap().clone();
+    let mut history = vec![
+        types::RolledSet {
+            groups: vec![vec![1, 2, 3, 4]; 6],
+            origin: types::RollOrigin::App,
+        };
+        999
+    ];
+    history.push(live);
+    log[index].selection = Selection::Rolled(history);
+    let before = engine.sheet(&ysolde_log(&engine)).unwrap();
+    let after = engine
+        .sheet(
+            &log[..log
+                .iter()
+                .position(|d| d.slot.as_str() == "dnd5e.level.2.advance")
+                .unwrap()],
+        )
+        .unwrap();
+    assert_eq!(before, after, "the superseded sets change nothing");
+    for _ in 0..10 {
+        let _ = engine.sheet(&log).unwrap();
+    }
+    let runs = 100;
+    let start = std::time::Instant::now();
+    for _ in 0..runs {
+        std::hint::black_box(engine.sheet(std::hint::black_box(&log)).unwrap());
+    }
+    let per_run = start.elapsed() / runs;
+    assert!(
+        per_run < std::time::Duration::from_millis(5),
+        "1,000-set fold took {per_run:?} per run — budget is 5 ms"
+    );
+}
+
+/// Rolled hit points through the real server: the gains panel carries the
+/// fixed value; the unrequired hit-die card never blocks finalize; a roll
+/// through the route lands in the deltas and in the abandon list; abandon
+/// discards it with the level; a level finalized without a roll keeps the
+/// fixed value.
+#[test]
+fn hit_dice_ride_the_level_up_views_and_abandon_discards_them() {
+    let dir = tempfile::tempdir().unwrap();
+    checks::declare_campaign(dir.path(), "dnd5e");
+    let server = TestServer::spawn(dir.path());
+    let client = reqwest::blocking::Client::new();
+    let url = server.url.as_str();
+    // Brannock through the API (a mint would sample; confirms are cheap).
+    let (status, created) =
+        lv::post_json(&client, url, "/api/characters", json!({"name": "Hit Die"}));
+    assert_eq!(status, 200, "{created}");
+    let id = created["draft"]["id"]
+        .as_str()
+        .or(created["id"].as_str())
+        .unwrap()
+        .to_string();
+    let mut v = created["version"].as_u64().unwrap();
+    let mut n = 0;
+    for d in brannock_log(&engine()) {
+        if d.slot.as_str() == "dnd5e.details.name" {
+            continue;
+        }
+        n += 1;
+        let (status, outcome) = lv::post_json(
+            &client,
+            url,
+            &format!("/api/characters/{id}/confirm"),
+            json!({"version": v, "decision": {
+                "id": format!("hd-{n}"), "slot": d.slot, "selection": d.selection, "source": "player"
+            }}),
+        );
+        assert_eq!(status, 200, "{outcome}");
+        assert_eq!(outcome["outcome"], "confirmed", "{outcome}");
+        v = outcome["draft"]["version"].as_u64().unwrap();
+    }
+    let (status, fin) = lv::post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/finalize"),
+        json!({"version": v}),
+    );
+    assert_eq!(status, 200, "{fin}");
+    let hp_before = fin["sheet"]["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["title"] == "Combat")
+        .unwrap()["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["label"] == "Hit Points")
+        .unwrap()["value"]
+        .as_str()
+        .unwrap()
+        .parse::<i64>()
+        .unwrap();
+
+    let draft = lv::start_level(&client, url, &id);
+    assert!(draft["projection"]["can_finalize"].as_bool().unwrap());
+    let card = lv::slot_view(&draft, "dnd5e.level.2.hit-die").expect("the hit-die card");
+    assert_eq!(card["required"], false);
+    assert_eq!(card["kind"]["kind"], "roll");
+    assert!(draft["level_up"]["gains"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|d| d["label"] == "Hit Points"));
+    // Roll it through the route.
+    let (status, rolled) = lv::post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/roll"),
+        json!({"slot": "dnd5e.level.2.hit-die", "version": draft["version"], "decision_id": "hd-roll-1"}),
+    );
+    assert_eq!(status, 200, "{rolled}");
+    assert_eq!(rolled["outcome"], "confirmed", "{rolled}");
+    let after = &rolled["draft"];
+    let history = lv::slot_view(after, "dnd5e.level.2.hit-die").unwrap()["options"].clone();
+    assert_eq!(history.as_array().unwrap().len(), 1);
+    assert_eq!(history[0]["badge"], "rolled");
+    let face: i64 = history[0]["label"].as_str().unwrap().parse().unwrap();
+    assert!((1..=10).contains(&face));
+    assert!(after["projection"]["can_finalize"].as_bool().unwrap());
+    // The abandon list names the hit die; the deltas carry the HP.
+    let pending = after["level_up"]["pending"].as_array().unwrap();
+    let hd = pending
+        .iter()
+        .find(|p| p["slot"] == "dnd5e.level.2.hit-die")
+        .expect("the hit die in the abandon list");
+    assert_eq!(hd["slot_label"], "Hit Points");
+    assert_eq!(
+        hd["selection_label"],
+        format!("{face} (rolled, roll 1 of 1)")
+    );
+    assert!(after["level_up"]["deltas"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|d| d["label"] == "Hit Points"));
+    // Abandon: the file holds no hit-die decision; the sheet is untouched.
+    let (status, ab) = lv::post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/level-up/abandon"),
+        json!({"version": after["version"]}),
+    );
+    assert_eq!(status, 200, "{ab}");
+    let doc = lv::read_doc(dir.path(), &id);
+    assert!(!doc["log"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|d| d["slot"] == "dnd5e.level.2.hit-die"));
+    // Level again and finalize at once without rolling: the fixed value.
+    let draft = lv::start_level(&client, url, &id);
+    let (status, fin2) = lv::post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/finalize"),
+        json!({"version": draft["version"]}),
+    );
+    assert_eq!(status, 200, "{fin2}");
+    assert_eq!(fin2["outcome"], "finalized", "{fin2}");
+    let hp = fin2["sheet"]["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["title"] == "Combat")
+        .unwrap()["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["label"] == "Hit Points")
+        .unwrap()
+        .clone();
+    let con_bonus = hp["value"].as_str().unwrap().parse::<i64>().unwrap() - hp_before - 6;
+    assert!((-5..=5).contains(&con_bonus), "fixed 6 + Con: {hp}");
+    assert!(hp["detail"].as_str().unwrap().contains("1 × (6 +"), "{hp}");
 }

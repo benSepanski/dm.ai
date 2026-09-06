@@ -588,3 +588,123 @@ fn v3_documents_read_untouched_with_the_marker_fixed_up() {
         doc["log"].as_array().unwrap().len()
     );
 }
+
+/// dnd-dice: a v6 document holding a roll history round-trips
+/// byte-identical through a fresh server (loading rewrites nothing), and
+/// a hand-edited live face fails replay — `verify` names the divergence.
+#[test]
+fn rolled_histories_round_trip_and_a_tampered_face_diverges() {
+    let dir = tempfile::tempdir().unwrap();
+    checks::declare_campaign(dir.path(), "dnd5e");
+    let client = client();
+    let id;
+    {
+        let server = TestServer::spawn(dir.path());
+        let draft = create_character(&client, &server.url, "Dicey");
+        id = draft["id"].as_str().unwrap().to_string();
+        let outcome = confirm(
+            &client,
+            &server.url,
+            &id,
+            1,
+            "m",
+            "dnd5e.scores.method",
+            json!({"kind": "option", "value": "method.roll"}),
+        );
+        assert_eq!(outcome["outcome"], "confirmed", "{outcome}");
+        let v = outcome["draft"]["version"].as_u64().unwrap();
+        let entered = json!({"kind": "rolled", "value": [{
+            "groups": [[6,5,3,1],[4,4,4,1],[5,4,3,3],[4,3,3,2],[3,3,3,1],[6,1,1,1]],
+            "origin": "entered"}]});
+        let outcome = confirm(
+            &client,
+            &server.url,
+            &id,
+            v,
+            "e1",
+            "dnd5e.scores.roll",
+            entered,
+        );
+        assert_eq!(outcome["outcome"], "confirmed", "{outcome}");
+        let v = outcome["draft"]["version"].as_u64().unwrap();
+        let assign = json!({"kind": "options", "value": [
+            "score.str.14", "score.dex.12", "score.con.12", "score.wis.10", "score.int.9", "score.cha.8"
+        ]});
+        let outcome = confirm(
+            &client,
+            &server.url,
+            &id,
+            v,
+            "a1",
+            "dnd5e.scores.assign",
+            assign,
+        );
+        assert_eq!(outcome["outcome"], "confirmed", "{outcome}");
+    }
+    let path = dir.path().join(format!("characters/{id}.json"));
+    let before = std::fs::read(&path).unwrap();
+    let doc: Value = serde_json::from_slice(&before).unwrap();
+    assert_eq!(doc["schema_version"], 6);
+    let roll = doc["log"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["slot"] == "dnd5e.scores.roll")
+        .unwrap();
+    assert_eq!(roll["selection"]["kind"], "rolled");
+    assert_eq!(roll["selection"]["value"][0]["origin"], "entered");
+    // A fresh server reads it and rewrites nothing; verify is clean.
+    {
+        let server = TestServer::spawn(dir.path());
+        let view: Value = client
+            .get(format!("{}/api/characters/{id}", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(view["state"], "draft");
+    }
+    assert_eq!(
+        std::fs::read(&path).unwrap(),
+        before,
+        "loading rewrote the file"
+    );
+    let (code, out) = TestServer::run_verify(dir.path(), &[]);
+    assert_eq!(code, 0, "{out}");
+    // Tamper (a): the 3 of the 14 becomes a 6 — the total becomes 17, the
+    // assignment's 14 is no longer offered, and the log no longer replays.
+    // verify names the failing decision; the file is never touched.
+    let text = std::fs::read_to_string(&path).unwrap();
+    let mut doc: Value = serde_json::from_str(&text).unwrap();
+    let log = doc["log"].as_array_mut().unwrap();
+    let roll = log
+        .iter_mut()
+        .find(|d| d["slot"] == "dnd5e.scores.roll")
+        .unwrap();
+    roll["selection"]["value"][0]["groups"][0][2] = json!(6);
+    std::fs::write(&path, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+    let tampered = std::fs::read(&path).unwrap();
+    let (code, out) = TestServer::run_verify(dir.path(), &[]);
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("BROKEN"), "{out}");
+    assert!(out.contains("dnd5e.scores.assign"), "{out}");
+    assert_eq!(
+        std::fs::read(&path).unwrap(),
+        tampered,
+        "verify never writes"
+    );
+    // Tamper (b): a face edit that keeps every total offered but changes
+    // which faces stand behind a score (the second 12 becomes a 13): the
+    // sheet's composition no longer matches replay — DIVERGED.
+    let mut doc: Value = serde_json::from_str(&text).unwrap();
+    let log = doc["log"].as_array_mut().unwrap();
+    let roll = log
+        .iter_mut()
+        .find(|d| d["slot"] == "dnd5e.scores.roll")
+        .unwrap();
+    roll["selection"]["value"][0]["groups"][2][2] = json!(4);
+    std::fs::write(&path, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+    let (code, out) = TestServer::run_verify(dir.path(), &[]);
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("DIVERGED"), "{out}");
+}

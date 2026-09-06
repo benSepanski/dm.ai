@@ -388,10 +388,9 @@ fn parse_roll_sentence(body: &str) -> Option<(i64, i64, i64, i64)> {
     for (i, w) in words.iter().enumerate() {
         let lw = w.to_lowercase();
         if let Some(rest) = lw.strip_prefix('d') {
-            if let Some(n) = rest
+            if let Ok(n) = rest
                 .trim_end_matches(|c: char| !c.is_ascii_digit())
                 .parse::<i64>()
-                .ok()
             {
                 sides = Some(n);
                 dice = i.checked_sub(1).and_then(|j| number_word(words[j]));

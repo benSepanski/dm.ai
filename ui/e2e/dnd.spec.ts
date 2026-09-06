@@ -395,7 +395,9 @@ test("level 2's empty level and the level-3 subclass: abandon, resume mid-level,
   await expect(gains).toContainText('Action Surge');
   await expect(gains).toContainText('Tactical Mind');
   await expect(gains).toContainText('Hit Points');
-  await expect(page.locator('.wizard-main [data-slot]')).toHaveCount(0);
+  // The one card is the optional hit die (dnd-dice); no choice is required.
+  await expect(page.locator('.wizard-main [data-slot]')).toHaveCount(1);
+  await expect(slot(page, 'dnd5e.level.2.hit-die')).toContainText('(optional)');
   await expect(page.locator('.wizard-steps .step-link')).toHaveText([/Level 2/]);
   await expect(page.getByTestId('checklist').getByText('Everything checks out')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Finalize level 2' })).toBeEnabled();
@@ -412,7 +414,8 @@ test("level 2's empty level and the level-3 subclass: abandon, resume mid-level,
   await page.getByRole('button', { name: 'Level up to 3' }).click();
   await expect(page.locator('.wizard')).toBeVisible();
   await expectSaneLayout(page);
-  await expect(page.locator('.wizard-main [data-slot]')).toHaveCount(1);
+  // The subclass beside the optional hit die.
+  await expect(page.locator('.wizard-main [data-slot]')).toHaveCount(2);
   await expect(subclass).toBeVisible();
   await expect(subclass.getByRole('radio')).toHaveCount(1);
   await expect(subclass.locator('label:has-text("Champion") input')).toBeVisible();

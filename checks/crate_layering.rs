@@ -810,3 +810,28 @@ fn ui_has_no_level_specific_wizard() {
         "one module-init site in the façade"
     );
 }
+
+/// PF2e registers no roll slot (dnd-dice): the kind and the constructing
+/// selection form are absent from the PF2e crate's shipped sources — its
+/// only mention is the describe arm the type demands.
+#[test]
+fn pf2e_registers_no_roll_slot() {
+    let root = checks::workspace_root();
+    for (path, src) in rust_sources(&root.join("crates/ruleset-pf2e/src")) {
+        if path.file_name().is_some_and(|n| n == "tests.rs") {
+            continue;
+        }
+        let code = code_lines(&src);
+        for token in [
+            "SlotViewKind::Roll",
+            "Selection::Rolled(vec!",
+            "check_roll_shape",
+        ] {
+            assert!(
+                !code.contains(token),
+                "{} contains '{token}': PF2e has no dice",
+                path.display()
+            );
+        }
+    }
+}

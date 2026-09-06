@@ -41,7 +41,7 @@ impl Entropy for OsEntropy {
         while out.len() < count {
             // The one sanctioned entropy draw in the workspace.
             #[allow(clippy::disallowed_methods)]
-            getrandom::fill(&mut buf).map_err(|e| EntropyError(e.to_string()))?;
+            getrandom::getrandom(&mut buf).map_err(|e| EntropyError(e.to_string()))?;
             for b in buf {
                 if out.len() == count {
                     break;
@@ -199,7 +199,7 @@ mod tests {
         let set = roll_set(&OsEntropy, &key("c", "d"), 10, 1, 1).unwrap();
         assert_eq!(set.groups.len(), 1);
         assert_eq!(set.groups[0].len(), 1);
-        assert!(claims_app_origin(&[set.clone()]));
+        assert!(claims_app_origin(std::slice::from_ref(&set)));
         assert!(!claims_app_origin(&stamp_entered(&[set])));
     }
 }
