@@ -219,7 +219,23 @@ cargo run --release -p server -- --data-dir ./campaign-5e verify
 
 ## Agent evidence
 
-(filled at the end of the checkpoint — see the commit log for the run)
+Final run on the branch head (2026-09-06):
+
+| Check | Result |
+|---|---|
+| `cargo fmt --all -- --check` | clean |
+| `cargo clippy --workspace --all-targets -- -D warnings` | clean |
+| `cargo deny check` | advisories, bans, licenses, sources ok |
+| `cargo test --workspace --no-fail-fast` | 29 test binaries, 178 tests passed, 0 failed (2 ignored fixture regenerators); includes `checks/campaign.rs` 13, `checks/dnd5e.rs` 7, `crate_layering.rs` 15, `class_isolation.rs` 4, `attestation.rs` 7 over both systems, `ruleset-dnd5e` 13 |
+| `reference-check --system dnd5e attest` | 103 records: 102 match, 1 waived, 0 mismatch |
+| WASM bundle (both rulesets) | 1,667,717 bytes, one module (budget 2,621,440) |
+| `npm run typecheck`, `npm run lint` | clean |
+| `npm test` (vitest) | 9 files, 61 tests passed |
+| `npm run e2e` (Playwright, full suite) | see the line below this table |
+
+Playwright full suite: 49 passed, 0 failed, 0 skipped (57.8 s) — including `campaign.spec.ts` (5 walks: choose-game, racing declaration refused, pre-seeded directory, pre-declaration directory never asked, corrupt declaration) and `dnd.spec.ts` (5 walks: the second campaign with a hand-checked Brannock sheet, the buy with the gold alternative, level 2's empty level and the level-3 subclass with abandon and mid-level resume, jumping ahead, the wrong drawer). Every PF2e story spec unchanged and green.
+
+Branch: 20 commits on `checkpoint/chargen-dnd`; 113 files changed against `main`.
 
 ## Complaints logged
 

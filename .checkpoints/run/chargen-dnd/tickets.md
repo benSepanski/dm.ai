@@ -97,5 +97,5 @@ every row green before the report.
   2 + subclass catalog, ability machinery, fold budget, sweep to the cap, clone,
   SIGKILL rows; class isolation per system; per-ruleset known versions; quick
   build refusal; wasm size budget in CI).
-- [~] 8. Report `.checkpoints/run/chargen-dnd/report.md` with the
+- [x] 8. Report `.checkpoints/run/chargen-dnd/report.md` with the
   boundary-bends section.
