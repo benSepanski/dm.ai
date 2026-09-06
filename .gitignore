@@ -10,3 +10,7 @@ ui/playwright-report/
 # live app data in the repo root (scratch campaigns) — never committed
 campaign/
 campaign.backup-pre-0.2.0/
+
+# per-machine tooling state
+.cheese/
+.claude/launch.json
