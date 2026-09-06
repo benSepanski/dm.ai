@@ -148,9 +148,14 @@ export type DecisionId = string;
 
 /**
  * Declare (or, while the campaign is empty, change) the campaign's game.
+ * `replaces` is the game the client believes is currently declared:
+ * absent from the choose-game screen (the client believes none), so a
+ * racing second answer meets an existing declaration and is refused;
+ * present for a deliberate change while the campaign is still empty.
  */
 export interface DeclareCampaignRequest {
     system: string;
+    replaces?: string;
 }
 
 /**
