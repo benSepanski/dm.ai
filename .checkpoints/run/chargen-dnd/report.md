@@ -201,7 +201,21 @@ cargo run --release -p server -- --data-dir ./campaign-5e verify
   14 the correct values are HP 12 / Con save +4 / +8 per level, and the
   goldens encode those.
 - The reference-check tool: `--system` and a match, one attestation schema
-  with a per-source block; the PF2e attestation was restructured in place.
+  with a per-source block; the PF2e attestation was restructured in place
+  (the tool now writes that shape; no PF2e regeneration). The 5.5e source
+  is the spec's bounded choice: the SRD 5.2.1 Markdown mirror the data was
+  transcribed from, pinned by commit (`your5e/5e-srd-markdown` at
+  `f1f5060f…`, tarball sha256 `aa80f8b8…`), and `fetch` refuses a mirror
+  whose embedded official PDF does not hash to the digest the manifest
+  records. 103 records attested: 102 match, one waiver (the point-buy
+  method is titled "Point Cost" in the SRD; the spec names it Point Buy).
+- A declare request carries what the client believes is declared
+  (`replaces`): the choose-game screen sends nothing, so a second differing
+  answer meets an existing declaration and is refused with "reload"; a
+  deliberate change names the declaration it replaces. Refusal and
+  wrong-drawer messages name games, not ids.
+- The `ui/dist` the server embeds was rebuilt after the bindings carried
+  both rulesets (a stale bundle silently disabled live previews in 5.5e).
 
 ## Agent evidence
 

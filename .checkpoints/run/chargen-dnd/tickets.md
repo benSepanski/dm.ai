@@ -59,17 +59,15 @@ every row green before the report.
 
 ## Tickets
 
-- [~] 1. Constraints wiring: DONE — layering allowlist (+ruleset-dnd5e edges,
+- [x] 1. Constraints wiring: DONE — layering allowlist (+ruleset-dnd5e edges,
   HTTP-client ban for server/wasm), per-crate purity/kind/LEVEL scans,
   engine-core/types no-system-literal scan, server/wasm no-slot-parsing scan,
   types `system` field only on the campaign view (+ declare request), UI
   system-blind scan (system ids, ability names, one wasm file), rules_data +
   attestation per system directory (PF2e attestation keys moved under
   `source`), `checks/campaign.rs` (declaration rows, system-before-version,
-  v4/v6 schema, SIGKILL declare, attribution). PENDING (need the 5.5e crate):
-  class_isolation per system, version_guard per-ruleset rows, 5.5e goldens /
-  sweep / clone / crash / ability machinery / quick-build refusal / perf /
-  bundle size / e2e.
+  v4/v6 schema, SIGKILL declare, attribution). Then, with the crate: class_isolation
+  per system, version_guard per-ruleset rows, and every 5.5e row (ticket 7).
 - [x] 2. Boundary: `Ruleset` trait in engine-core; PF2e implements it +
   `embedded()`; rules-data moved to `rules-data/pf2e/`; server refactored to
   `Arc<dyn Ruleset>` (no `ruleset_pf2e::` in routes/version); per-ruleset
@@ -86,15 +84,18 @@ every row green before the report.
   feats, Fighter (styles, masteries, packages A/B/gold), all SRD weapons and
   armor, advancement + Champion; derive_sheet; 13 crate tests. Random mint:
   `Ruleset::mint_pin` (5.5e pins the standard array) + group-aware shuffle.
-- [~] 5. reference-check `--system dnd5e`: SRD source fetch (pinned sha256),
+- [x] 5. reference-check `--system dnd5e`: SRD source fetch (pinned sha256),
   5.5e comparator, per-system attestation with a `source` block; PF2e
   attestation re-shaped (keys moved under `source`) without regeneration.
-  (subagent running)
-- [~] 6. UI: DONE — campaign view fetch + choose-game screen; roster label +
+  DONE: source = the SRD 5.2.1 markdown mirror pinned by commit + sha256, PDF
+  digest verified in flight; 103 records, 1 waiver, 0 mismatches.
+- [x] 6. UI: DONE — campaign view fetch + choose-game screen; roster label +
   license lines; `one-per-group` editor; game-free boost copy; façade passes
   the system id; quick build only when the roster names a class;
-  `campaign.spec.ts`. PENDING: `dnd.spec.ts` 5.5e walks (subagent running).
-- [ ] 7. Checks: every 5.5e row green (goldens, sweep, clone, crash, api
-  authority, persistence, version guard, ability machinery, perf, size).
-- [ ] 8. Report `.checkpoints/run/chargen-dnd/report.md` with the
+  `campaign.spec.ts`. `dnd.spec.ts` five 5.5e walks green; racing declaration refused (server fix).
+- [x] 7. Checks: every 5.5e row green (`checks/dnd5e.rs`: goldens, empty level
+  2 + subclass catalog, ability machinery, fold budget, sweep to the cap, clone,
+  SIGKILL rows; class isolation per system; per-ruleset known versions; quick
+  build refusal; wasm size budget in CI).
+- [~] 8. Report `.checkpoints/run/chargen-dnd/report.md` with the
   boundary-bends section.
