@@ -260,3 +260,54 @@ fn blocked_suggestions_keep_the_legal_prefix_and_name_the_remainder() {
         "a partial fill is not finalizable"
     );
 }
+
+// ---- chargen-dnd: quick build is absent where the rules publish none ----
+
+/// In a 5.5e campaign the suggested-build route refuses typed and the
+/// roster offers no quick-build class; a PF2e campaign is unchanged.
+#[test]
+fn quick_build_is_absent_from_a_5e_campaign() {
+    let client = reqwest::blocking::Client::new();
+    let dir = tempfile::tempdir().unwrap();
+    checks::declare_campaign(dir.path(), "dnd5e");
+    let server = TestServer::spawn(dir.path());
+    let roster: Value = client
+        .get(format!("{}/api/roster", server.url))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert!(
+        roster.get("quick_build").is_none_or(|q| q.is_null()),
+        "no quick-build class in a 5.5e campaign: {roster}"
+    );
+    let response = client
+        .post(format!("{}/api/characters/quick-build", server.url))
+        .json(&json!({ "request_id": "qb-5e", "name": null }))
+        .send()
+        .unwrap();
+    assert_eq!(response.status().as_u16(), 422);
+    let body: Value = response.json().unwrap();
+    assert!(
+        body["message"]
+            .as_str()
+            .unwrap()
+            .contains("suggested build"),
+        "{body}"
+    );
+    assert!(
+        !dir.path().join("characters/c-qb-qb-5e.json").exists(),
+        "nothing written"
+    );
+    drop(server);
+
+    let pf2e = tempfile::tempdir().unwrap();
+    let server = TestServer::spawn(pf2e.path());
+    let roster: Value = client
+        .get(format!("{}/api/roster", server.url))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(roster["quick_build"]["id"], "class.fighter");
+}

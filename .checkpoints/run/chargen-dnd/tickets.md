@@ -59,23 +59,28 @@ every row green before the report.
 
 ## Tickets
 
-- [ ] 1. Constraints wiring: layering allowlist (+ruleset-dnd5e edges, HTTP-client
-  ban for server/wasm), per-crate purity/kind/LEVEL scans, engine-core/types
-  no-system-literal scan, server/wasm no-slot-parsing scan, types `system`
-  field only on the campaign view, UI system-blind scan (system ids, ability
-  names, one wasm file); rules_data/attestation/class_isolation per system
-  directory; stubs for the 5.5e rows (goldens, sweep, clone, crash,
-  declaration, system-before-version, attribution, ability machinery,
-  quick-build refusal, perf, e2e).
-- [ ] 2. Boundary: `Ruleset` trait in engine-core; PF2e implements it +
+- [~] 1. Constraints wiring: DONE — layering allowlist (+ruleset-dnd5e edges,
+  HTTP-client ban for server/wasm), per-crate purity/kind/LEVEL scans,
+  engine-core/types no-system-literal scan, server/wasm no-slot-parsing scan,
+  types `system` field only on the campaign view (+ declare request), UI
+  system-blind scan (system ids, ability names, one wasm file), rules_data +
+  attestation per system directory (PF2e attestation keys moved under
+  `source`), `checks/campaign.rs` (declaration rows, system-before-version,
+  v4/v6 schema, SIGKILL declare, attribution). PENDING (need the 5.5e crate):
+  class_isolation per system, version_guard per-ruleset rows, 5.5e goldens /
+  sweep / clone / crash / ability machinery / quick-build refusal / perf /
+  bundle size / e2e.
+- [x] 2. Boundary: `Ruleset` trait in engine-core; PF2e implements it +
   `embedded()`; rules-data moved to `rules-data/pf2e/`; server refactored to
   `Arc<dyn Ruleset>` (no `ruleset_pf2e::` in routes/version); per-ruleset
-  KnownVersions; checks/reference-check paths updated; wasm selector +
-  `engine_request(system, req)`; all existing tests green.
-- [ ] 3. Campaign declaration + schema v5: store-owned declaration, declare /
-  change routes, campaign view, undeclared refusals, system field + fixup,
-  system-before-version refusal in place, extras keyed by system, verify
-  output for campaign problems.
+  KnownVersions (extras keyed by system); checks/reference-check paths updated;
+  wasm selector + `engine_request(system, req)`; all existing tests green.
+- [x] 3. Campaign declaration + schema v5: store-owned declaration (hard-link
+  create-exclusive, rename change-while-empty, root temp sweep), declare /
+  campaign routes, campaign view (+ `RosterView.quick_build: Option<ClassOption>`,
+  `license_notice` moved to the campaign view), undeclared refusals and roster
+  shell, `system` field + fixup from a registered pin prefix, refusal in place
+  (`StoreError::Refused` → 422), verify prints CAMPAIGN problems.
 - [ ] 4. ruleset-dnd5e crate + rules-data/dnd5e (SRD 5.2.1 subset): species,
   backgrounds, origin feats, Fighter (styles, masteries), weapons/armor/gear,
   packages, advancement + Champion; derive_sheet; unit tests; goldens.

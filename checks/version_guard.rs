@@ -807,3 +807,103 @@ fn leveling_is_a_wizard_write_under_the_version_guard() {
     );
     assert_eq!(code, 0, "{output}");
 }
+
+// ---- chargen-dnd: known versions are per ruleset ----
+
+/// A 5.5e campaign's guard never names a PF2e version and vice versa: the
+/// current version a character is judged against is its own game's, a
+/// fabricated prior version listed only under the other game's key in the
+/// extras file is NOT older-known here, and an extras key naming an
+/// unshipped system is a startup error.
+#[test]
+fn known_versions_are_per_ruleset() {
+    let client = reqwest::blocking::Client::new();
+    let dir = tempfile::tempdir().unwrap();
+    checks::declare_campaign(dir.path(), "dnd5e");
+    let extra = dir.path().join("extra-known-versions.json");
+    // The fabricated version lives under the PF2e key only.
+    std::fs::write(
+        &extra,
+        json!({ "pf2e": { "versions": { "dnd5e-srd.0.0.1-test": [] } } }).to_string(),
+    )
+    .unwrap();
+    let id;
+    let current;
+    {
+        let server = TestServer::spawn_with_args(
+            dir.path(),
+            &["--extra-known-versions", extra.to_str().unwrap()],
+        );
+        let draft: Value = client
+            .post(format!("{}/api/characters", server.url))
+            .json(&json!({ "name": "Brannock" }))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        id = draft["id"].as_str().unwrap().to_string();
+        current = draft["rules_version"].as_str().unwrap().to_string();
+        assert!(
+            current.starts_with("dnd5e-"),
+            "a 5.5e character pins a 5.5e version, got {current}"
+        );
+    }
+    edit_doc(dir.path(), &id, |doc| {
+        doc["rules_version"] = Value::from("dnd5e-srd.0.0.1-test");
+    });
+    {
+        let server = TestServer::spawn_with_args(
+            dir.path(),
+            &["--extra-known-versions", extra.to_str().unwrap()],
+        );
+        let roster: Value = client
+            .get(format!("{}/api/roster", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        let entry = &roster["entries"][0];
+        assert_eq!(
+            entry["version"]["status"], "unknown",
+            "a version listed only under another game's key is not older-known here: {entry}"
+        );
+        assert_eq!(entry["version"]["current"], current.as_str());
+    }
+    // Under its own key the same version IS older-known.
+    std::fs::write(
+        &extra,
+        json!({ "dnd5e": { "versions": { "dnd5e-srd.0.0.1-test": [] } } }).to_string(),
+    )
+    .unwrap();
+    {
+        let server = TestServer::spawn_with_args(
+            dir.path(),
+            &["--extra-known-versions", extra.to_str().unwrap()],
+        );
+        let roster: Value = client
+            .get(format!("{}/api/roster", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert_eq!(roster["entries"][0]["version"]["status"], "older_known");
+    }
+    // An extras key naming an unshipped system refuses to start.
+    std::fs::write(
+        &extra,
+        json!({ "nonesuch": { "versions": { "nonesuch-x.0.0.1": [] } } }).to_string(),
+    )
+    .unwrap();
+    let output = std::process::Command::new(checks::server_binary())
+        .args(["--data-dir"])
+        .arg(dir.path())
+        .args(["--port", "0", "--extra-known-versions"])
+        .arg(&extra)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("nonesuch"),
+        "names the offending key"
+    );
+}
