@@ -147,6 +147,13 @@ export interface AbandonLevelRequest {
 export type DecisionId = string;
 
 /**
+ * Declare (or, while the campaign is empty, change) the campaign's game.
+ */
+export interface DeclareCampaignRequest {
+    system: string;
+}
+
+/**
  * Everything the engine can say about a draft from its log alone.
  * The server wraps this with persistence metadata (id, version, cursor).
  */
@@ -283,6 +290,8 @@ export interface LevelUpRequest {
  */
 export interface WireTypeExports {
     roster: RosterView;
+    campaign: CampaignView;
+    declare_campaign_request: DeclareCampaignRequest;
     character: CharacterView;
     create_request: CreateCharacterRequest;
     confirm_request: ConfirmRequest;
@@ -300,6 +309,46 @@ export interface WireTypeExports {
     quick_build_result: QuickBuildResult;
     fill_remaining_request: FillRemainingRequest;
     fill_remaining_outcome: FillRemainingOutcome;
+}
+
+/**
+ * The campaign as a whole: which game it plays (or that it has not chosen
+ * one), the games this build ships to choose from, and every shipped
+ * license paragraph — attribution follows the binary, never the open
+ * campaign. Fetched first by the UI; the only view that names a system.
+ */
+export interface CampaignView {
+    /**
+     * The game this campaign plays, when resolved (declared, or inferred
+     * for a pre-declaration directory that holds characters).
+     */
+    system?: string;
+    /**
+     * Render-ready name of that game.
+     */
+    system_name?: string;
+    /**
+     * True when the game was inferred rather than declared (the app never
+     * writes a declaration into such a campaign).
+     */
+    inferred: boolean;
+    /**
+     * Whether the game may still be chosen or changed: only while the
+     * campaign holds no character.
+     */
+    can_declare: boolean;
+    /**
+     * Why no game could be resolved, naming the fix; absent otherwise.
+     */
+    problem?: string;
+    /**
+     * The games this build ships, for the choose-game screen.
+     */
+    games: GameOption[];
+    /**
+     * Every shipped ruleset's license paragraphs, in display order.
+     */
+    license_lines: string[];
 }
 
 /**
@@ -460,6 +509,11 @@ export interface FinalizeRequest {
     version: number;
 }
 
+export interface GameOption {
+    id: string;
+    name: string;
+}
+
 export interface OptionView {
     id: OptionId;
     label: string;
@@ -525,13 +579,14 @@ export interface RosterView {
      */
     problems: RosterProblem[];
     /**
-     * The ORC attribution notice, displayed in the app.
-     */
-    license_notice: string;
-    /**
      * Shipped classes, for the random-mint class picker.
      */
     classes?: ClassOption[];
+    /**
+     * Whether this campaign's game publishes a suggested build the
+     * quick-build control can offer; false when the rules publish none.
+     */
+    quick_build_available?: boolean;
 }
 
 export interface SheetEntry {
