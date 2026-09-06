@@ -583,10 +583,11 @@ export interface RosterView {
      */
     classes?: ClassOption[];
     /**
-     * Whether this campaign's game publishes a suggested build the
-     * quick-build control can offer; false when the rules publish none.
+     * The class the quick-build control would build, when this campaign's
+     * game publishes a suggested build; absent when the rules publish
+     * none (the roster then shows no quick-build control).
      */
-    quick_build_available?: boolean;
+    quick_build?: ClassOption;
 }
 
 export interface SheetEntry {

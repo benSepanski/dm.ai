@@ -450,7 +450,7 @@ async fn roster(State(app): State<SharedApp>) -> Result<Json<RosterView>, Failur
             entries: Vec::new(),
             problems,
             classes: Vec::new(),
-            quick_build_available: false,
+            quick_build: None,
         }));
     };
     let cx = &cx;
@@ -478,8 +478,18 @@ async fn roster(State(app): State<SharedApp>) -> Result<Json<RosterView>, Failur
         entries,
         problems,
         classes: class_catalog(cx)?,
-        quick_build_available: !cx.rs.suggested_builds().is_empty(),
+        quick_build: quick_build_class(cx)?,
     }))
+}
+
+/// The class quick build would make: the first shipped class carrying a
+/// suggested build (the same choice the quick-build route makes for a log
+/// that names no class), as the catalog offers it.
+fn quick_build_class(cx: &Ctx) -> Result<Option<ClassOption>, Failure> {
+    let Some((class_id, _)) = cx.rs.suggested_builds().first() else {
+        return Ok(None);
+    };
+    Ok(class_catalog(cx)?.into_iter().find(|c| c.id == *class_id))
 }
 
 /// The shipped classes, for the random-mint picker: the class slot's
