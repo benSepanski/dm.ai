@@ -2,7 +2,15 @@
 // change-with-dependent-clearing flow. Pure presentation — counts, legality,
 // and effects all come from the engine.
 import { useState } from 'react';
-import type { ClearPreview, Decision, MeterView, OptionView, Selection, SlotView } from './engine';
+import type {
+  ClearPreview,
+  Decision,
+  MeterView,
+  OptionView,
+  RolledSet,
+  Selection,
+  SlotView,
+} from './engine';
 
 /**
  * Option lists longer than this get a text filter (spec req 8: full breadth
@@ -81,6 +89,7 @@ export function SlotCard({
   tentative,
   onTentative,
   onConfirm,
+  onRoll,
   onRequestChange,
   busy,
   ack = null,
@@ -92,6 +101,8 @@ export function SlotCard({
   tentative: TentativeSelection;
   onTentative: (selection: TentativeSelection) => void;
   onConfirm: (selection: Selection) => void;
+  /** Ask the server to roll this slot's dice (roll slots only). */
+  onRoll?: () => void;
   onRequestChange: () => void;
   busy: boolean;
   /** Transient save acknowledgment ("Saved — 1 skill choice left"). */
@@ -116,8 +127,14 @@ export function SlotCard({
   // Partial AND illegal slots stay editable: the editor opens preloaded
   // with the confirmed picks so the fix happens in place, and Confirm
   // amends.
+  // A roll slot is always open: its history is the decision, and rolling
+  // again or entering more dice appends to it — there is nothing to
+  // "change", only more to record.
   const editing =
-    confirmed === null || slot.status === 'partial' || slot.status === 'illegal';
+    slot.kind.kind === 'roll' ||
+    confirmed === null ||
+    slot.status === 'partial' ||
+    slot.status === 'illegal';
   const effectiveTentative =
     tentative ??
     (slot.status === 'partial' || slot.status === 'illegal'
@@ -187,6 +204,7 @@ export function SlotCard({
           tentative={effectiveTentative}
           onTentative={onTentative}
           onConfirm={onConfirm}
+          onRoll={onRoll}
           busy={busy}
         />
       ) : (
@@ -231,6 +249,13 @@ function ConfirmedSummary({ slot, decision }: { slot: SlotView; decision: Decisi
     case 'text':
       text = decision.selection.value;
       break;
+    case 'rolled': {
+      // The live set is the one available history entry.
+      const live = slot.options.find((o) => o.available);
+      text = live?.label ?? `${decision.selection.value.length} set(s) recorded`;
+      chosenIds = live !== undefined ? [live.id] : [];
+      break;
+    }
   }
   // A confirmed choice keeps its details readable — committing to an
   // option must never mean losing the ability to re-read what it does.
@@ -282,12 +307,14 @@ function SlotEditor({
   tentative,
   onTentative,
   onConfirm,
+  onRoll,
   busy,
 }: {
   slot: SlotView;
   tentative: TentativeSelection;
   onTentative: (selection: TentativeSelection) => void;
   onConfirm: (selection: Selection) => void;
+  onRoll?: (() => void) | undefined;
   busy: boolean;
 }) {
   switch (slot.kind.kind) {
@@ -366,6 +393,20 @@ function SlotEditor({
           tentative={tentative}
           onTentative={onTentative}
           onConfirm={onConfirm}
+          busy={busy}
+        />
+      );
+    case 'roll':
+      return (
+        <RollEditor
+          slot={slot}
+          sides={slot.kind.sides}
+          dice={slot.kind.dice}
+          groups={slot.kind.groups}
+          tentative={tentative}
+          onTentative={onTentative}
+          onConfirm={onConfirm}
+          onRoll={onRoll}
           busy={busy}
         />
       );
@@ -998,6 +1039,177 @@ function TextEditor({
         busy={busy}
         onClick={() => onConfirm({ kind: 'text', value })}
       />
+    </div>
+  );
+}
+
+/** How many history entries a roll card shows before "show all". */
+export const ROLL_HISTORY_SHOWN = 3;
+
+/**
+ * Recorded dice: the slot's history (one render-ready entry per set,
+ * from the engine — totals, faces, tag, which is live), a button that asks
+ * the server to roll, and a grid to enter physical dice by hand. The grid
+ * is sized from the slot's kind; every number the card shows arrives as
+ * text. The UI adds nothing up.
+ */
+function RollEditor({
+  slot,
+  sides,
+  dice,
+  groups,
+  tentative,
+  onTentative,
+  onConfirm,
+  onRoll,
+  busy,
+}: {
+  slot: SlotView;
+  sides: number;
+  dice: number;
+  groups: number;
+  tentative: TentativeSelection;
+  onTentative: (selection: TentativeSelection) => void;
+  onConfirm: (selection: Selection) => void;
+  onRoll?: (() => void) | undefined;
+  busy: boolean;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const [entering, setEntering] = useState(false);
+  const [faces, setFaces] = useState<string[][]>(() =>
+    Array.from({ length: groups }, () => Array.from({ length: dice }, () => '')),
+  );
+  const history = slot.options;
+  const hidden = showAll ? 0 : Math.max(0, history.length - ROLL_HISTORY_SHOWN);
+  const shown = history.slice(hidden);
+
+  const parsed: number[][] = faces.map((g) =>
+    g.map((f) => (f.trim() === '' ? Number.NaN : Number(f))),
+  );
+  const complete = parsed.every((g) => g.every((f) => Number.isInteger(f)));
+  const onDie = parsed.every((g) => g.every((f) => !Number.isInteger(f) || (f >= 1 && f <= sides)));
+  const entered: RolledSet | null =
+    complete && onDie ? { groups: parsed, origin: 'entered' } : null;
+
+  const setFace = (g: number, d: number, value: string) => {
+    const next = faces.map((row) => [...row]);
+    const row = next[g];
+    if (row === undefined) {
+      return;
+    }
+    row[d] = value;
+    setFaces(next);
+    const nextParsed = next.map((row) => row.map((f) => (f.trim() === '' ? Number.NaN : Number(f))));
+    const ok =
+      nextParsed.every((row) => row.every((f) => Number.isInteger(f) && f >= 1 && f <= sides));
+    onTentative(ok ? { kind: 'rolled', value: [{ groups: nextParsed, origin: 'entered' }] } : null);
+  };
+
+  const disabledReason = !complete
+    ? `Enter every die (${groups} set${groups === 1 ? '' : 's'} of ${dice}).`
+    : !onDie
+      ? `Every face must be from 1 to ${sides}.`
+      : null;
+
+  return (
+    <div className="roll-editor">
+      {history.length === 0 ? (
+        <p className="roll-empty">Nothing rolled yet.</p>
+      ) : (
+        <div className="roll-history" data-testid={`roll-history-${slot.id}`}>
+          {hidden > 0 && (
+            <button type="button" className="roll-show-all" onClick={() => setShowAll(true)}>
+              Show all {history.length} sets
+            </button>
+          )}
+          <ol className="roll-sets">
+            {shown.map((set) => (
+              <li
+                key={set.id}
+                className={`roll-set ${set.available ? 'roll-live' : 'roll-superseded'}`}
+                data-testid="roll-set"
+                data-live={set.available || undefined}
+              >
+                <span className="roll-totals">{set.label}</span>
+                {set.badge != null && <span className="option-badge">{set.badge}</span>}
+                <span className="roll-summary">{set.summary}</span>
+                {set.details.length > 0 && (
+                  <ul className="roll-faces">
+                    {set.details.map((d, i) => (
+                      <li key={i}>{d}</li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      <div className="roll-actions">
+        <button
+          type="button"
+          className="roll-button"
+          disabled={busy || onRoll === undefined}
+          data-busy={busy || undefined}
+          onClick={onRoll}
+          title={history.length === 0 ? 'The app rolls for you' : 'Roll again — every earlier set stays in your record'}
+        >
+          {history.length === 0 ? 'Roll' : 'Roll again'}
+        </button>
+        <button
+          type="button"
+          className="roll-enter-toggle"
+          aria-expanded={entering}
+          disabled={busy}
+          onClick={() => setEntering((e) => !e)}
+        >
+          {entering ? 'Hide dice entry' : 'Enter dice'}
+        </button>
+      </div>
+      {entering && (
+        <div className="roll-grid" data-testid={`roll-grid-${slot.id}`}>
+          <p className="roll-grid-intro">
+            Type the faces you rolled: {groups} set{groups === 1 ? '' : 's'} of {dice},
+            each from 1 to {sides}.
+          </p>
+          {faces.map((row, g) => (
+            <div className="roll-grid-row" key={g}>
+              {groups > 1 && <span className="roll-grid-label">Set {g + 1}</span>}
+              {row.map((value, d) => (
+                <input
+                  key={d}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={sides}
+                  aria-label={`Set ${g + 1} die ${d + 1}`}
+                  value={value}
+                  disabled={busy}
+                  onChange={(e) => setFace(g, d, e.target.value)}
+                />
+              ))}
+            </div>
+          ))}
+          <ConfirmButton
+            slotId={slot.id}
+            label="entered dice"
+            disabledReason={disabledReason}
+            busy={busy}
+            onClick={() => {
+              if (entered !== null) {
+                onConfirm({ kind: 'rolled', value: [entered] });
+                setFaces(
+                  Array.from({ length: groups }, () => Array.from({ length: dice }, () => '')),
+                );
+                onTentative(null);
+              }
+            }}
+          />
+        </div>
+      )}
+      {tentative?.kind === 'rolled' && !entering && (
+        <p className="roll-pending">Dice entered but not yet confirmed.</p>
+      )}
     </div>
   );
 }

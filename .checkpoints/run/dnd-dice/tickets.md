@@ -113,11 +113,11 @@ points) split off as `dnd-hp-dice`.
   (one id → one set), `crash_harness.rs` (roll, entered amend, hit-die roll),
   seeded rows (same seed → same faces across two clones; no flag → differ;
   badge iff flag; no `seed` key in any written file).
-- [~] 5. WASM bindings rebuild; UI `RollEditor`, `rollDice` API, clear-before-
+- [x] 5. WASM bindings rebuild; UI `RollEditor`, `rollDice` API, clear-before-
   reroll, roster badge, ConfirmedSummary `rolled` arm, pending/prune
   handling; vitest rows; UI dice-blind scan green; `campaign.spec.ts`
   untouched.
-- [ ] 6. Checks + stories: Ysolde golden (reroll, entered set, duplicate
+- [~] 6. Checks + stories: Ysolde golden (reroll, entered set, duplicate
   totals, 18+2 cap) + fixtures; multiplicity property; hit-point rows
   (absent = fixed, rolled replaces one level, unrequired, gains/deltas,
   abandon lists it); 1,000-set fold budget; PF2e registration scan;

@@ -142,6 +142,17 @@ export interface AbandonLevelRequest {
 }
 
 /**
+ * Ask the server to roll a roll slot's dice and record the set (dnd-dice).
+ * The client mints the decision id — the idempotency key: a retry with
+ * the same id returns the roll already recorded, never a second one.
+ */
+export interface RollRequest {
+    slot: SlotId;
+    version: number;
+    decision_id: DecisionId;
+}
+
+/**
  * Client-minted per confirm; a replayed ID appends nothing (idempotency).
  */
 export type DecisionId = string;
@@ -186,7 +197,17 @@ export interface FillRemainingRequest {
  * How a slot collects its selection. Presentation-mechanical only — the
  * meaning of the options is the ruleset's business.
  */
-export type SlotViewKind = { kind: "single" } | { kind: "multi"; count: number } | { kind: "list" } | { kind: "text"; multiline: boolean };
+export type SlotViewKind = { kind: "single" } | { kind: "multi"; count: number } | { kind: "list" } | { kind: "text"; multiline: boolean } | { kind: "roll"; sides: number; dice: number; groups: number };
+
+/**
+ * One rolled set: the faces, grouped as the slot's shape groups them
+ * (six groups of four for a 4d6-six-times method; one group of one for a
+ * single hit die).
+ */
+export interface RolledSet {
+    groups: number[][];
+    origin: RollOrigin;
+}
 
 /**
  * One sheet value that would change under current data, old → new.
@@ -301,6 +322,7 @@ export interface WireTypeExports {
     create_request: CreateCharacterRequest;
     confirm_request: ConfirmRequest;
     confirm_outcome: ConfirmOutcome;
+    roll_request: RollRequest;
     clear_request: ClearRequest;
     clear_outcome: ClearOutcome;
     step_request: StepRequest;
@@ -354,6 +376,11 @@ export interface CampaignView {
      * Every shipped ruleset's license paragraphs, in display order.
      */
     license_lines: string[];
+    /**
+     * True when the server was started with the testing-only dice seed:
+     * every die is deterministic and the roster wears a badge (dnd-dice).
+     */
+    seeded_dice?: boolean;
 }
 
 /**
@@ -441,7 +468,7 @@ export interface ClearPreview {
 /**
  * What was chosen in a slot.
  */
-export type Selection = { kind: "option"; value: OptionId } | { kind: "options"; value: OptionId[] } | { kind: "text"; value: string };
+export type Selection = { kind: "option"; value: OptionId } | { kind: "options"; value: OptionId[] } | { kind: "text"; value: string } | { kind: "rolled"; value: RolledSet[] };
 
 /**
  * Where a character's pinned rules-data version stands relative to the
@@ -454,6 +481,12 @@ export type VersionStatus = { status: "current" } | { status: "older_known"; pin
  * later epochs as new variants.
  */
 export type DecisionSource = "player" | "suggested" | "random" | "clone";
+
+/**
+ * Who produced a rolled set's faces. Exactly two: the app's own dice, or
+ * physical dice the player entered by hand.
+ */
+export type RollOrigin = "app" | "entered";
 
 export interface ChecklistEntry {
     severity: ChecklistSeverity;

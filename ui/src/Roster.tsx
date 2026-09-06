@@ -43,6 +43,12 @@ export function Roster({
     <div className="roster">
       <header className="roster-header">
         <h1>dm.ai — characters</h1>
+        {campaign.seeded_dice && (
+          <p className="campaign-seeded" data-testid="seeded-dice" role="status">
+            Seeded dice — this server rolls from a fixed seed (testing only). Every
+            die is predictable; nothing here is a fair roll.
+          </p>
+        )}
         {campaign.system_name !== undefined && (
           <p className="campaign-label" data-testid="campaign-label">
             <span className="campaign-plays">This campaign plays</span>{' '}

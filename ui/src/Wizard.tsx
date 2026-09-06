@@ -9,6 +9,7 @@ import {
   confirmDecision,
   fillRemaining,
   finalizeCharacter,
+  rollDice,
   setStep as apiSetStep,
 } from './api';
 import { Checklist } from './Checklist';
@@ -54,6 +55,10 @@ export function sameSelection(a: Selection, b: Selection): boolean {
       [...a.value].sort().join('\u0000') === [...b.value].sort().join('\u0000')
     );
   }
+  if (a.kind === 'rolled' && b.kind === 'rolled') {
+    // Recorded dice compare by content: sets, groups, faces, tags.
+    return JSON.stringify(a.value) === JSON.stringify(b.value);
+  }
   return a.value === b.value;
 }
 
@@ -67,6 +72,9 @@ export function isRealEdit(saved: Selection | undefined, selection: Selection): 
     return selection.value.trim() !== '';
   }
   if (selection.kind === 'options') {
+    return selection.value.length > 0;
+  }
+  if (selection.kind === 'rolled') {
     return selection.value.length > 0;
   }
   return true;
@@ -95,6 +103,9 @@ export function Wizard({
     slot: string;
     label: string;
     preview: ClearPreview;
+    /** What confirming the dialog does: clear the slot, or roll again
+     * (a reroll appends a set and clears the slot's dependents). */
+    then?: 'roll';
   } | null>(null);
   // Transient in-card acknowledgment for saves that leave the slot open —
   // without it, a successful 4-of-5 confirm looks like a dead button.
@@ -228,6 +239,66 @@ export function Wizard({
         selection,
         source: 'player',
       });
+      handleOutcome(slot, outcome);
+    } catch (error) {
+      setCardError({
+        slot,
+        message: `That choice did not save (${String(
+          error instanceof Error ? error.message : error,
+        )}). The server may be restarting — try again.`,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Ask the server to roll a roll slot's dice. A reroll appends a set and
+   * clears the slot's dependents, so when anything would be cleared the
+   * existing dialog asks first (the same idiom as changing any choice). */
+  const roll = (slot: string, label: string) => {
+    const occupied = serverLog.some((d) => d.slot === slot);
+    if (occupied && engineReady) {
+      try {
+        const preview = engineClearPreview(serverLog, slot);
+        const dependents = preview.cleared.filter((c) => c.slot !== slot);
+        if (dependents.length > 0) {
+          setClearDialog({ slot, label, preview: { slot, cleared: dependents }, then: 'roll' });
+          return;
+        }
+      } catch (error) {
+        setNotice(String(error instanceof Error ? error.message : error));
+        return;
+      }
+    }
+    void executeRoll(slot);
+  };
+
+  const executeRoll = async (slot: string) => {
+    setBusy(true);
+    setNotice(null);
+    setCardError(null);
+    try {
+      const outcome = await rollDice(draft.id, draft.version, slot, newDecisionId());
+      handleOutcome(slot, outcome);
+    } catch (error) {
+      setCardError({
+        slot,
+        message: `The dice did not roll (${String(
+          error instanceof Error ? error.message : error,
+        )}). Try again.`,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** One confirm outcome, one set of reactions — confirm, amend, and roll
+   * all answer with the same shape. */
+  function handleOutcome(
+    slot: string,
+    outcome: Awaited<ReturnType<typeof confirmDecision>>,
+  ): void {
+    {
       switch (outcome.outcome) {
         case 'confirmed': {
           setDraft(outcome.draft);
@@ -277,17 +348,8 @@ export function Wizard({
           setDraft(outcome.draft);
           break;
       }
-    } catch (error) {
-      setCardError({
-        slot,
-        message: `That choice did not save (${String(
-          error instanceof Error ? error.message : error,
-        )}). The server may be restarting — try again.`,
-      });
-    } finally {
-      setBusy(false);
     }
-  };
+  }
 
   const requestChange = (slot: string, label: string) => {
     try {
@@ -554,6 +616,7 @@ export function Wizard({
               })
             }
             onConfirm={(selection) => void confirm(slot.id, selection)}
+            onRoll={() => roll(slot.id, slot.label)}
             onRequestChange={() => requestChange(slot.id, slot.label)}
             busy={busy}
             ack={ack !== null && ack.slot === slot.id ? ack.message : null}
@@ -621,11 +684,26 @@ export function Wizard({
           </div>
         </div>
       )}
-      {clearDialog !== null && (
+      {clearDialog !== null && clearDialog.then === undefined && (
         <ClearConfirmDialog
           preview={clearDialog.preview}
           slotLabel={clearDialog.label}
           onConfirm={() => void executeClear()}
+          onCancel={() => setClearDialog(null)}
+        />
+      )}
+      {clearDialog !== null && clearDialog.then === 'roll' && (
+        <ClearConfirmDialog
+          preview={clearDialog.preview}
+          slotLabel={clearDialog.label}
+          title="Roll again?"
+          intro="Every earlier set stays in your record. Rolling again clears these choices:"
+          confirmLabel="Roll again"
+          onConfirm={() => {
+            const target = clearDialog.slot;
+            setClearDialog(null);
+            void executeRoll(target);
+          }}
           onCancel={() => setClearDialog(null)}
         />
       )}

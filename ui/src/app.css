@@ -1001,3 +1001,96 @@ li.option-group-heading {
   color: var(--ink-soft);
   font-size: 0.85rem;
 }
+
+/* ---- Recorded dice (dnd-dice) ---- */
+.campaign-seeded {
+  margin: 0.25rem 0 0;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--bad);
+  border-left: 4px solid var(--bad);
+  background: var(--card);
+  font-size: 0.9rem;
+}
+.roll-editor {
+  display: grid;
+  gap: 0.6rem;
+}
+.roll-empty {
+  color: var(--ink-soft);
+  margin: 0;
+}
+.roll-sets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.roll-set {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0.2rem 0.5rem;
+  align-items: baseline;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.roll-set.roll-superseded {
+  color: var(--ink-soft);
+}
+.roll-set.roll-live {
+  border-color: var(--ok, var(--accent));
+}
+.roll-totals {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.roll-summary {
+  font-size: 0.85rem;
+}
+.roll-faces {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.85rem;
+}
+.roll-show-all {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.roll-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.roll-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+.roll-grid-intro {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.roll-grid-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.roll-grid-label {
+  min-width: 3.5rem;
+  font-size: 0.85rem;
+}
+.roll-grid-row input {
+  width: 3.2rem;
+}
+.roll-pending {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
