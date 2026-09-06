@@ -2,7 +2,7 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const __wire_type_exports: (a: any) => any;
-export const engine_request: (a: any) => [number, number, number];
+export const engine_request: (a: number, b: number, c: any) => [number, number, number];
 export const start: () => void;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

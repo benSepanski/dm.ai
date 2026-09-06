@@ -1,0 +1,206 @@
+[
+  {
+    "id": "background.acolyte",
+    "name": "Acolyte",
+    "abilities": [
+      "int",
+      "wis",
+      "cha"
+    ],
+    "feat": "feat.origin.magic-initiate",
+    "feat_display": "Magic Initiate (Cleric)",
+    "skills": [
+      "skill.insight",
+      "skill.religion"
+    ],
+    "tool": "tool.calligraphers-supplies",
+    "equipment": {
+      "items": [
+        {
+          "item": "tool.calligraphers-supplies",
+          "count": 1
+        },
+        {
+          "item": "gear.book",
+          "count": 1
+        },
+        {
+          "item": "gear.holy-symbol",
+          "count": 1
+        },
+        {
+          "item": "gear.parchment",
+          "count": 10
+        },
+        {
+          "item": "gear.robe",
+          "count": 1
+        }
+      ],
+      "gold": 8
+    },
+    "gold_alternative": 50,
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 83,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "background.criminal",
+    "name": "Criminal",
+    "abilities": [
+      "dex",
+      "con",
+      "int"
+    ],
+    "feat": "feat.origin.alert",
+    "feat_display": null,
+    "skills": [
+      "skill.sleight-of-hand",
+      "skill.stealth"
+    ],
+    "tool": "tool.thieves-tools",
+    "equipment": {
+      "items": [
+        {
+          "item": "weapon.dagger",
+          "count": 2
+        },
+        {
+          "item": "tool.thieves-tools",
+          "count": 1
+        },
+        {
+          "item": "gear.crowbar",
+          "count": 1
+        },
+        {
+          "item": "gear.pouch",
+          "count": 2
+        },
+        {
+          "item": "gear.travelers-clothes",
+          "count": 1
+        }
+      ],
+      "gold": 16
+    },
+    "gold_alternative": 50,
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 83,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "background.sage",
+    "name": "Sage",
+    "abilities": [
+      "con",
+      "int",
+      "wis"
+    ],
+    "feat": "feat.origin.magic-initiate",
+    "feat_display": "Magic Initiate (Wizard)",
+    "skills": [
+      "skill.arcana",
+      "skill.history"
+    ],
+    "tool": "tool.calligraphers-supplies",
+    "equipment": {
+      "items": [
+        {
+          "item": "weapon.quarterstaff",
+          "count": 1
+        },
+        {
+          "item": "tool.calligraphers-supplies",
+          "count": 1
+        },
+        {
+          "item": "gear.book",
+          "count": 1
+        },
+        {
+          "item": "gear.parchment",
+          "count": 8
+        },
+        {
+          "item": "gear.robe",
+          "count": 1
+        }
+      ],
+      "gold": 8
+    },
+    "gold_alternative": 50,
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 83,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "background.soldier",
+    "name": "Soldier",
+    "abilities": [
+      "str",
+      "dex",
+      "con"
+    ],
+    "feat": "feat.origin.savage-attacker",
+    "feat_display": null,
+    "skills": [
+      "skill.athletics",
+      "skill.intimidation"
+    ],
+    "tool": "tool.gaming-set",
+    "equipment": {
+      "items": [
+        {
+          "item": "weapon.spear",
+          "count": 1
+        },
+        {
+          "item": "weapon.shortbow",
+          "count": 1
+        },
+        {
+          "item": "gear.arrows",
+          "count": 1
+        },
+        {
+          "item": "tool.gaming-set",
+          "count": 1
+        },
+        {
+          "item": "gear.healers-kit",
+          "count": 1
+        },
+        {
+          "item": "gear.quiver",
+          "count": 1
+        },
+        {
+          "item": "gear.travelers-clothes",
+          "count": 1
+        }
+      ],
+      "gold": 14
+    },
+    "gold_alternative": 50,
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 83,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  }
+]

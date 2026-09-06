@@ -1,0 +1,283 @@
+{
+  "name": "Nell",
+  "summary": [
+    "Halfling Fighter 1",
+    "Small · Speed 30 ft."
+  ],
+  "sections": [
+    {
+      "title": "Ability Scores",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "13 (+1)",
+          "detail": "13 (Point Buy)"
+        },
+        {
+          "label": "Dexterity",
+          "value": "17 (+3)",
+          "detail": "15 (Point Buy) +2 (Criminal)"
+        },
+        {
+          "label": "Constitution",
+          "value": "15 (+2)",
+          "detail": "14 (Point Buy) +1 (Criminal)"
+        },
+        {
+          "label": "Intelligence",
+          "value": "8 (-1)",
+          "detail": "8 (Point Buy)"
+        },
+        {
+          "label": "Wisdom",
+          "value": "12 (+1)",
+          "detail": "12 (Point Buy)"
+        },
+        {
+          "label": "Charisma",
+          "value": "10 (+0)",
+          "detail": "10 (Point Buy)"
+        }
+      ]
+    },
+    {
+      "title": "Combat",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "12",
+          "detail": "10 + 2 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "13",
+          "detail": "10 + 3 Dex (unarmored)"
+        },
+        {
+          "label": "Initiative",
+          "value": "+5",
+          "detail": "3 Dex, +2 proficiency (Alert)"
+        },
+        {
+          "label": "Speed",
+          "value": "30 ft.",
+          "detail": "Halfling"
+        },
+        {
+          "label": "Proficiency Bonus",
+          "value": "+2",
+          "detail": "level 1"
+        },
+        {
+          "label": "Hit Dice",
+          "value": "1d10",
+          "detail": "d10 per Fighter level"
+        },
+        {
+          "label": "Passive Perception",
+          "value": "13",
+          "detail": "10 + 1 Wis + 2 proficiency (from Fighter)"
+        }
+      ]
+    },
+    {
+      "title": "Saving Throws",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "+3",
+          "detail": "1 Str + 2 proficiency (from Fighter)"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+3",
+          "detail": "3 Dex"
+        },
+        {
+          "label": "Constitution",
+          "value": "+4",
+          "detail": "2 Con + 2 proficiency (from Fighter)"
+        },
+        {
+          "label": "Intelligence",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Wisdom",
+          "value": "+1",
+          "detail": "1 Wis"
+        },
+        {
+          "label": "Charisma",
+          "value": "+0",
+          "detail": "0 Cha"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+3",
+          "detail": "3 Dex"
+        },
+        {
+          "label": "Animal Handling",
+          "value": "+1",
+          "detail": "1 Wis"
+        },
+        {
+          "label": "Arcana",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Athletics",
+          "value": "+3",
+          "detail": "1 Str + 2 proficiency (from Fighter)"
+        },
+        {
+          "label": "Deception",
+          "value": "+0",
+          "detail": "0 Cha"
+        },
+        {
+          "label": "History",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Insight",
+          "value": "+1",
+          "detail": "1 Wis"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+0",
+          "detail": "0 Cha"
+        },
+        {
+          "label": "Investigation",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Medicine",
+          "value": "+1",
+          "detail": "1 Wis"
+        },
+        {
+          "label": "Nature",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Perception",
+          "value": "+3",
+          "detail": "1 Wis + 2 proficiency (from Fighter)"
+        },
+        {
+          "label": "Performance",
+          "value": "+0",
+          "detail": "0 Cha"
+        },
+        {
+          "label": "Persuasion",
+          "value": "+0",
+          "detail": "0 Cha"
+        },
+        {
+          "label": "Religion",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Sleight of Hand",
+          "value": "+5",
+          "detail": "3 Dex + 2 proficiency (from Criminal)"
+        },
+        {
+          "label": "Stealth",
+          "value": "+5",
+          "detail": "3 Dex + 2 proficiency (from Criminal)"
+        },
+        {
+          "label": "Survival",
+          "value": "+1",
+          "detail": "1 Wis"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": []
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Fighting Style",
+          "value": "Archery",
+          "detail": "You gain a +2 bonus to attack rolls you make with Ranged weapons. — You have honed your martial prowess and gain a Fighting Style feat of your choice (see \"Feats\"). Defense is recommended. Whenever you gain a Fighter level, you can replace the feat you chose with a different Fighting Style feat."
+        },
+        {
+          "label": "Second Wind",
+          "value": "Fighter 1",
+          "detail": "You have a limited well of physical and mental stamina that you can draw on. As a Bonus Action, you can use it to regain Hit Points equal to 1d10 plus your Fighter level. You can use this feature twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. When you reach certain Fighter levels, you gain more uses of this feature, as shown in the Second Wind column of the Fighter Features table."
+        },
+        {
+          "label": "Weapon Mastery",
+          "value": "Dagger (Nick), Shortbow (Vex), Rapier (Vex)",
+          "detail": "Your training with weapons allows you to use the mastery properties of three kinds of Simple or Martial weapons of your choice. Whenever you finish a Long Rest, you can practice weapon drills and change one of those weapon choices. When you reach certain Fighter levels, you gain the ability to use the mastery properties of more kinds of weapons, as shown in the Weapon Mastery column of the Fighter Features table."
+        },
+        {
+          "label": "Brave",
+          "value": "Halfling",
+          "detail": "You have Advantage on saving throws you make to avoid or end the Frightened condition."
+        },
+        {
+          "label": "Halfling Nimbleness",
+          "value": "Halfling",
+          "detail": "You can move through the space of any creature that is a size larger than you, but you can't stop in the same space."
+        },
+        {
+          "label": "Luck",
+          "value": "Halfling",
+          "detail": "When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll."
+        },
+        {
+          "label": "Naturally Stealthy",
+          "value": "Halfling",
+          "detail": "You can take the Hide action even when you are obscured only by a creature that is at least one size larger than you."
+        },
+        {
+          "label": "Alert",
+          "value": "origin feat from Criminal",
+          "detail": "Initiative Proficiency. When you roll Initiative, you can add your Proficiency Bonus to the roll. Initiative Swap. Immediately after you roll Initiative, you can swap your Initiative with the Initiative of one willing ally in the same combat. You can't make this swap if you or the ally has the Incapacitated condition."
+        },
+        {
+          "label": "Tool Proficiency",
+          "value": "Thieves' Tools",
+          "detail": "from Criminal"
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Total Weight",
+          "value": "0 lb.",
+          "detail": "carrying capacity 195 lb. (Strength 13 × 15)"
+        },
+        {
+          "label": "Coin",
+          "value": "205 GP",
+          "detail": "155 GP from Fighter option C + 50 GP from Criminal"
+        }
+      ]
+    }
+  ]
+}

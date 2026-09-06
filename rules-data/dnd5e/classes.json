@@ -1,0 +1,162 @@
+[
+  {
+    "id": "class.fighter",
+    "name": "Fighter",
+    "text": "A master of weaponry and combat techniques: Fighters rely on martial prowess, a Fighting Style, and Weapon Mastery to dominate the battlefield.",
+    "primary_abilities": [
+      "str",
+      "dex"
+    ],
+    "hit_die": 10,
+    "hp_at_level_1": 10,
+    "hp_per_level": 6,
+    "saving_throws": [
+      "str",
+      "con"
+    ],
+    "skill_choice": {
+      "count": 2,
+      "from": [
+        "skill.acrobatics",
+        "skill.animal-handling",
+        "skill.athletics",
+        "skill.history",
+        "skill.insight",
+        "skill.intimidation",
+        "skill.persuasion",
+        "skill.perception",
+        "skill.survival"
+      ]
+    },
+    "weapon_proficiencies": [
+      "simple",
+      "martial"
+    ],
+    "armor_training": [
+      "light",
+      "medium",
+      "heavy",
+      "shield"
+    ],
+    "features": [
+      {
+        "id": "feature.fighter.fighting-style",
+        "name": "Fighting Style",
+        "text": "You have honed your martial prowess and gain a Fighting Style feat of your choice (see \"Feats\"). Defense is recommended. Whenever you gain a Fighter level, you can replace the feat you chose with a different Fighting Style feat."
+      },
+      {
+        "id": "feature.fighter.second-wind",
+        "name": "Second Wind",
+        "text": "You have a limited well of physical and mental stamina that you can draw on. As a Bonus Action, you can use it to regain Hit Points equal to 1d10 plus your Fighter level. You can use this feature twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. When you reach certain Fighter levels, you gain more uses of this feature, as shown in the Second Wind column of the Fighter Features table."
+      },
+      {
+        "id": "feature.fighter.weapon-mastery",
+        "name": "Weapon Mastery",
+        "text": "Your training with weapons allows you to use the mastery properties of three kinds of Simple or Martial weapons of your choice. Whenever you finish a Long Rest, you can practice weapon drills and change one of those weapon choices. When you reach certain Fighter levels, you gain the ability to use the mastery properties of more kinds of weapons, as shown in the Weapon Mastery column of the Fighter Features table."
+      }
+    ],
+    "fighting_style_feature": "feature.fighter.fighting-style",
+    "weapon_mastery_feature": "feature.fighter.weapon-mastery",
+    "weapon_mastery_count": 3,
+    "advancement": [
+      {
+        "level": 2,
+        "features": [
+          {
+            "id": "feature.fighter.action-surge",
+            "name": "Action Surge",
+            "text": "You can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest. Starting at level 17, you can use it twice before a rest but only once on a turn."
+          },
+          {
+            "id": "feature.fighter.tactical-mind",
+            "name": "Tactical Mind",
+            "text": "You have a mind for tactics on and off the battlefield. When you fail an ability check, you can expend a use of your Second Wind to push yourself toward success. Rather than regaining Hit Points, you roll 1d10 and add the number rolled to the ability check, potentially turning it into a success. If the check still fails, this use of Second Wind isn't expended."
+          }
+        ],
+        "subclass_choice": false
+      },
+      {
+        "level": 3,
+        "features": [],
+        "subclass_choice": true,
+        "subclass_text": "You gain a Fighter subclass of your choice. A subclass is a specialization that grants you features at certain Fighter levels. For the rest of your career, you gain each of your subclass's features that are of your Fighter level or lower."
+      }
+    ],
+    "equipment_packages": [
+      {
+        "id": "package.fighter.a",
+        "label": "A",
+        "items": [
+          {
+            "item": "armor.chain-mail",
+            "count": 1
+          },
+          {
+            "item": "weapon.greatsword",
+            "count": 1
+          },
+          {
+            "item": "weapon.flail",
+            "count": 1
+          },
+          {
+            "item": "weapon.javelin",
+            "count": 8
+          },
+          {
+            "item": "gear.dungeoneers-pack",
+            "count": 1
+          }
+        ],
+        "gold": 4
+      },
+      {
+        "id": "package.fighter.b",
+        "label": "B",
+        "items": [
+          {
+            "item": "armor.studded-leather-armor",
+            "count": 1
+          },
+          {
+            "item": "weapon.scimitar",
+            "count": 1
+          },
+          {
+            "item": "weapon.shortsword",
+            "count": 1
+          },
+          {
+            "item": "weapon.longbow",
+            "count": 1
+          },
+          {
+            "item": "gear.arrows",
+            "count": 1
+          },
+          {
+            "item": "gear.quiver",
+            "count": 1
+          },
+          {
+            "item": "gear.dungeoneers-pack",
+            "count": 1
+          }
+        ],
+        "gold": 11
+      }
+    ],
+    "gold_alternative": {
+      "id": "package.fighter.gold",
+      "label": "C",
+      "gold": 155
+    },
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 47,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  }
+]

@@ -9,7 +9,36 @@
 use engine_core::AppendOutcome;
 use types::{Decision, DecisionId, DecisionInput, DecisionSource, Selection, SlotId, SlotViewKind};
 
-/// Every shipped record display name, as a quoted source literal.
+/// Every shipped 5.5e record display name.
+fn shipped_names_dnd5e() -> Vec<String> {
+    let data = ruleset_dnd5e::embedded_data().expect("5.5e data parses");
+    let mut names: Vec<String> = Vec::new();
+    names.extend(data.species.iter().map(|r| r.name.clone()));
+    names.extend(data.backgrounds.iter().map(|r| r.name.clone()));
+    names.extend(data.feats.iter().map(|r| r.name.clone()));
+    names.extend(data.classes.iter().map(|r| r.name.clone()));
+    names.extend(
+        data.classes
+            .iter()
+            .flat_map(|c| c.advancement.iter())
+            .flat_map(|a| a.features.iter())
+            .map(|f| f.name.clone()),
+    );
+    names.extend(data.subclasses.iter().map(|r| r.name.clone()));
+    names.extend(
+        data.subclasses
+            .iter()
+            .flat_map(|s| s.features.iter())
+            .map(|f| f.name.clone()),
+    );
+    names.extend(data.equipment.weapons.iter().map(|r| r.name.clone()));
+    names.extend(data.equipment.armor.iter().map(|r| r.name.clone()));
+    names.sort();
+    names.dedup();
+    names
+}
+
+/// Every shipped PF2e record display name, as a quoted source literal.
 fn shipped_names() -> Vec<String> {
     let data = checks::load_rules_data();
     let mut names: Vec<String> = Vec::new();
@@ -41,8 +70,19 @@ fn shipped_names() -> Vec<String> {
 
 #[test]
 fn no_shipped_record_name_is_a_ruleset_source_literal() {
-    let names = shipped_names();
-    let src_dir = checks::workspace_root().join("crates/ruleset-pf2e/src");
+    for (krate, names) in [
+        ("ruleset-pf2e", shipped_names()),
+        ("ruleset-dnd5e", shipped_names_dnd5e()),
+    ] {
+        no_name_literal_in(krate, &names);
+    }
+}
+
+fn no_name_literal_in(krate: &str, names: &[String]) {
+    let src_dir = checks::workspace_root()
+        .join("crates")
+        .join(krate)
+        .join("src");
     let mut violations = Vec::new();
     for entry in std::fs::read_dir(&src_dir).unwrap().flatten() {
         let path = entry.path();
@@ -54,7 +94,7 @@ fn no_shipped_record_name_is_a_ruleset_source_literal() {
             continue;
         }
         let text = std::fs::read_to_string(&path).unwrap();
-        for name in &names {
+        for name in names {
             let literal = format!("\"{name}\"");
             if text.contains(&literal) {
                 violations.push(format!(
@@ -67,7 +107,7 @@ fn no_shipped_record_name_is_a_ruleset_source_literal() {
     }
     assert!(
         violations.is_empty(),
-        "class-specific identity must be a data lookup, never a literal:\n  {}",
+        "{krate}: class-specific identity must be a data lookup, never a literal:\n  {}",
         violations.join("\n  ")
     );
 }
@@ -222,6 +262,7 @@ fn meters_are_built_only_through_their_constructors() {
     for dir in [
         "crates/engine-core",
         "crates/ruleset-pf2e",
+        "crates/ruleset-dnd5e",
         "crates/server",
         "crates/wasm",
     ] {
@@ -248,4 +289,52 @@ fn meters_are_built_only_through_their_constructors() {
         "raw MeterView literal outside crates/types (use MeterView::requirement / \
          ::exact / ::budget so display and state stay coherent): {violations:?}"
     );
+}
+
+/// The 5.5e run of the cross-class check: with one shipped class the loop
+/// is trivially satisfied, and it grows with every class added — the guard
+/// stands per system, never across systems.
+#[test]
+fn no_cross_class_vocabulary_in_5e_projections() {
+    let data = ruleset_dnd5e::embedded_data().expect("5.5e data parses");
+    let engine = ruleset_dnd5e::engine(std::sync::Arc::new(
+        ruleset_dnd5e::embedded_data().expect("5.5e data parses"),
+    ));
+    let classes: Vec<(String, String)> = data
+        .classes
+        .iter()
+        .map(|c| (c.id.clone(), c.name.clone()))
+        .collect();
+    assert!(!classes.is_empty());
+    for (class_id, class_name) in &classes {
+        let mut log = Vec::new();
+        let input = DecisionInput {
+            id: DecisionId::new("iso-5e-class"),
+            slot: SlotId::new(ruleset_dnd5e::CLASS_SLOT_ID),
+            selection: Selection::Option(types::OptionId::new(class_id)),
+            source: DecisionSource::Player,
+        };
+        if let Ok(AppendOutcome::Appended(new_log)) = engine.append(&log, input) {
+            log = new_log;
+        }
+        let mut projection = engine.project(&log).expect("projects");
+        for step in &mut projection.steps {
+            for slot in &mut step.slots {
+                if slot.id.as_str() == ruleset_dnd5e::CLASS_SLOT_ID {
+                    slot.options.clear();
+                }
+            }
+        }
+        let rendered = serde_json::to_string(&projection).unwrap();
+        for (other_id, other_name) in &classes {
+            if other_id == class_id {
+                continue;
+            }
+            assert!(
+                !rendered.contains(other_name.as_str()),
+                "a {class_name}'s projection mentions '{other_name}'"
+            );
+            assert!(!rendered.contains(other_id.as_str()));
+        }
+    }
 }

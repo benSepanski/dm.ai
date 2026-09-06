@@ -26,39 +26,12 @@ use routes::App;
 #[folder = "$CARGO_MANIFEST_DIR/../../ui/dist"]
 struct UiAssets;
 
-// Rules data ships inside the binary — same commit, same data, both
-// runtimes; a corrupt file is a build-time refusal (parse at startup).
-const RULES_MANIFEST: &str = include_str!("../../../rules-data/manifest.json");
-const RULES_ANCESTRIES: &str = include_str!("../../../rules-data/ancestries.json");
-const RULES_HERITAGES: &str = include_str!("../../../rules-data/heritages.json");
-const RULES_ANCESTRY_FEATS: &str = include_str!("../../../rules-data/ancestry-feats.json");
-const RULES_BACKGROUNDS: &str = include_str!("../../../rules-data/backgrounds.json");
-const RULES_CLASSES: &str = include_str!("../../../rules-data/classes.json");
-const RULES_CLASS_FEATS: &str = include_str!("../../../rules-data/class-feats.json");
-const RULES_GENERAL_FEATS: &str = include_str!("../../../rules-data/general-feats.json");
-const RULES_SKILLS: &str = include_str!("../../../rules-data/skills.json");
-const RULES_EQUIPMENT: &str = include_str!("../../../rules-data/equipment.json");
-const RULES_SPELLS: &str = include_str!("../../../rules-data/spells.json");
-// The lineage record: ID sets of every shipped data version. The server
-// only needs its key set — a pin is "older known" when it appears in the
-// manifest's supersedes chain AND here.
-const RULES_SHIPPED_VERSIONS: &str = include_str!("../../../rules-data/shipped-versions.json");
+use engine_core::Ruleset;
 
-fn load_rules() -> Result<ruleset_pf2e::RulesData, String> {
-    ruleset_pf2e::RulesData::parse(&ruleset_pf2e::RulesDataFiles {
-        manifest: RULES_MANIFEST,
-        ancestries: RULES_ANCESTRIES,
-        heritages: RULES_HERITAGES,
-        ancestry_feats: RULES_ANCESTRY_FEATS,
-        backgrounds: RULES_BACKGROUNDS,
-        classes: RULES_CLASSES,
-        class_feats: RULES_CLASS_FEATS,
-        general_feats: RULES_GENERAL_FEATS,
-        skills: RULES_SKILLS,
-        equipment: RULES_EQUIPMENT,
-        spells: RULES_SPELLS,
-    })
-    .map_err(|e| format!("rules data is corrupt — refusing to start: {e}"))
+/// Every shipped ruleset, embedded at compile time. Adding a game is one
+/// arm here (and one in the wasm crate) — no registry.
+fn shipped_rulesets() -> Vec<Arc<dyn Ruleset>> {
+    vec![ruleset_pf2e::embedded(), ruleset_dnd5e::embedded()]
 }
 
 #[derive(Parser)]
@@ -93,41 +66,80 @@ enum Command {
 
 fn main() {
     let cli = Cli::parse();
-    let rules = match load_rules() {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("{e}");
-            std::process::exit(2);
+    let rulesets = shipped_rulesets();
+    if let Some(path) = cli.extra_known_versions.as_deref() {
+        match version::extra_versions_systems(path) {
+            Ok(keys) => {
+                for key in keys {
+                    if !rulesets.iter().any(|r| r.system() == key) {
+                        eprintln!(
+                            "--extra-known-versions names system '{key}', which this build does not ship"
+                        );
+                        std::process::exit(2);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::exit(2);
+            }
         }
-    };
-    let known = match version::KnownVersions::assemble(
-        ruleset_pf2e::rules_version(&rules),
-        &rules.manifest.supersedes,
-        RULES_SHIPPED_VERSIONS,
-        cli.extra_known_versions.as_deref(),
-    ) {
-        Ok(k) => k,
-        Err(e) => {
-            eprintln!("{e}");
-            std::process::exit(2);
+    }
+    let mut known = std::collections::BTreeMap::new();
+    for rs in &rulesets {
+        match version::KnownVersions::assemble(
+            rs.system(),
+            rs.rules_version(),
+            rs.supersedes(),
+            rs.shipped_versions_json(),
+            cli.extra_known_versions.as_deref(),
+        ) {
+            Ok(k) => {
+                known.insert(rs.system().to_string(), k);
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::exit(2);
+            }
         }
-    };
+    }
     match cli.command {
-        Some(Command::Verify) => verify(cli.data_dir, rules, known),
-        None => serve(cli.data_dir, cli.port, rules, known, cli.name_pools),
+        Some(Command::Verify) => verify(cli.data_dir, rulesets, known),
+        None => serve(cli.data_dir, cli.port, rulesets, known, cli.name_pools),
     }
 }
 
-fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData, known: version::KnownVersions) {
-    let rules_version = ruleset_pf2e::rules_version(&rules).to_string();
-    let engine = ruleset_pf2e::engine(Arc::new(rules));
-    let store = match Store::open(&data_dir) {
+fn verify(
+    data_dir: PathBuf,
+    rulesets: Vec<Arc<dyn Ruleset>>,
+    known: std::collections::BTreeMap<String, version::KnownVersions>,
+) {
+    let systems: Vec<(String, String)> = rulesets
+        .iter()
+        .map(|r| (r.system().to_string(), r.system_name().to_string()))
+        .collect();
+    let store = match Store::open(&data_dir, &systems) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{e}");
             std::process::exit(2);
         }
     };
+    let campaign = store.campaign_status();
+    if let Some(problem) = &campaign.problem {
+        println!("CAMPAIGN  {problem}");
+    }
+    let Some(system) = store.system().map(str::to_string) else {
+        println!("verify: this campaign has no resolvable game — nothing verified");
+        std::process::exit(if campaign.problem.is_some() { 1 } else { 0 });
+    };
+    let Some(rs) = rulesets.iter().find(|r| r.system() == system) else {
+        eprintln!("this campaign is declared for '{system}', which this build does not ship");
+        std::process::exit(2);
+    };
+    let known = &known[&system];
+    let engine = rs.engine();
+    let rules_version = rs.rules_version().to_string();
     let load = match store.load_all() {
         Ok(l) => l,
         Err(e) => {
@@ -144,7 +156,7 @@ fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData, known: version::Kno
         if c.rules_version != rules_version {
             // Older-known pins replay against current data; unknown pins
             // cannot. The version guard's load-time statuses, in print.
-            match version::status_for(&engine, &known, c) {
+            match version::status_for(engine, known, c) {
                 types::VersionStatus::KeptOld {
                     pinned,
                     evaluated_against,
@@ -203,20 +215,15 @@ fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData, known: version::Kno
         // only one. The stored sheet is judged against the prefix alone.
         if c.has_pending_tail() {
             let tail = c.pending_tail();
-            let advances = tail
-                .iter()
-                .filter(|d| ruleset_pf2e::advance_level_of(d.slot.as_str()).is_some())
-                .count();
-            let head_is_advance = tail
-                .first()
-                .is_some_and(|d| ruleset_pf2e::advance_level_of(d.slot.as_str()).is_some());
+            let advances = tail.iter().filter(|d| rs.is_advance_slot(&d.slot)).count();
+            let head_is_advance = tail.first().is_some_and(|d| rs.is_advance_slot(&d.slot));
             if !head_is_advance || advances != 1 {
                 failures += 1;
                 println!(
                     "TAIL-BAD  {} ({}): the pending level-up's decisions do not start with exactly one level advance — abandon the level-up to recover",
                     c.id, c.sheet.name
                 );
-            } else if let Err(e) = engine.fold(&c.log) {
+            } else if let Err(e) = engine.folds(&c.log) {
                 failures += 1;
                 println!(
                     "TAIL-BROKE {} ({}): the pending level-up no longer replays: {e} — abandon the level-up to recover",
@@ -270,8 +277,8 @@ fn verify(data_dir: PathBuf, rules: ruleset_pf2e::RulesData, known: version::Kno
 fn serve(
     data_dir: PathBuf,
     port: u16,
-    rules: ruleset_pf2e::RulesData,
-    known: version::KnownVersions,
+    rulesets: Vec<Arc<dyn Ruleset>>,
+    known: std::collections::BTreeMap<String, version::KnownVersions>,
     name_pools: PathBuf,
 ) {
     if let Err(e) = std::fs::create_dir_all(&data_dir) {
@@ -282,25 +289,17 @@ fn serve(
         eprintln!("{e}");
         std::process::exit(3);
     }
-    let store = match Store::open(&data_dir) {
+    let systems: Vec<(String, String)> = rulesets
+        .iter()
+        .map(|r| (r.system().to_string(), r.system_name().to_string()))
+        .collect();
+    let store = match Store::open(&data_dir, &systems) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{e}");
             std::process::exit(2);
         }
     };
-
-    let notice = &rules.manifest.license_notice;
-    let license_notice = format!(
-        "{}\n\n{}\n\n{}",
-        notice.orc_notice, notice.attribution, notice.reserved
-    );
-    let rules_version = ruleset_pf2e::rules_version(&rules).to_string();
-    // Per-class suggested builds, resolved from the class records before the
-    // data moves into the engine.
-    let suggested = ruleset_pf2e::suggested_builds(&rules);
-    let rules = Arc::new(rules);
-    let engine = ruleset_pf2e::engine(rules.clone());
 
     // Bind: with the lock held, a taken port walks to the next free one
     // (never silently fail to serve). Port 0 lets the OS pick.
@@ -312,13 +311,9 @@ fn serve(
     let _ = persistence::write_lock(&data_dir, &url);
 
     let app = Arc::new(App {
-        engine,
-        rules,
-        store: Mutex::new(store),
-        rules_version,
+        rulesets,
         known,
-        license_notice,
-        suggested,
+        store: Mutex::new(store),
         name_pools,
     });
 

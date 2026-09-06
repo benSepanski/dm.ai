@@ -10,6 +10,12 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../..');
 
 let built = false;
 function serverBinary(): string {
+  // A prebuilt binary (e.g. CI's release build, or a local one while the
+  // workspace is mid-change) skips the build step.
+  const prebuilt = process.env['DMAI_SERVER_BIN'];
+  if (prebuilt !== undefined && prebuilt !== '') {
+    return prebuilt;
+  }
   if (!built) {
     execFileSync('cargo', ['build', '-p', 'server', '--quiet'], { cwd: repoRoot });
     built = true;

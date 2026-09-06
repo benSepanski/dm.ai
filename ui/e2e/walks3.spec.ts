@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import {
+  declareFirstGame,
   confirmBoosts,
   confirmOption,
   confirmText,
@@ -20,6 +21,7 @@ let server: TestServer;
 test.beforeEach(async () => {
   server = new TestServer();
   await server.start();
+  await declareFirstGame(server);
 });
 
 test.afterEach(async () => {
@@ -102,7 +104,12 @@ test('walk 9 — the bump: divergent replay flags for review, accept; identical 
   // Fabricate a prior shipped version exactly as checks/version_guard.rs
   // does: build real characters, kill the server, doctor the files, and
   // restart with the hidden --extra-known-versions test-support flag.
-  const TEST_VERSION = 'pf2e-pc.0.0.1-test';
+  // Versions are per ruleset and prefixed by the system id; the campaign
+  // view says which one this directory plays.
+  const campaign = (await (await fetch(`${server.url}/api/campaign`)).json()) as {
+    system: string;
+  };
+  const TEST_VERSION = `${campaign.system}-pc.0.0.1-test`;
   const api = async (path: string, body: unknown): Promise<Record<string, unknown>> => {
     const res = await fetch(`${server.url}${path}`, {
       method: 'POST',
@@ -160,7 +167,12 @@ test('walk 9 — the bump: divergent replay flags for review, accept; identical 
     doc['finalized_through'] = (doc['log'] as unknown[]).length;
   });
   const extraPath = join(server.dataDir, 'extra-known-versions.json');
-  writeFileSync(extraPath, JSON.stringify({ versions: { [TEST_VERSION]: [] } }));
+  // The test-support extras file is keyed by system, so a fabricated prior
+  // version can never land in another ruleset's guard.
+  writeFileSync(
+    extraPath,
+    JSON.stringify({ [campaign.system]: { versions: { [TEST_VERSION]: [] } } }),
+  );
   server.extraArgs = ['--extra-known-versions', extraPath];
   await server.start();
 

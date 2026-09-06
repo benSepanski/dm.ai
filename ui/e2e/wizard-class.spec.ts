@@ -5,6 +5,7 @@
 // layout sweep via the shared helpers.
 import { expect, type Page, test } from '@playwright/test';
 import {
+  declareFirstGame,
   confirmBoosts,
   confirmOption,
   createCharacter,
@@ -20,6 +21,7 @@ let server: TestServer;
 test.beforeEach(async () => {
   server = new TestServer();
   await server.start();
+  await declareFirstGame(server);
 });
 
 test.afterEach(async () => {

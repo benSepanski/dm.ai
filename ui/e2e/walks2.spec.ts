@@ -2,6 +2,7 @@
 // chain (with a trained-gated feat greying), and the one-tap quick build.
 import { expect, test } from '@playwright/test';
 import {
+  declareFirstGame,
   confirmOption,
   confirmText,
   createCharacter,
@@ -16,6 +17,7 @@ let server: TestServer;
 test.beforeEach(async () => {
   server = new TestServer();
   await server.start();
+  await declareFirstGame(server);
 });
 
 test.afterEach(async () => {

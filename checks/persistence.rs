@@ -69,7 +69,7 @@ fn documents_round_trip_a_versioned_schema() {
     // The document on disk carries the schema version and parses.
     let path = dir.path().join(format!("characters/{id}.json"));
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(doc["schema_version"], 4);
+    assert_eq!(doc["schema_version"], 5);
     assert_eq!(doc["rules_version"], "pf2e-pc.0.4.0");
     assert_eq!(doc["log"].as_array().unwrap().len(), 2); // name + ancestry
 
@@ -137,7 +137,7 @@ fn v1_documents_read_untouched_and_upgrade_on_first_write() {
     }
     let upgraded: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(
-        upgraded["schema_version"], 4,
+        upgraded["schema_version"], 5,
         "first write after load upgrades v1 to the current schema"
     );
 }
@@ -300,7 +300,7 @@ fn pending_levels_never_touch_the_finalized_prefix_or_sheet() {
     let url = server.url.as_str();
     let id = finalized_fighter(&client, url, "prefix-inv");
     let before = read_doc(dir.path(), &id);
-    assert_eq!(before["schema_version"], 4);
+    assert_eq!(before["schema_version"], 5);
     assert_eq!(
         before["finalized_through"].as_u64().unwrap() as usize,
         before["log"].as_array().unwrap().len()
@@ -578,11 +578,11 @@ fn v3_documents_read_untouched_with_the_marker_fixed_up() {
         json!({"kind": "option", "value": "heritage.dwarf.rock"}),
     );
     assert_eq!(outcome["outcome"], "confirmed", "{outcome}");
-    assert_eq!(read_doc(dir.path(), &draft_id)["schema_version"], 4);
+    assert_eq!(read_doc(dir.path(), &draft_id)["schema_version"], 5);
     assert_eq!(read_doc(dir.path(), &draft_id)["finalized_through"], 0);
     start_level(&client, url, &final_id);
     let doc = read_doc(dir.path(), &final_id);
-    assert_eq!(doc["schema_version"], 4);
+    assert_eq!(doc["schema_version"], 5);
     assert_eq!(
         doc["finalized_through"].as_u64().unwrap() as usize + 1,
         doc["log"].as_array().unwrap().len()

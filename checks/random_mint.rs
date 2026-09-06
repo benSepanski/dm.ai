@@ -409,7 +409,7 @@ fn level_randomly(
     tag: &str,
 ) -> Vec<types::Decision> {
     let advance = DecisionInput {
-        id: DecisionId::new(format!("{tag}.level-{level}.advance")),
+        id: DecisionId::new(format!("{tag}.level-{level}-advance")),
         slot: SlotId::new(ruleset_pf2e::slot_level_advance(level)),
         selection: Selection::Option(OptionId::new(format!("advance.{level}"))),
         source: DecisionSource::Player,

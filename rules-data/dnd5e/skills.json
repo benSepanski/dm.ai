@@ -1,0 +1,218 @@
+[
+  {
+    "id": "skill.acrobatics",
+    "name": "Acrobatics",
+    "ability": "dex",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.animal-handling",
+    "name": "Animal Handling",
+    "ability": "wis",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.arcana",
+    "name": "Arcana",
+    "ability": "int",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.athletics",
+    "name": "Athletics",
+    "ability": "str",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.deception",
+    "name": "Deception",
+    "ability": "cha",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.history",
+    "name": "History",
+    "ability": "int",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.insight",
+    "name": "Insight",
+    "ability": "wis",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.intimidation",
+    "name": "Intimidation",
+    "ability": "cha",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.investigation",
+    "name": "Investigation",
+    "ability": "int",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.medicine",
+    "name": "Medicine",
+    "ability": "wis",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.nature",
+    "name": "Nature",
+    "ability": "int",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.perception",
+    "name": "Perception",
+    "ability": "wis",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.performance",
+    "name": "Performance",
+    "ability": "cha",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.persuasion",
+    "name": "Persuasion",
+    "ability": "cha",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.religion",
+    "name": "Religion",
+    "ability": "int",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.sleight-of-hand",
+    "name": "Sleight of Hand",
+    "ability": "dex",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.stealth",
+    "name": "Stealth",
+    "ability": "dex",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "skill.survival",
+    "name": "Survival",
+    "ability": "wis",
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 9,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  }
+]

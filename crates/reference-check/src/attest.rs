@@ -1,6 +1,11 @@
-//! The `attest` subcommand: verify the cache, match every shipped record,
-//! enforce waiver bindings, sweep reverse completeness, and write
-//! `rules-data/attestation.json`.
+//! The `attest` subcommand: verify the cache, match every shipped record
+//! through the system's comparator, enforce waiver bindings, sweep reverse
+//! completeness, and write `rules-data/<system>/attestation.json`.
+//!
+//! This module is the system-independent half: the verdict loop, the
+//! waiver binding, and the one attestation schema. The per-system halves
+//! (`pf2e.rs`, `dnd5e.rs`) produce a `Pass` — one `Matched` per shipped
+//! record plus the reverse sweep — and are selected by a `match`.
 //!
 //! Waiver semantics (architecture, "Failure modes"): a waiver in
 //! overrides.json is bound to the sha256 of the comparison state it excuses
@@ -16,45 +21,71 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::{json, Value};
 
-use crate::foundry::{normalize_name, FoundryRecord, Index, Partition};
-use crate::ours::{Kind, OurRecord};
-use crate::{cache, canon, compare, foundry, ours, workspace_root, FOUNDRY_SHA256, FOUNDRY_TAG};
+use crate::compare::Outcome;
+use crate::foundry::normalize_name;
+use crate::ours::OurRecord;
+use crate::{
+    cache, canon, dnd5e, ours, pf2e, workspace_root, System, FOUNDRY_SHA256, FOUNDRY_TAG,
+    SRD_COMMIT, SRD_PDF_SHA256, SRD_REPO, SRD_SHA256,
+};
 
-/// Set to true only when the shipped data claims full Player Core breadth
-/// (spec req 1 complete — flipped after the T3–T5 data tickets landed and
-/// the reverse sweep reconciled to the spec's named exclusions). While
-/// false, `missing_from_data` is informational: the offline check asserts
-/// it empty only under a true flag.
-const CLAIMS_FULL_BREADTH: bool = true;
+/// Whether the shipped data claims full breadth for its reverse-sweep
+/// categories. PF2e: true (spec chargen-content req 1 complete). 5.5e:
+/// false — the slice ships a representative subset (four species, the
+/// SRD's four backgrounds; weapons and armor are complete but the claim is
+/// per system), so `missing_from_data` is informational there.
+fn claims_full_breadth(system: System) -> bool {
+    match system {
+        System::Pf2e => true,
+        System::Dnd5e => false,
+    }
+}
 
 const CONFIG_PATH: &str = "crates/reference-check/overrides.json";
 
-struct Config {
-    overrides: BTreeMap<String, String>,
-    waivers: BTreeMap<String, Waiver>,
+pub struct Config {
+    pub overrides: BTreeMap<String, String>,
+    pub waivers: BTreeMap<String, Waiver>,
     /// (sweep category, normalized record name) pairs the spec excludes by
     /// name from full breadth (e.g. Raised by Belief, spec req 1 [call]).
     /// Reasons live in the config file; the reverse sweep skips these so a
     /// future claims_full_breadth=true does not demand out-of-scope records.
-    spec_exclusions: BTreeSet<(String, String)>,
+    pub spec_exclusions: BTreeSet<(String, String)>,
 }
 
-struct Waiver {
-    reason: String,
-    state_hash: String,
+pub struct Waiver {
+    pub reason: String,
+    pub state_hash: String,
 }
 
-fn load_config() -> Result<Config, String> {
+/// One shipped record's comparison result, before waivers are applied.
+pub struct Matched {
+    pub found: bool,
+    pub outcome: Outcome,
+}
+
+/// A system pass: `matched` is parallel to the record list it was built
+/// from; the sweep and override bookkeeping feed the attestation directly.
+pub struct Pass {
+    pub matched: Vec<Matched>,
+    pub missing_from_data: BTreeMap<String, Value>,
+    pub overrides_used: BTreeSet<String>,
+}
+
+fn load_config(system: System) -> Result<Config, String> {
     let path = workspace_root().join(CONFIG_PATH);
     let text = std::fs::read_to_string(&path).map_err(|e| format!("reading {CONFIG_PATH}: {e}"))?;
-    let value: Value =
+    let all: Value =
         serde_json::from_str(&text).map_err(|e| format!("parsing {CONFIG_PATH}: {e}"))?;
+    let value = all
+        .get(system.id())
+        .ok_or_else(|| format!("{CONFIG_PATH} has no '{}' block", system.id()))?;
     let mut overrides = BTreeMap::new();
     if let Some(map) = value["overrides"].as_object() {
         for (id, target) in map {
             let target = target
                 .as_str()
-                .ok_or_else(|| format!("override for '{id}' must be a pack-relative path"))?;
+                .ok_or_else(|| format!("override for '{id}' must be a source-relative path"))?;
             overrides.insert(id.clone(), target.to_string());
         }
     }
@@ -100,116 +131,54 @@ fn load_config() -> Result<Config, String> {
     })
 }
 
-fn partition_for(record: &OurRecord) -> Option<Partition> {
-    // Skill feats ship inside general-feats.json under the T2 ID convention
-    // `feat.skill.<slug>` (non-skill general feats keep `feat.general.*`);
-    // the prefix routes the lookup to the skill-feat partition.
-    if record.kind == Kind::GeneralFeat && record.id.starts_with("feat.skill.") {
-        return Some(Partition::FeatSkill);
-    }
-    match record.kind {
-        Kind::Ancestry => Some(Partition::Ancestry),
-        Kind::Heritage => Some(Partition::Heritage),
-        Kind::Background => Some(Partition::Background),
-        Kind::Class => Some(Partition::Class),
-        Kind::AncestryFeat => Some(Partition::FeatAncestry),
-        Kind::ClassFeat => Some(Partition::FeatClass),
-        Kind::GeneralFeat => Some(Partition::FeatGeneral),
-        Kind::Weapon => Some(Partition::Weapon),
-        Kind::Armor => Some(Partition::Armor),
-        Kind::Shield => Some(Partition::Shield),
-        Kind::Gear => Some(Partition::Gear),
-        Kind::Spell => Some(Partition::Spell),
-        Kind::ClassFeature => Some(Partition::ClassFeature),
-        // No Foundry pack exists for these: PF2e core skills are fixed game
-        // vocabulary (not compendium records) and class kits ship only in
-        // the book. They are attestable solely via reviewed waivers.
-        Kind::Skill | Kind::Kit => None,
+/// The per-source `source` block: kind + sha256 are shared across systems;
+/// the other keys are short identifiers (a tag, a commit, a url) — never
+/// content. `checks/attestation.rs` enforces exactly that shape.
+fn source_block(system: System) -> Value {
+    match system {
+        System::Pf2e => json!({
+            "kind": "foundry-pf2e",
+            "tag": FOUNDRY_TAG,
+            "sha256": FOUNDRY_SHA256,
+        }),
+        System::Dnd5e => json!({
+            "kind": "srd521-markdown",
+            "repo": SRD_REPO,
+            "commit": SRD_COMMIT,
+            "url": format!("https://github.com/{SRD_REPO}/archive/{SRD_COMMIT}.tar.gz"),
+            "sha256": SRD_SHA256,
+            "pdf_sha256": SRD_PDF_SHA256,
+        }),
     }
 }
 
-pub fn attest() -> Result<(), String> {
+pub fn attest(system: System) -> Result<(), String> {
     // Never attest against unverified content (torn-cache failure mode).
-    cache::ensure_verified()?;
-    let records = ours::load_all()?;
-    let index = foundry::load_index()?;
-    let config = load_config()?;
+    cache::ensure_verified(system)?;
+    let records = ours::load_all(system)?;
+    let config = load_config(system)?;
 
     for id in config.overrides.keys().chain(config.waivers.keys()) {
         if !records.iter().any(|r| &r.id == id) {
             return Err(format!(
-                "{CONFIG_PATH} names '{id}', which is not a shipped record"
+                "{CONFIG_PATH} ({}) names '{id}', which is not a shipped record",
+                system.id()
             ));
         }
     }
 
-    // Background `skill_feat` fields hold shipped feat IDs; the comparator
-    // resolves them to record names through this shipped-data-only map.
-    let ctx = compare::Ctx {
-        feat_names: records
-            .iter()
-            .filter(|r| r.kind == Kind::GeneralFeat)
-            .map(|r| (r.id.clone(), r.name.clone()))
-            .collect(),
+    let pass = match system {
+        System::Pf2e => pf2e::run(&records, &config)?,
+        System::Dnd5e => dnd5e::run(&records, &config)?,
     };
+    assert_eq!(pass.matched.len(), records.len(), "one Matched per record");
 
     let mut attested: BTreeMap<String, Value> = BTreeMap::new();
-    let mut overrides_used: BTreeSet<String> = BTreeSet::new();
-    let mut matched_paths: BTreeSet<String> = BTreeSet::new();
     let mut errors: Vec<String> = Vec::new();
     let mut per_file: BTreeMap<String, [usize; 3]> = BTreeMap::new(); // match/waived/mismatch
 
-    for record in &records {
-        let counterpart = find_counterpart(record, &index, &config, &mut overrides_used)?;
-        let outcome = match &counterpart {
-            Some(f) => compare::compare(record, f, &ctx),
-            None => compare::fields_for_missing(record.kind),
-        };
-        if let Some(f) = &counterpart {
-            matched_paths.insert(f.path.clone());
-        }
-
-        let file_hash = canon::record_hash(&record.value);
-        let state = json!({
-            "counterpart": if counterpart.is_some() { "found" } else { "missing" },
-            "mismatched_fields": outcome.mismatches,
-            "record_hash": file_hash,
-        });
-        let state_hash = canon::sha256_hex(canon::canonical_json(&state).as_bytes());
-        let clean = counterpart.is_some() && outcome.mismatches.is_empty();
-
-        let (verdict, waiver_json) = match (clean, config.waivers.get(&record.id)) {
-            (true, None) => ("match", Value::Null),
-            (true, Some(_)) => {
-                errors.push(format!(
-                    "stale waiver: '{}' now matches cleanly — remove its waiver \
-                     from {CONFIG_PATH}",
-                    record.id
-                ));
-                ("match", Value::Null)
-            }
-            (false, Some(w)) if w.state_hash == state_hash => (
-                "waived",
-                json!({ "reason": w.reason, "state_hash": w.state_hash }),
-            ),
-            (false, Some(_)) => {
-                errors.push(format!(
-                    "stale waiver: '{}' mismatch state shifted; current state_hash \
-                     is {state_hash} (fields: {:?}) — re-review before updating \
-                     {CONFIG_PATH}",
-                    record.id, outcome.mismatches
-                ));
-                ("mismatch", Value::Null)
-            }
-            (false, None) => {
-                errors.push(format!(
-                    "unwaived mismatch: '{}' fields {:?}; waiver state_hash would \
-                     be {state_hash}",
-                    record.id, outcome.mismatches
-                ));
-                ("mismatch", Value::Null)
-            }
-        };
+    for (record, matched) in records.iter().zip(&pass.matched) {
+        let (verdict, waiver_json, file_hash) = verdict_for(record, matched, &config, &mut errors);
 
         let counts = per_file.entry(record.file.clone()).or_default();
         match verdict {
@@ -223,34 +192,33 @@ pub fn attest() -> Result<(), String> {
             json!({
                 "file_hash": file_hash,
                 "verdict": verdict,
-                "fields_checked": outcome.fields_checked,
-                "mismatches": outcome.mismatches,
+                "fields_checked": matched.outcome.fields_checked,
+                "mismatches": matched.outcome.mismatches,
                 "waiver": waiver_json,
             }),
         );
     }
 
-    let missing_from_data = reverse_sweep(&index, &matched_paths, &config);
-    let manifest = manifest_version()?;
+    let manifest = manifest_version(system)?;
 
     let attestation = json!({
         "tool_version": env!("CARGO_PKG_VERSION"),
-        "foundry_tag": FOUNDRY_TAG,
-        "foundry_sha256": FOUNDRY_SHA256,
+        "source": source_block(system),
         "rules_version": manifest,
         "generated": canon::utc_date_today(),
-        "claims_full_breadth": CLAIMS_FULL_BREADTH,
+        "claims_full_breadth": claims_full_breadth(system),
         "records": attested,
-        "missing_from_data": missing_from_data,
-        "overrides_used": overrides_used,
+        "missing_from_data": pass.missing_from_data,
+        "overrides_used": pass.overrides_used,
     });
-    let out_path = workspace_root().join("rules-data/attestation.json");
+    let rel = format!("rules-data/{}/attestation.json", system.id());
+    let out_path = workspace_root().join(&rel);
     let mut text = serde_json::to_string_pretty(&sorted(&attestation))
         .expect("serializing owned JSON cannot fail");
     text.push('\n');
     std::fs::write(&out_path, text).map_err(|e| format!("writing attestation: {e}"))?;
 
-    eprintln!("attestation written to rules-data/attestation.json");
+    eprintln!("attestation written to {rel}");
     eprintln!("  per-file verdicts (match/waived/mismatch):");
     for (file, [m, w, x]) in &per_file {
         eprintln!("    {file}: {m}/{w}/{x}");
@@ -267,107 +235,64 @@ pub fn attest() -> Result<(), String> {
     }
 }
 
-fn find_counterpart(
+/// Apply the waiver binding to one record: (verdict, waiver json,
+/// file_hash). Problems are appended to `errors`; the attestation is still
+/// written so the printed state_hash can be reviewed into overrides.json.
+fn verdict_for(
     record: &OurRecord,
-    index: &Index,
+    matched: &Matched,
     config: &Config,
-    overrides_used: &mut BTreeSet<String>,
-) -> Result<Option<FoundryRecord>, String> {
-    let Some(partition) = partition_for(record) else {
-        return Ok(None);
-    };
-    if let Some(target) = config.overrides.get(&record.id) {
-        let found = index.load_by_path(target)?;
-        if !found.is_player_core() {
-            return Err(format!(
-                "override target '{target}' for '{}' is not a Player Core record",
+    errors: &mut Vec<String>,
+) -> (&'static str, Value, String) {
+    let file_hash = canon::record_hash(&record.value);
+    let state = json!({
+        "counterpart": if matched.found { "found" } else { "missing" },
+        "mismatched_fields": matched.outcome.mismatches,
+        "record_hash": file_hash,
+    });
+    let state_hash = canon::sha256_hex(canon::canonical_json(&state).as_bytes());
+    let clean = matched.found && matched.outcome.mismatches.is_empty();
+
+    let (verdict, waiver_json) = match (clean, config.waivers.get(&record.id)) {
+        (true, None) => ("match", Value::Null),
+        (true, Some(_)) => {
+            errors.push(format!(
+                "stale waiver: '{}' now matches cleanly — remove its waiver \
+                 from {CONFIG_PATH}",
                 record.id
             ));
+            ("match", Value::Null)
         }
-        overrides_used.insert(record.id.clone());
-        return Ok(Some(found));
-    }
-    match index.find(partition, &normalize_name(&record.name)) {
-        // Publication filter: a same-name record from another book is not a
-        // counterpart (dual-source records keep the Player Core printing in
-        // Foundry's packs, so title equality is the whole filter).
-        Some(f) if f.is_player_core() => Ok(Some(FoundryRecord {
-            path: f.path.clone(),
-            value: f.value.clone(),
-        })),
-        _ => Ok(None),
-    }
+        (false, Some(w)) if w.state_hash == state_hash => (
+            "waived",
+            json!({ "reason": w.reason, "state_hash": w.state_hash }),
+        ),
+        (false, Some(_)) => {
+            errors.push(format!(
+                "stale waiver: '{}' mismatch state shifted; current state_hash \
+                 is {state_hash} (fields: {:?}) — re-review before updating \
+                 {CONFIG_PATH}",
+                record.id, matched.outcome.mismatches
+            ));
+            ("mismatch", Value::Null)
+        }
+        (false, None) => {
+            errors.push(format!(
+                "unwaived mismatch: '{}' fields {:?}; waiver state_hash would \
+                 be {state_hash}",
+                record.id, matched.outcome.mismatches
+            ));
+            ("mismatch", Value::Null)
+        }
+    };
+    (verdict, waiver_json, file_hash)
 }
 
-/// Reverse completeness (spec req 4 "completeness runs both ways"): for
-/// every category where the spec claims full common-Player-Core breadth,
-/// list ground-truth records we do not ship. Only record NAMES and counts
-/// cross into the attestation — names of published records are facts, and
-/// the one identifier the no-ground-truth-content rule permits.
-///
-/// The `classes` pack is deliberately not swept: this slice claims breadth
-/// for a level-1 Fighter's selectable content, not for other classes.
-/// (attestation section name, partition, ground-truth filter).
-type SweepCategory = (&'static str, Partition, fn(&FoundryRecord) -> bool);
-
-fn reverse_sweep(
-    index: &Index,
-    matched_paths: &BTreeSet<String>,
-    config: &Config,
-) -> BTreeMap<String, Value> {
-    let mut out = BTreeMap::new();
-    let categories: &[SweepCategory] = &[
-        ("ancestries", Partition::Ancestry, |_| true),
-        ("heritages", Partition::Heritage, |_| true),
-        ("backgrounds", Partition::Background, |_| true),
-        ("ancestry_feats_l1", Partition::FeatAncestry, level_1),
-        ("fighter_feats_l1", Partition::FeatClass, |f| {
-            level_1(f) && has_trait(f, "fighter")
-        }),
-        ("general_feats_l1", Partition::FeatGeneral, level_1),
-        ("skill_feats_l1", Partition::FeatSkill, level_1),
-        ("weapons", Partition::Weapon, level_0_item),
-        ("armor", Partition::Armor, level_0_item),
-        ("shields", Partition::Shield, level_0_item),
-        ("gear", Partition::Gear, level_0_item),
-    ];
-    for (name, partition, filter) in categories {
-        let mut names: Vec<String> = index
-            .all(*partition)
-            .filter(|f| f.is_player_core() && f.rarity() == "common" && filter(f))
-            .filter(|f| !matched_paths.contains(&f.path))
-            .filter(|f| {
-                !config
-                    .spec_exclusions
-                    .contains(&((*name).to_string(), normalize_name(f.name())))
-            })
-            .map(|f| f.name().to_string())
-            .collect();
-        names.sort();
-        out.insert(
-            (*name).to_string(),
-            json!({ "count": names.len(), "names": names }),
-        );
-    }
-    out
-}
-
-fn level_1(f: &FoundryRecord) -> bool {
-    f.system()["level"]["value"].as_i64() == Some(1)
-}
-
-fn level_0_item(f: &FoundryRecord) -> bool {
-    f.system()["level"]["value"].as_i64().unwrap_or(0) == 0
-}
-
-fn has_trait(f: &FoundryRecord, t: &str) -> bool {
-    f.system()["traits"]["value"]
-        .as_array()
-        .is_some_and(|a| a.iter().any(|v| v.as_str() == Some(t)))
-}
-
-fn manifest_version() -> Result<String, String> {
-    let path = workspace_root().join("rules-data/manifest.json");
+fn manifest_version(system: System) -> Result<String, String> {
+    let path = workspace_root()
+        .join("rules-data")
+        .join(system.id())
+        .join("manifest.json");
     let text = std::fs::read_to_string(&path).map_err(|e| format!("reading manifest.json: {e}"))?;
     let value: Value =
         serde_json::from_str(&text).map_err(|e| format!("parsing manifest.json: {e}"))?;

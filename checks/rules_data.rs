@@ -1,51 +1,168 @@
-//! Rules-data integrity lint: files parse, IDs are unique and stable-shaped,
-//! every record carries license metadata, cross-references resolve, and the
-//! ORC notice text is present for the app to display.
+//! Rules-data integrity lint, per system directory: files parse, IDs are
+//! unique and stable-shaped, every record carries license metadata from
+//! its system's allowlisted book under its system's license, the manifest
+//! names its directory and carries its attribution text, version strings
+//! carry the system prefix, cross-references resolve, and the reserved-noun
+//! scrub runs per system.
+
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
+
+/// Files in a system directory that are config/meta, not records.
+const META_FILES: &[&str] = &[
+    "manifest.json",
+    "denylist.json",
+    "shipped-versions.json",
+    "attestation.json",
+];
+
+/// Per-system licensing facts the lint holds records to. Adding a system
+/// or a book is a deliberate edit here AND a manifest-attribution
+/// extension in the same change (spec req 9).
+struct SystemLicense {
+    system: &'static str,
+    books: &'static [&'static str],
+    license: &'static str,
+    /// Text the manifest's license notice must carry (joined).
+    notice_must_contain: &'static [&'static str],
+}
+
+const SYSTEMS: &[SystemLicense] = &[
+    SystemLicense {
+        system: "pf2e",
+        books: &["Pathfinder Player Core"],
+        license: "ORC",
+        notice_must_contain: &["ORC License", "Pathfinder Player Core", "Reserved Material"],
+    },
+    SystemLicense {
+        system: "dnd5e",
+        books: &["System Reference Document 5.2.1"],
+        license: "CC-BY-4.0",
+        notice_must_contain: &[
+            "System Reference Document 5.2.1",
+            "Creative Commons Attribution 4.0",
+        ],
+    },
+];
+
+fn rules_root() -> PathBuf {
+    checks::workspace_root().join("rules-data")
+}
+
+/// Every system directory under rules-data/.
+fn system_dirs() -> Vec<(String, PathBuf)> {
+    let mut dirs: Vec<(String, PathBuf)> = std::fs::read_dir(rules_root())
+        .unwrap()
+        .flatten()
+        .filter(|e| e.path().is_dir())
+        .map(|e| (e.file_name().to_string_lossy().to_string(), e.path()))
+        .collect();
+    dirs.sort();
+    assert!(
+        !dirs.is_empty(),
+        "rules-data/ holds one directory per system"
+    );
+    dirs
+}
+
+fn license_for(system: &str) -> &'static SystemLicense {
+    SYSTEMS
+        .iter()
+        .find(|s| s.system == system)
+        .unwrap_or_else(|| {
+            panic!("rules-data/{system}/ has no licensing entry in checks/rules_data.rs — adding a system is a deliberate edit here")
+        })
+}
+
+fn read_json(path: &Path) -> serde_json::Value {
+    serde_json::from_str(&std::fs::read_to_string(path).unwrap())
+        .unwrap_or_else(|e| panic!("{} parses: {e}", path.display()))
+}
+
+/// Record files of a system directory (every .json that is not meta).
+fn record_files(dir: &Path) -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == "json"))
+        .filter(|p| {
+            !META_FILES.contains(&p.file_name().and_then(|n| n.to_str()).unwrap_or_default())
+        })
+        .collect();
+    files.sort();
+    files
+}
+
+/// Records of one file: a flat array, or an object of categorized arrays.
+fn records_in(path: &Path) -> Vec<(String, serde_json::Value)> {
+    let value = read_json(path);
+    let file = path.file_name().unwrap().to_string_lossy().to_string();
+    let records: Vec<serde_json::Value> = match value {
+        serde_json::Value::Array(items) => items,
+        serde_json::Value::Object(map) => map
+            .values()
+            .flat_map(|arr| {
+                arr.as_array()
+                    .unwrap_or_else(|| panic!("{file}: categorized file holds arrays"))
+                    .clone()
+            })
+            .collect(),
+        _ => panic!("{file}: a record file is an array or an object of arrays"),
+    };
+    records
+        .into_iter()
+        .map(|r| {
+            let id = r["id"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{file}: every record carries an id"))
+                .to_string();
+            (id, r)
+        })
+        .collect()
+}
+
+/// Collect (record id, record) from every record file of a system.
+fn all_records(dir: &Path) -> Vec<(String, serde_json::Value)> {
+    record_files(dir)
+        .iter()
+        .flat_map(|f| records_in(f))
+        .collect()
+}
 
 #[test]
 fn rules_data_parses_and_is_internally_consistent() {
     // RulesData::parse runs the full integrity pass (unique IDs, resolvable
     // cross-references); a violation panics with the offending record.
     let _ = checks::load_rules_data();
+    // Every system directory's files at least parse as records with ids,
+    // unique per system.
+    for (system, dir) in system_dirs() {
+        let mut seen = BTreeSet::new();
+        for (id, _) in all_records(&dir) {
+            assert!(
+                seen.insert(id.clone()),
+                "{system}: duplicate record id '{id}'"
+            );
+        }
+        assert!(!seen.is_empty(), "{system}: ships no records");
+    }
 }
 
 #[test]
 fn every_record_carries_license_metadata() {
-    let root = checks::workspace_root().join("rules-data");
-    for file in [
-        "ancestries.json",
-        "heritages.json",
-        "ancestry-feats.json",
-        "backgrounds.json",
-        "classes.json",
-        "class-feats.json",
-        "general-feats.json",
-        "skills.json",
-    ] {
-        let text = std::fs::read_to_string(root.join(file)).unwrap();
-        let records: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
-        for record in records {
-            assert_license(&record, file);
-        }
-    }
-    // equipment.json and spells.json hold categorized arrays.
-    for file in ["equipment.json", "spells.json"] {
-        let text = std::fs::read_to_string(root.join(file)).unwrap();
-        let value: serde_json::Value = serde_json::from_str(&text).unwrap();
-        for (key, records) in value.as_object().unwrap() {
-            for record in records.as_array().unwrap() {
-                assert_license(record, &format!("{file}/{key}"));
+    for (system, dir) in system_dirs() {
+        let license = license_for(&system);
+        for file in record_files(&dir) {
+            let name = file.file_name().unwrap().to_string_lossy().to_string();
+            for (id, record) in records_in(&file) {
+                assert_license(license, &record, &id, &format!("{system}/{name}"));
             }
         }
     }
 }
 
-/// The only book records may cite. Any new book is a deliberate edit here
-/// AND a manifest-attribution extension in the same change (spec req 5).
-const ALLOWED_SOURCE_BOOKS: &[&str] = &["Pathfinder Player Core"];
-
-fn assert_license(record: &serde_json::Value, file: &str) {
-    let id = record["id"].as_str().unwrap_or("<no id>");
+fn assert_license(license: &SystemLicense, record: &serde_json::Value, id: &str, file: &str) {
     let source = record
         .get("source")
         .unwrap_or_else(|| panic!("{file}: record '{id}' has no source metadata"));
@@ -57,129 +174,121 @@ fn assert_license(record: &serde_json::Value, file: &str) {
     }
     assert_eq!(
         source["license"].as_str(),
-        Some("ORC"),
-        "{file}: record '{id}' must carry the ORC license tag"
+        Some(license.license),
+        "{file}: record '{id}' must carry the {} license tag",
+        license.license
     );
     let book = source["book"].as_str().unwrap_or("<no book>");
     assert!(
-        ALLOWED_SOURCE_BOOKS.contains(&book),
+        license.books.contains(&book),
         "{file}: record '{id}' cites book '{book}' — outside the allowlist; \
          adding a book requires extending the manifest attribution in the \
          same change"
     );
+    assert!(
+        !source["attribution"]
+            .as_str()
+            .unwrap_or("")
+            .trim()
+            .is_empty(),
+        "{file}: record '{id}' carries an empty attribution"
+    );
 }
 
+/// The manifest names its directory (the selector key), every version it
+/// names carries the system prefix, and its notice carries the system's
+/// attribution text.
 #[test]
-fn manifest_carries_the_orc_notice() {
-    let data = checks::load_rules_data();
-    let notice = &data.manifest.license_notice;
-    assert!(
-        notice.orc_notice.contains("ORC License"),
-        "ORC notice text missing"
-    );
-    assert!(
-        notice.attribution.contains("Pathfinder Player Core"),
-        "attribution must name the licensed material"
-    );
-    assert!(
-        notice.reserved.contains("Reserved Material"),
-        "reserved-material statement missing"
-    );
-}
-
-/// Every rules-data file holding records (manifest, denylist, and
-/// shipped-versions are config/meta, not records).
-const RECORD_FILES: &[&str] = &[
-    "ancestries.json",
-    "heritages.json",
-    "ancestry-feats.json",
-    "backgrounds.json",
-    "classes.json",
-    "class-feats.json",
-    "general-feats.json",
-    "skills.json",
-    "equipment.json",
-    "spells.json",
-];
-
-/// Collect (record id, full record JSON) from every record file.
-fn all_records() -> Vec<(String, serde_json::Value)> {
-    let root = checks::workspace_root().join("rules-data");
-    let mut out = Vec::new();
-    for file in RECORD_FILES {
-        let text = std::fs::read_to_string(root.join(file)).unwrap();
-        let value: serde_json::Value = serde_json::from_str(&text).unwrap();
-        let records: Vec<serde_json::Value> = if *file == "equipment.json" || *file == "spells.json"
-        {
-            value
-                .as_object()
-                .unwrap()
-                .values()
-                .flat_map(|arr| arr.as_array().unwrap().clone())
-                .collect()
-        } else {
-            value.as_array().unwrap().clone()
-        };
-        for record in records {
-            let id = record["id"].as_str().unwrap_or("<no id>").to_string();
-            out.push((id, record));
+fn manifests_name_their_system_and_carry_their_notice() {
+    for (system, dir) in system_dirs() {
+        let license = license_for(&system);
+        let manifest = read_json(&dir.join("manifest.json"));
+        assert_eq!(
+            manifest["system"].as_str(),
+            Some(system.as_str()),
+            "{system}: manifest.system must equal the directory name"
+        );
+        let prefix = format!("{system}-");
+        let version = manifest["version"].as_str().unwrap_or("");
+        assert!(
+            version.starts_with(&prefix),
+            "{system}: version '{version}' must begin with '{prefix}'"
+        );
+        for v in manifest["supersedes"].as_array().into_iter().flatten() {
+            assert!(
+                v.as_str().unwrap_or("").starts_with(&prefix),
+                "{system}: superseded version {v} must begin with '{prefix}'"
+            );
+        }
+        let shipped = read_json(&dir.join("shipped-versions.json"));
+        for key in shipped["versions"].as_object().unwrap().keys() {
+            assert!(
+                key.starts_with(&prefix),
+                "{system}: shipped version '{key}' must begin with '{prefix}'"
+            );
+        }
+        let notice = serde_json::to_string(&manifest["license_notice"]).unwrap();
+        for needle in license.notice_must_contain {
+            assert!(
+                notice.contains(needle),
+                "{system}: license notice must mention '{needle}'"
+            );
         }
     }
-    out
 }
 
-/// Reserved-noun scrub (spec req 5): no denylisted proper noun in any
-/// shipped record's name or text. The denylist itself and attestation
-/// waivers are repo tooling, exempt from this scan by construction (only
-/// record files are scanned). Exceptions carry a per-record reason.
+/// Reserved-noun scrub (chargen-content spec req 5): no denylisted proper
+/// noun in any shipped record's name or text. The denylist itself and
+/// attestation waivers are repo tooling, exempt from this scan by
+/// construction (only record files are scanned). Exceptions carry a
+/// per-record reason. A system whose license reserves nothing ships an
+/// empty term list.
 #[test]
 fn no_reserved_proper_nouns_in_records() {
-    let root = checks::workspace_root().join("rules-data");
-    let denylist: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(root.join("denylist.json")).unwrap())
-            .unwrap();
-    let terms: Vec<String> = denylist["terms"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|t| t.as_str().unwrap().to_lowercase())
-        .collect();
-    assert!(!terms.is_empty(), "denylist.json has no terms");
-    let exceptions: std::collections::BTreeMap<String, String> = denylist["exceptions"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|e| {
-            let reason = e["reason"].as_str().unwrap_or("");
-            assert!(
-                !reason.is_empty(),
-                "denylist exception for '{}' must carry a reason",
-                e["id"]
-            );
-            (e["id"].as_str().unwrap().to_string(), reason.to_string())
-        })
-        .collect();
+    for (system, dir) in system_dirs() {
+        let denylist = read_json(&dir.join("denylist.json"));
+        let terms: Vec<String> = denylist["terms"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t.as_str().unwrap().to_lowercase())
+            .collect();
+        let exceptions: BTreeMap<String, String> = denylist["exceptions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|e| {
+                let reason = e["reason"].as_str().unwrap_or("");
+                assert!(
+                    !reason.is_empty(),
+                    "{system}: denylist exception for '{}' must carry a reason",
+                    e["id"]
+                );
+                (e["id"].as_str().unwrap().to_string(), reason.to_string())
+            })
+            .collect();
 
-    for (id, record) in all_records() {
-        if exceptions.contains_key(&id) {
-            continue;
-        }
-        let mut haystacks: Vec<(String, String)> = Vec::new();
-        collect_strings(&record, "", &mut haystacks);
-        for (path, text) in haystacks {
-            // The url field legitimately encodes original names (renamed
-            // records keep their AoN url pointing at the original).
-            if path.ends_with("url") {
+        for (id, record) in all_records(&dir) {
+            if exceptions.contains_key(&id) {
                 continue;
             }
-            let lower = text.to_lowercase();
-            for term in &terms {
-                assert!(
-                    !contains_word(&lower, term),
-                    "record '{id}' field '{path}' contains reserved noun \
-                     '{term}': scrub it per the ORC AxE deletion pattern, or \
-                     add a reasoned exception in rules-data/denylist.json"
-                );
+            let mut haystacks: Vec<(String, String)> = Vec::new();
+            collect_strings(&record, "", &mut haystacks);
+            for (path, text) in haystacks {
+                // The url field legitimately encodes original names
+                // (renamed records keep their url pointing at the original).
+                if path.ends_with("url") {
+                    continue;
+                }
+                let lower = text.to_lowercase();
+                for term in &terms {
+                    assert!(
+                        !contains_word(&lower, term),
+                        "{system}: record '{id}' field '{path}' contains reserved noun \
+                         '{term}': scrub it per the ORC AxE deletion pattern, or \
+                         add a reasoned exception in rules-data/{system}/denylist.json"
+                    );
+                }
             }
         }
     }
@@ -227,39 +336,49 @@ fn collect_strings(value: &serde_json::Value, path: &str, out: &mut Vec<(String,
     }
 }
 
-/// ID immutability + version lineage, one artifact (architecture table):
-/// every version in the manifest's `supersedes` list has its ID set
-/// recorded in shipped-versions.json, and every recorded ID of every
-/// shipped version still resolves in current data (wrong records are
-/// deprecated, never deleted).
+/// ID immutability + version lineage, one artifact per system: every
+/// version in the manifest's `supersedes` list has its ID set recorded in
+/// shipped-versions.json, the current version's ID set is recorded too and
+/// equals the shipped records, and every recorded ID of every shipped
+/// version still resolves in current data (wrong records are deprecated,
+/// never deleted).
 #[test]
 fn shipped_ids_are_immutable_and_lineage_is_recorded() {
-    let root = checks::workspace_root().join("rules-data");
-    let shipped: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(root.join("shipped-versions.json")).unwrap())
-            .unwrap();
-    let versions = shipped["versions"].as_object().unwrap();
-    let data = checks::load_rules_data();
-
-    for superseded in &data.manifest.supersedes {
-        assert!(
-            versions.contains_key(superseded),
-            "manifest supersedes '{superseded}' but shipped-versions.json has \
-             no ID set for it — append the superseded version's IDs at bump \
-             time"
-        );
-    }
-
-    let current: std::collections::BTreeSet<String> =
-        all_records().into_iter().map(|(id, _)| id).collect();
-    for (version, ids) in versions {
-        for id in ids.as_array().unwrap() {
-            let id = id.as_str().unwrap();
+    for (system, dir) in system_dirs() {
+        let shipped = read_json(&dir.join("shipped-versions.json"));
+        let versions = shipped["versions"].as_object().unwrap();
+        let manifest = read_json(&dir.join("manifest.json"));
+        for superseded in manifest["supersedes"].as_array().into_iter().flatten() {
+            let superseded = superseded.as_str().unwrap();
             assert!(
-                current.contains(id),
-                "record '{id}' (shipped in {version}) is missing from current \
-                 data: shipped IDs are never deleted — deprecate the record \
-                 (unselectable in new drafts, still resolvable) instead"
+                versions.contains_key(superseded),
+                "{system}: manifest supersedes '{superseded}' but shipped-versions.json has \
+                 no ID set for it — append the superseded version's IDs at bump time"
+            );
+        }
+        let current: BTreeSet<String> = all_records(&dir).into_iter().map(|(id, _)| id).collect();
+        for (version, ids) in versions {
+            for id in ids.as_array().unwrap() {
+                let id = id.as_str().unwrap();
+                assert!(
+                    current.contains(id),
+                    "{system}: record '{id}' (shipped in {version}) is missing from current \
+                     data: shipped IDs are never deleted — deprecate the record \
+                     (unselectable in new drafts, still resolvable) instead"
+                );
+            }
+        }
+        let current_version = manifest["version"].as_str().unwrap();
+        if let Some(recorded) = versions.get(current_version) {
+            let recorded: BTreeSet<String> = recorded
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_str().unwrap().to_string())
+                .collect();
+            assert_eq!(
+                recorded, current,
+                "{system}: the recorded ID set for '{current_version}' must equal the shipped records"
             );
         }
     }
@@ -267,12 +386,12 @@ fn shipped_ids_are_immutable_and_lineage_is_recorded() {
 
 /// Name pools (roster-ergonomics req 4): own-authored app data living
 /// OUTSIDE rules-data/ (which keeps it out of attestation and
-/// reference-check by construction). Every shipped ancestry has a pool of
-/// at least a dozen usable names, the default pool is non-empty, no name
-/// is blank, and no record carries license metadata — pools are not rules
-/// content.
+/// reference-check by construction). Every shipped ancestry (PF2e) and
+/// species (5.5e) has a pool of at least a dozen usable names, the default
+/// pool is non-empty, no name is blank, and no record carries license
+/// metadata — pools are not rules content.
 #[test]
-fn name_pools_cover_every_shipped_ancestry() {
+fn name_pools_cover_every_shipped_ancestry_and_species() {
     let root = checks::workspace_root();
     let pools_path = root.join("app-data/name-pools.json");
     assert!(
@@ -291,24 +410,27 @@ fn name_pools_cover_every_shipped_ancestry() {
         "name pools are app data — no license machinery"
     );
 
-    let ancestries: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(root.join("rules-data/ancestries.json")).unwrap(),
-    )
-    .unwrap();
-    let by_ancestry = pools["pools"].as_object().expect("pools map");
-    for record in ancestries.as_array().unwrap() {
-        let id = record["id"].as_str().unwrap();
-        let pool = by_ancestry
-            .get(id)
-            .and_then(|p| p.as_array())
-            .unwrap_or_else(|| panic!("shipped ancestry '{id}' has no name pool"));
-        assert!(
-            pool.len() >= 12,
-            "ancestry '{id}' pool has {} names — at least a dozen required",
-            pool.len()
-        );
+    let by_key = pools["pools"].as_object().expect("pools map");
+    for (system, dir) in system_dirs() {
+        for file in ["ancestries.json", "species.json"] {
+            let path = dir.join(file);
+            if !path.exists() {
+                continue;
+            }
+            for (id, _) in records_in(&path) {
+                let pool = by_key
+                    .get(&id)
+                    .and_then(|p| p.as_array())
+                    .unwrap_or_else(|| panic!("{system}: shipped '{id}' has no name pool"));
+                assert!(
+                    pool.len() >= 12,
+                    "{system}: '{id}' pool has {} names — at least a dozen required",
+                    pool.len()
+                );
+            }
+        }
     }
-    for (pool_id, pool) in by_ancestry {
+    for (pool_id, pool) in by_key {
         for name in pool.as_array().expect("pool is a list") {
             let name = name.as_str().expect("names are strings");
             assert!(!name.trim().is_empty(), "blank name in pool '{pool_id}'");
@@ -322,11 +444,11 @@ fn name_pools_cover_every_shipped_ancestry() {
     }
 }
 
-/// Advancement data (level-up architecture): every shipped class defines
-/// every level through the shipped cap (the ruleset's integrity check
-/// refuses otherwise — asserted here as data facts), fixed features are
-/// records with namespaced IDs, a caster's slot table reaches the cap, and
-/// the level-3 world's cap is exactly 3.
+/// Advancement data (level-up architecture): every shipped PF2e class
+/// defines every level through the shipped cap (the ruleset's integrity
+/// check refuses otherwise — asserted here as data facts), fixed features
+/// are records with namespaced IDs, a caster's slot table reaches the cap,
+/// and the level-3 world's cap is exactly 3.
 #[test]
 fn advancement_tables_reach_the_shipped_cap() {
     let data = checks::load_rules_data();
@@ -388,4 +510,54 @@ fn advancement_tables_reach_the_shipped_cap() {
         .spells
         .iter()
         .any(|s| s.rank == 2 && s.traditions.iter().any(|t| t == "arcane")));
+}
+
+/// 5.5e advancement data as JSON facts: every class's advancement runs
+/// 2..=3 contiguously, fixed features carry `feature.` IDs, and every
+/// subclass record cross-references a shipped class.
+#[test]
+fn dnd5e_advancement_tables_reach_the_shipped_cap() {
+    let dir = rules_root().join("dnd5e");
+    if !dir.exists() {
+        panic!("rules-data/dnd5e/ must exist (chargen-dnd)");
+    }
+    let classes = read_json(&dir.join("classes.json"));
+    let class_ids: BTreeSet<String> = classes
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["id"].as_str().unwrap().to_string())
+        .collect();
+    assert!(!class_ids.is_empty(), "dnd5e ships at least one class");
+    for class in classes.as_array().unwrap() {
+        let id = class["id"].as_str().unwrap();
+        let levels: Vec<u64> = class["advancement"]
+            .as_array()
+            .unwrap_or_else(|| panic!("{id}: advancement block"))
+            .iter()
+            .map(|a| a["level"].as_u64().unwrap())
+            .collect();
+        assert_eq!(levels, vec![2, 3], "{id}: advancement must run 2..=3");
+        for adv in class["advancement"].as_array().unwrap() {
+            for feature in adv["features"].as_array().into_iter().flatten() {
+                assert!(
+                    feature["id"].as_str().unwrap_or("").starts_with("feature."),
+                    "{id}: feature ids carry a 'feature.' prefix"
+                );
+            }
+        }
+    }
+    let subclasses = read_json(&dir.join("subclasses.json"));
+    assert!(
+        !subclasses.as_array().unwrap().is_empty(),
+        "dnd5e ships at least one subclass"
+    );
+    for sub in subclasses.as_array().unwrap() {
+        let class = sub["class"].as_str().unwrap_or("");
+        assert!(
+            class_ids.contains(class),
+            "subclass '{}' names class '{class}', which is not shipped",
+            sub["id"]
+        );
+    }
 }

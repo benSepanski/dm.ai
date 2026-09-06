@@ -11,18 +11,20 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use engine_core::{AppendOutcome, EngineError, Sampler, SlotSuggestion, SuggestionContext};
-use ruleset_pf2e::Pf2eEngine;
+use engine_core::{
+    AppendOutcome, EngineError, EngineOps, Ruleset, Sampler, SlotSuggestion, SuggestionContext,
+};
 use tokio::sync::Mutex;
 use types::{
-    AbandonLevelOutcome, AbandonLevelRequest, ApiError, CharacterId, CharacterView, ChecklistEntry,
-    ChecklistSeverity, ClassOption, ClearOutcome, ClearRequest, CloneRequest, CloneResult,
-    ConfirmOutcome, ConfirmRequest, CreateCharacterRequest, Decision, DecisionId, DecisionInput,
-    DecisionSource, DraftView, FillRemainingOutcome, FillRemainingRequest, FinalizeOutcome,
-    FinalizeRequest, LevelUpOutcome, LevelUpRequest, LevelUpView, QuickBuildRequest,
-    QuickBuildResult, RandomMintRequest, ReplayOutcome, RosterCharacterState, RosterEntry,
-    RosterProblem, RosterView, Selection, SlotId, StepId, StepRequest, VersionActionRequest,
-    VersionFlaggedError, VersionResolutionOutcome, VersionStatus,
+    AbandonLevelOutcome, AbandonLevelRequest, ApiError, CampaignView, CharacterId, CharacterView,
+    ChecklistEntry, ChecklistSeverity, ClassOption, ClearOutcome, ClearRequest, CloneRequest,
+    CloneResult, ConfirmOutcome, ConfirmRequest, CreateCharacterRequest, Decision, DecisionId,
+    DecisionInput, DecisionSource, DeclareCampaignRequest, DraftView, FillRemainingOutcome,
+    FillRemainingRequest, FinalizeOutcome, FinalizeRequest, GameOption, LevelUpOutcome,
+    LevelUpRequest, LevelUpView, QuickBuildRequest, QuickBuildResult, RandomMintRequest,
+    ReplayOutcome, RosterCharacterState, RosterEntry, RosterProblem, RosterView, Selection, SlotId,
+    StepId, StepRequest, VersionActionRequest, VersionFlaggedError, VersionResolutionOutcome,
+    VersionStatus,
 };
 
 use crate::clock;
@@ -30,27 +32,69 @@ use crate::persistence::{DocState, KeepOldMarker, Loaded, Store, StoreError, Ver
 use crate::version::{repair_replay, sheet_diffs, status_for, KnownVersions};
 
 pub(crate) struct App {
-    pub engine: Pf2eEngine,
-    /// The parsed rules data the engine was built over (class caps for the
-    /// level-up routes; the engine itself stays the only rules authority).
-    pub rules: Arc<ruleset_pf2e::RulesData>,
+    /// Every shipped ruleset; the campaign's declaration selects one.
+    pub rulesets: Vec<Arc<dyn Ruleset>>,
+    /// Per-ruleset known-version sets, keyed by system id.
+    pub known: BTreeMap<String, KnownVersions>,
     pub store: Mutex<Store>,
-    pub rules_version: String,
-    pub known: KnownVersions,
-    pub license_notice: String,
-    /// Per-class suggested builds (class record ID → slot → suggestion),
-    /// resolved from the class records' suggested_build blocks at startup.
-    pub suggested: Vec<(String, BTreeMap<SlotId, SlotSuggestion>)>,
     /// The random-name pools file (app data, not rules content). Read at
     /// mint time so editing it is a data change, not a rebuild; a
     /// malformed file fails the mint, never the server.
     pub name_pools: PathBuf,
 }
 
+/// The ruleset a campaign plays, resolved per request under the store
+/// lock: the declared system's ruleset and its known-version set.
+pub(crate) struct Ctx<'a> {
+    pub rs: &'a dyn Ruleset,
+    pub known: &'a KnownVersions,
+    pub name_pools: &'a std::path::Path,
+}
+
+impl App {
+    pub fn ruleset_for(&self, system: &str) -> Option<&Arc<dyn Ruleset>> {
+        self.rulesets.iter().find(|r| r.system() == system)
+    }
+
+    /// Resolve the campaign's ruleset; an undeclared campaign refuses
+    /// every character route, typed.
+    pub fn ctx(&self, store: &Store) -> Result<Ctx<'_>, Failure> {
+        let system = store.system().ok_or_else(|| {
+            Failure::Unprocessable(
+                "this campaign has not chosen its game yet — declare it first".into(),
+            )
+        })?;
+        let rs = self.ruleset_for(system).ok_or_else(|| {
+            Failure::Unprocessable(format!(
+                "this campaign is declared for '{system}', which this build does not ship"
+            ))
+        })?;
+        let known = self
+            .known
+            .get(system)
+            .ok_or_else(|| Failure::Internal(format!("no known-version set for '{system}'")))?;
+        Ok(Ctx {
+            rs: rs.as_ref(),
+            known,
+            name_pools: &self.name_pools,
+        })
+    }
+
+    /// Every shipped ruleset's license paragraphs — attribution follows
+    /// the binary, never the open campaign.
+    pub fn license_lines(&self) -> Vec<String> {
+        self.rulesets
+            .iter()
+            .flat_map(|r| r.license_lines())
+            .collect()
+    }
+}
+
 pub(crate) type SharedApp = Arc<App>;
 
 pub(crate) fn router(app: SharedApp) -> Router {
     Router::new()
+        .route("/api/campaign", get(campaign).post(declare_campaign))
         .route("/api/roster", get(roster))
         .route("/api/characters", post(create_character))
         .route("/api/characters/quick-build", post(quick_build))
@@ -81,7 +125,7 @@ pub(crate) fn router(app: SharedApp) -> Router {
         .with_state(app)
 }
 
-enum Failure {
+pub(crate) enum Failure {
     NotFound(String),
     Unprocessable(String),
     Internal(String),
@@ -95,6 +139,7 @@ impl From<StoreError> for Failure {
     fn from(e: StoreError) -> Self {
         match e {
             StoreError::NotFound(id) => Failure::NotFound(format!("character '{id}' not found")),
+            StoreError::Refused(message) => Failure::Unprocessable(message),
             other => Failure::Internal(other.to_string()),
         }
     }
@@ -125,31 +170,32 @@ impl IntoResponse for Failure {
 
 /// The steps live for a log (creation steps while creating, the pending
 /// level's step while leveling) — the only step list any client sees.
-fn live_steps(engine: &Pf2eEngine, log: &[Decision]) -> Vec<(StepId, String)> {
+fn live_steps(engine: &dyn EngineOps, log: &[Decision]) -> Vec<(StepId, String)> {
     engine.live_steps(log).unwrap_or_default()
 }
 
-fn first_live_step(engine: &Pf2eEngine, log: &[Decision]) -> StepId {
+fn first_live_step(engine: &dyn EngineOps, log: &[Decision]) -> StepId {
     live_steps(engine, log)
         .first()
         .map(|(id, _)| id.clone())
         .unwrap_or_else(|| StepId::new("concept"))
 }
 
-fn step_index(engine: &Pf2eEngine, log: &[Decision], step: &StepId) -> usize {
+fn step_index(engine: &dyn EngineOps, log: &[Decision], step: &StepId) -> usize {
     live_steps(engine, log)
         .iter()
         .position(|(id, _)| id == step)
         .unwrap_or(0)
 }
 
-fn draft_view(app: &App, loaded: &Loaded) -> Result<DraftView, Failure> {
-    let projection = app
-        .engine
+fn draft_view(cx: &Ctx, loaded: &Loaded) -> Result<DraftView, Failure> {
+    let projection = cx
+        .rs
+        .engine()
         .project(&loaded.log)
         .map_err(|e| Failure::Internal(format!("stored log does not replay: {e}")))?;
     let level_up = if loaded.has_pending_tail() {
-        Some(level_up_view(app, loaded)?)
+        Some(level_up_view(cx, loaded)?)
     } else {
         None
     };
@@ -170,49 +216,50 @@ fn draft_view(app: &App, loaded: &Loaded) -> Result<DraftView, Failure> {
 /// finalized sheet vs the fold through the advance decision alone; deltas
 /// are the finalized sheet vs the fold through the whole tail; pending is
 /// the tail described for the abandon dialog. Nothing hand-authored.
-fn level_up_view(app: &App, loaded: &Loaded) -> Result<LevelUpView, Failure> {
+fn level_up_view(cx: &Ctx, loaded: &Loaded) -> Result<LevelUpView, Failure> {
     let prefix = loaded.finalized_prefix();
     let tail = loaded.pending_tail();
-    let state = app
-        .engine
-        .fold(&loaded.log)
+    let level = cx
+        .rs
+        .level_of(&loaded.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
     let advanced: Vec<Decision> = prefix.iter().chain(tail.iter().take(1)).cloned().collect();
-    let advance_sheet = app
-        .engine
+    let advance_sheet = cx
+        .rs
+        .engine()
         .sheet(&advanced)
         .map_err(|e| Failure::Internal(e.to_string()))?;
-    let full_sheet = app
-        .engine
+    let full_sheet = cx
+        .rs
+        .engine()
         .sheet(&loaded.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
     Ok(LevelUpView {
-        level: state.level() as u32,
+        level,
         gains: sheet_diffs(&loaded.sheet, &advance_sheet),
         deltas: sheet_diffs(&loaded.sheet, &full_sheet),
         pending: tail
             .iter()
-            .filter_map(|d| app.engine.describe_decision(d))
+            .filter_map(|d| cx.rs.engine().describe_decision(d))
             .collect(),
     })
 }
 
 /// The level a finalized character can advance to, when its pin is
 /// current and the class's advancement table has more (the cap is data).
-fn next_level_for(app: &App, loaded: &Loaded, status: &VersionStatus) -> Option<u32> {
+fn next_level_for(cx: &Ctx, loaded: &Loaded, status: &VersionStatus) -> Option<u32> {
     if *status != VersionStatus::Current || loaded.state != DocState::Finalized {
         return None;
     }
-    let state = app.engine.fold(loaded.finalized_prefix()).ok()?;
-    ruleset_pf2e::next_level(&app.rules, &state)
+    cx.rs.next_level(loaded.finalized_prefix()).ok()?
 }
 
 /// The full character view, version flag included. A draft with an
 /// unresolved non-current pin gets no projection (that would replay the old
 /// log against new data outside the resolution flow) — its stored sheet and
 /// flag arrive as `FlaggedDraft`.
-fn character_view(app: &App, loaded: &Loaded) -> Result<CharacterView, Failure> {
-    let status = status_for(&app.engine, &app.known, loaded);
+fn character_view(cx: &Ctx, loaded: &Loaded) -> Result<CharacterView, Failure> {
+    let status = status_for(cx.rs.engine(), cx.known, loaded);
     Ok(match loaded.state {
         // A pending level rides beside the still-authoritative sheet; the
         // pin is current by construction (the level started under it and
@@ -221,18 +268,18 @@ fn character_view(app: &App, loaded: &Loaded) -> Result<CharacterView, Failure> 
             CharacterView::Leveling {
                 id: loaded.id.clone(),
                 sheet: loaded.sheet.clone(),
-                draft: draft_view(app, loaded)?,
+                draft: draft_view(cx, loaded)?,
             }
         }
         DocState::Finalized => CharacterView::Finalized {
             id: loaded.id.clone(),
             sheet: loaded.sheet.clone(),
-            next_level: next_level_for(app, loaded, &status),
+            next_level: next_level_for(cx, loaded, &status),
             version_status: status,
             version: loaded.draft_version,
         },
         DocState::Draft if status == VersionStatus::Current => {
-            CharacterView::Draft(draft_view(app, loaded)?)
+            CharacterView::Draft(draft_view(cx, loaded)?)
         }
         DocState::Draft => CharacterView::FlaggedDraft {
             id: loaded.id.clone(),
@@ -247,13 +294,13 @@ fn character_view(app: &App, loaded: &Loaded) -> Result<CharacterView, Failure> 
 /// Reject wizard writes on a draft whose pin is not current: continuing
 /// would replay (and extend) an old log against new data. Resolution is the
 /// only path forward; the refusal carries the flag.
-fn guard_wizard_write(app: &App, loaded: &Loaded) -> Result<(), Failure> {
+fn guard_wizard_write(cx: &Ctx, loaded: &Loaded) -> Result<(), Failure> {
     if (loaded.state == DocState::Draft || loaded.has_pending_tail())
-        && loaded.rules_version != app.rules_version
+        && loaded.rules_version != cx.rs.rules_version()
     {
         return Err(Failure::VersionFlagged(Box::new(status_for(
-            &app.engine,
-            &app.known,
+            cx.rs.engine(),
+            cx.known,
             loaded,
         ))));
     }
@@ -300,25 +347,26 @@ fn guard_below_marker(
 /// log; a finalized character's stored sheet reflects ONLY its finalized
 /// prefix — a confirm into a pending level never touches it (the prefix
 /// invariant; only finalize-pending moves the sheet, with the marker).
-fn refresh_draft_sheet(app: &App, loaded: &mut Loaded) -> Result<(), Failure> {
+fn refresh_draft_sheet(cx: &Ctx, loaded: &mut Loaded) -> Result<(), Failure> {
     if loaded.state == DocState::Draft {
-        loaded.sheet = app
-            .engine
+        loaded.sheet = cx
+            .rs
+            .engine()
             .sheet(&loaded.log)
             .map_err(|e| Failure::Internal(e.to_string()))?;
     }
     Ok(())
 }
 
-fn resume_label(app: &App, loaded: &Loaded) -> String {
-    let steps = live_steps(&app.engine, &loaded.log);
-    let index = step_index(&app.engine, &loaded.log, &loaded.current_step);
+fn resume_label(cx: &Ctx, loaded: &Loaded) -> String {
+    let steps = live_steps(cx.rs.engine(), &loaded.log);
+    let index = step_index(cx.rs.engine(), &loaded.log, &loaded.current_step);
     let title = steps
         .get(index)
         .map(|(_, t)| t.as_str())
         .unwrap_or("Concept");
     if loaded.has_pending_tail() {
-        let level = app.engine.fold(&loaded.log).map(|s| s.level()).unwrap_or(0);
+        let level = cx.rs.level_of(&loaded.log).unwrap_or(0);
         format!(
             "level {level} — step {} of {} — {}",
             index + 1,
@@ -342,9 +390,70 @@ fn display_name(loaded: &Loaded) -> String {
     }
 }
 
+/// The campaign view: which game, whether it can still be chosen, the
+/// games to choose from, every shipped license paragraph.
+fn campaign_view(app: &App, store: &Store) -> CampaignView {
+    let status = store.campaign_status();
+    let system_name = status
+        .system
+        .as_deref()
+        .and_then(|s| app.ruleset_for(s))
+        .map(|r| r.system_name().to_string());
+    CampaignView {
+        system: status.system,
+        system_name,
+        inferred: status.inferred,
+        can_declare: store.is_empty(),
+        problem: status.problem,
+        games: app
+            .rulesets
+            .iter()
+            .map(|r| GameOption {
+                id: r.system().to_string(),
+                name: r.system_name().to_string(),
+            })
+            .collect(),
+        license_lines: app.license_lines(),
+    }
+}
+
+async fn campaign(State(app): State<SharedApp>) -> Result<Json<CampaignView>, Failure> {
+    let store = app.store.lock().await;
+    Ok(Json(campaign_view(&app, &store)))
+}
+
+/// Declare (or, while the campaign is empty, change) the game. Refusals
+/// are typed and write nothing; a racing second declaration loses to the
+/// first (create-exclusive) and is told to reload.
+async fn declare_campaign(
+    State(app): State<SharedApp>,
+    Json(request): Json<DeclareCampaignRequest>,
+) -> Result<Json<CampaignView>, Failure> {
+    let mut store = app.store.lock().await;
+    store.declare(&request.system, request.replaces.as_deref())?;
+    Ok(Json(campaign_view(&app, &store)))
+}
+
 async fn roster(State(app): State<SharedApp>) -> Result<Json<RosterView>, Failure> {
     let store = app.store.lock().await;
     let load = store.load_all()?;
+    let problems: Vec<RosterProblem> = load
+        .problems
+        .into_iter()
+        .map(|(file, message)| RosterProblem { file, message })
+        .collect();
+    // An undeclared (or unresolvable) campaign serves the roster shell:
+    // no entries, the problems, no class catalog — the campaign view
+    // carries the reason and the choose-game options.
+    let Ok(cx) = app.ctx(&store) else {
+        return Ok(Json(RosterView {
+            entries: Vec::new(),
+            problems,
+            classes: Vec::new(),
+            quick_build: None,
+        }));
+    };
+    let cx = &cx;
     let mut entries: Vec<RosterEntry> = load
         .characters
         .iter()
@@ -354,42 +463,49 @@ async fn roster(State(app): State<SharedApp>) -> Result<Json<RosterView>, Failur
             summary: summary_line(c),
             state: match c.state {
                 DocState::Draft => RosterCharacterState::Draft {
-                    resume_label: resume_label(&app, c),
+                    resume_label: resume_label(cx, c),
                 },
                 DocState::Finalized if c.has_pending_tail() => RosterCharacterState::Leveling {
-                    resume_label: resume_label(&app, c),
+                    resume_label: resume_label(cx, c),
                 },
                 DocState::Finalized => RosterCharacterState::Finalized,
             },
-            version: status_for(&app.engine, &app.known, c),
+            version: status_for(cx.rs.engine(), cx.known, c),
         })
         .collect();
     entries.sort_by(|a, b| a.id.cmp(&b.id));
     Ok(Json(RosterView {
         entries,
-        problems: load
-            .problems
-            .into_iter()
-            .map(|(file, message)| RosterProblem { file, message })
-            .collect(),
-        license_notice: app.license_notice.clone(),
-        classes: class_catalog(&app)?,
+        problems,
+        classes: class_catalog(cx)?,
+        quick_build: quick_build_class(cx)?,
     }))
+}
+
+/// The class quick build would make: the first shipped class carrying a
+/// suggested build (the same choice the quick-build route makes for a log
+/// that names no class), as the catalog offers it.
+fn quick_build_class(cx: &Ctx) -> Result<Option<ClassOption>, Failure> {
+    let Some((class_id, _)) = cx.rs.suggested_builds().first() else {
+        return Ok(None);
+    };
+    Ok(class_catalog(cx)?.into_iter().find(|c| c.id == *class_id))
 }
 
 /// The shipped classes, for the random-mint picker: the class slot's
 /// available options against an empty log (a projection query — the
 /// engine stays the only authority on what is offered).
-fn class_catalog(app: &App) -> Result<Vec<ClassOption>, Failure> {
-    let projection = app
-        .engine
+fn class_catalog(cx: &Ctx) -> Result<Vec<ClassOption>, Failure> {
+    let projection = cx
+        .rs
+        .engine()
         .project(&[])
         .map_err(|e| Failure::Internal(e.to_string()))?;
     Ok(projection
         .steps
         .iter()
         .flat_map(|s| s.slots.iter())
-        .filter(|slot| slot.id.as_str() == ruleset_pf2e::CLASS_SLOT_ID)
+        .filter(|slot| slot.id == cx.rs.class_slot())
         .flat_map(|slot| slot.options.iter())
         .filter(|o| o.available)
         .map(|o| ClassOption {
@@ -404,38 +520,41 @@ async fn create_character(
     Json(request): Json<CreateCharacterRequest>,
 ) -> Result<Json<DraftView>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let id = store.mint_character_id();
     let mut log = Vec::new();
     if let Some(name) = request.name.filter(|n| !n.trim().is_empty()) {
         // A working name arrives as a normal decision on the name slot.
         let input = types::DecisionInput {
             id: types::DecisionId::new(format!("{id}-initial-name")),
-            slot: SlotId::new("pf2e.details.name"),
+            slot: cx.rs.name_slot(),
             selection: Selection::Text(name),
             source: types::DecisionSource::Player,
         };
-        if let Ok(AppendOutcome::Appended(new_log)) = app.engine.append(&log, input) {
+        if let Ok(AppendOutcome::Appended(new_log)) = cx.rs.engine().append(&log, input) {
             log = new_log;
         }
     }
-    let sheet = app
-        .engine
+    let sheet = cx
+        .rs
+        .engine()
         .sheet(&log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
     let loaded = Loaded {
         id: id.clone(),
+        system: cx.rs.system().to_string(),
         state: DocState::Draft,
-        current_step: first_live_step(&app.engine, &log),
+        current_step: first_live_step(cx.rs.engine(), &log),
         draft_version: 1,
         sheet,
         log,
         finalized_through: 0,
-        rules_version: app.rules_version.clone(),
+        rules_version: cx.rs.rules_version().to_string(),
         version_history: Vec::new(),
         keep_old: None,
     };
     store.save(&loaded)?;
-    Ok(Json(draft_view(&app, &loaded)?))
+    Ok(Json(draft_view(cx, &loaded)?))
 }
 
 async fn get_character(
@@ -443,8 +562,9 @@ async fn get_character(
     AxumPath(id): AxumPath<String>,
 ) -> Result<Json<CharacterView>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let loaded = store.load(&CharacterId::new(id))?;
-    Ok(Json(character_view(&app, &loaded)?))
+    Ok(Json(character_view(cx, &loaded)?))
 }
 
 async fn delete_character(
@@ -473,11 +593,12 @@ async fn confirm(
     Json(request): Json<ConfirmRequest>,
 ) -> Result<Json<ConfirmOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     guard_wizard_target(&loaded)?;
-    guard_wizard_write(&app, &loaded)?;
+    guard_wizard_write(cx, &loaded)?;
     // A level advance enters the log only through the level-up route.
-    if ruleset_pf2e::advance_level_of(request.decision.slot.as_str()).is_some() {
+    if cx.rs.is_advance_slot(&request.decision.slot) {
         return Err(Failure::Unprocessable(
             "level advances start through Level up, not as a confirmed choice".into(),
         ));
@@ -489,33 +610,33 @@ async fn confirm(
     // conflict, and appends nothing.
     if loaded.log.iter().any(|d| d.id == request.decision.id) {
         return Ok(Json(ConfirmOutcome::Confirmed {
-            draft: draft_view(&app, &loaded)?,
+            draft: draft_view(cx, &loaded)?,
         }));
     }
     if request.version != loaded.draft_version {
         return Ok(Json(ConfirmOutcome::Conflict {
-            current: draft_view(&app, &loaded)?,
+            current: draft_view(cx, &loaded)?,
         }));
     }
     let slot = request.decision.slot.clone();
-    match app.engine.append(&loaded.log, request.decision) {
+    match cx.rs.engine().append(&loaded.log, request.decision) {
         Ok(AppendOutcome::AlreadyPresent) => {
             // Idempotent retry: already durable, acknowledge again.
             Ok(Json(ConfirmOutcome::Confirmed {
-                draft: draft_view(&app, &loaded)?,
+                draft: draft_view(cx, &loaded)?,
             }))
         }
         Ok(AppendOutcome::Appended(new_log)) => {
             loaded.log = new_log;
-            refresh_draft_sheet(&app, &mut loaded)?;
+            refresh_draft_sheet(cx, &mut loaded)?;
             loaded.draft_version += 1;
             store.save(&loaded)?;
             Ok(Json(ConfirmOutcome::Confirmed {
-                draft: draft_view(&app, &loaded)?,
+                draft: draft_view(cx, &loaded)?,
             }))
         }
         Err(e) => {
-            let step = first_live_step(&app.engine, &loaded.log);
+            let step = first_live_step(cx.rs.engine(), &loaded.log);
             let entry = match &e {
                 EngineError::UnknownSlot { .. }
                 | EngineError::InvalidDecision { .. }
@@ -525,7 +646,7 @@ async fn confirm(
             };
             Ok(Json(ConfirmOutcome::Rejected {
                 reasons: vec![entry],
-                draft: draft_view(&app, &loaded)?,
+                draft: draft_view(cx, &loaded)?,
             }))
         }
     }
@@ -539,18 +660,20 @@ async fn amend(
     Json(request): Json<ConfirmRequest>,
 ) -> Result<Json<ConfirmOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     guard_wizard_target(&loaded)?;
-    guard_wizard_write(&app, &loaded)?;
-    if ruleset_pf2e::advance_level_of(request.decision.slot.as_str()).is_some() {
+    guard_wizard_write(cx, &loaded)?;
+    if cx.rs.is_advance_slot(&request.decision.slot) {
         return Err(Failure::Unprocessable(
             "level advances start through Level up, not as a confirmed choice".into(),
         ));
     }
     // An amend cascades like a clear: the slot and everything it drags
     // along must sit above the marker.
-    let doomed: Vec<SlotId> = app
-        .engine
+    let doomed: Vec<SlotId> = cx
+        .rs
+        .engine()
         .clear_preview(&loaded.log, &request.decision.slot)
         .map(|p| p.cleared.into_iter().map(|c| c.slot).collect())
         .unwrap_or_default();
@@ -560,33 +683,33 @@ async fn amend(
     )?;
     if loaded.log.iter().any(|d| d.id == request.decision.id) {
         return Ok(Json(ConfirmOutcome::Confirmed {
-            draft: draft_view(&app, &loaded)?,
+            draft: draft_view(cx, &loaded)?,
         }));
     }
     if request.version != loaded.draft_version {
         return Ok(Json(ConfirmOutcome::Conflict {
-            current: draft_view(&app, &loaded)?,
+            current: draft_view(cx, &loaded)?,
         }));
     }
     let slot = request.decision.slot.clone();
-    match app.engine.amend(&loaded.log, request.decision) {
+    match cx.rs.engine().amend(&loaded.log, request.decision) {
         Ok(AppendOutcome::AlreadyPresent) => Ok(Json(ConfirmOutcome::Confirmed {
-            draft: draft_view(&app, &loaded)?,
+            draft: draft_view(cx, &loaded)?,
         })),
         Ok(AppendOutcome::Appended(new_log)) => {
             loaded.log = new_log;
-            refresh_draft_sheet(&app, &mut loaded)?;
+            refresh_draft_sheet(cx, &mut loaded)?;
             loaded.draft_version += 1;
             store.save(&loaded)?;
             Ok(Json(ConfirmOutcome::Confirmed {
-                draft: draft_view(&app, &loaded)?,
+                draft: draft_view(cx, &loaded)?,
             }))
         }
         Err(e) => {
-            let step = first_live_step(&app.engine, &loaded.log);
+            let step = first_live_step(cx.rs.engine(), &loaded.log);
             Ok(Json(ConfirmOutcome::Rejected {
                 reasons: vec![engine_error_entry(step, slot, e.to_string())],
-                draft: draft_view(&app, &loaded)?,
+                draft: draft_view(cx, &loaded)?,
             }))
         }
     }
@@ -598,37 +721,40 @@ async fn clear(
     Json(request): Json<ClearRequest>,
 ) -> Result<Json<ClearOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     guard_wizard_target(&loaded)?;
-    guard_wizard_write(&app, &loaded)?;
-    if ruleset_pf2e::advance_level_of(request.slot.as_str()).is_some() {
+    guard_wizard_write(cx, &loaded)?;
+    if cx.rs.is_advance_slot(&request.slot) {
         return Err(Failure::Unprocessable(
             "a pending level is discarded through Abandon level, not by clearing".into(),
         ));
     }
     if request.version != loaded.draft_version {
         return Ok(Json(ClearOutcome::Conflict {
-            current: draft_view(&app, &loaded)?,
+            current: draft_view(cx, &loaded)?,
         }));
     }
-    let preview = app
-        .engine
+    let preview = cx
+        .rs
+        .engine()
         .clear_preview(&loaded.log, &request.slot)
         .map_err(|e| Failure::Unprocessable(e.to_string()))?;
     guard_below_marker(
         &loaded,
         std::iter::once(request.slot.clone()).chain(preview.cleared.iter().map(|c| c.slot.clone())),
     )?;
-    let new_log = app
-        .engine
+    let new_log = cx
+        .rs
+        .engine()
         .clear(&loaded.log, &request.slot)
         .map_err(|e| Failure::Unprocessable(e.to_string()))?;
     loaded.log = new_log;
-    refresh_draft_sheet(&app, &mut loaded)?;
+    refresh_draft_sheet(cx, &mut loaded)?;
     loaded.draft_version += 1;
     store.save(&loaded)?;
     Ok(Json(ClearOutcome::Cleared {
-        draft: draft_view(&app, &loaded)?,
+        draft: draft_view(cx, &loaded)?,
         preview,
     }))
 }
@@ -639,12 +765,13 @@ async fn set_step(
     Json(request): Json<StepRequest>,
 ) -> Result<Json<DraftView>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     guard_wizard_target(&loaded)?;
-    guard_wizard_write(&app, &loaded)?;
+    guard_wizard_write(cx, &loaded)?;
     // The step cursor is navigation, not a decision: last write wins and no
     // version bump (a stale-tab navigation shouldn't invalidate confirms).
-    if !live_steps(&app.engine, &loaded.log)
+    if !live_steps(cx.rs.engine(), &loaded.log)
         .iter()
         .any(|(s, _)| *s == request.step)
     {
@@ -655,7 +782,7 @@ async fn set_step(
     }
     loaded.current_step = request.step;
     store.save(&loaded)?;
-    Ok(Json(draft_view(&app, &loaded)?))
+    Ok(Json(draft_view(cx, &loaded)?))
 }
 
 async fn finalize(
@@ -664,6 +791,7 @@ async fn finalize(
     Json(request): Json<FinalizeRequest>,
 ) -> Result<Json<FinalizeOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     // "Finalize what is pending": nothing pending on a finalized character
     // is an idempotent no-op returning the current sheet (the retry after
@@ -673,14 +801,15 @@ async fn finalize(
             sheet: loaded.sheet.clone(),
         }));
     }
-    guard_wizard_write(&app, &loaded)?;
+    guard_wizard_write(cx, &loaded)?;
     if request.version != loaded.draft_version {
         return Ok(Json(FinalizeOutcome::Conflict {
-            current: Box::new(draft_view(&app, &loaded)?),
+            current: Box::new(draft_view(cx, &loaded)?),
         }));
     }
-    let projection = app
-        .engine
+    let projection = cx
+        .rs
+        .engine()
         .project(&loaded.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
     if !projection.can_finalize {
@@ -712,6 +841,7 @@ async fn level_up(
     Json(request): Json<LevelUpRequest>,
 ) -> Result<Json<LevelUpOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     if loaded.state == DocState::Draft {
         return Err(Failure::Unprocessable(
@@ -721,12 +851,12 @@ async fn level_up(
     // Idempotent: a character already leveling returns its pending level —
     // a second tab, a retry, never a second advance.
     if loaded.has_pending_tail() {
-        guard_wizard_write(&app, &loaded)?;
+        guard_wizard_write(cx, &loaded)?;
         return Ok(Json(LevelUpOutcome::Started {
-            draft: Box::new(draft_view(&app, &loaded)?),
+            draft: Box::new(draft_view(cx, &loaded)?),
         }));
     }
-    let status = status_for(&app.engine, &app.known, &loaded);
+    let status = status_for(cx.rs.engine(), cx.known, &loaded);
     if status != VersionStatus::Current {
         // Kept-old or otherwise non-current: the log cannot be extended
         // under today's data; resolve the flag first (kept-old characters
@@ -735,26 +865,29 @@ async fn level_up(
     }
     if request.version != loaded.draft_version {
         return Ok(Json(LevelUpOutcome::Conflict {
-            character: Box::new(character_view(&app, &loaded)?),
+            character: Box::new(character_view(cx, &loaded)?),
         }));
     }
-    let state = app
-        .engine
-        .fold(&loaded.log)
+    let current_level = cx
+        .rs
+        .level_of(&loaded.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
-    let Some(level) = ruleset_pf2e::next_level(&app.rules, &state) else {
+    let Some(level) = cx
+        .rs
+        .next_level(&loaded.log)
+        .map_err(|e| Failure::Internal(e.to_string()))?
+    else {
         return Err(Failure::Unprocessable(format!(
-            "level {} is as far as this rules data goes — higher levels are coming",
-            state.level()
+            "level {current_level} is as far as this rules data goes — higher levels are coming"
         )));
     };
     let input = DecisionInput {
-        id: DecisionId::new(format!("level-{level}.advance")),
-        slot: SlotId::new(ruleset_pf2e::slot_level_advance(level)),
-        selection: Selection::Option(types::OptionId::new(format!("advance.{level}"))),
+        id: DecisionId::new(format!("level-{level}-advance")),
+        slot: cx.rs.advance_slot(level),
+        selection: Selection::Option(cx.rs.advance_option(level)),
         source: DecisionSource::Player,
     };
-    match app.engine.append(&loaded.log, input) {
+    match cx.rs.engine().append(&loaded.log, input) {
         Ok(AppendOutcome::Appended(new_log)) => loaded.log = new_log,
         Ok(AppendOutcome::AlreadyPresent) => {}
         Err(e) => {
@@ -764,11 +897,11 @@ async fn level_up(
         }
     }
     // The stored sheet stays the finalized one; only the tail grew.
-    loaded.current_step = first_live_step(&app.engine, &loaded.log);
+    loaded.current_step = first_live_step(cx.rs.engine(), &loaded.log);
     loaded.draft_version += 1;
     store.save(&loaded)?;
     Ok(Json(LevelUpOutcome::Started {
-        draft: Box::new(draft_view(&app, &loaded)?),
+        draft: Box::new(draft_view(cx, &loaded)?),
     }))
 }
 
@@ -778,6 +911,7 @@ async fn abandon_level(
     Json(request): Json<AbandonLevelRequest>,
 ) -> Result<Json<AbandonLevelOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     if !loaded.has_pending_tail() {
         return Err(Failure::Unprocessable(
@@ -788,18 +922,18 @@ async fn abandon_level(
     // longer works — so no version-flag guard here.
     if request.version != loaded.draft_version {
         return Ok(Json(AbandonLevelOutcome::Conflict {
-            character: Box::new(character_view(&app, &loaded)?),
+            character: Box::new(character_view(cx, &loaded)?),
         }));
     }
     // Truncate to the marker: the finalized prefix and sheet are untouched
     // by construction; the version counter stays monotonic so a tab stale
     // from this attempt can never land in the next.
     loaded.log.truncate(loaded.finalized_through);
-    loaded.current_step = first_live_step(&app.engine, &loaded.log);
+    loaded.current_step = first_live_step(cx.rs.engine(), &loaded.log);
     loaded.draft_version += 1;
     store.save(&loaded)?;
     Ok(Json(AbandonLevelOutcome::Abandoned {
-        character: Box::new(character_view(&app, &loaded)?),
+        character: Box::new(character_view(cx, &loaded)?),
     }))
 }
 
@@ -829,24 +963,25 @@ fn valid_request_id(id: &str) -> bool {
 /// The suggested build that applies to this log: the chosen class's block
 /// when the log names a class, else the first class shipping one.
 fn suggestion_map<'a>(
-    app: &'a App,
+    cx: &'a Ctx<'a>,
     log: &[Decision],
 ) -> Option<&'a BTreeMap<SlotId, SlotSuggestion>> {
     let chosen_class = log
         .iter()
         .rev()
-        .find(|d| d.slot.as_str() == ruleset_pf2e::CLASS_SLOT_ID)
+        .find(|d| d.slot == cx.rs.class_slot())
         .and_then(|d| match &d.selection {
             Selection::Option(id) => Some(id.as_str().to_string()),
             _ => None,
         });
     match chosen_class {
-        Some(class_id) => app
-            .suggested
+        Some(class_id) => cx
+            .rs
+            .suggested_builds()
             .iter()
             .find(|(id, _)| *id == class_id)
             .map(|(_, map)| map),
-        None => app.suggested.first().map(|(_, map)| map),
+        None => cx.rs.suggested_builds().first().map(|(_, map)| map),
     }
 }
 
@@ -869,6 +1004,7 @@ async fn quick_build(
         ));
     }
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let id = CharacterId::new(format!("{QUICK_BUILD_ID_PREFIX}{}", request.request_id));
     let suggest_owned;
     // Replay: the file already exists — return the saved result, append
@@ -879,14 +1015,15 @@ async fn quick_build(
                 "this quick-build request was already completed and finalized".into(),
             ));
         }
-        guard_wizard_write(&app, &loaded)?;
-        let Some(suggest) = suggestion_map(&app, &loaded.log) else {
+        guard_wizard_write(cx, &loaded)?;
+        let Some(suggest) = suggestion_map(cx, &loaded.log) else {
             return Err(Failure::Unprocessable(
                 "no shipped class carries a suggested build".into(),
             ));
         };
-        let unresolved = app
-            .engine
+        let unresolved = cx
+            .rs
+            .engine()
             .unresolved_suggestions(
                 &loaded.log,
                 &mut |ctx: &SuggestionContext| suggest.get(ctx.slot).cloned(),
@@ -894,7 +1031,7 @@ async fn quick_build(
             )
             .map_err(|e| Failure::Internal(e.to_string()))?;
         return Ok(Json(QuickBuildResult {
-            draft: draft_view(&app, &loaded)?,
+            draft: draft_view(cx, &loaded)?,
             unresolved,
         }));
     }
@@ -904,16 +1041,16 @@ async fn quick_build(
     if let Some(name) = request.name.as_ref().filter(|n| !n.trim().is_empty()) {
         let input = DecisionInput {
             id: DecisionId::new(format!("{}.initial-name", request.request_id)),
-            slot: SlotId::new("pf2e.details.name"),
+            slot: cx.rs.name_slot(),
             selection: Selection::Text(name.clone()),
             source: DecisionSource::Player,
         };
-        if let Ok(AppendOutcome::Appended(new_log)) = app.engine.append(&log, input) {
+        if let Ok(AppendOutcome::Appended(new_log)) = cx.rs.engine().append(&log, input) {
             log = new_log;
         }
     }
     {
-        let Some(suggest) = suggestion_map(&app, &log) else {
+        let Some(suggest) = suggestion_map(cx, &log) else {
             return Err(Failure::Unprocessable(
                 "no shipped class carries a suggested build".into(),
             ));
@@ -921,8 +1058,9 @@ async fn quick_build(
         suggest_owned = suggest.clone();
     }
     let request_id = request.request_id.clone();
-    let plan = app
-        .engine
+    let plan = cx
+        .rs
+        .engine()
         .expand_suggestions(
             &log,
             &mut |ctx: &SuggestionContext| suggest_owned.get(ctx.slot).cloned(),
@@ -930,16 +1068,18 @@ async fn quick_build(
             DecisionSource::Suggested,
         )
         .map_err(|e| Failure::Internal(e.to_string()))?;
-    let sheet = app
-        .engine
+    let sheet = cx
+        .rs
+        .engine()
         .sheet(&plan.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
     let loaded = Loaded {
         id,
+        system: cx.rs.system().to_string(),
         state: DocState::Draft,
         // Review state: resume lands on the final step, where the player
         // confirms the name and finalizes.
-        current_step: live_steps(&app.engine, &plan.log)
+        current_step: live_steps(cx.rs.engine(), &plan.log)
             .last()
             .map(|(id, _)| id.clone())
             .unwrap_or_else(|| StepId::new("concept")),
@@ -947,13 +1087,13 @@ async fn quick_build(
         sheet,
         log: plan.log,
         finalized_through: 0,
-        rules_version: app.rules_version.clone(),
+        rules_version: cx.rs.rules_version().to_string(),
         version_history: Vec::new(),
         keep_old: None,
     };
     store.save(&loaded)?;
     Ok(Json(QuickBuildResult {
-        draft: draft_view(&app, &loaded)?,
+        draft: draft_view(cx, &loaded)?,
         unresolved: plan.unresolved,
     }))
 }
@@ -971,6 +1111,7 @@ async fn fill_remaining(
         ));
     }
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     guard_wizard_target(&loaded)?;
     if loaded.has_pending_tail() {
@@ -979,8 +1120,8 @@ async fn fill_remaining(
                 .into(),
         ));
     }
-    guard_wizard_write(&app, &loaded)?;
-    let Some(suggest) = suggestion_map(&app, &loaded.log).cloned() else {
+    guard_wizard_write(cx, &loaded)?;
+    let Some(suggest) = suggestion_map(cx, &loaded.log).cloned() else {
         return Err(Failure::Unprocessable(
             "the chosen class carries no suggested build".into(),
         ));
@@ -995,23 +1136,25 @@ async fn fill_remaining(
         .iter()
         .any(|d| d.id.as_str().starts_with(&marker))
     {
-        let unresolved = app
-            .engine
+        let unresolved = cx
+            .rs
+            .engine()
             .unresolved_suggestions(&loaded.log, &mut suggest_fn, DecisionSource::Suggested)
             .map_err(|e| Failure::Internal(e.to_string()))?;
         return Ok(Json(FillRemainingOutcome::Filled {
-            draft: draft_view(&app, &loaded)?,
+            draft: draft_view(cx, &loaded)?,
             unresolved,
         }));
     }
     if request.version != loaded.draft_version {
         return Ok(Json(FillRemainingOutcome::Conflict {
-            current: draft_view(&app, &loaded)?,
+            current: draft_view(cx, &loaded)?,
         }));
     }
     let request_id = request.request_id.clone();
-    let plan = app
-        .engine
+    let plan = cx
+        .rs
+        .engine()
         .expand_suggestions(
             &loaded.log,
             &mut suggest_fn,
@@ -1021,12 +1164,12 @@ async fn fill_remaining(
         .map_err(|e| Failure::Internal(e.to_string()))?;
     if !plan.appended.is_empty() {
         loaded.log = plan.log;
-        refresh_draft_sheet(&app, &mut loaded)?;
+        refresh_draft_sheet(cx, &mut loaded)?;
         loaded.draft_version += 1;
         store.save(&loaded)?;
     }
     Ok(Json(FillRemainingOutcome::Filled {
-        draft: draft_view(&app, &loaded)?,
+        draft: draft_view(cx, &loaded)?,
         unresolved: plan.unresolved,
     }))
 }
@@ -1041,18 +1184,52 @@ async fn fill_remaining(
 const RANDOM_MINT_ID_PREFIX: &str = "c-rn-";
 const CLONE_ID_PREFIX: &str = "c-cl-";
 
-/// Free-text lore topics for slots that ask the player to name a Lore
-/// skill. Own-authored app vocabulary, not rules content.
-const LORE_TOPICS: &[&str] = &[
-    "Farming Lore",
-    "Fishing Lore",
-    "Milling Lore",
-    "Tanning Lore",
-    "Caravan Lore",
-    "Brewing Lore",
-    "Stonework Lore",
-    "Herbalism Lore",
-];
+/// A random candidate order over a slot's legal options. Ungrouped
+/// options are simply shuffled. Grouped options (a pick per group, as the
+/// `one-per-group` presentation renders them) come one per group first —
+/// groups in random order, each group's pick random among its options
+/// whose label no earlier pick used, so distinct groups take distinct
+/// values where the catalog allows — then the rest, shuffled. Labels are
+/// data; the server knows nothing about what a group is.
+fn grouped_shuffle(sampler: &mut Sampler, legal: &[&types::OptionView]) -> Vec<types::OptionId> {
+    if legal.iter().all(|o| o.group.is_none()) {
+        let ids: Vec<types::OptionId> = legal.iter().map(|o| o.id.clone()).collect();
+        return sampler.shuffled(&ids);
+    }
+    let mut groups: Vec<String> = Vec::new();
+    for o in legal {
+        let g = o.group.clone().unwrap_or_default();
+        if !groups.contains(&g) {
+            groups.push(g);
+        }
+    }
+    let groups = sampler.shuffled(&groups);
+    let mut head: Vec<types::OptionId> = Vec::new();
+    let mut used_labels: Vec<&str> = Vec::new();
+    for group in &groups {
+        let members: Vec<&types::OptionView> = legal
+            .iter()
+            .copied()
+            .filter(|o| o.group.as_deref().unwrap_or_default() == group)
+            .collect();
+        let order = sampler.shuffled(&members);
+        let pick = order
+            .iter()
+            .find(|o| !used_labels.contains(&o.label.as_str()))
+            .or_else(|| order.first());
+        if let Some(pick) = pick {
+            used_labels.push(&pick.label);
+            head.push(pick.id.clone());
+        }
+    }
+    let rest: Vec<types::OptionId> = legal
+        .iter()
+        .map(|o| o.id.clone())
+        .filter(|id| !head.contains(id))
+        .collect();
+    head.extend(sampler.shuffled(&rest));
+    head
+}
 
 /// The name-pools document (`app-data/name-pools.json`).
 #[derive(serde::Deserialize)]
@@ -1065,8 +1242,8 @@ struct NamePools {
 /// Read and parse the pools file at mint time. A malformed (or missing)
 /// file is a typed mint failure naming the file — never a crash, and the
 /// mint writes nothing.
-fn load_name_pools(app: &App) -> Result<NamePools, Failure> {
-    let path = &app.name_pools;
+fn load_name_pools(cx: &Ctx) -> Result<NamePools, Failure> {
+    let path = cx.name_pools;
     let text = std::fs::read_to_string(path).map_err(|e| {
         Failure::Unprocessable(format!(
             "the name-pools file '{}' could not be read ({e}) — random minting \
@@ -1086,23 +1263,11 @@ fn load_name_pools(app: &App) -> Result<NamePools, Failure> {
 impl NamePools {
     /// The pool for an ancestry record ID; a missing or empty pool falls
     /// back to the default pool (which the data lint keeps non-empty).
-    fn for_ancestry(&self, ancestry: Option<&str>) -> &[String] {
-        ancestry
-            .and_then(|a| self.pools.get(a))
+    fn for_key(&self, key: Option<&str>) -> &[String] {
+        key.and_then(|a| self.pools.get(a))
             .filter(|p| !p.is_empty())
             .map_or(&self.default[..], |p| &p[..])
     }
-}
-
-/// The ancestry record ID chosen in a log, if any.
-fn chosen_ancestry(log: &[Decision]) -> Option<String> {
-    log.iter()
-        .rev()
-        .find(|d| d.slot.as_str() == ruleset_pf2e::ANCESTRY_SLOT_ID)
-        .and_then(|d| match &d.selection {
-            Selection::Option(id) => Some(id.as_str().to_string()),
-            _ => None,
-        })
 }
 
 async fn random_mint(
@@ -1117,6 +1282,7 @@ async fn random_mint(
         ));
     }
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let id = CharacterId::new(format!("{RANDOM_MINT_ID_PREFIX}{}", request.request_id));
     // Replay: the file already exists — return the saved result, append
     // nothing (crash-between-save-and-ack contract; a changed class or
@@ -1127,19 +1293,19 @@ async fn random_mint(
                 "this random-mint request was already completed and finalized".into(),
             ));
         }
-        guard_wizard_write(&app, &loaded)?;
+        guard_wizard_write(cx, &loaded)?;
         return Ok(Json(QuickBuildResult {
-            draft: draft_view(&app, &loaded)?,
+            draft: draft_view(cx, &loaded)?,
             unresolved: Vec::new(),
         }));
     }
     // Everything that can refuse does so before any write: pools first
     // (spec: a malformed pool file fails the mint, nothing written).
-    let pools = load_name_pools(&app)?;
+    let pools = load_name_pools(cx)?;
     // The request ID is the entropy: same request, same character —
     // deterministic, reproducible, replay-safe.
     let mut sampler = Sampler::from_key(&request.request_id);
-    let catalog = class_catalog(&app)?;
+    let catalog = class_catalog(cx)?;
     let (class_id, class_source) = match &request.class_id {
         Some(wanted) => {
             if !catalog.iter().any(|c| c.id == *wanted) {
@@ -1170,21 +1336,21 @@ async fn random_mint(
     if let Some(name) = request.name.as_ref().filter(|n| !n.trim().is_empty()) {
         let input = DecisionInput {
             id: DecisionId::new(format!("{}.initial-name", request.request_id)),
-            slot: SlotId::new(ruleset_pf2e::NAME_SLOT_ID),
+            slot: cx.rs.name_slot(),
             selection: Selection::Text(name.clone()),
             source: DecisionSource::Player,
         };
-        if let Ok(AppendOutcome::Appended(new_log)) = app.engine.append(&log, input) {
+        if let Ok(AppendOutcome::Appended(new_log)) = cx.rs.engine().append(&log, input) {
             log = new_log;
         }
     }
     let class_input = DecisionInput {
         id: DecisionId::new(format!("{}.class-pick", request.request_id)),
-        slot: SlotId::new(ruleset_pf2e::CLASS_SLOT_ID),
+        slot: cx.rs.class_slot(),
         selection: Selection::Option(types::OptionId::new(class_id)),
         source: class_source,
     };
-    match app.engine.append(&log, class_input) {
+    match cx.rs.engine().append(&log, class_input) {
         Ok(AppendOutcome::Appended(new_log)) => log = new_log,
         Ok(AppendOutcome::AlreadyPresent) => {}
         Err(e) => {
@@ -1202,30 +1368,35 @@ async fn random_mint(
     let plan = {
         let sampler = &mut sampler;
         let mut random_source = |ctx: &SuggestionContext| -> Option<SlotSuggestion> {
-            if ctx.slot.as_str() == ruleset_pf2e::NAME_SLOT_ID {
+            if *ctx.slot == cx.rs.name_slot() {
                 return None;
             }
             match ctx.kind {
                 types::SlotViewKind::Text { .. } => {
-                    let topic = sampler.pick(LORE_TOPICS)?;
-                    Some(SlotSuggestion::Text((*topic).to_string()))
+                    let candidates = cx.rs.text_fill_candidates(ctx.slot);
+                    let topic = sampler.pick(&candidates)?;
+                    Some(SlotSuggestion::Text(topic.clone()))
                 }
                 _ => {
-                    let legal: Vec<types::OptionId> = ctx
-                        .options
-                        .iter()
-                        .filter(|o| o.available)
-                        .map(|o| o.id.clone())
-                        .collect();
+                    // A pinned pick (a generation method the mint never
+                    // varies) goes first; the ruleset says which.
+                    if let Some(pinned) = cx.rs.mint_pin(ctx.slot) {
+                        if ctx.options.iter().any(|o| o.available && o.id == pinned) {
+                            return Some(SlotSuggestion::Candidates(vec![pinned]));
+                        }
+                    }
+                    let legal: Vec<&types::OptionView> =
+                        ctx.options.iter().filter(|o| o.available).collect();
                     if legal.is_empty() {
                         return None;
                     }
-                    Some(SlotSuggestion::Candidates(sampler.shuffled(&legal)))
+                    Some(SlotSuggestion::Candidates(grouped_shuffle(sampler, &legal)))
                 }
             }
         };
-        let mut plan = app
-            .engine
+        let mut plan = cx
+            .rs
+            .engine()
             .expand_suggestions(
                 &log,
                 &mut random_source,
@@ -1242,8 +1413,9 @@ async fn random_mint(
         // generated decisions that got flagged and resample them at the
         // settled counts. Bounded; player decisions are never touched.
         for _ in 0..8 {
-            let projection = app
-                .engine
+            let projection = cx
+                .rs
+                .engine()
                 .project(&plan.log)
                 .map_err(|e| Failure::Internal(e.to_string()))?;
             let incomplete: Vec<SlotId> = projection
@@ -1261,12 +1433,13 @@ async fn random_mint(
             }
             let mut cleared = plan.log.clone();
             for slot in &incomplete {
-                if let Ok(new_log) = app.engine.clear(&cleared, slot) {
+                if let Ok(new_log) = cx.rs.engine().clear(&cleared, slot) {
                     cleared = new_log;
                 }
             }
-            plan = app
-                .engine
+            plan = cx
+                .rs
+                .engine()
                 .expand_suggestions(
                     &cleared,
                     &mut random_source,
@@ -1280,26 +1453,23 @@ async fn random_mint(
     log = plan.log;
     // Name the character from the sampled ancestry's pool (typed names
     // already occupy the slot and stand).
-    if !log
-        .iter()
-        .any(|d| d.slot.as_str() == ruleset_pf2e::NAME_SLOT_ID)
-    {
-        let ancestry = chosen_ancestry(&log);
-        let pool = pools.for_ancestry(ancestry.as_deref());
+    if !log.iter().any(|d| d.slot == cx.rs.name_slot()) {
+        let key = cx.rs.name_pool_key(&log);
+        let pool = pools.for_key(key.as_deref());
         let Some(name) = sampler.pick(pool) else {
             return Err(Failure::Unprocessable(format!(
                 "the name-pools file '{}' has an empty default pool — random \
                  minting needs at least one name; nothing was created",
-                app.name_pools.display()
+                cx.name_pools.display()
             )));
         };
         let input = DecisionInput {
             id: DecisionId::new(format!("{}.random-name", request.request_id)),
-            slot: SlotId::new(ruleset_pf2e::NAME_SLOT_ID),
+            slot: cx.rs.name_slot(),
             selection: Selection::Text(name.clone()),
             source: DecisionSource::Random,
         };
-        match app.engine.append(&log, input) {
+        match cx.rs.engine().append(&log, input) {
             Ok(AppendOutcome::Appended(new_log)) => log = new_log,
             Ok(AppendOutcome::AlreadyPresent) => {}
             Err(e) => {
@@ -1309,14 +1479,16 @@ async fn random_mint(
             }
         }
     }
-    let sheet = app
-        .engine
+    let sheet = cx
+        .rs
+        .engine()
         .sheet(&log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
     // Unresolved is expected empty over shipped data; recomputed here so
     // future data reports honestly (same surface as quick build).
-    let unresolved = app
-        .engine
+    let unresolved = cx
+        .rs
+        .engine()
         .unresolved_suggestions(
             &log,
             &mut |_ctx: &SuggestionContext| None,
@@ -1331,9 +1503,10 @@ async fn random_mint(
         .collect();
     let loaded = Loaded {
         id,
+        system: cx.rs.system().to_string(),
         state: DocState::Draft,
         // Review state: resume lands on the final step, like quick build.
-        current_step: live_steps(&app.engine, &log)
+        current_step: live_steps(cx.rs.engine(), &log)
             .last()
             .map(|(id, _)| id.clone())
             .unwrap_or_else(|| StepId::new("concept")),
@@ -1341,13 +1514,13 @@ async fn random_mint(
         sheet,
         log,
         finalized_through: 0,
-        rules_version: app.rules_version.clone(),
+        rules_version: cx.rs.rules_version().to_string(),
         version_history: Vec::new(),
         keep_old: None,
     };
     store.save(&loaded)?;
     Ok(Json(QuickBuildResult {
-        draft: draft_view(&app, &loaded)?,
+        draft: draft_view(cx, &loaded)?,
         unresolved,
     }))
 }
@@ -1370,6 +1543,7 @@ async fn clone_character(
         ));
     }
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let id = CharacterId::new(format!("{CLONE_ID_PREFIX}{}", request.request_id));
     // Replay: already created — return it, ignore the retried parameters
     // (first write wins).
@@ -1393,7 +1567,7 @@ async fn clone_character(
         }
         Err(e) => return Err(e.into()),
     };
-    let status = status_for(&app.engine, &app.known, &source);
+    let status = status_for(cx.rs.engine(), cx.known, &source);
     if let VersionStatus::Unknown { pinned, .. } = &status {
         return Err(Failure::Unprocessable(format!(
             "'{}' is pinned to rules-data version '{pinned}', which this \
@@ -1408,13 +1582,13 @@ async fn clone_character(
     // data; its stored sheet is copied verbatim and the established
     // version flag meets the clone on first open, exactly as it would the
     // source.)
-    let current_pin = source.rules_version == app.rules_version;
+    let current_pin = source.rules_version == cx.rs.rules_version();
     // What the stored sheet reflects: the whole log for a creation draft,
     // the finalized prefix for a finalized character (a pending tail is
     // never part of the stored sheet).
     let reflected: &[Decision] = source.finalized_prefix();
     if current_pin {
-        let replayed = app.engine.sheet(reflected).map_err(|e| {
+        let replayed = cx.rs.engine().sheet(reflected).map_err(|e| {
             Failure::Unprocessable(format!(
                 "'{}' does not replay cleanly ({e}) — run `verify`; nothing \
                  was created",
@@ -1432,14 +1606,11 @@ async fn clone_character(
     // The clone's log: the source's, verbatim, except the name decision —
     // re-minted with clone provenance and the clone-time name (appended
     // when the source never named itself).
-    let name_decision_at = source
-        .log
-        .iter()
-        .rposition(|d| d.slot.as_str() == ruleset_pf2e::NAME_SLOT_ID);
+    let name_decision_at = source.log.iter().rposition(|d| d.slot == cx.rs.name_slot());
     let mut log = source.log.clone();
     let minted = |order: u32| Decision {
         id: DecisionId::new(format!("{}.clone-name", request.request_id)),
-        slot: SlotId::new(ruleset_pf2e::NAME_SLOT_ID),
+        slot: cx.rs.name_slot(),
         selection: Selection::Text(new_name.clone()),
         source: DecisionSource::Clone,
         order,
@@ -1458,15 +1629,17 @@ async fn clone_character(
         // The clone's sheet is the fold of what its stored sheet reflects
         // (the pending tail, if any, is copied along but stays pending);
         // the whole log is folded once for cleanliness.
-        app.engine
-            .fold(&log)
+        cx.rs
+            .engine()
+            .folds(&log)
             .map_err(|e| Failure::Internal(format!("the cloned log does not replay: {e}")))?;
         let reflected_len = if source.state == DocState::Draft {
             log.len()
         } else {
             source.finalized_through.min(log.len())
         };
-        app.engine
+        cx.rs
+            .engine()
             .sheet(&log[..reflected_len])
             .map_err(|e| Failure::Internal(format!("the cloned log does not replay: {e}")))?
     } else {
@@ -1476,6 +1649,7 @@ async fn clone_character(
     };
     let loaded = Loaded {
         id,
+        system: source.system.clone(),
         state: source.state,
         current_step: source.current_step.clone(),
         draft_version: source.draft_version,
@@ -1529,13 +1703,14 @@ async fn version_repin(
     Json(request): Json<VersionActionRequest>,
 ) -> Result<Json<VersionResolutionOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     if request.version != loaded.draft_version {
         return Ok(Json(VersionResolutionOutcome::Conflict {
-            character: Box::new(character_view(&app, &loaded)?),
+            character: Box::new(character_view(cx, &loaded)?),
         }));
     }
-    let status = status_for(&app.engine, &app.known, &loaded);
+    let status = status_for(cx.rs.engine(), cx.known, &loaded);
     match &status {
         VersionStatus::OlderKnown {
             pinned,
@@ -1543,18 +1718,18 @@ async fn version_repin(
             ..
         } => {
             let from = pinned.clone();
-            loaded.rules_version = app.rules_version.clone();
+            loaded.rules_version = cx.rs.rules_version().to_string();
             loaded.keep_old = None;
             loaded.version_history.push(resolution_event(
                 "re_pin",
                 &from,
-                &app.rules_version,
+                cx.rs.rules_version(),
                 "identical replay",
             ));
             loaded.draft_version += 1;
             store.save(&loaded)?;
             Ok(Json(VersionResolutionOutcome::Resolved {
-                character: Box::new(character_view(&app, &loaded)?),
+                character: Box::new(character_view(cx, &loaded)?),
             }))
         }
         VersionStatus::OlderKnown { .. } => Ok(Json(refused(
@@ -1578,13 +1753,14 @@ async fn version_accept(
     Json(request): Json<VersionActionRequest>,
 ) -> Result<Json<VersionResolutionOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     if request.version != loaded.draft_version {
         return Ok(Json(VersionResolutionOutcome::Conflict {
-            character: Box::new(character_view(&app, &loaded)?),
+            character: Box::new(character_view(cx, &loaded)?),
         }));
     }
-    let status = status_for(&app.engine, &app.known, &loaded);
+    let status = status_for(cx.rs.engine(), cx.known, &loaded);
     match &status {
         VersionStatus::OlderKnown {
             pinned,
@@ -1592,25 +1768,26 @@ async fn version_accept(
             ..
         } => {
             let from = pinned.clone();
-            let replayed = app
-                .engine
+            let replayed = cx
+                .rs
+                .engine()
                 .sheet(loaded.finalized_prefix())
                 .map_err(|e| Failure::Internal(e.to_string()))?;
             let mut event = resolution_event(
                 "accept",
                 &from,
-                &app.rules_version,
+                cx.rs.rules_version(),
                 "accepted divergent replay; superseded values recorded",
             );
             event.superseded_values = differences.clone();
             loaded.sheet = replayed;
-            loaded.rules_version = app.rules_version.clone();
+            loaded.rules_version = cx.rs.rules_version().to_string();
             loaded.keep_old = None;
             loaded.version_history.push(event);
             loaded.draft_version += 1;
             store.save(&loaded)?;
             Ok(Json(VersionResolutionOutcome::Resolved {
-                character: Box::new(character_view(&app, &loaded)?),
+                character: Box::new(character_view(cx, &loaded)?),
             }))
         }
         VersionStatus::OlderKnown {
@@ -1650,13 +1827,14 @@ async fn version_keep_old(
     Json(request): Json<VersionActionRequest>,
 ) -> Result<Json<VersionResolutionOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     if request.version != loaded.draft_version {
         return Ok(Json(VersionResolutionOutcome::Conflict {
-            character: Box::new(character_view(&app, &loaded)?),
+            character: Box::new(character_view(cx, &loaded)?),
         }));
     }
-    let status = status_for(&app.engine, &app.known, &loaded);
+    let status = status_for(cx.rs.engine(), cx.known, &loaded);
     match &status {
         VersionStatus::OlderKnown {
             pinned, outcome, ..
@@ -1677,7 +1855,7 @@ async fn version_keep_old(
             };
             loaded.keep_old = Some(KeepOldMarker {
                 pinned: from.clone(),
-                evaluated_against: app.rules_version.clone(),
+                evaluated_against: cx.rs.rules_version().to_string(),
                 at_millis: clock::now_millis(),
             });
             loaded
@@ -1686,7 +1864,7 @@ async fn version_keep_old(
             loaded.draft_version += 1;
             store.save(&loaded)?;
             Ok(Json(VersionResolutionOutcome::Resolved {
-                character: Box::new(character_view(&app, &loaded)?),
+                character: Box::new(character_view(cx, &loaded)?),
             }))
         }
         _ => Ok(Json(refused(
@@ -1707,13 +1885,14 @@ async fn version_resolve_errors(
     Json(request): Json<VersionActionRequest>,
 ) -> Result<Json<VersionResolutionOutcome>, Failure> {
     let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
     if request.version != loaded.draft_version {
         return Ok(Json(VersionResolutionOutcome::Conflict {
-            character: Box::new(character_view(&app, &loaded)?),
+            character: Box::new(character_view(cx, &loaded)?),
         }));
     }
-    let status = status_for(&app.engine, &app.known, &loaded);
+    let status = status_for(cx.rs.engine(), cx.known, &loaded);
     match &status {
         VersionStatus::OlderKnown {
             pinned,
@@ -1721,15 +1900,16 @@ async fn version_resolve_errors(
             ..
         } if loaded.state == DocState::Draft => {
             let from = pinned.clone();
-            let repair = repair_replay(&app.engine, &loaded.log);
-            let sheet = app
-                .engine
+            let repair = repair_replay(cx.rs.engine(), &loaded.log);
+            let sheet = cx
+                .rs
+                .engine()
                 .sheet(&repair.log)
                 .map_err(|e| Failure::Internal(format!("repaired log must fold: {e}")))?;
             let mut event = resolution_event(
                 "resolve_replay_error",
                 &from,
-                &app.rules_version,
+                cx.rs.rules_version(),
                 format!(
                     "log no longer replayed; {} decision(s) cleared and reopened",
                     repair.cleared_decisions.len()
@@ -1738,13 +1918,13 @@ async fn version_resolve_errors(
             event.cleared_decisions = repair.cleared_decisions;
             loaded.log = repair.log;
             loaded.sheet = sheet;
-            loaded.rules_version = app.rules_version.clone();
+            loaded.rules_version = cx.rs.rules_version().to_string();
             loaded.keep_old = None;
             loaded.version_history.push(event);
             loaded.draft_version += 1;
             store.save(&loaded)?;
             Ok(Json(VersionResolutionOutcome::Resolved {
-                character: Box::new(character_view(&app, &loaded)?),
+                character: Box::new(character_view(cx, &loaded)?),
             }))
         }
         _ => Ok(Json(refused(

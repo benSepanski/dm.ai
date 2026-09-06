@@ -164,26 +164,34 @@ is a new view over open choice slots, not a new wizard.
    levels are growth-track data slices; retraining moves to
    edits-and-exceptions (it is log editing); staged level-ups with
    DM-gated activation wait for a slice with a table.
-6. **chargen-dnd**: **D&D 5.5e Champion Fighter** (SRD 5.2-safe) — the
+6. **chargen-dnd**: **D&D 5.5e Champion Fighter** (SRD 5.2.1, CC BY) — the
    cross-system stress test: binary proficiency vs ranks, background-coupled
    ability scores vs boosts, subclass at 3 vs 1, weight vs Bulk. With
    level-up landed, the slice creates the Fighter at 1 and levels him to
    3, so the Champion subclass is a real slot, not a footnote. If the core
    survives PF2e Fighter → 5.5e Fighter without a rewrite, the abstraction is
-   real. Expect the boundary to bend; budget for revising it deliberately.
-   This slice also brings the first **dice** (rolled ability scores): rolls
-   land in the decision log as recorded inputs — replay replays the recorded
-   value, keeping derivation pure — with the full roll history logged
-   (rerolls visible, manual physical-dice entry tagged as such). Reroll
-   policy (e.g. "reroll if total modifiers below X") is table policy the
-   DM configures, not app opinion; the details are that slice's spec
-   dialogue, not settled here.
-7. **edits-and-exceptions**: editing tiers (free narrative fields / logged
+   real. Expect the boundary to bend; the report lists every bend. Decided
+   at spec (2026-09-06): a campaign directory plays **one game**, declared
+   once when the campaign is empty — no per-character system choice and no
+   mixed-system campaigns; ability scores by Standard Array and Point Buy
+   only, with rolling split out to the next slice so this one makes a
+   single claim: the boundary holds.
+7. **dnd-dice**: the first **dice** — rolled ability scores (4d6 drop
+   lowest) as the third score method for 5.5e. Rolls land in the decision
+   log as **recorded inputs** — replay replays the recorded value, keeping
+   derivation pure — with the full roll history logged: every rolled set
+   kept, rerolls allowed and visible, physical-dice entry validated against
+   the die shape and tagged as entered. Reroll policy (e.g. "reroll if total
+   modifiers below X") is table policy the DM configures in a slice with a
+   table, not app opinion; rolled hit points at level-up are a natural
+   second consumer if the slice has room. The recorded-input log shape is
+   the substrate Epoch 8's rolled actions reuse.
+8. **edits-and-exceptions**: editing tiers (free narrative fields / logged
    play-state / locked build mechanics with a fix-request flow), DM exceptions
    recorded as first-class override decisions, retraining as log edits with
    replay revalidation, per-table trust mode (locked vs free-with-audit),
    and the change-history view.
-8. **chargen-starfinder**: SF2e (e.g. Soldier) — deliberately last: it shares
+9. **chargen-starfinder**: SF2e (e.g. Soldier) — deliberately last: it shares
    PF2e's engine, so it validates little about system-independence but is the
    payoff test. If it costs more than rules-data entry plus a small plugin
    delta (skills roster, credits, equipment traits), the PF2e plugin

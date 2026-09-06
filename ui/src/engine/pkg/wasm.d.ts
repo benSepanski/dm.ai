@@ -147,6 +147,18 @@ export interface AbandonLevelRequest {
 export type DecisionId = string;
 
 /**
+ * Declare (or, while the campaign is empty, change) the campaign's game.
+ * `replaces` is the game the client believes is currently declared:
+ * absent from the choose-game screen (the client believes none), so a
+ * racing second answer meets an existing declaration and is refused;
+ * present for a deliberate change while the campaign is still empty.
+ */
+export interface DeclareCampaignRequest {
+    system: string;
+    replaces?: string;
+}
+
+/**
  * Everything the engine can say about a draft from its log alone.
  * The server wraps this with persistence metadata (id, version, cursor).
  */
@@ -283,6 +295,8 @@ export interface LevelUpRequest {
  */
 export interface WireTypeExports {
     roster: RosterView;
+    campaign: CampaignView;
+    declare_campaign_request: DeclareCampaignRequest;
     character: CharacterView;
     create_request: CreateCharacterRequest;
     confirm_request: ConfirmRequest;
@@ -300,6 +314,46 @@ export interface WireTypeExports {
     quick_build_result: QuickBuildResult;
     fill_remaining_request: FillRemainingRequest;
     fill_remaining_outcome: FillRemainingOutcome;
+}
+
+/**
+ * The campaign as a whole: which game it plays (or that it has not chosen
+ * one), the games this build ships to choose from, and every shipped
+ * license paragraph — attribution follows the binary, never the open
+ * campaign. Fetched first by the UI; the only view that names a system.
+ */
+export interface CampaignView {
+    /**
+     * The game this campaign plays, when resolved (declared, or inferred
+     * for a pre-declaration directory that holds characters).
+     */
+    system?: string;
+    /**
+     * Render-ready name of that game.
+     */
+    system_name?: string;
+    /**
+     * True when the game was inferred rather than declared (the app never
+     * writes a declaration into such a campaign).
+     */
+    inferred: boolean;
+    /**
+     * Whether the game may still be chosen or changed: only while the
+     * campaign holds no character.
+     */
+    can_declare: boolean;
+    /**
+     * Why no game could be resolved, naming the fix; absent otherwise.
+     */
+    problem?: string;
+    /**
+     * The games this build ships, for the choose-game screen.
+     */
+    games: GameOption[];
+    /**
+     * Every shipped ruleset's license paragraphs, in display order.
+     */
+    license_lines: string[];
 }
 
 /**
@@ -460,6 +514,11 @@ export interface FinalizeRequest {
     version: number;
 }
 
+export interface GameOption {
+    id: string;
+    name: string;
+}
+
 export interface OptionView {
     id: OptionId;
     label: string;
@@ -525,13 +584,15 @@ export interface RosterView {
      */
     problems: RosterProblem[];
     /**
-     * The ORC attribution notice, displayed in the app.
-     */
-    license_notice: string;
-    /**
      * Shipped classes, for the random-mint class picker.
      */
     classes?: ClassOption[];
+    /**
+     * The class the quick-build control would build, when this campaign's
+     * game publishes a suggested build; absent when the rules publish
+     * none (the roster then shows no quick-build control).
+     */
+    quick_build?: ClassOption;
 }
 
 export interface SheetEntry {
@@ -637,7 +698,7 @@ export function __wire_type_exports(value: WireTypeExports): WireTypeExports;
  * The narrow boundary: every engine interaction is one request in, one
  * response out. Deserialization failures surface as catchable JS errors.
  */
-export function engine_request(request: EngineRequest): EngineResponse;
+export function engine_request(system: string, request: EngineRequest): EngineResponse;
 
 /**
  * Surfaces Rust panic messages to the browser console so a dead engine is
@@ -650,7 +711,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wire_type_exports: (a: any) => any;
-    readonly engine_request: (a: any) => [number, number, number];
+    readonly engine_request: (a: number, b: number, c: any) => [number, number, number];
     readonly start: () => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

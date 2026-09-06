@@ -9,9 +9,10 @@ use types::{Decision, SheetDiff, SheetView, StepId};
 /// Current schema, stamped on every write. v2 = v1 plus the `suggested`
 /// decision source (quick build); v3 = v2 plus the `random` and `clone`
 /// decision sources (roster ergonomics); v4 = v3 plus `finalized_through`
-/// (level-up: how much of the log the stored sheet reflects). Structurally
-/// identical otherwise; absent fields are fixed up on read.
-pub(crate) const SCHEMA_VERSION: u32 = 4;
+/// (level-up: how much of the log the stored sheet reflects); v5 = v4 plus
+/// `system` (the game the character belongs to). Structurally identical
+/// otherwise; absent fields are fixed up on read.
+pub(crate) const SCHEMA_VERSION: u32 = 5;
 /// Oldest schema this binary still reads. v1 files are accepted on load,
 /// never rewritten by loading, and upgraded on their next ordinary write.
 pub(crate) const MIN_SCHEMA_VERSION: u32 = 1;
@@ -21,6 +22,11 @@ pub(crate) struct CharacterDoc {
     /// Always first field so a human reading the file sees it immediately.
     pub(crate) schema_version: u32,
     pub(crate) id: String,
+    /// The game this character belongs to (v5+). Absent on older files and
+    /// resolved on read from the pin's registered prefix, else PF2e;
+    /// written on the file's next write.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) system: Option<String>,
     /// The rules-data version the decision log was built against.
     pub(crate) rules_version: String,
     pub(crate) state: DocState,

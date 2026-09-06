@@ -3,6 +3,7 @@
 // against the real server binary and the built UI it embeds.
 import { expect, test } from '@playwright/test';
 import {
+  declareFirstGame,
   confirmBoosts,
   confirmMultiUntilFull,
   confirmOption,
@@ -19,6 +20,7 @@ let server: TestServer;
 test.beforeEach(async () => {
   server = new TestServer();
   await server.start();
+  await declareFirstGame(server);
 });
 
 test.afterEach(async () => {

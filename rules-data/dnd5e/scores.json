@@ -1,0 +1,49 @@
+{
+  "methods": [
+    {
+      "id": "method.standard-array",
+      "name": "Standard Array",
+      "kind": "array",
+      "text": "Use the following six scores for your abilities: 15, 14, 13, 12, 10, 8.",
+      "array": [
+        15,
+        14,
+        13,
+        12,
+        10,
+        8
+      ],
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 21,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "method.point-buy",
+      "name": "Point Buy",
+      "kind": "point-buy",
+      "text": "You have 27 points to spend on your ability scores. The cost of each score is shown in the table. For example, a score of 14 costs 7 of your 27 points.",
+      "budget": 27,
+      "costs": {
+        "8": 0,
+        "9": 1,
+        "10": 2,
+        "11": 3,
+        "12": 4,
+        "13": 5,
+        "14": 7,
+        "15": 9
+      },
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 21,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    }
+  ]
+}

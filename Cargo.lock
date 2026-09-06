@@ -244,6 +244,7 @@ dependencies = [
  "libc",
  "proptest",
  "reqwest",
+ "ruleset-dnd5e",
  "ruleset-pf2e",
  "serde_json",
  "sha2",
@@ -1210,6 +1211,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ruleset-dnd5e"
+version = "0.1.0"
+dependencies = [
+ "engine-core",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "types",
+]
+
+[[package]]
 name = "ruleset-pf2e"
 version = "0.1.0"
 dependencies = [
@@ -1450,6 +1462,7 @@ dependencies = [
  "engine-core",
  "libc",
  "mime_guess",
+ "ruleset-dnd5e",
  "ruleset-pf2e",
  "rust-embed",
  "serde",
@@ -1899,6 +1912,7 @@ version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
  "engine-core",
+ "ruleset-dnd5e",
  "ruleset-pf2e",
  "serde",
  "tsify",

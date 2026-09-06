@@ -3,7 +3,7 @@
 // wordiest shipped records with every detail expanded — at desktop and
 // narrow (tablet) viewports.
 import { expect, type Page, test } from '@playwright/test';
-import { confirmBoosts, confirmOption, createCharacter, gotoStep, slot } from './helpers';
+import { declareFirstGame, confirmBoosts, confirmOption, createCharacter, gotoStep, slot } from './helpers';
 import { expectSaneLayout } from './layout';
 import { TestServer } from './server';
 
@@ -12,6 +12,7 @@ let server: TestServer;
 test.beforeEach(async () => {
   server = new TestServer();
   await server.start();
+  await declareFirstGame(server);
 });
 
 test.afterEach(async () => {

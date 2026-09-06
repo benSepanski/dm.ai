@@ -9,7 +9,26 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use crate::cache;
+use crate::{cache, System};
+
+/// Pack directories (under `packs/pf2e/` in the tarball) the matcher reads.
+/// Only these are extracted — the tarball also carries bestiaries,
+/// adventures, and art the tool has no use for.
+pub const NEEDED_PACKS: &[&str] = &[
+    "ancestries",
+    "heritages",
+    "backgrounds",
+    "classes",
+    "class-features",
+    "spells",
+    "feats",
+    "equipment",
+];
+
+/// Directory holding the extracted `packs/pf2e/` tree.
+pub fn packs_root() -> std::path::PathBuf {
+    cache::source_root(System::Pf2e).join("packs").join("pf2e")
+}
 
 /// Partitions the matcher searches. Foundry item `type` + feat `category`
 /// drive the assignment.
@@ -84,7 +103,7 @@ impl Index {
     /// Load a record by pack-relative path — the override-map escape hatch
     /// for names the normalizer cannot bridge.
     pub fn load_by_path(&self, rel_path: &str) -> Result<FoundryRecord, String> {
-        let full = cache::packs_root().join(rel_path);
+        let full = packs_root().join(rel_path);
         let value = read_json(&full)?;
         Ok(FoundryRecord {
             path: rel_path.to_string(),
@@ -116,7 +135,7 @@ fn read_json(path: &Path) -> Result<serde_json::Value, String> {
 }
 
 pub fn load_index() -> Result<Index, String> {
-    let root = cache::packs_root();
+    let root = packs_root();
     let mut by_partition: BTreeMap<Partition, BTreeMap<String, FoundryRecord>> = BTreeMap::new();
     let mut insert = |partition: Partition, record: FoundryRecord| {
         by_partition

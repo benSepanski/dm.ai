@@ -1,122 +1,123 @@
-//! Ground-truth cache: fetch, verify, extract. The cache directory is
-//! gitignored (`checks/attestation.rs` asserts that) — no Foundry byte is
+//! Ground-truth cache: fetch, verify, extract — per system, under
+//! `.reference-cache/<system>/`. The cache directory is gitignored as a
+//! whole (`checks/attestation.rs` asserts that) — no ground-truth byte is
 //! ever committed. Every attest run re-verifies the cached tarball against
 //! the pinned sha256 BEFORE any matching; a torn or stale cache fails
 //! loudly (or refetches, in `fetch`) — the tool never attests against
 //! unverified content.
 
 use std::fs;
+use std::io::Read;
 use std::path::PathBuf;
 
-use crate::{canon, tarball_url, workspace_root, FOUNDRY_SHA256, FOUNDRY_TAG};
+use crate::{canon, workspace_root, Pin, System};
 
 pub const CACHE_DIR: &str = ".reference-cache";
 
-/// Pack directories (under `packs/pf2e/` in the tarball) the matcher reads.
-/// Only these are extracted — the tarball also carries bestiaries,
-/// adventures, and art the tool has no use for.
-const NEEDED_PACKS: &[&str] = &[
-    "ancestries",
-    "heritages",
-    "backgrounds",
-    "classes",
-    "class-features",
-    "spells",
-    "feats",
-    "equipment",
-];
-
-fn cache_root() -> PathBuf {
-    workspace_root().join(CACHE_DIR)
+fn cache_root(system: System) -> PathBuf {
+    workspace_root().join(CACHE_DIR).join(system.id())
 }
 
-fn tarball_path() -> PathBuf {
-    cache_root().join(format!("{FOUNDRY_TAG}.tar.gz"))
+fn tarball_path(system: System, pin: &Pin) -> PathBuf {
+    cache_root(system).join(format!("{}.tar.gz", pin.tag))
 }
 
 /// Extraction target; the `.verified` marker inside records the tarball
 /// hash the extraction came from.
-fn extract_root() -> PathBuf {
-    cache_root().join("extracted").join(FOUNDRY_TAG)
+fn extract_root(system: System, pin: &Pin) -> PathBuf {
+    cache_root(system).join("extracted").join(pin.tag)
 }
 
-fn marker_path() -> PathBuf {
-    extract_root().join(".verified")
+fn marker_path(system: System, pin: &Pin) -> PathBuf {
+    extract_root(system, pin).join(".verified")
 }
 
-/// Directory holding the extracted `packs/pf2e/` tree.
-pub fn packs_root() -> PathBuf {
-    extract_root()
-        .join(format!("pf2e-{FOUNDRY_TAG}"))
-        .join("packs")
-        .join("pf2e")
+/// The extracted tarball's top-level directory (`<top_dir>/` of the pin).
+pub fn source_root(system: System) -> PathBuf {
+    let pin = system.pin();
+    extract_root(system, &pin).join(&pin.top_dir)
 }
 
 /// `fetch`: download (if absent), verify against the pin, extract. A hash
-/// mismatch deletes the tarball and refetches once; a second mismatch is a
-/// hard failure (the pin is stale or the upstream tarball changed — either
-/// way, re-pinning is a deliberate edit to main.rs, never automatic).
-pub fn fetch() -> Result<(), String> {
-    fs::create_dir_all(cache_root()).map_err(|e| format!("creating {CACHE_DIR}: {e}"))?;
-    let path = tarball_path();
+/// mismatch deletes nothing: the tarball is refetched once over the torn
+/// one; a second mismatch is a hard failure (the pin is stale or the
+/// upstream tarball changed — either way, re-pinning is a deliberate edit
+/// to main.rs, never automatic).
+pub fn fetch(system: System) -> Result<(), String> {
+    let pin = system.pin();
+    fs::create_dir_all(cache_root(system))
+        .map_err(|e| format!("creating {CACHE_DIR}/{}: {e}", system.id()))?;
+    let path = tarball_path(system, &pin);
     if !path.exists() {
-        download(&path)?;
+        download(&pin, &path)?;
     }
-    if verify_tarball().is_err() {
+    if verify_tarball(system, &pin).is_err() {
         // Refetch once: download() writes a temp file and renames it over
         // the torn tarball (the workspace-wide no-unlink discipline holds
         // even here — nothing is ever removed, only replaced).
         eprintln!("cached tarball fails the pinned hash; refetching once");
-        download(&path)?;
-        verify_tarball()?;
+        download(&pin, &path)?;
+        verify_tarball(system, &pin)?;
     }
-    extract()?;
-    eprintln!("fetch: {FOUNDRY_TAG} verified ({FOUNDRY_SHA256}) and extracted");
+    extract(system, &pin)?;
+    eprintln!(
+        "fetch: {} {} verified ({}) and extracted",
+        system.id(),
+        pin.tag,
+        pin.sha256
+    );
     Ok(())
 }
 
 /// Verify cache integrity without touching the network; called by `attest`
 /// before any matching. Re-extracts from the verified tarball if the
 /// extraction marker is missing or stale.
-pub fn ensure_verified() -> Result<(), String> {
-    if !tarball_path().exists() {
+pub fn ensure_verified(system: System) -> Result<(), String> {
+    let pin = system.pin();
+    if !tarball_path(system, &pin).exists() {
         return Err(format!(
-            "no cached tarball at {}: run `cargo run -p reference-check -- fetch` first",
-            tarball_path().display()
+            "no cached tarball at {}: run `cargo run -p reference-check -- fetch --system {}` first",
+            tarball_path(system, &pin).display(),
+            system.id()
         ));
     }
-    verify_tarball()?;
-    let marker_ok = fs::read_to_string(marker_path())
-        .map(|m| m.trim() == FOUNDRY_SHA256)
+    verify_tarball(system, &pin)?;
+    let marker_ok = fs::read_to_string(marker_path(system, &pin))
+        .map(|m| m.trim() == pin.sha256)
         .unwrap_or(false);
     if !marker_ok {
-        extract()?;
+        extract(system, &pin)?;
     }
     Ok(())
 }
 
-fn verify_tarball() -> Result<(), String> {
-    let bytes = fs::read(tarball_path()).map_err(|e| format!("reading cached tarball: {e}"))?;
+fn verify_tarball(system: System, pin: &Pin) -> Result<(), String> {
+    let bytes =
+        fs::read(tarball_path(system, pin)).map_err(|e| format!("reading cached tarball: {e}"))?;
     let actual = canon::sha256_hex(&bytes);
-    if actual != FOUNDRY_SHA256 {
+    if actual != pin.sha256 {
         return Err(format!(
-            "cached tarball hash mismatch for {FOUNDRY_TAG}\n  pinned: {FOUNDRY_SHA256}\n  \
-             actual: {actual}\nnever attesting against unverified content; delete \
-             {CACHE_DIR}/ and re-run `fetch`, or re-pin deliberately in main.rs",
+            "cached tarball hash mismatch for {} {}\n  pinned: {}\n  \
+             actual: {actual}\nnever attesting against unverified content; move \
+             {CACHE_DIR}/{}/ aside and re-run `fetch`, or re-pin deliberately in main.rs",
+            system.id(),
+            pin.tag,
+            pin.sha256,
+            system.id(),
         ));
     }
     Ok(())
 }
 
-fn download(path: &std::path::Path) -> Result<(), String> {
-    let url = tarball_url();
+fn download(pin: &Pin, path: &std::path::Path) -> Result<(), String> {
+    let url = &pin.url;
     eprintln!("downloading {url}");
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(600))
         .build()
         .map_err(|e| format!("building http client: {e}"))?;
     let response = client
-        .get(&url)
+        .get(url)
         .send()
         .and_then(reqwest::blocking::Response::error_for_status)
         .map_err(|e| format!("fetching {url}: {e}"))?;
@@ -132,23 +133,31 @@ fn download(path: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Extract only the needed `packs/pf2e/` subset from the verified tarball,
-/// then drop the `.verified` marker naming the hash it came from. Unpacking
+/// Extract only the pin's needed subset from the verified tarball, hash
+/// any in-flight-checked entry (the 5.5e PDF) without writing it, then
+/// drop the `.verified` marker naming the hash it came from. Unpacking
 /// overwrites in place (extraction dirs are per-tag, and every byte comes
 /// from the just-verified tarball, so overwrite is exactly re-extraction);
 /// the marker is written only after a complete pass, so an interrupted
 /// extraction re-runs on the next invocation.
-fn extract() -> Result<(), String> {
-    let root = extract_root();
+fn extract(system: System, pin: &Pin) -> Result<(), String> {
+    let root = extract_root(system, pin);
     fs::create_dir_all(&root).map_err(|e| format!("creating extraction dir: {e}"))?;
 
-    let file = fs::File::open(tarball_path()).map_err(|e| format!("opening tarball: {e}"))?;
+    let file =
+        fs::File::open(tarball_path(system, pin)).map_err(|e| format!("opening tarball: {e}"))?;
     let gz = flate2::read::GzDecoder::new(file);
     let mut archive = tar::Archive::new(gz);
-    let prefixes: Vec<String> = NEEDED_PACKS
+    let prefixes: Vec<String> = pin
+        .needed
         .iter()
-        .map(|p| format!("pf2e-{FOUNDRY_TAG}/packs/pf2e/{p}/"))
+        .map(|p| format!("{}/{p}", pin.top_dir))
         .collect();
+    let inner = pin
+        .inner_hash
+        .as_ref()
+        .map(|(rel, digest)| (format!("{}/{rel}", pin.top_dir), *digest));
+    let mut inner_seen = false;
 
     let mut extracted = 0usize;
     for entry in archive
@@ -161,6 +170,24 @@ fn extract() -> Result<(), String> {
             .map_err(|e| format!("tarball entry path: {e}"))?
             .to_path_buf();
         let path_str = path.to_string_lossy().to_string();
+        if let Some((inner_path, digest)) = &inner {
+            if &path_str == inner_path {
+                let mut bytes = Vec::new();
+                entry
+                    .read_to_end(&mut bytes)
+                    .map_err(|e| format!("reading {path_str}: {e}"))?;
+                let actual = canon::sha256_hex(&bytes);
+                if &actual != digest {
+                    return Err(format!(
+                        "{path_str} inside the pinned tarball hashes to {actual}, not the \
+                         pinned {digest}: the mirror does not carry the document our records \
+                         were transcribed from; never attesting against it"
+                    ));
+                }
+                inner_seen = true;
+                continue;
+            }
+        }
         if !prefixes.iter().any(|p| path_str.starts_with(p.as_str())) {
             continue;
         }
@@ -175,13 +202,16 @@ fn extract() -> Result<(), String> {
         extracted += 1;
     }
     if extracted == 0 {
-        return Err("tarball contained none of the expected pack paths".to_string());
+        return Err("tarball contained none of the expected paths".to_string());
     }
-    fs::write(marker_path(), format!("{FOUNDRY_SHA256}\n"))
+    if inner.is_some() && !inner_seen {
+        return Err("tarball lacks the entry whose hash the pin requires".to_string());
+    }
+    fs::write(marker_path(system, pin), format!("{}\n", pin.sha256))
         .map_err(|e| format!("writing verification marker: {e}"))?;
     eprintln!(
-        "extracted {extracted} files from {} packs",
-        NEEDED_PACKS.len()
+        "extracted {extracted} files from {} pinned paths",
+        pin.needed.len()
     );
     Ok(())
 }

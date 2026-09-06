@@ -1,0 +1,29 @@
+[
+  {
+    "id": "subclass.fighter.champion",
+    "name": "Champion",
+    "class": "class.fighter",
+    "text": "Pursue Physical Excellence in Combat. A Champion focuses on the development of martial prowess in a relentless pursuit of victory. Champions combine rigorous training with physical excellence to deal devastating blows, withstand peril, and garner glory. Whether in athletic contests or bloody battle, Champions strive for the crown of the victor.",
+    "features": [
+      {
+        "level": 3,
+        "id": "feature.champion.improved-critical",
+        "name": "Improved Critical",
+        "text": "Your attack rolls with weapons and Unarmed Strikes can score a Critical Hit on a roll of 19 or 20 on the d20."
+      },
+      {
+        "level": 3,
+        "id": "feature.champion.remarkable-athlete",
+        "name": "Remarkable Athlete",
+        "text": "Thanks to your athleticism, you have Advantage on Initiative rolls and Strength (Athletics) checks. In addition, immediately after you score a Critical Hit, you can move up to half your Speed without provoking Opportunity Attacks."
+      }
+    ],
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 49,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  }
+]

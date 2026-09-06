@@ -1,12 +1,15 @@
 // The character roster: create / resume / view / delete (asks once, then
-// moves the file to trash), quick build, random mint (class picker), clone
-// (asks for the new name), quarantine reports, and the ORC notice.
+// moves the file to trash), quick build (when the campaign's game publishes
+// one), random mint (class picker), clone (asks for the new name),
+// quarantine reports, the campaign's game label, and every shipped license
+// notice. Every game word on this screen arrives in a view.
 import { useState } from 'react';
-import type { RosterView } from './engine';
+import type { CampaignView, RosterView } from './engine';
 import { VersionBadge } from './VersionFlag';
 
 export function Roster({
   roster,
+  campaign,
   onCreate,
   onQuickBuild,
   onRandom,
@@ -15,8 +18,12 @@ export function Roster({
   onDelete,
 }: {
   roster: RosterView;
+  /** Which game this campaign plays (or why none could be resolved) and
+   * the license paragraphs that follow the binary. */
+  campaign: CampaignView;
   onCreate: (name: string | null) => void;
-  /** One tap: a draft filled with the app's suggested Fighter build. */
+  /** One tap: a draft filled with the app's suggested build for
+   * `roster.quick_build` (offered only when the game publishes one). */
   onQuickBuild: (name: string | null) => void;
   /** One tap: a random, legal, named draft of the picked class (null =
    * any). Resolves when the mint lands so the button can re-enable. */
@@ -36,7 +43,27 @@ export function Roster({
     <div className="roster">
       <header className="roster-header">
         <h1>dm.ai — characters</h1>
+        {campaign.system_name !== undefined && (
+          <p className="campaign-label" data-testid="campaign-label">
+            <span className="campaign-plays">This campaign plays</span>{' '}
+            <strong className="campaign-game">{campaign.system_name}</strong>
+            {campaign.inferred && (
+              <span className="campaign-inferred" title="This campaign predates game declarations; it never declared one and plays this game by default.">
+                {' '}
+                (by default — created before campaigns named their game)
+              </span>
+            )}
+          </p>
+        )}
       </header>
+
+      {campaign.problem !== undefined && (
+        <div className="campaign-problem" role="alert">
+          <p>
+            <strong>This campaign has no game.</strong> {campaign.problem}
+          </p>
+        </div>
+      )}
 
       {roster.problems.length > 0 && (
         <div className="roster-problems" role="alert">
@@ -131,69 +158,73 @@ export function Roster({
         </ul>
       )}
 
-      <form
-        className="roster-create"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onCreate(name.trim() === '' ? null : name.trim());
-          setName('');
-        }}
-      >
-        <input
-          type="text"
-          placeholder="Working name (optional)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button type="submit" className="confirm">
-          Create character
-        </button>
-        <button
-          type="button"
-          className="quick-build"
-          title="Create a draft with every choice pre-filled by dm.ai's suggested build — review, tweak, and finalize"
-          onClick={() => {
-            onQuickBuild(name.trim() === '' ? null : name.trim());
+      {campaign.system !== undefined && (
+        <form
+          className="roster-create"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onCreate(name.trim() === '' ? null : name.trim());
             setName('');
           }}
         >
-          Quick build a Fighter
-        </button>
-        <span className="roster-random">
-          <button
-            type="button"
-            className="quick-build"
-            disabled={minting}
-            title="Create a random, rules-legal draft — every choice rolled, review and finalize"
-            onClick={() => {
-              setMinting(true);
-              void onRandom(
-                randomClass === 'any' ? null : randomClass,
-                name.trim() === '' ? null : name.trim(),
-              ).finally(() => setMinting(false));
-              setName('');
-            }}
-          >
-            {minting ? 'Rolling…' : 'Random character'}
+          <input
+            type="text"
+            placeholder="Working name (optional)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button type="submit" className="confirm">
+            Create character
           </button>
-          <select
-            aria-label="random character class"
-            title="Which class the random character rolls (part of Random character)"
-            value={randomClass}
-            onChange={(e) => setRandomClass(e.target.value)}
-          >
-            <option value="any">any class</option>
-            {(roster.classes ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </span>
-      </form>
+          {roster.quick_build !== undefined && (
+            <button
+              type="button"
+              className="quick-build"
+              title="Create a draft with every choice pre-filled by dm.ai's suggested build — review, tweak, and finalize"
+              onClick={() => {
+                onQuickBuild(name.trim() === '' ? null : name.trim());
+                setName('');
+              }}
+            >
+              Quick build a {roster.quick_build.name}
+            </button>
+          )}
+          <span className="roster-random">
+            <button
+              type="button"
+              className="quick-build"
+              disabled={minting}
+              title="Create a random, rules-legal draft — every choice rolled, review and finalize"
+              onClick={() => {
+                setMinting(true);
+                void onRandom(
+                  randomClass === 'any' ? null : randomClass,
+                  name.trim() === '' ? null : name.trim(),
+                ).finally(() => setMinting(false));
+                setName('');
+              }}
+            >
+              {minting ? 'Rolling…' : 'Random character'}
+            </button>
+            <select
+              aria-label="random character class"
+              title="Which class the random character rolls (part of Random character)"
+              value={randomClass}
+              onChange={(e) => setRandomClass(e.target.value)}
+            >
+              <option value="any">any class</option>
+              {(roster.classes ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </span>
+        </form>
+      )}
 
       <footer className="license-notice">
-        {roster.license_notice.split('\n\n').map((paragraph, i) => (
+        {campaign.license_lines.map((paragraph, i) => (
           <p key={i}>{paragraph}</p>
         ))}
       </footer>

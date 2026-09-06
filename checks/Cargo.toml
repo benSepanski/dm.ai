@@ -71,11 +71,20 @@ path = "random_mint.rs"
 name = "clone"
 path = "clone.rs"
 
+[[test]]
+name = "campaign"
+path = "campaign.rs"
+
+[[test]]
+name = "dnd5e"
+path = "dnd5e.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }
 engine-core = { workspace = true }
 ruleset-pf2e = { workspace = true }
+ruleset-dnd5e = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

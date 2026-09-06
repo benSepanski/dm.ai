@@ -8,10 +8,12 @@
 #![forbid(unsafe_code)]
 
 mod engine;
+mod ruleset;
 mod sampler;
 mod slot;
 
 pub use engine::*;
+pub use ruleset::*;
 pub use sampler::*;
 pub use slot::*;
 

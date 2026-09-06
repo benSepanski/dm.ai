@@ -5,6 +5,7 @@
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { declareFirstGame } from './helpers';
 import { TestServer } from './server';
 
 let server: TestServer;
@@ -12,6 +13,7 @@ let server: TestServer;
 test.beforeEach(async () => {
   server = new TestServer();
   await server.start();
+  await declareFirstGame(server);
 });
 
 test.afterEach(async () => {

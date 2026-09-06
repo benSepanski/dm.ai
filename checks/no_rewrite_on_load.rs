@@ -111,7 +111,7 @@ fn flagged_characters_load_without_a_byte_written() {
     let extra = dir.path().join("extra-known-versions.json");
     std::fs::write(
         &extra,
-        json!({"versions": {"pf2e-pc.0.0.1-test": []}}).to_string(),
+        json!({"pf2e": {"versions": {"pf2e-pc.0.0.1-test": []}}}).to_string(),
     )
     .unwrap();
 

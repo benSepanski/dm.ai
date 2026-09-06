@@ -4,6 +4,36 @@ import { expect, type Page } from '@playwright/test';
 import { expectSaneLayout } from './layout';
 import type { TestServer } from './server';
 
+/**
+ * A fresh data directory is an undeclared campaign: character routes refuse
+ * until the game is chosen. Walks that start from scratch declare the FIRST
+ * game the server lists — never a hard-coded id — before the browser opens.
+ * Returns the declared campaign view.
+ */
+export async function declareFirstGame(server: TestServer): Promise<{
+  system: string;
+  system_name: string;
+  games: { id: string; name: string }[];
+  license_lines: string[];
+}> {
+  const before = (await (await fetch(`${server.url}/api/campaign`)).json()) as {
+    games: { id: string; name: string }[];
+  };
+  const first = before.games[0];
+  if (first === undefined) {
+    throw new Error('the server ships no games to declare');
+  }
+  const response = await fetch(`${server.url}/api/campaign`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ system: first.id }),
+  });
+  if (!response.ok) {
+    throw new Error(`declaring ${first.id} failed: ${response.status} ${await response.text()}`);
+  }
+  return (await response.json()) as Awaited<ReturnType<typeof declareFirstGame>>;
+}
+
 export async function createCharacter(page: Page, server: TestServer, name: string) {
   await page.goto(server.url);
   await expectSaneLayout(page);
@@ -18,7 +48,8 @@ export function slot(page: Page, id: string) {
 }
 
 export async function gotoStep(page: Page, title: string) {
-  await page.getByRole('button', { name: new RegExp(`\\d+\\. ${title}`) }).click();
+  // Anchored at the end: "Class" must not also match "Class Choices".
+  await page.getByRole('button', { name: new RegExp(`\\d+\\. ${title}$`) }).click();
   // The layout sweep rides every step visit: every walk checks every
   // screen it reaches, for free.
   await expectSaneLayout(page);

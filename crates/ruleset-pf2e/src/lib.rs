@@ -17,6 +17,7 @@ mod details;
 mod equipment;
 mod feats;
 mod mechanics;
+mod ruleset;
 mod skills;
 mod spells;
 #[cfg(test)]
@@ -29,6 +30,7 @@ use types::StepId;
 
 pub use data::{DataError, RulesData, RulesDataFiles};
 pub use mechanics::Pf2eState;
+pub use ruleset::{embedded, embedded_data, embedded_files, Pf2eRuleset};
 
 pub type Pf2eEngine = Engine<Pf2eState>;
 
