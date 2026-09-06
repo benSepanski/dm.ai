@@ -16,6 +16,14 @@ import type {
 export type * from './pkg/wasm';
 
 let ready: Promise<void> | null = null;
+let system: string | null = null;
+
+/** The campaign's game system, stamped once from the campaign view; every
+ * engine request carries it so the browser selects the same ruleset the
+ * server does. */
+export function selectSystem(id: string): void {
+  system = id;
+}
 
 /** Load and instantiate the engine (idempotent). */
 export function initEngine(wasmInput?: Parameters<typeof initWasm>[0]): Promise<void> {
@@ -25,7 +33,10 @@ export function initEngine(wasmInput?: Parameters<typeof initWasm>[0]): Promise<
 
 /** One request in, one response out. Call after initEngine resolves. */
 export function engineRequest(request: EngineRequest): EngineResponse {
-  return engine_request(request);
+  if (system === null) {
+    throw new Error('engine used before the campaign view named its game');
+  }
+  return engine_request(system, request);
 }
 
 function expectProjection(response: EngineResponse): ProjectionView {

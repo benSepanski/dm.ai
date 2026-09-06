@@ -18,7 +18,7 @@ fn extra_versions_file(dir: &std::path::Path) -> std::path::PathBuf {
     let path = dir.join("extra-known-versions.json");
     std::fs::write(
         &path,
-        json!({ "versions": { TEST_VERSION: [] } }).to_string(),
+        json!({ "pf2e": { "versions": { TEST_VERSION: [] } } }).to_string(),
     )
     .unwrap();
     path

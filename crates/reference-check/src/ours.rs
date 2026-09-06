@@ -70,7 +70,7 @@ const SPELLS_CATEGORIES: &[(&str, Kind)] = &[
 ];
 
 pub fn load_all() -> Result<Vec<OurRecord>, String> {
-    let root = workspace_root().join("rules-data");
+    let root = workspace_root().join("rules-data/pf2e");
     let mut out = Vec::new();
     for (file, kind) in FLAT_FILES {
         let text =

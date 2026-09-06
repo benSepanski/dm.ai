@@ -97,7 +97,7 @@ const ATTESTED_RECORD_FILES: &[&str] = &[
 
 /// (id, record) for every shipped record, from the committed JSON bytes.
 fn current_records() -> Vec<(String, serde_json::Value)> {
-    let root = checks::workspace_root().join("rules-data");
+    let root = checks::workspace_root().join("rules-data/pf2e");
     let mut out = Vec::new();
     for file in ATTESTED_RECORD_FILES {
         let text = std::fs::read_to_string(root.join(file)).unwrap();
@@ -122,7 +122,7 @@ fn current_records() -> Vec<(String, serde_json::Value)> {
 }
 
 fn attestation() -> serde_json::Value {
-    let path = checks::workspace_root().join("rules-data/attestation.json");
+    let path = checks::workspace_root().join("rules-data/pf2e/attestation.json");
     let text = std::fs::read_to_string(&path).expect(
         "rules-data/attestation.json must exist: run \
          `cargo run -p reference-check -- fetch` then `-- attest`",
@@ -182,7 +182,7 @@ fn is_field_name(s: &str) -> bool {
 #[test]
 fn attestation_matches_manifest_version() {
     let manifest: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(checks::workspace_root().join("rules-data/manifest.json"))
+        &std::fs::read_to_string(checks::workspace_root().join("rules-data/pf2e/manifest.json"))
             .unwrap(),
     )
     .unwrap();

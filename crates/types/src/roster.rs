@@ -11,8 +11,6 @@ pub struct RosterView {
     /// Files that could not be loaded (quarantined or unreadable) — always
     /// reported, never blocking the rest of the roster.
     pub problems: Vec<RosterProblem>,
-    /// The ORC attribution notice, displayed in the app.
-    pub license_notice: String,
     /// Shipped classes, for the random-mint class picker.
     #[serde(default)]
     pub classes: Vec<ClassOption>,
@@ -63,4 +61,47 @@ pub struct RosterProblem {
     pub file: String,
     /// What happened, e.g. "could not be read — quarantined".
     pub message: String,
+}
+
+/// The campaign as a whole: which game it plays (or that it has not chosen
+/// one), the games this build ships to choose from, and every shipped
+/// license paragraph — attribution follows the binary, never the open
+/// campaign. Fetched first by the UI; the only view that names a system.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct CampaignView {
+    /// The game this campaign plays, when resolved (declared, or inferred
+    /// for a pre-declaration directory that holds characters).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system: Option<String>,
+    /// Render-ready name of that game.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_name: Option<String>,
+    /// True when the game was inferred rather than declared (the app never
+    /// writes a declaration into such a campaign).
+    pub inferred: bool,
+    /// Whether the game may still be chosen or changed: only while the
+    /// campaign holds no character.
+    pub can_declare: bool,
+    /// Why no game could be resolved, naming the fix; absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub problem: Option<String>,
+    /// The games this build ships, for the choose-game screen.
+    pub games: Vec<GameOption>,
+    /// Every shipped ruleset's license paragraphs, in display order.
+    pub license_lines: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct GameOption {
+    pub id: String,
+    pub name: String,
+}
+
+/// Declare (or, while the campaign is empty, change) the campaign's game.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct DeclareCampaignRequest {
+    pub system: String,
 }

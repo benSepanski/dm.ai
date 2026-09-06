@@ -12,11 +12,14 @@ export function __wire_type_exports(value) {
 /**
  * The narrow boundary: every engine interaction is one request in, one
  * response out. Deserialization failures surface as catchable JS errors.
+ * @param {string} system
  * @param {EngineRequest} request
  * @returns {EngineResponse}
  */
-export function engine_request(request) {
-    const ret = wasm.engine_request(request);
+export function engine_request(system, request) {
+    const ptr0 = passStringToWasm0(system, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.engine_request(ptr0, len0, request);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }

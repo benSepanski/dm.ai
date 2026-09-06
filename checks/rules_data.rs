@@ -11,7 +11,7 @@ fn rules_data_parses_and_is_internally_consistent() {
 
 #[test]
 fn every_record_carries_license_metadata() {
-    let root = checks::workspace_root().join("rules-data");
+    let root = checks::workspace_root().join("rules-data/pf2e");
     for file in [
         "ancestries.json",
         "heritages.json",
@@ -104,7 +104,7 @@ const RECORD_FILES: &[&str] = &[
 
 /// Collect (record id, full record JSON) from every record file.
 fn all_records() -> Vec<(String, serde_json::Value)> {
-    let root = checks::workspace_root().join("rules-data");
+    let root = checks::workspace_root().join("rules-data/pf2e");
     let mut out = Vec::new();
     for file in RECORD_FILES {
         let text = std::fs::read_to_string(root.join(file)).unwrap();
@@ -134,7 +134,7 @@ fn all_records() -> Vec<(String, serde_json::Value)> {
 /// record files are scanned). Exceptions carry a per-record reason.
 #[test]
 fn no_reserved_proper_nouns_in_records() {
-    let root = checks::workspace_root().join("rules-data");
+    let root = checks::workspace_root().join("rules-data/pf2e");
     let denylist: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(root.join("denylist.json")).unwrap())
             .unwrap();
@@ -234,7 +234,7 @@ fn collect_strings(value: &serde_json::Value, path: &str, out: &mut Vec<(String,
 /// deprecated, never deleted).
 #[test]
 fn shipped_ids_are_immutable_and_lineage_is_recorded() {
-    let root = checks::workspace_root().join("rules-data");
+    let root = checks::workspace_root().join("rules-data/pf2e");
     let shipped: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(root.join("shipped-versions.json")).unwrap())
             .unwrap();
@@ -292,7 +292,7 @@ fn name_pools_cover_every_shipped_ancestry() {
     );
 
     let ancestries: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(root.join("rules-data/ancestries.json")).unwrap(),
+        &std::fs::read_to_string(root.join("rules-data/pf2e/ancestries.json")).unwrap(),
     )
     .unwrap();
     let by_ancestry = pools["pools"].as_object().expect("pools map");

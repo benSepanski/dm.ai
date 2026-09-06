@@ -15,7 +15,7 @@ pub fn workspace_root() -> PathBuf {
 /// Load and parse the repo's rules-data files through the ruleset crate —
 /// exactly what the server and wasm builds embed.
 pub fn load_rules_data() -> ruleset_pf2e::RulesData {
-    let root = workspace_root().join("rules-data");
+    let root = workspace_root().join("rules-data/pf2e");
     let read = |name: &str| std::fs::read_to_string(root.join(name)).expect("rules-data file");
     let manifest = read("manifest.json");
     let ancestries = read("ancestries.json");
@@ -42,6 +42,17 @@ pub fn load_rules_data() -> ruleset_pf2e::RulesData {
         spells: &spells,
     })
     .expect("rules data parses and passes integrity checks")
+}
+
+/// Write a campaign declaration into a data directory the way the server
+/// would (tests that need a non-PF2e campaign call this before spawning).
+pub fn declare_campaign(data_dir: &std::path::Path, system: &str) {
+    std::fs::create_dir_all(data_dir).expect("data dir");
+    std::fs::write(
+        data_dir.join("campaign.json"),
+        format!("{{\n  \"schema_version\": 1,\n  \"system\": \"{system}\"\n}}\n"),
+    )
+    .expect("declaration written");
 }
 
 // ---- Real-server harness for the persistence/crash/API checks ----
@@ -74,14 +85,41 @@ pub struct TestServer {
 }
 
 impl TestServer {
-    /// Spawn on an OS-assigned port and wait for the printed URL.
+    /// Spawn on an OS-assigned port and wait for the printed URL. A fresh
+    /// directory (no declaration, no characters) is declared Pathfinder 2e
+    /// first — the harness's campaigns play PF2e unless a test declares
+    /// otherwise; `spawn_undeclared` serves the choose-game tests.
     pub fn spawn(data_dir: &std::path::Path) -> TestServer {
         Self::spawn_with_args(data_dir, &[])
+    }
+
+    /// Spawn without touching the declaration (the undeclared-campaign
+    /// tests).
+    pub fn spawn_undeclared(data_dir: &std::path::Path) -> TestServer {
+        Self::spawn_raw(data_dir, &[])
+    }
+
+    fn declare_fresh(data_dir: &std::path::Path) {
+        let has_declaration = data_dir.join("campaign.json").exists();
+        let has_characters = std::fs::read_dir(data_dir.join("characters"))
+            .map(|d| {
+                d.flatten()
+                    .any(|e| e.path().extension().is_some_and(|x| x == "json"))
+            })
+            .unwrap_or(false);
+        if !has_declaration && !has_characters {
+            crate::declare_campaign(data_dir, "pf2e");
+        }
     }
 
     /// Spawn with extra CLI arguments (e.g. the version-guard tests pass the
     /// hidden test-support flag `--extra-known-versions <file>`).
     pub fn spawn_with_args(data_dir: &std::path::Path, extra_args: &[&str]) -> TestServer {
+        Self::declare_fresh(data_dir);
+        Self::spawn_raw(data_dir, extra_args)
+    }
+
+    fn spawn_raw(data_dir: &std::path::Path, extra_args: &[&str]) -> TestServer {
         // Tests run with the package dir as cwd, so the server's relative
         // name-pools default would miss; point it at the workspace file
         // unless the caller overrides (the pool-failure fixtures do).

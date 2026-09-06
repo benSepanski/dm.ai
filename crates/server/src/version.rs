@@ -6,8 +6,7 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use engine_core::EngineError;
-use ruleset_pf2e::Pf2eEngine;
+use engine_core::{EngineError, EngineOps};
 use types::{
     ClearedDecision, Decision, ReplayOutcome, Selection, SheetDiff, SheetView, VersionStatus,
 };
@@ -32,35 +31,27 @@ impl KnownVersions {
     /// suite uses the flag to fabricate a prior shipped version; production
     /// never passes it, and its presence is announced on stderr.
     pub fn assemble(
+        system: &str,
         current: &str,
         supersedes: &[String],
         shipped_versions_json: &str,
         extra_known_versions: Option<&Path>,
     ) -> Result<KnownVersions, String> {
         let recorded = parse_version_keys(shipped_versions_json)
-            .map_err(|e| format!("shipped-versions.json is corrupt: {e}"))?;
+            .map_err(|e| format!("shipped-versions.json ({system}) is corrupt: {e}"))?;
         let mut older_known: BTreeSet<String> = supersedes
             .iter()
             .filter(|v| recorded.contains(*v))
             .cloned()
             .collect();
         if let Some(path) = extra_known_versions {
-            let text = std::fs::read_to_string(path).map_err(|e| {
-                format!(
-                    "--extra-known-versions file '{}' unreadable: {e}",
-                    path.display()
-                )
-            })?;
-            let extra = parse_version_keys(&text).map_err(|e| {
-                format!(
-                    "--extra-known-versions file '{}' is corrupt: {e}",
-                    path.display()
-                )
-            })?;
-            eprintln!(
-                "TEST-SUPPORT: --extra-known-versions active — treating {} extra version(s) as older-known",
-                extra.len()
-            );
+            let extra = parse_extra_versions(path, system)?;
+            if !extra.is_empty() {
+                eprintln!(
+                    "TEST-SUPPORT: --extra-known-versions active — treating {} extra {system} version(s) as older-known",
+                    extra.len()
+                );
+            }
             // Extras count as both superseded and recorded.
             older_known.extend(extra);
         }
@@ -70,6 +61,68 @@ impl KnownVersions {
             older_known,
         })
     }
+}
+
+/// The test-support extras file is keyed by system: `{"<system>":
+/// {"versions": {"<ver>": [ids...]}}}` — each ruleset's set takes only its
+/// own key, so a fabricated prior version can never land in another
+/// system's guard. Every key must name a shipped system (asserted by the
+/// caller over the full registry; here an unknown key is simply not ours).
+fn parse_extra_versions(path: &Path, system: &str) -> Result<BTreeSet<String>, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| {
+        format!(
+            "--extra-known-versions file '{}' unreadable: {e}",
+            path.display()
+        )
+    })?;
+    let value: serde_json::Value = serde_json::from_str(&text).map_err(|e| {
+        format!(
+            "--extra-known-versions file '{}' is corrupt: {e}",
+            path.display()
+        )
+    })?;
+    let object = value.as_object().ok_or_else(|| {
+        format!(
+            "--extra-known-versions file '{}' must be an object keyed by system",
+            path.display()
+        )
+    })?;
+    if object.contains_key("versions") {
+        return Err(format!(
+            "--extra-known-versions file '{}' uses the unkeyed shape — key it by system: {{\"<system>\": {{\"versions\": ...}}}}",
+            path.display()
+        ));
+    }
+    match object.get(system) {
+        None => Ok(BTreeSet::new()),
+        Some(entry) => parse_version_keys(&entry.to_string()).map_err(|e| {
+            format!(
+                "--extra-known-versions file '{}' entry for '{system}' is corrupt: {e}",
+                path.display()
+            )
+        }),
+    }
+}
+
+/// The system keys an extras file names (startup validation: every key
+/// must be a shipped system).
+pub fn extra_versions_systems(path: &Path) -> Result<Vec<String>, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| {
+        format!(
+            "--extra-known-versions file '{}' unreadable: {e}",
+            path.display()
+        )
+    })?;
+    let value: serde_json::Value = serde_json::from_str(&text).map_err(|e| {
+        format!(
+            "--extra-known-versions file '{}' is corrupt: {e}",
+            path.display()
+        )
+    })?;
+    Ok(value
+        .as_object()
+        .map(|o| o.keys().cloned().collect())
+        .unwrap_or_default())
 }
 
 /// Parse the `{"versions": {"<ver>": [ids...]}}` shape into its key set.
@@ -84,7 +137,7 @@ fn parse_version_keys(text: &str) -> Result<BTreeSet<String>, String> {
 
 /// Compute a character's version status. Read-only: replays the log in
 /// memory, writes nothing.
-pub fn status_for(engine: &Pf2eEngine, known: &KnownVersions, loaded: &Loaded) -> VersionStatus {
+pub fn status_for(engine: &dyn EngineOps, known: &KnownVersions, loaded: &Loaded) -> VersionStatus {
     if loaded.rules_version == known.current {
         return VersionStatus::Current;
     }
@@ -224,13 +277,13 @@ pub struct ReplayRepair {
     pub cleared_decisions: Vec<Decision>,
 }
 
-pub fn repair_replay(engine: &Pf2eEngine, log: &[Decision]) -> ReplayRepair {
+pub fn repair_replay(engine: &dyn EngineOps, log: &[Decision]) -> ReplayRepair {
     let mut current: Vec<Decision> = log.to_vec();
     let mut cleared: Vec<ClearedDecision> = Vec::new();
     let mut cleared_decisions: Vec<Decision> = Vec::new();
     loop {
-        let err = match engine.fold(&current) {
-            Ok(_) => break,
+        let err = match engine.folds(&current) {
+            Ok(()) => break,
             Err(e) => e,
         };
         let doomed: BTreeSet<types::SlotId> = match &err {

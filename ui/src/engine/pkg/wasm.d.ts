@@ -637,7 +637,7 @@ export function __wire_type_exports(value: WireTypeExports): WireTypeExports;
  * The narrow boundary: every engine interaction is one request in, one
  * response out. Deserialization failures surface as catchable JS errors.
  */
-export function engine_request(request: EngineRequest): EngineResponse;
+export function engine_request(system: string, request: EngineRequest): EngineResponse;
 
 /**
  * Surfaces Rust panic messages to the browser console so a dead engine is
@@ -650,7 +650,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wire_type_exports: (a: any) => any;
-    readonly engine_request: (a: any) => [number, number, number];
+    readonly engine_request: (a: number, b: number, c: any) => [number, number, number];
     readonly start: () => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

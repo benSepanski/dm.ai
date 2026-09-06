@@ -244,13 +244,13 @@ pub fn attest() -> Result<(), String> {
         "missing_from_data": missing_from_data,
         "overrides_used": overrides_used,
     });
-    let out_path = workspace_root().join("rules-data/attestation.json");
+    let out_path = workspace_root().join("rules-data/pf2e/attestation.json");
     let mut text = serde_json::to_string_pretty(&sorted(&attestation))
         .expect("serializing owned JSON cannot fail");
     text.push('\n');
     std::fs::write(&out_path, text).map_err(|e| format!("writing attestation: {e}"))?;
 
-    eprintln!("attestation written to rules-data/attestation.json");
+    eprintln!("attestation written to rules-data/pf2e/attestation.json");
     eprintln!("  per-file verdicts (match/waived/mismatch):");
     for (file, [m, w, x]) in &per_file {
         eprintln!("    {file}: {m}/{w}/{x}");
@@ -367,7 +367,7 @@ fn has_trait(f: &FoundryRecord, t: &str) -> bool {
 }
 
 fn manifest_version() -> Result<String, String> {
-    let path = workspace_root().join("rules-data/manifest.json");
+    let path = workspace_root().join("rules-data/pf2e/manifest.json");
     let text = std::fs::read_to_string(&path).map_err(|e| format!("reading manifest.json: {e}"))?;
     let value: Value =
         serde_json::from_str(&text).map_err(|e| format!("parsing manifest.json: {e}"))?;

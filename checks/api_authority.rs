@@ -236,7 +236,7 @@ fn fill_remaining_is_rejected_on_a_version_flagged_draft() {
     let extra = dir.path().join("extra-known-versions.json");
     std::fs::write(
         &extra,
-        json!({ "versions": { TEST_VERSION: [] } }).to_string(),
+        json!({ "pf2e": { "versions": { TEST_VERSION: [] } } }).to_string(),
     )
     .unwrap();
 
