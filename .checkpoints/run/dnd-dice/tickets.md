@@ -117,13 +117,13 @@ points) split off as `dnd-hp-dice`.
   reroll, roster badge, ConfirmedSummary `rolled` arm, pending/prune
   handling; vitest rows; UI dice-blind scan green; `campaign.spec.ts`
   untouched.
-- [~] 6. Checks + stories: Ysolde golden (reroll, entered set, duplicate
+- [x] 6. Checks + stories: Ysolde golden (reroll, entered set, duplicate
   totals, 18+2 cap) + fixtures; multiplicity property; hit-point rows
   (absent = fixed, rolled replaces one level, unrequired, gains/deltas,
   abandon lists it); 1,000-set fold budget; PF2e registration scan;
   Playwright `ui/e2e/dice.spec.ts` (roll + reroll with confirm, entered
   dice with a bad face, duplicates and the cap, double tap, hit die with a
   kept reroll and an entered d10, abandoned level, nothing-else-moved).
-- [ ] 7. Full gate run (fmt, clippy, deny, tests + budget, wasm size,
+- [x] 7. Full gate run (fmt, clippy, deny, tests + budget, wasm size,
   bindings fresh, npm typecheck/lint/test/e2e) and the report
   `.checkpoints/run/dnd-dice/report.md`.

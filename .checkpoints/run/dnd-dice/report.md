@@ -1,0 +1,243 @@
+# dnd-dice — rolled ability scores and hit points as recorded inputs — report
+
+Checkpoint: `dnd-dice` · Branch: `checkpoint/dnd-dice` · Status: delivered
+
+## What changed and why
+
+The app rolls dice now, and every roll is a recorded input in the decision
+log: the faces that came up, grouped as the die shape groups them, tagged
+with whether the app rolled them or the player entered physical dice.
+Replay reads faces and never regenerates a roll; derivation (drop the
+lowest, sum, assign) stays a pure fold. Every rolled set is kept — a
+reroll appends to the slot's history, the most recent set is live, and
+nothing ever removes or rewrites an earlier set.
+
+Two consumers ship on the same shape:
+
+- **Rolled ability scores** for 5.5e — the SRD's third method, "Random
+  Generation" (4d6, keep the highest three, six times; SRD 5.2.1 p. 21),
+  as a data record beside Standard Array and Point Cost. Choosing it
+  opens a roll card: the app rolls, or the player enters twenty-four
+  faces by hand. The assignment then offers the live set's six totals
+  under every ability, each total as often as it was rolled (duplicate
+  totals are legal); 18 plus the Soldier's +2 reads 20, the cap.
+- **Rolled hit points** at levels 2 and 3 — one unrequired roll card per
+  pending level. Absent, the class's fixed value applies exactly as
+  before (the SRD's "instead of rolling"); present, the live face
+  replaces that level's value under the published minimum of 1 (SRD
+  5.2.1 p. 23). Level 2 still finalizes at once; the abandon list names
+  the die; the sheet's breakdown says rolled, entered, or fixed per level.
+
+The design that makes it hold:
+
+- **Inputs only append.** A submitted roll means "sets to append"; the
+  engine composes it onto the stored history on amend and preview, so a
+  request cannot drop or reorder a set. Origin is stamped by the server:
+  entered on the ordinary confirm/amend path, app-rolled only by the roll
+  route (a client claiming the app's tag is refused, typed).
+- **Entropy enters in one place.** `server::dice` draws the operating
+  system's bytes by rejection sampling, behind the one clippy-sanctioned
+  call; nothing else in the workspace can reach an entropy crate (a
+  whole-workspace dependency scan enforces it, plus token scans over
+  the WASM and UI sources). The roll route reads the slot's shape under
+  the store lock, draws with the lock released, and records through the
+  write body it now shares with confirm and amend.
+- **Reproducibility is the log; seeds exist only at draw time.** A
+  testing-only `--dice-seed` flag swaps in a keyed SplitMix64 mixer
+  (seed × character id × decision id), so the same seed, character, and
+  decision id reproduce the same faces across copies of a campaign and
+  different decisions are independent streams. The campaign view says
+  `seeded_dice` and the roster wears a badge whenever it is set; no seed
+  reaches any file.
+- **The UI knows no die.** The roll card renders the engine's history
+  entries (totals, faces with the dropped die named, the tag, which set
+  is live), sizes its entry grid from the slot's kind, and adds nothing
+  up. A scan bans die literals and browser entropy from shipped UI code.
+
+PF2e is untouched: no roll slot, no data change, every golden byte-identical.
+The 5.5e rules version moved to `dnd5e-srd.0.2.0` for the new record; the
+established quiet re-pin covers existing characters. Character files are
+schema v6 (the selection enum grew); v1–v5 read and never rewrite on load.
+
+## How to verify
+
+Your existing 5.5e directory works as before after a quiet re-pin on first
+open; a fresh directory is cleanest for the walks:
+
+```bash
+cargo run --release -p server -- --data-dir ./campaign-dice
+```
+
+1. **The roll.** Declare D&D 5.5e, create "Ysolde", walk Class (Fighter)
+   and Origin (Soldier, +2 Strength / +1 Constitution, Human, Perception,
+   Alert). At Ability Scores pick **Random Generation**: a "Roll ability
+   scores" card says nothing is rolled yet and the assignment waits on it.
+   Tap **Roll**: six sets of four faces appear, the dropped die named per
+   set ("6, 5, 3, 1 → 14 (dropped 1)"), the badge says *rolled*, and the
+   assignment offers the six totals under every ability. Assign them
+   (two equal totals go to two abilities) and hand-check each total from
+   its faces and the sidebar scores from totals plus the Soldier's
+   increases.
+2. **The reroll.** Tap **Roll again**: the dialog says every earlier set
+   stays and names the assignment it clears. Confirm: two sets listed in
+   order, the first greyed as superseded, the second live; the assignment
+   card is empty again. Open `campaign-dice/characters/<id>.json`: the
+   roll decision holds both sets, faces and `"origin": "app"`, in order.
+3. **The physical dice.** Create "Marrow" the same way, but tap **Enter
+   dice**: twenty-four boxes. Type two identical sets and one 6, 6, 6, 1;
+   put a 7 in one box — the card says every face must be 1 to 6 and
+   Confirm stays disabled. Fix it, confirm: the set is tagged *entered*
+   and its totals read 18, 12, 12, 10, 9, 8. Assign 18 to Strength and
+   the twelves to two abilities: the sidebar reads Strength **20 (+5)**,
+   the cap, with the Ability Scores step complete. Then tap Roll again: a
+   *rolled* set lands live above the entered one.
+4. **The double tap.** Tap Roll again twice as fast as you can: one new
+   set. (The button is busy after the first tap.)
+5. **The hit die.** Finish and finalize Ysolde (skills, style, masteries,
+   packages). Level up to 2: the gains panel lists the fixed hit points;
+   the one card is **Hit Points (optional)** and Finalize is enabled at
+   once. Tap Roll — a face — then Roll again: both kept, the second live;
+   "Changes so far" shows Hit Points. **Abandon level 2**: the dialog names
+   Hit Points among what it discards; afterwards the file holds no hit-die
+   decision. Level up again, roll once, finalize: the sheet's Hit Points
+   breakdown reads "level 2: N (rolled) + Con". At level 3 pick the
+   Champion and **Enter dice** on the hit die: 11 is refused with the rule
+   named, 7 is accepted and tagged entered; finalize and the breakdown
+   reads "level 3: 7 (entered)". Open Brannock in your existing campaign:
+   his hit points and his file are unchanged.
+6. **The crash.** `kill -9` the server the instant after tapping Roll, a
+   few times; restart on the same directory: the history holds either no
+   new set or exactly one, never a torn file; resume lands on the card.
+   Close the tab after a roll and reopen: same card, same sets.
+7. **The skeptical inspection.** Read Ysolde's roll decision in the file:
+   sets in order, four faces each, tagged. Run
+
+```bash
+cargo run --release -p server -- --data-dir ./campaign-dice verify
+```
+
+   Then edit one live face (a 3 to a 6) and verify again: it reports
+   **BROKEN** — the assignment no longer replays because the tampered
+   total is not among the rolled ones — naming the decision. (An edit that
+   keeps every total but moves which faces stand behind a score reports
+   DIVERGED instead; both leave the file untouched.)
+8. **The clone.** Clone Ysolde mid-wizard: the clone's file carries both
+   sets and the assignment.
+9. **The seeded server.** Start with the flag and the roster wears a red
+   "Seeded dice — testing only" banner; the file records faces only.
+
+```bash
+cargo run --release -p server -- --data-dir ./campaign-dice --dice-seed 7
+```
+
+   To see reproduction by hand, copy the directory twice, start each copy
+   with the same seed, and roll the same character through the API with
+   the same decision id — identical faces (the UI mints a fresh decision
+   id per tap, so two taps in the browser are two different rolls; see
+   the decisions below).
+
+10. **Nothing else moved.** Torvald, Sylvenne, Brannock, and Nell open
+    unchanged; a fresh PF2e character meets no roll card; a fresh 5.5e
+    character choosing Standard Array or Point Cost meets none either;
+    random mint still pins the array.
+11. **Intent checks.** Read a rolled set in the file: is it obviously how
+    an attack roll or a saving throw would be recorded later — faces on a
+    die, grouped, tagged — or is it ability-score-shaped? Does keeping
+    every reroll visibly feel like the right relationship between player
+    and DM? Would a future redo of a roll need anything but this file?
+
+## Constraints now enforced
+
+| Row | Lives at |
+|---|---|
+| Entropy reaches the server only: whole-workspace normal-dependency walk (`rand*`, `getrandom` only under `server`; `reference-check`'s TLS stack exempted as the non-shipped network tool); purity tokens `getrandom`, `rand::`, `Math::random` in engine crates; entropy tokens absent from `crates/wasm/src` | `checks/crate_layering.rs::only_the_server_reaches_an_entropy_crate`, `engine_sources_are_pure`, `wasm_sources_draw_no_entropy` |
+| Entropy is drawn at one call site: `getrandom::getrandom`/`fill`, `rand::random`/`thread_rng`/`rng` disallowed workspace-wide, one scoped allow in `server::dice`; the app-rolled origin is constructed (`origin: RollOrigin::App`) in exactly one server module and nowhere in engine crates or wasm | `clippy.toml`, `crate_layering.rs::app_rolled_origin_is_minted_in_one_server_module` |
+| Recorded-input types are game-free: no system id, ability, or hit-point word in `crates/types/src` or `crates/engine-core/src` | `crate_layering.rs::engine_core_and_types_name_no_system` |
+| UI is dice-blind: no `Math.random`, `getRandomValues`, `randomUUID` (outside the id minter), no word-bounded die literal, no drop-lowest phrase in shipped `ui/src` | `crate_layering.rs::ui_is_dice_blind` |
+| Shape is checked at every roll slot: the shared `check_roll_shape` refuses wrong group count, dice per group, a face off the die, zero sets; engine-core tests over a toy roll slot; both 5.5e roll slots refuse out-of-shape sets at apply | `crates/types/src/roll.rs` tests, `crates/engine-core/src/tests.rs::rolls`, `crates/ruleset-dnd5e/src/tests.rs::dice`, `::hit_dice` |
+| Roll inputs append by construction: amend and preview compose stored ++ incoming (M + N); the roll route appends exactly one app-rolled set; a claimed app origin is refused typed with the file byte-identical; the route refuses a non-roll slot, a hidden slot, a stale version (conflict), a finalized character | `engine-core tests::rolls`, `checks/api_authority.rs::roll_route_records_app_dice_and_refuses_forged_origins` |
+| Roll idempotency: one decision id → one set, equal views; retry after SIGKILL between roll and write records exactly one set | `checks/confirm_idempotency.rs::a_replayed_roll_id_records_one_set`, `checks/crash_harness.rs::rolls_under_sigkill_are_prior_or_next_state` |
+| Atomic transitions: SIGKILL during the roll route, an entered-dice amend, and a hit-die roll on a pending level leaves the prior or next state | `crash_harness.rs::rolls_under_sigkill_are_prior_or_next_state` |
+| Seeds stay at draw time: equal (seed, character, decision) → equal faces across two copies; different seed or the OS differ; a second decision id is a different stream; `seeded_dice` true iff the flag; no `seed` in any written file; a seeded campaign verifies clean; the mixer's streams cover every face without obvious correlation | `api_authority.rs::seeded_dice_reproduce_across_copies_and_wear_the_badge`, `crates/server/src/dice.rs` tests, `ui/e2e/dice.spec.ts` |
+| Schema v6: v1–v5 fixtures load byte-identical (existing rows, bumped to 6); v7 refused; a v6 roll history round-trips byte-identical through a fresh server; a tampered face is BROKEN/DIVERGED under `verify` | `checks/persistence.rs::rolled_histories_round_trip_and_a_tampered_face_diverges`, `checks/campaign.rs::v7_files_are_refused` |
+| Rolled scores golden: Ysolde (an app roll superseded by an entered set with duplicate twelves and an 18 reaching the cap) folds to hand-computed scores; the fixture shows faces, tags, order | `checks/dnd5e.rs::ysolde_golden_keeps_the_history_and_reaches_the_cap`, `checks/fixtures/ysolde.*.json` |
+| Assignment multiplicity over swept histories with repeats; one use too many is Illegal with the rule named; the array's rule untouched | `checks/dnd5e.rs::rolled_totals_assign_as_often_as_rolled_across_a_seed_sweep`, `ability_score_machinery_holds_across_a_seed_sweep` |
+| Rolled hit points: no decision → fixed values (Brannock's goldens byte-identical); a face replaces one level only under the minimum; the slot is unrequired and level 2 finalizes at once; gains, deltas, and the abandon list carry the roll; abandon discards it | `crates/ruleset-dnd5e/src/tests.rs::hit_dice`, `checks/dnd5e.rs::hit_dice_ride_the_level_up_views_and_abandon_discards_them`, `goldens_brannock_1_and_3_and_the_gold_alternative` |
+| PF2e untouched: no roll slot, kind, or constructing form in the PF2e crate; every PF2e golden, fixture, and story byte-identical | `crate_layering.rs::pf2e_registers_no_roll_slot`, `checks/replay.rs`, the PF2e Playwright specs |
+| Rules data: `method.roll` attested against the SRD by name and shape; version 0.2.0 supersedes 0.1.0 in shipped-versions; the version-guard rows re-pin | `checks/rules_data.rs`, `checks/attestation.rs`, `checks/version_guard.rs`, `crates/reference-check` (`--system dnd5e`) |
+| Stories walk under the layout sweep: the roll and the reroll with its confirm; entered dice with a bad face, duplicates, the cap, a roll on top, the double tap; the hit die with a kept reroll, the abandoned level, an entered d10; the seeded badge and the array path's absent card | `ui/e2e/dice.spec.ts` (4 walks) |
+| Budgets: a 1,000-set fold < 5 ms; WASM ≤ 2.5 MB, one module | `checks/dnd5e.rs::fold_with_a_thousand_set_history_is_under_5ms`, `.github/workflows/ci.yml` |
+
+## Decisions made inside the contract
+
+- **The method record is named as the SRD names it**, "Random Generation",
+  so it attests by name with no waiver; the spec's stories say "Roll".
+  The card and its button say Roll; the method option says Random
+  Generation.
+- **The roll key is (character id, decision id)** as the architecture
+  says. The UI mints a fresh decision id per tap, so seeded reproduction
+  is a property of scripted (API-driven) sessions over a copied campaign,
+  which is what the checks assert — not of two browser taps or of two
+  clone characters (clones have new ids). The spec's manual check ("roll
+  Ysolde twice on two fresh clones") cannot pass as written under this
+  keying; verify step 9 above is the walk that does. A keying by
+  (character, slot, history position) would make browser-driven
+  reproduction work too; noted as a follow-up choice, not taken here.
+- **A tampered live face reports BROKEN, not DIVERGED**, when it changes
+  a total the assignment relies on: the assignment's apply refuses the
+  now-unoffered value, so the log stops replaying. That is a stronger
+  catch than the spec's DIVERGED; a face edit that keeps totals but moves
+  which faces back a score is what DIVERGED reports. Both are asserted.
+- **Multiplicity replaced the array's by-value "taken" test** with a
+  by-count one that the array also satisfies; the array's checklist
+  message is unchanged, the roll's names the count ("12 assigned 3 times,
+  rolled 2").
+- **History entries ride the option list** with `available` marking the
+  live set and `badge` the tag, as the architecture chose; the roll card
+  collapses beyond three sets behind "Show all".
+- **The hit-die card is always open**: a roll slot never shows a
+  "Change…" affordance, because rolling again or entering more dice
+  appends rather than replaces.
+- **Entropy dependency**: `getrandom` 0.2, the version `rust-embed`
+  already pulls, so the dependency-hygiene ban on duplicate versions
+  holds; the 0.3 line stays dev-only under proptest as before.
+- **The `--dice-seed` flag is visible** in `--help` (not hidden like the
+  extra-known-versions test flag): the badge is the safeguard, and the
+  Epoch 6 harness will want to find it.
+- **Sheet composition under rolling** names faces and tag per ability
+  ("18 (Random Generation: 6, 6, 6, 1 → 18, entered) +2 (Soldier)"); two
+  equal totals each name their own group.
+- **The cut to `dnd-hp-dice` was not needed**: the score stories were
+  green before the hit-dice tickets started.
+
+## Agent evidence
+
+Final run on the branch head (2026-09-06):
+
+| Check | Result |
+|---|---|
+| `cargo fmt --all -- --check` | clean |
+| `cargo clippy --workspace --all-targets -- -D warnings` | clean |
+| `cargo deny check` | advisories, bans, licenses, sources ok |
+| `cargo test --workspace --no-fail-fast` | 22 test binaries with tests, 229 passed, 0 failed, 2 ignored (fixture regenerators) |
+| `reference-check --system dnd5e attest` | 104 records: 103 match, 1 waived (the pre-existing Point Cost naming waiver), 0 mismatch |
+| WASM bundle (both rulesets) | 1,729,479 bytes, one module (budget 2,621,440); bindings fresh after a rebuild |
+| `npm run typecheck`, `npm run lint` | clean |
+| `npm test` (vitest) | 10 files, 65 tests passed |
+| `npm run e2e` (Playwright, full suite) | 53 passed, 0 failed (1.1 min) — `dice.spec.ts` 4 walks, `dnd.spec.ts` updated for the optional hit-die card, every PF2e spec unchanged |
+
+Test-suite wall time: on this machine the whole suite measures 33 s idle
+against main's 39 s measured the same way minutes apart — the noise floor
+here (other servers running) exceeds the delta. Timed individually the
+new server-backed rows add about 7 s locally (roll route 1.0, seeded 1.2,
+idempotency 1.1, persistence 1.3, hit-dice 1.7, crash 1.5); two rows were
+trimmed after a first cut (crash cycles halved, the hit-dice character
+built through confirms instead of a mint). CI's 20 s gate is the arbiter;
+if it trips, the seeded and crash rows are the candidates to move behind
+a slow tag.
+
+Branch: 8 commits on `checkpoint/dnd-dice`; 59 files changed against `main`.
+
+## Complaints logged
+
+None.
