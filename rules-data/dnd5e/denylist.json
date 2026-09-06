@@ -1,0 +1,5 @@
+{
+  "_comment": "Reserved proper nouns that must not appear in any shipped record. The SRD 5.2.1 is CC BY 4.0 and contains no reserved names — Wizards' product identity is simply absent from it — so the list is empty; the scan still runs so a future record cannot smuggle one in.",
+  "terms": [],
+  "exceptions": []
+}

@@ -4,6 +4,7 @@ members = [
     "crates/types",
     "crates/engine-core",
     "crates/ruleset-pf2e",
+    "crates/ruleset-dnd5e",
     "crates/wasm",
     "crates/server",
     "crates/reference-check",
@@ -19,6 +20,7 @@ publish = false
 types = { path = "crates/types" }
 engine-core = { path = "crates/engine-core" }
 ruleset-pf2e = { path = "crates/ruleset-pf2e" }
+ruleset-dnd5e = { path = "crates/ruleset-dnd5e" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

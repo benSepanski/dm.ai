@@ -16,6 +16,7 @@ use wasm_bindgen::prelude::*;
 fn ruleset_for(system: &str) -> Option<Arc<dyn Ruleset>> {
     match system {
         "pf2e" => Some(ruleset_pf2e::embedded()),
+        "dnd5e" => Some(ruleset_dnd5e::embedded()),
         _ => None,
     }
 }

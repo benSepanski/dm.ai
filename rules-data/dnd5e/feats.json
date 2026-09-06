@@ -1,0 +1,137 @@
+[
+  {
+    "id": "feat.origin.alert",
+    "name": "Alert",
+    "category": "origin",
+    "text": "Initiative Proficiency. When you roll Initiative, you can add your Proficiency Bonus to the roll. Initiative Swap. Immediately after you roll Initiative, you can swap your Initiative with the Initiative of one willing ally in the same combat. You can't make this swap if you or the ally has the Incapacitated condition.",
+    "effects": [
+      {
+        "type": "initiative_proficiency"
+      }
+    ],
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 87,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "feat.origin.magic-initiate",
+    "name": "Magic Initiate",
+    "category": "origin",
+    "text": "Two Cantrips. You learn two cantrips of your choice from the Cleric, Druid, or Wizard spell list. Intelligence, Wisdom, or Charisma is your spellcasting ability for this feat's spells (choose when you select this feat). Level 1 Spell. Choose a level 1 spell from the same list you selected for this feat's cantrips. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have. Spell Change. Whenever you gain a new level, you can replace one of the spells you chose for this feat with a different spell of the same level from the chosen spell list. Repeatable. You can take this feat more than once, but you must choose a different spell list each time.",
+    "effects": [
+      {
+        "type": "spell_choices_unsupported"
+      }
+    ],
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 87,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "feat.origin.savage-attacker",
+    "name": "Savage Attacker",
+    "category": "origin",
+    "text": "You've trained to deal particularly damaging strikes. Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target.",
+    "effects": [],
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 87,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "feat.origin.skilled",
+    "name": "Skilled",
+    "category": "origin",
+    "text": "You gain proficiency in any combination of three skills or tools of your choice. Repeatable. You can take this feat more than once.",
+    "effects": [
+      {
+        "type": "choose_skills_or_tools",
+        "count": 3
+      }
+    ],
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 87,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "feat.style.archery",
+    "name": "Archery",
+    "category": "fighting-style",
+    "text": "You gain a +2 bonus to attack rolls you make with Ranged weapons.",
+    "effects": [
+      {
+        "type": "ranged_attack_bonus",
+        "bonus": 2
+      }
+    ],
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 87,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "feat.style.defense",
+    "name": "Defense",
+    "category": "fighting-style",
+    "text": "While you're wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.",
+    "effects": [
+      {
+        "type": "armor_class_bonus_armored",
+        "bonus": 1
+      }
+    ],
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 88,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "feat.style.great-weapon-fighting",
+    "name": "Great Weapon Fighting",
+    "category": "fighting-style",
+    "text": "When you roll damage for an attack you make with a Melee weapon that you are holding with two hands, you can treat any 1 or 2 on a damage die as a 3. The weapon must have the Two-Handed or Versatile property to gain this benefit.",
+    "effects": [],
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 88,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  },
+  {
+    "id": "feat.style.two-weapon-fighting",
+    "name": "Two-Weapon Fighting",
+    "category": "fighting-style",
+    "text": "When you make an extra attack as a result of using a weapon that has the Light property, you can add your ability modifier to the damage of that attack if you aren't already adding it to the damage.",
+    "effects": [],
+    "source": {
+      "book": "System Reference Document 5.2.1",
+      "page": 88,
+      "url": "https://www.dndbeyond.com/srd",
+      "license": "CC-BY-4.0",
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+    }
+  }
+]

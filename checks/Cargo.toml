@@ -80,6 +80,7 @@ cargo_metadata = { workspace = true }
 types = { workspace = true }
 engine-core = { workspace = true }
 ruleset-pf2e = { workspace = true }
+ruleset-dnd5e = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

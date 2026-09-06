@@ -1,0 +1,1394 @@
+{
+  "weapons": [
+    {
+      "id": "weapon.club",
+      "name": "Club",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d4",
+      "damage_type": "Bludgeoning",
+      "properties": [
+        "Light"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Slow",
+      "weight_lb": 2,
+      "cost_cp": 10,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.dagger",
+      "name": "Dagger",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d4",
+      "damage_type": "Piercing",
+      "properties": [
+        "Finesse",
+        "Light",
+        "Thrown"
+      ],
+      "versatile_damage": null,
+      "range": "20/60",
+      "ammunition": null,
+      "mastery": "Nick",
+      "weight_lb": 1,
+      "cost_cp": 200,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.greatclub",
+      "name": "Greatclub",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d8",
+      "damage_type": "Bludgeoning",
+      "properties": [
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Push",
+      "weight_lb": 10,
+      "cost_cp": 20,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.handaxe",
+      "name": "Handaxe",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d6",
+      "damage_type": "Slashing",
+      "properties": [
+        "Light",
+        "Thrown"
+      ],
+      "versatile_damage": null,
+      "range": "20/60",
+      "ammunition": null,
+      "mastery": "Vex",
+      "weight_lb": 2,
+      "cost_cp": 500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.javelin",
+      "name": "Javelin",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d6",
+      "damage_type": "Piercing",
+      "properties": [
+        "Thrown"
+      ],
+      "versatile_damage": null,
+      "range": "30/120",
+      "ammunition": null,
+      "mastery": "Slow",
+      "weight_lb": 2,
+      "cost_cp": 50,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.light-hammer",
+      "name": "Light Hammer",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d4",
+      "damage_type": "Bludgeoning",
+      "properties": [
+        "Light",
+        "Thrown"
+      ],
+      "versatile_damage": null,
+      "range": "20/60",
+      "ammunition": null,
+      "mastery": "Nick",
+      "weight_lb": 2,
+      "cost_cp": 200,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.mace",
+      "name": "Mace",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d6",
+      "damage_type": "Bludgeoning",
+      "properties": [],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Sap",
+      "weight_lb": 4,
+      "cost_cp": 500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.quarterstaff",
+      "name": "Quarterstaff",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d6",
+      "damage_type": "Bludgeoning",
+      "properties": [
+        "Versatile"
+      ],
+      "versatile_damage": "1d8",
+      "range": null,
+      "ammunition": null,
+      "mastery": "Topple",
+      "weight_lb": 4,
+      "cost_cp": 20,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.sickle",
+      "name": "Sickle",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d4",
+      "damage_type": "Slashing",
+      "properties": [
+        "Light"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Nick",
+      "weight_lb": 2,
+      "cost_cp": 100,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.spear",
+      "name": "Spear",
+      "category": "simple",
+      "kind": "melee",
+      "damage": "1d6",
+      "damage_type": "Piercing",
+      "properties": [
+        "Thrown",
+        "Versatile"
+      ],
+      "versatile_damage": "1d8",
+      "range": "20/60",
+      "ammunition": null,
+      "mastery": "Sap",
+      "weight_lb": 3,
+      "cost_cp": 100,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.dart",
+      "name": "Dart",
+      "category": "simple",
+      "kind": "ranged",
+      "damage": "1d4",
+      "damage_type": "Piercing",
+      "properties": [
+        "Finesse",
+        "Thrown"
+      ],
+      "versatile_damage": null,
+      "range": "20/60",
+      "ammunition": null,
+      "mastery": "Vex",
+      "weight_lb": 0.25,
+      "cost_cp": 5,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.light-crossbow",
+      "name": "Light Crossbow",
+      "category": "simple",
+      "kind": "ranged",
+      "damage": "1d8",
+      "damage_type": "Piercing",
+      "properties": [
+        "Ammunition",
+        "Loading",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": "80/320",
+      "ammunition": "Bolt",
+      "mastery": "Slow",
+      "weight_lb": 5,
+      "cost_cp": 2500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.shortbow",
+      "name": "Shortbow",
+      "category": "simple",
+      "kind": "ranged",
+      "damage": "1d6",
+      "damage_type": "Piercing",
+      "properties": [
+        "Ammunition",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": "80/320",
+      "ammunition": "Arrow",
+      "mastery": "Vex",
+      "weight_lb": 2,
+      "cost_cp": 2500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.sling",
+      "name": "Sling",
+      "category": "simple",
+      "kind": "ranged",
+      "damage": "1d4",
+      "damage_type": "Bludgeoning",
+      "properties": [
+        "Ammunition"
+      ],
+      "versatile_damage": null,
+      "range": "30/120",
+      "ammunition": "Bullet",
+      "mastery": "Slow",
+      "weight_lb": 0,
+      "cost_cp": 10,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.battleaxe",
+      "name": "Battleaxe",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d8",
+      "damage_type": "Slashing",
+      "properties": [
+        "Versatile"
+      ],
+      "versatile_damage": "1d10",
+      "range": null,
+      "ammunition": null,
+      "mastery": "Topple",
+      "weight_lb": 4,
+      "cost_cp": 1000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.flail",
+      "name": "Flail",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d8",
+      "damage_type": "Bludgeoning",
+      "properties": [],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Sap",
+      "weight_lb": 2,
+      "cost_cp": 1000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.glaive",
+      "name": "Glaive",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d10",
+      "damage_type": "Slashing",
+      "properties": [
+        "Heavy",
+        "Reach",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Graze",
+      "weight_lb": 6,
+      "cost_cp": 2000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.greataxe",
+      "name": "Greataxe",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d12",
+      "damage_type": "Slashing",
+      "properties": [
+        "Heavy",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Cleave",
+      "weight_lb": 7,
+      "cost_cp": 3000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.greatsword",
+      "name": "Greatsword",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "2d6",
+      "damage_type": "Slashing",
+      "properties": [
+        "Heavy",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Graze",
+      "weight_lb": 6,
+      "cost_cp": 5000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.halberd",
+      "name": "Halberd",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d10",
+      "damage_type": "Slashing",
+      "properties": [
+        "Heavy",
+        "Reach",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Cleave",
+      "weight_lb": 6,
+      "cost_cp": 2000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.lance",
+      "name": "Lance",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d10",
+      "damage_type": "Piercing",
+      "properties": [
+        "Heavy",
+        "Reach",
+        "Two-Handed (unless mounted)"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Topple",
+      "weight_lb": 6,
+      "cost_cp": 1000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.longsword",
+      "name": "Longsword",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d8",
+      "damage_type": "Slashing",
+      "properties": [
+        "Versatile"
+      ],
+      "versatile_damage": "1d10",
+      "range": null,
+      "ammunition": null,
+      "mastery": "Sap",
+      "weight_lb": 3,
+      "cost_cp": 1500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.maul",
+      "name": "Maul",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "2d6",
+      "damage_type": "Bludgeoning",
+      "properties": [
+        "Heavy",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Topple",
+      "weight_lb": 10,
+      "cost_cp": 1000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.morningstar",
+      "name": "Morningstar",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d8",
+      "damage_type": "Piercing",
+      "properties": [],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Sap",
+      "weight_lb": 4,
+      "cost_cp": 1500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.pike",
+      "name": "Pike",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d10",
+      "damage_type": "Piercing",
+      "properties": [
+        "Heavy",
+        "Reach",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Push",
+      "weight_lb": 18,
+      "cost_cp": 500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.rapier",
+      "name": "Rapier",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d8",
+      "damage_type": "Piercing",
+      "properties": [
+        "Finesse"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Vex",
+      "weight_lb": 2,
+      "cost_cp": 2500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.scimitar",
+      "name": "Scimitar",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d6",
+      "damage_type": "Slashing",
+      "properties": [
+        "Finesse",
+        "Light"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Nick",
+      "weight_lb": 3,
+      "cost_cp": 2500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.shortsword",
+      "name": "Shortsword",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d6",
+      "damage_type": "Piercing",
+      "properties": [
+        "Finesse",
+        "Light"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Vex",
+      "weight_lb": 2,
+      "cost_cp": 1000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.trident",
+      "name": "Trident",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d8",
+      "damage_type": "Piercing",
+      "properties": [
+        "Thrown",
+        "Versatile"
+      ],
+      "versatile_damage": "1d10",
+      "range": "20/60",
+      "ammunition": null,
+      "mastery": "Topple",
+      "weight_lb": 4,
+      "cost_cp": 500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.warhammer",
+      "name": "Warhammer",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d8",
+      "damage_type": "Bludgeoning",
+      "properties": [
+        "Versatile"
+      ],
+      "versatile_damage": "1d10",
+      "range": null,
+      "ammunition": null,
+      "mastery": "Push",
+      "weight_lb": 5,
+      "cost_cp": 1500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.war-pick",
+      "name": "War Pick",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d8",
+      "damage_type": "Piercing",
+      "properties": [
+        "Versatile"
+      ],
+      "versatile_damage": "1d10",
+      "range": null,
+      "ammunition": null,
+      "mastery": "Sap",
+      "weight_lb": 2,
+      "cost_cp": 500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.whip",
+      "name": "Whip",
+      "category": "martial",
+      "kind": "melee",
+      "damage": "1d4",
+      "damage_type": "Slashing",
+      "properties": [
+        "Finesse",
+        "Reach"
+      ],
+      "versatile_damage": null,
+      "range": null,
+      "ammunition": null,
+      "mastery": "Slow",
+      "weight_lb": 3,
+      "cost_cp": 200,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.blowgun",
+      "name": "Blowgun",
+      "category": "martial",
+      "kind": "ranged",
+      "damage": "1",
+      "damage_type": "Piercing",
+      "properties": [
+        "Ammunition",
+        "Loading"
+      ],
+      "versatile_damage": null,
+      "range": "25/100",
+      "ammunition": "Needle",
+      "mastery": "Vex",
+      "weight_lb": 1,
+      "cost_cp": 1000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.hand-crossbow",
+      "name": "Hand Crossbow",
+      "category": "martial",
+      "kind": "ranged",
+      "damage": "1d6",
+      "damage_type": "Piercing",
+      "properties": [
+        "Ammunition",
+        "Light",
+        "Loading"
+      ],
+      "versatile_damage": null,
+      "range": "30/120",
+      "ammunition": "Bolt",
+      "mastery": "Vex",
+      "weight_lb": 3,
+      "cost_cp": 7500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.heavy-crossbow",
+      "name": "Heavy Crossbow",
+      "category": "martial",
+      "kind": "ranged",
+      "damage": "1d10",
+      "damage_type": "Piercing",
+      "properties": [
+        "Ammunition",
+        "Heavy",
+        "Loading",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": "100/400",
+      "ammunition": "Bolt",
+      "mastery": "Push",
+      "weight_lb": 18,
+      "cost_cp": 5000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.longbow",
+      "name": "Longbow",
+      "category": "martial",
+      "kind": "ranged",
+      "damage": "1d8",
+      "damage_type": "Piercing",
+      "properties": [
+        "Ammunition",
+        "Heavy",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": "150/600",
+      "ammunition": "Arrow",
+      "mastery": "Slow",
+      "weight_lb": 2,
+      "cost_cp": 5000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.musket",
+      "name": "Musket",
+      "category": "martial",
+      "kind": "ranged",
+      "damage": "1d12",
+      "damage_type": "Piercing",
+      "properties": [
+        "Ammunition",
+        "Loading",
+        "Two-Handed"
+      ],
+      "versatile_damage": null,
+      "range": "40/120",
+      "ammunition": "Bullet",
+      "mastery": "Slow",
+      "weight_lb": 10,
+      "cost_cp": 50000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "weapon.pistol",
+      "name": "Pistol",
+      "category": "martial",
+      "kind": "ranged",
+      "damage": "1d10",
+      "damage_type": "Piercing",
+      "properties": [
+        "Ammunition",
+        "Loading"
+      ],
+      "versatile_damage": null,
+      "range": "30/90",
+      "ammunition": "Bullet",
+      "mastery": "Vex",
+      "weight_lb": 3,
+      "cost_cp": 25000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 91,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    }
+  ],
+  "armor": [
+    {
+      "id": "armor.padded-armor",
+      "name": "Padded Armor",
+      "category": "light",
+      "base_ac": 11,
+      "add_dex": true,
+      "dex_max": null,
+      "strength_requirement": null,
+      "stealth_disadvantage": true,
+      "weight_lb": 8,
+      "cost_cp": 500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.leather-armor",
+      "name": "Leather Armor",
+      "category": "light",
+      "base_ac": 11,
+      "add_dex": true,
+      "dex_max": null,
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "weight_lb": 10,
+      "cost_cp": 1000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.studded-leather-armor",
+      "name": "Studded Leather Armor",
+      "category": "light",
+      "base_ac": 12,
+      "add_dex": true,
+      "dex_max": null,
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "weight_lb": 13,
+      "cost_cp": 4500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.hide-armor",
+      "name": "Hide Armor",
+      "category": "medium",
+      "base_ac": 12,
+      "add_dex": true,
+      "dex_max": 2,
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "weight_lb": 12,
+      "cost_cp": 1000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.chain-shirt",
+      "name": "Chain Shirt",
+      "category": "medium",
+      "base_ac": 13,
+      "add_dex": true,
+      "dex_max": 2,
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "weight_lb": 20,
+      "cost_cp": 5000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.scale-mail",
+      "name": "Scale Mail",
+      "category": "medium",
+      "base_ac": 14,
+      "add_dex": true,
+      "dex_max": 2,
+      "strength_requirement": null,
+      "stealth_disadvantage": true,
+      "weight_lb": 45,
+      "cost_cp": 5000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.breastplate",
+      "name": "Breastplate",
+      "category": "medium",
+      "base_ac": 14,
+      "add_dex": true,
+      "dex_max": 2,
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "weight_lb": 20,
+      "cost_cp": 40000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.half-plate-armor",
+      "name": "Half Plate Armor",
+      "category": "medium",
+      "base_ac": 15,
+      "add_dex": true,
+      "dex_max": 2,
+      "strength_requirement": null,
+      "stealth_disadvantage": true,
+      "weight_lb": 40,
+      "cost_cp": 75000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.ring-mail",
+      "name": "Ring Mail",
+      "category": "heavy",
+      "base_ac": 14,
+      "add_dex": false,
+      "dex_max": null,
+      "strength_requirement": null,
+      "stealth_disadvantage": true,
+      "weight_lb": 40,
+      "cost_cp": 3000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.chain-mail",
+      "name": "Chain Mail",
+      "category": "heavy",
+      "base_ac": 16,
+      "add_dex": false,
+      "dex_max": null,
+      "strength_requirement": 13,
+      "stealth_disadvantage": true,
+      "weight_lb": 55,
+      "cost_cp": 7500,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.splint-armor",
+      "name": "Splint Armor",
+      "category": "heavy",
+      "base_ac": 17,
+      "add_dex": false,
+      "dex_max": null,
+      "strength_requirement": 15,
+      "stealth_disadvantage": true,
+      "weight_lb": 60,
+      "cost_cp": 20000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.plate-armor",
+      "name": "Plate Armor",
+      "category": "heavy",
+      "base_ac": 18,
+      "add_dex": false,
+      "dex_max": null,
+      "strength_requirement": 15,
+      "stealth_disadvantage": true,
+      "weight_lb": 65,
+      "cost_cp": 150000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "armor.shield",
+      "name": "Shield",
+      "category": "shield",
+      "base_ac": 2,
+      "add_dex": false,
+      "dex_max": null,
+      "strength_requirement": null,
+      "stealth_disadvantage": false,
+      "weight_lb": 6,
+      "cost_cp": 1000,
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 92,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    }
+  ],
+  "gear": [
+    {
+      "id": "gear.dungeoneers-pack",
+      "name": "Dungeoneer's Pack",
+      "weight_lb": 55,
+      "cost_cp": 1200,
+      "text": "Contains a Backpack, Caltrops, Crowbar, 2 flasks of Oil, 10 days of Rations, Rope, Tinderbox, 10 Torches, and a Waterskin.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 97,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.arrows",
+      "name": "Arrows (20)",
+      "weight_lb": 1,
+      "cost_cp": 100,
+      "text": "Ammunition for weapons with the Ammunition property that fire arrows; sold and carried in lots of 20.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 96,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.quiver",
+      "name": "Quiver",
+      "weight_lb": 1,
+      "cost_cp": 100,
+      "text": "Holds up to 20 Arrows.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 99,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.book",
+      "name": "Book",
+      "weight_lb": 5,
+      "cost_cp": 2500,
+      "text": "A book of prayers, history, or another subject.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 96,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.holy-symbol",
+      "name": "Holy Symbol (Amulet)",
+      "weight_lb": 1,
+      "cost_cp": 500,
+      "text": "A Holy Symbol is bejeweled or painted to channel divine magic; the amulet form is worn or held.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 93,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.parchment",
+      "name": "Parchment (sheet)",
+      "weight_lb": 0,
+      "cost_cp": 10,
+      "text": "One sheet of parchment.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 99,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.robe",
+      "name": "Robe",
+      "weight_lb": 4,
+      "cost_cp": 100,
+      "text": "A robe.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 99,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.crowbar",
+      "name": "Crowbar",
+      "weight_lb": 5,
+      "cost_cp": 200,
+      "text": "Using a Crowbar gives you Advantage on Strength checks where the Crowbar's leverage can be applied.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 97,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.pouch",
+      "name": "Pouch",
+      "weight_lb": 1,
+      "cost_cp": 50,
+      "text": "A Pouch holds up to 6 pounds within one-fifth of a cubic foot.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 99,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.travelers-clothes",
+      "name": "Traveler's Clothes",
+      "weight_lb": 4,
+      "cost_cp": 200,
+      "text": "Traveler's Clothes are resilient garments designed for travel in various environments.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 97,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "gear.healers-kit",
+      "name": "Healer's Kit",
+      "weight_lb": 3,
+      "cost_cp": 500,
+      "text": "A Healer's Kit has ten uses. As a Utilize action, you can expend one of its uses to stabilize an Unconscious creature that has 0 Hit Points without needing to make a Wisdom (Medicine) check.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 97,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    }
+  ],
+  "tools": [
+    {
+      "id": "tool.calligraphers-supplies",
+      "name": "Calligrapher's Supplies",
+      "weight_lb": 5,
+      "cost_cp": 1000,
+      "text": "Ability: Dexterity. Utilize: Write text with impressive flourishes that guard against forgery (DC 15). Craft: Ink, Spell Scroll.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 93,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "tool.thieves-tools",
+      "name": "Thieves' Tools",
+      "weight_lb": 1,
+      "cost_cp": 2500,
+      "text": "Ability: Dexterity. Utilize: Pick a lock (DC 15), or disarm a trap (DC 15).",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 94,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
+      "id": "tool.gaming-set",
+      "name": "Gaming Set",
+      "weight_lb": 0,
+      "cost_cp": 10,
+      "text": "Ability: Wisdom. Utilize: Discern whether someone is cheating (DC 10), or win the game (DC 20). Variants: Dice (1 SP), dragonchess (1 GP), playing cards (5 SP), three-dragon ante (1 GP). Each variant requires a separate proficiency; this record stands for one kind chosen by the player.",
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 94,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    }
+  ]
+}

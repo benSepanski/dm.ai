@@ -31,7 +31,7 @@ use engine_core::Ruleset;
 /// Every shipped ruleset, embedded at compile time. Adding a game is one
 /// arm here (and one in the wasm crate) — no registry.
 fn shipped_rulesets() -> Vec<Arc<dyn Ruleset>> {
-    vec![ruleset_pf2e::embedded()]
+    vec![ruleset_pf2e::embedded(), ruleset_dnd5e::embedded()]
 }
 
 #[derive(Parser)]

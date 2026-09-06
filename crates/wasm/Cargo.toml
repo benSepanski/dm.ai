@@ -11,6 +11,7 @@ crate-type = ["cdylib", "rlib"]
 types = { workspace = true, features = ["ts"] }
 engine-core = { workspace = true }
 ruleset-pf2e = { workspace = true }
+ruleset-dnd5e = { workspace = true }
 serde = { workspace = true }
 tsify = { version = "0.5.8", features = ["js"] }
 wasm-bindgen = { workspace = true }
