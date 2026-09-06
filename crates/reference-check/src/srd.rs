@@ -354,6 +354,57 @@ pub struct ScoreMethod {
     pub array: Vec<i64>,
     pub budget: Option<i64>,
     pub costs: BTreeMap<String, i64>,
+    /// A rolling method's shape as the sentence states it: (sides, dice
+    /// per group, dice kept, groups).
+    pub roll: Option<(i64, i64, i64, i64)>,
+}
+
+/// A small number word ("four") or digit string to an integer.
+fn number_word(word: &str) -> Option<i64> {
+    let w = word.trim().trim_end_matches(|c: char| !c.is_alphanumeric());
+    match w {
+        "one" => Some(1),
+        "two" => Some(2),
+        "three" => Some(3),
+        "four" => Some(4),
+        "five" => Some(5),
+        "six" => Some(6),
+        "seven" => Some(7),
+        "eight" => Some(8),
+        "nine" => Some(9),
+        "ten" => Some(10),
+        _ => w.parse().ok(),
+    }
+}
+
+/// "Roll four d6s and record the total of the highest three dice. Do this
+/// five more times, so you have six numbers." → (6, 4, 3, 6).
+fn parse_roll_sentence(body: &str) -> Option<(i64, i64, i64, i64)> {
+    let words: Vec<&str> = body.split_whitespace().collect();
+    let mut dice = None;
+    let mut sides = None;
+    let mut keep = None;
+    let mut groups = None;
+    for (i, w) in words.iter().enumerate() {
+        let lw = w.to_lowercase();
+        if let Some(rest) = lw.strip_prefix('d') {
+            if let Some(n) = rest
+                .trim_end_matches(|c: char| !c.is_ascii_digit())
+                .parse::<i64>()
+                .ok()
+            {
+                sides = Some(n);
+                dice = i.checked_sub(1).and_then(|j| number_word(words[j]));
+            }
+        }
+        if lw == "highest" {
+            keep = words.get(i + 1).and_then(|n| number_word(n));
+        }
+        if lw == "numbers." || lw == "numbers" {
+            groups = i.checked_sub(1).and_then(|j| number_word(words[j]));
+        }
+    }
+    Some((sides?, dice?, keep?, groups?))
 }
 
 pub struct ToolPage {
@@ -381,6 +432,7 @@ pub struct Srd {
     pub subclasses: BTreeMap<String, SubclassSection>,
     pub score_array: Option<ScoreMethod>,
     pub score_points: Option<ScoreMethod>,
+    pub score_roll: Option<ScoreMethod>,
     /// Equipment pages by normalized title (tool lookups).
     equipment_pages: BTreeMap<String, PathBuf>,
 }
@@ -431,6 +483,7 @@ pub fn load() -> Result<Srd, String> {
         subclasses: BTreeMap::new(),
         score_array: None,
         score_points: None,
+        score_roll: None,
         equipment_pages,
     };
 
@@ -930,6 +983,7 @@ fn load_scores(srd: &mut Srd, text: &str) {
                 array,
                 budget: None,
                 costs: BTreeMap::new(),
+                roll: None,
             });
         } else if body_l.contains("points to spend") {
             srd.score_points = Some(ScoreMethod {
@@ -937,6 +991,15 @@ fn load_scores(srd: &mut Srd, text: &str) {
                 array: Vec::new(),
                 budget: first_int(body),
                 costs: costs.clone(),
+                roll: None,
+            });
+        } else if body_l.contains("roll") && body_l.contains("highest") {
+            srd.score_roll = Some(ScoreMethod {
+                name: name.to_string(),
+                array: Vec::new(),
+                budget: None,
+                costs: BTreeMap::new(),
+                roll: parse_roll_sentence(body),
             });
         }
     }

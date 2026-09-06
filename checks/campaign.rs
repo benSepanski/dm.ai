@@ -467,17 +467,18 @@ fn v4_files_load_byte_identical_and_gain_their_system_on_first_write() {
     assert_eq!(status, 200, "{outcome}");
     assert_eq!(outcome["outcome"], "confirmed");
     let upgraded: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(upgraded["schema_version"], 5);
+    assert_eq!(upgraded["schema_version"], 6);
     assert_eq!(upgraded["system"], "pf2e");
 }
 
+/// The schema after the current one (v6, dnd-dice) is refused, in place.
 #[test]
-fn v6_files_are_refused() {
+fn v7_files_are_refused() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("characters")).unwrap();
     std::fs::write(
         dir.path().join("characters/future.json"),
-        json!({ "schema_version": 6, "id": "future" }).to_string(),
+        json!({ "schema_version": 7, "id": "future" }).to_string(),
     )
     .unwrap();
     let (code, stderr) = TestServer::spawn_expect_failure(dir.path());

@@ -186,7 +186,7 @@ fn brannock_log(engine: &Dnd5eEngine) -> Vec<Decision> {
 fn embedded_data_parses_and_the_engine_constructs() {
     let data = crate::embedded_data().expect("embedded data parses");
     assert_eq!(data.manifest.system, "dnd5e");
-    assert_eq!(data.manifest.version, "dnd5e-srd.0.1.0");
+    assert_eq!(data.manifest.version, "dnd5e-srd.0.2.0");
     assert_eq!(data.max_advancement_level(), 3);
     assert_eq!(data.subclass_levels(), vec![3]);
     let rs = crate::embedded();
@@ -919,4 +919,418 @@ fn name_pool_key_is_the_species_and_the_subclass_step_is_never_live_early() {
             "details"
         ]
     );
+}
+
+// ---- dnd-dice: the rolling method ------------------------------------------
+
+mod dice {
+    use super::*;
+    use crate::mechanics::SLOT_SCORES_ROLL;
+    use types::{RollOrigin, RolledSet};
+
+    fn set(groups: &[[u8; 4]], origin: RollOrigin) -> RolledSet {
+        RolledSet {
+            groups: groups.iter().map(|g| g.to_vec()).collect(),
+            origin,
+        }
+    }
+
+    /// Six groups: 14 (6,5,3,1), 12 (4,4,4,1), 12 (5,4,3,3), 10 (4,3,3,2),
+    /// 9 (3,3,3,1), 8 (6,1,1,1) — duplicate twelves on purpose.
+    fn ysolde_set(origin: RollOrigin) -> RolledSet {
+        set(
+            &[
+                [6, 5, 3, 1],
+                [4, 4, 4, 1],
+                [5, 4, 3, 3],
+                [4, 3, 3, 2],
+                [3, 3, 3, 1],
+                [6, 1, 1, 1],
+            ],
+            origin,
+        )
+    }
+
+    fn rolled(sets: Vec<RolledSet>) -> Selection {
+        Selection::Rolled(sets)
+    }
+
+    fn choose_rolling(engine: &Dnd5eEngine, log: &mut Vec<Decision>) {
+        confirm(engine, log, SLOT_SCORES_METHOD, one("method.roll"));
+    }
+
+    fn rolled_history(log: &[Decision]) -> Vec<RolledSet> {
+        match &log
+            .iter()
+            .find(|d| d.slot.as_str() == SLOT_SCORES_ROLL)
+            .expect("a roll decision")
+            .selection
+        {
+            Selection::Rolled(sets) => sets.clone(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn the_rolling_method_opens_the_roll_slot_and_locks_assignment_until_rolled() {
+        let engine = engine();
+        let mut log = Vec::new();
+        // Under the array the roll slot is hidden.
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_SCORES_METHOD,
+            one("method.standard-array"),
+        );
+        let p = engine.project(&log).unwrap();
+        assert!(slot_view(&p, SLOT_SCORES_ROLL).is_none());
+        // Under rolling it is open with the published shape, required, and
+        // the assignment waits for a roll.
+        let log2 = engine
+            .clear(&log, &SlotId::new(SLOT_SCORES_METHOD))
+            .unwrap();
+        let mut log = log2;
+        choose_rolling(&engine, &mut log);
+        let p = engine.project(&log).unwrap();
+        let roll = slot_view(&p, SLOT_SCORES_ROLL).unwrap();
+        assert_eq!(
+            roll.kind,
+            SlotViewKind::Roll {
+                sides: 6,
+                dice: 4,
+                groups: 6
+            }
+        );
+        assert!(roll.required);
+        assert!(roll.options.is_empty());
+        assert_eq!(
+            slot_view(&p, SLOT_SCORES_ASSIGN)
+                .unwrap()
+                .locked_reason
+                .as_deref(),
+            Some("roll your ability scores first")
+        );
+        assert!(p
+            .checklist
+            .iter()
+            .any(|e| e.slot.as_str() == SLOT_SCORES_ROLL
+                && e.severity == ChecklistSeverity::Incomplete));
+    }
+
+    #[test]
+    fn a_rolled_set_offers_its_totals_with_multiplicity() {
+        let engine = engine();
+        let mut log = Vec::new();
+        choose_rolling(&engine, &mut log);
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_SCORES_ROLL,
+            rolled(vec![ysolde_set(RollOrigin::App)]),
+        );
+        let p = engine.project(&log).unwrap();
+        let roll = slot_view(&p, SLOT_SCORES_ROLL).unwrap();
+        assert_eq!(roll.options.len(), 1);
+        let live = &roll.options[0];
+        assert_eq!(live.label, "14, 12, 12, 10, 9, 8");
+        assert!(live.available);
+        assert_eq!(live.badge.as_deref(), Some("rolled"));
+        assert_eq!(live.details[0], "6, 5, 3, 1 → 14 (dropped 1)");
+        // Assignment: distinct values once per ability, 12 offered twice.
+        let assign = slot_view(&p, SLOT_SCORES_ASSIGN).unwrap();
+        assert!(assign.locked_reason.is_none());
+        let str_options: Vec<&str> = assign
+            .options
+            .iter()
+            .filter(|o| o.group.as_deref() == Some("Strength"))
+            .map(|o| o.label.as_str())
+            .collect();
+        assert_eq!(str_options, vec!["14", "12", "10", "9", "8"]);
+        let twelve = assign
+            .options
+            .iter()
+            .find(|o| o.id.as_str() == "score.str.12")
+            .unwrap();
+        assert_eq!(twelve.summary, "offered 2 times");
+        // Assign both twelves to two abilities: legal. A third twelve is
+        // illegal with the rule named; the array's rule is untouched.
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_SCORES_ASSIGN,
+            many(&[
+                &score("str", 14),
+                &score("dex", 12),
+                &score("con", 12),
+                &score("wis", 10),
+                &score("int", 9),
+                &score("cha", 8),
+            ]),
+        );
+        let p = engine.project(&log).unwrap();
+        assert!(
+            !p.checklist.iter().any(|e| e.step.as_str() == "scores"),
+            "{:?}",
+            p.checklist
+        );
+        let assign = slot_view(&p, SLOT_SCORES_ASSIGN).unwrap();
+        // Both twelves are used: a third ability sees it unavailable.
+        let wis_twelve = assign
+            .options
+            .iter()
+            .find(|o| o.id.as_str() == "score.wis.12")
+            .unwrap();
+        assert!(!wis_twelve.available);
+        assert_eq!(
+            wis_twelve.unavailable_reason.as_deref(),
+            Some("assigned to Dexterity, Constitution")
+        );
+        // Over-assignment through the raw log is illegal, never refused.
+        let log_over = engine
+            .amend(
+                &log,
+                DecisionInput {
+                    id: DecisionId::new("over"),
+                    slot: SlotId::new(SLOT_SCORES_ASSIGN),
+                    selection: many(&[
+                        &score("str", 12),
+                        &score("dex", 12),
+                        &score("con", 12),
+                        &score("wis", 10),
+                        &score("int", 9),
+                        &score("cha", 8),
+                    ]),
+                    source: DecisionSource::Player,
+                },
+            )
+            .unwrap();
+        let AppendOutcome::Appended(log_over) = log_over else {
+            panic!()
+        };
+        let p = engine.project(&log_over).unwrap();
+        let entry = p
+            .checklist
+            .iter()
+            .find(|e| e.severity == ChecklistSeverity::Illegal)
+            .expect("an illegal entry");
+        assert_eq!(entry.rule, "Random Generation");
+        assert!(
+            entry.message.contains("12 assigned 3 times, rolled 2"),
+            "{}",
+            entry.message
+        );
+    }
+
+    #[test]
+    fn rerolls_append_to_the_history_and_clear_the_assignment() {
+        let engine = engine();
+        let mut log = Vec::new();
+        choose_rolling(&engine, &mut log);
+        let first = set(
+            &[
+                [3, 3, 3, 1],
+                [2, 2, 2, 2],
+                [4, 3, 1, 1],
+                [5, 1, 1, 1],
+                [6, 6, 1, 1],
+                [2, 2, 1, 1],
+            ],
+            RollOrigin::App,
+        );
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_SCORES_ROLL,
+            rolled(vec![first.clone()]),
+        );
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_SCORES_ASSIGN,
+            many(&[
+                &score("str", 13),
+                &score("dex", 9),
+                &score("con", 8),
+                &score("wis", 7),
+                &score("int", 6),
+                &score("cha", 5),
+            ]),
+        );
+        // A reroll submits only the new set; the engine composes.
+        let second = ysolde_set(RollOrigin::Entered);
+        let AppendOutcome::Appended(log) = engine
+            .amend(
+                &log,
+                DecisionInput {
+                    id: DecisionId::new("reroll"),
+                    slot: SlotId::new(SLOT_SCORES_ROLL),
+                    selection: rolled(vec![second.clone()]),
+                    source: DecisionSource::Player,
+                },
+            )
+            .unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(rolled_history(&log), vec![first, second]);
+        assert!(!log.iter().any(|d| d.slot.as_str() == SLOT_SCORES_ASSIGN));
+        let p = engine.project(&log).unwrap();
+        let roll = slot_view(&p, SLOT_SCORES_ROLL).unwrap();
+        assert_eq!(roll.options.len(), 2);
+        assert!(!roll.options[0].available);
+        assert_eq!(
+            roll.options[0].unavailable_reason.as_deref(),
+            Some("superseded by a later roll")
+        );
+        assert_eq!(roll.options[0].badge.as_deref(), Some("rolled"));
+        assert!(roll.options[1].available);
+        assert_eq!(roll.options[1].badge.as_deref(), Some("entered"));
+        // The assignment offers the live set only.
+        let assign = slot_view(&p, SLOT_SCORES_ASSIGN).unwrap();
+        assert!(assign.options.iter().all(|o| o.label != "13"));
+        // The confirm-time description names the live set and its origin.
+        let described = engine
+            .describe_decision(
+                log.iter()
+                    .find(|d| d.slot.as_str() == SLOT_SCORES_ROLL)
+                    .unwrap(),
+            )
+            .unwrap();
+        assert_eq!(
+            described.selection_label,
+            "14, 12, 12, 10, 9, 8 (entered, set 2 of 2)"
+        );
+    }
+
+    #[test]
+    fn out_of_shape_sets_are_refused_at_apply() {
+        let engine = engine();
+        let mut log = Vec::new();
+        choose_rolling(&engine, &mut log);
+        let seven = set(
+            &[
+                [6, 5, 3, 7],
+                [4, 4, 4, 1],
+                [5, 4, 3, 3],
+                [4, 3, 3, 2],
+                [3, 3, 3, 1],
+                [6, 1, 1, 1],
+            ],
+            RollOrigin::Entered,
+        );
+        let err = try_confirm(&engine, &log, SLOT_SCORES_ROLL, rolled(vec![seven])).unwrap_err();
+        assert!(
+            err.to_string().contains("7") && err.to_string().contains("6-sided"),
+            "{err}"
+        );
+        let five_groups = RolledSet {
+            groups: vec![vec![1, 1, 1, 1]; 5],
+            origin: RollOrigin::Entered,
+        };
+        assert!(try_confirm(&engine, &log, SLOT_SCORES_ROLL, rolled(vec![five_groups])).is_err());
+        // Under the array, a roll is structurally refused (the slot is hidden).
+        let mut array_log = Vec::new();
+        confirm(
+            &engine,
+            &mut array_log,
+            SLOT_SCORES_METHOD,
+            one("method.standard-array"),
+        );
+        assert!(try_confirm(
+            &engine,
+            &array_log,
+            SLOT_SCORES_ROLL,
+            rolled(vec![ysolde_set(RollOrigin::App)])
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn changing_the_method_clears_the_roll_history() {
+        let engine = engine();
+        let mut log = Vec::new();
+        choose_rolling(&engine, &mut log);
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_SCORES_ROLL,
+            rolled(vec![ysolde_set(RollOrigin::App)]),
+        );
+        let preview = engine
+            .clear_preview(&log, &SlotId::new(SLOT_SCORES_METHOD))
+            .unwrap();
+        let cleared: Vec<&str> = preview.cleared.iter().map(|c| c.slot.as_str()).collect();
+        assert!(cleared.contains(&SLOT_SCORES_ROLL));
+        let cleared = engine
+            .clear(&log, &SlotId::new(SLOT_SCORES_METHOD))
+            .unwrap();
+        assert!(cleared.is_empty());
+    }
+
+    #[test]
+    fn the_sheet_names_the_faces_behind_a_rolled_score_and_reaches_the_cap() {
+        let engine = engine();
+        let mut log = Vec::new();
+        confirm(&engine, &mut log, SLOT_CLASS, one("class.fighter"));
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_BACKGROUND,
+            one("background.soldier"),
+        );
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_BACKGROUND_INCREASE,
+            Selection::Option(Increase::TwoOne(Ability::Str, Ability::Con).option_id()),
+        );
+        choose_rolling(&engine, &mut log);
+        // An 18 (6,6,6,1) plus the Soldier's +2 reads 20: the cap, reached
+        // and not exceeded, with a clean checklist for the scores.
+        let eighteen = set(
+            &[
+                [6, 6, 6, 1],
+                [4, 4, 4, 1],
+                [5, 4, 3, 3],
+                [4, 3, 3, 2],
+                [3, 3, 3, 1],
+                [6, 1, 1, 1],
+            ],
+            RollOrigin::Entered,
+        );
+        confirm(&engine, &mut log, SLOT_SCORES_ROLL, rolled(vec![eighteen]));
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_SCORES_ASSIGN,
+            many(&[
+                &score("str", 18),
+                &score("dex", 12),
+                &score("con", 12),
+                &score("wis", 10),
+                &score("int", 9),
+                &score("cha", 8),
+            ]),
+        );
+        let p = engine.project(&log).unwrap();
+        assert!(!p
+            .checklist
+            .iter()
+            .any(|e| e.slot.as_str() == SLOT_SCORES_ASSIGN));
+        assert_eq!(value(&p.sheet, "Ability Scores", "Strength"), "20 (+5)");
+        let strength = detail(&p.sheet, "Ability Scores", "Strength");
+        assert_eq!(
+            strength,
+            "18 (Random Generation: 6, 6, 6, 1 → 18, entered) +2 (Soldier)"
+        );
+        // The two twelves each name their own faces.
+        assert_eq!(
+            detail(&p.sheet, "Ability Scores", "Dexterity"),
+            "12 (Random Generation: 4, 4, 4, 1 → 12, entered)"
+        );
+        assert_eq!(
+            detail(&p.sheet, "Ability Scores", "Constitution"),
+            "12 (Random Generation: 5, 4, 3, 3 → 12, entered) +1 (Soldier)"
+        );
+    }
 }

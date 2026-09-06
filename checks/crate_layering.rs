@@ -62,7 +62,21 @@ const BANNED_ENGINE_TOKENS: &[&str] = &[
     "SystemTime",
     "Instant::now",
     "unsafe ",
+    "getrandom",
+    "rand::",
+    "Math::random",
 ];
+
+/// Entropy tokens banned from the browser bundle's sources too (dnd-dice
+/// architecture: a roll is never drawn in WASM).
+const BANNED_ENTROPY_TOKENS: &[&str] = &["getrandom", "rand::", "Math::random", "OsRng"];
+
+/// Crates allowed an entropy crate (`rand*`, `getrandom`) in their resolved
+/// normal-dependency tree: the server draws dice through one helper;
+/// reference-check is the verification-only network tool whose TLS stack
+/// pulls `getrandom` and ships nowhere. Every other workspace crate —
+/// the engine crates, the WASM bundle, the checks — stays entropy-free.
+const ENTROPY_ALLOWED_CRATES: &[&str] = &["server", "reference-check"];
 
 /// Ruleset option-kind modules, per crate: no kind may reference another
 /// kind (kinds -> mechanics -> engine-core). Each ruleset names its own
@@ -151,20 +165,23 @@ fn no_banned_crate_names() {
     }
 }
 
+/// Entropy reaches the server only (dnd-dice architecture): walking every
+/// workspace crate's resolved normal-dependency tree, `rand*` and
+/// `getrandom` appear only under the allowed crates. Engine crates stay
+/// pure (derivation is a pure fold); the WASM bundle and the checks never
+/// draw a die.
 #[test]
-fn engine_crates_have_no_impure_dependencies() {
+fn only_the_server_reaches_an_entropy_crate() {
     let meta = metadata();
     let resolve = meta.resolve.as_ref().expect("resolved dep graph");
     let by_id: BTreeMap<_, _> = meta.packages.iter().map(|p| (&p.id, p)).collect();
 
-    for root in ENGINE_CRATES {
-        let root_pkg = meta
-            .workspace_packages()
-            .into_iter()
-            .find(|p| p.name.as_str() == *root)
-            .unwrap_or_else(|| panic!("engine crate {root} missing from workspace"));
-
-        // Walk the resolved graph from the engine crate.
+    for root_pkg in meta.workspace_packages() {
+        let root = root_pkg.name.as_str();
+        if ENTROPY_ALLOWED_CRATES.contains(&root) {
+            continue;
+        }
+        // Walk the resolved graph from the crate.
         let mut stack = vec![&root_pkg.id];
         let mut seen = BTreeSet::new();
         while let Some(id) = stack.pop() {
@@ -177,8 +194,8 @@ fn engine_crates_have_no_impure_dependencies() {
                 .find(|n| &n.id == id)
                 .expect("node in resolve graph");
             for dep in &node.deps {
-                // Dev-dependencies (proptest et al.) never ship in the
-                // engine; only normal edges matter for purity.
+                // Dev-dependencies (proptest et al.) never ship; only
+                // normal edges matter for purity.
                 if !dep
                     .dep_kinds
                     .iter()
@@ -188,13 +205,63 @@ fn engine_crates_have_no_impure_dependencies() {
                 }
                 let name = by_id[&dep.pkg].name.as_str();
                 assert!(
-                    !name.starts_with("rand"),
-                    "{root} transitively depends on '{name}': randomness is \
-                     banned in engine crates (derivation is a pure fold)"
+                    !(name.starts_with("rand") || name == "getrandom"),
+                    "{root} transitively depends on '{name}': entropy reaches the \
+                     server only (engine crates are a pure fold; the browser never rolls)"
                 );
                 stack.push(&dep.pkg);
             }
         }
+    }
+}
+
+/// The browser bundle's own sources draw no entropy either.
+#[test]
+fn wasm_sources_draw_no_entropy() {
+    let root = checks::workspace_root();
+    for (path, src) in rust_sources(&root.join("crates/wasm/src")) {
+        let code = code_lines(&src);
+        for token in BANNED_ENTROPY_TOKENS {
+            assert!(
+                !code.contains(token),
+                "{} contains '{token}': a roll is never drawn in WASM",
+                path.display()
+            );
+        }
+    }
+}
+
+/// The app-rolled origin is minted in exactly one server module — the
+/// entropy helper — and nowhere in the engine crates or the browser
+/// bundle: an app-rolled set whose bytes the server did not produce
+/// cannot be constructed anywhere else.
+#[test]
+fn app_rolled_origin_is_minted_in_one_server_module() {
+    let root = checks::workspace_root();
+    let token = "RollOrigin::App";
+    for krate in ENGINE_CRATES.iter().chain(["wasm"].iter()) {
+        for (path, src) in rust_sources(&root.join("crates").join(krate).join("src")) {
+            assert!(
+                !code_lines(&src).contains(token),
+                "{} constructs {token}: only the server's entropy helper mints an app roll",
+                path.display()
+            );
+        }
+    }
+    let minting: Vec<String> = rust_sources(&root.join("crates/server/src"))
+        .into_iter()
+        .filter(|(_, src)| code_lines(src).contains(token))
+        .map(|(p, _)| p.file_name().unwrap().to_string_lossy().to_string())
+        .collect();
+    assert!(
+        minting.len() <= 1,
+        "{token} is constructed in more than one server module: {minting:?}"
+    );
+    if let Some(module) = minting.first() {
+        assert_eq!(
+            module, "dice.rs",
+            "{token} is minted only in the entropy helper"
+        );
     }
 }
 
@@ -380,7 +447,9 @@ fn code_lines(src: &str) -> String {
 }
 
 /// Game-free core: no system id literal in engine-core or types (the
-/// trait names slots, levels, versions, and pools — never a game).
+/// trait names slots, levels, versions, and pools — never a game), and no
+/// ability or hit-point word either (dnd-dice: the recorded-input shape
+/// is faces, dice, groups — never what a total is for).
 #[test]
 fn engine_core_and_types_name_no_system() {
     let root = checks::workspace_root();
@@ -392,6 +461,103 @@ fn engine_core_and_types_name_no_system() {
                     !code.contains(token),
                     "{} contains '{token}': the core and the wire types carry no game",
                     path.display()
+                );
+            }
+            let lower = code.to_lowercase();
+            for token in [
+                "strength",
+                "dexterity",
+                "constitution",
+                "intelligence",
+                "wisdom",
+                "charisma",
+                "hit point",
+                "hit_point",
+                "hit die",
+                "hit_die",
+            ] {
+                assert!(
+                    !lower.contains(token),
+                    "{} contains '{token}': the core and the wire types carry no game word",
+                    path.display()
+                );
+            }
+        }
+    }
+}
+
+/// A die literal: `d` + one of the polyhedral sizes, standing alone as a
+/// word (`d6`, `1d10`, `4d6`), never inside an identifier (`padding`,
+/// `d-1234`).
+fn has_die_literal(code: &str) -> Option<String> {
+    let bytes = code.as_bytes();
+    let is_word = |b: u8| b.is_ascii_alphanumeric() || b == b'_';
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'd'
+            && (i == 0 || !bytes[i - 1].is_ascii_alphabetic() && bytes[i - 1] != b'_')
+        {
+            let mut j = i + 1;
+            while j < bytes.len() && bytes[j].is_ascii_digit() {
+                j += 1;
+            }
+            let digits = &code[i + 1..j];
+            let ends_word = j >= bytes.len() || !is_word(bytes[j]);
+            if ends_word && ["4", "6", "8", "10", "12", "20"].contains(&digits) {
+                return Some(code[i..j].to_string());
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
+/// Dice-blind UI (dnd-dice architecture): the browser never rolls (no
+/// `Math.random`, no `getRandomValues`) and never knows a die — no die
+/// literal and no drop-lowest phrase in shipped source. Counts arrive on
+/// the slot kind; totals, struck dice, and tags arrive as render-ready
+/// option text. `log.ts` mints decision ids with `Math.random` — ids, not
+/// faces — and is the one named exemption.
+#[test]
+fn ui_is_dice_blind() {
+    let root = checks::workspace_root().join("ui/src");
+    let mut stack = vec![root.clone()];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                if path.file_name().is_some_and(|n| n == "pkg") {
+                    continue;
+                }
+                stack.push(path);
+                continue;
+            }
+            let name = path.file_name().unwrap().to_string_lossy().to_string();
+            if !(name.ends_with(".ts") || name.ends_with(".tsx")) || name.contains(".test.") {
+                continue;
+            }
+            let src = std::fs::read_to_string(&path).unwrap();
+            let code = code_lines(&src);
+            if name != "log.ts" {
+                for token in ["Math.random", "getRandomValues", "randomUUID"] {
+                    assert!(
+                        !code.contains(token),
+                        "{name} contains '{token}': the browser never rolls"
+                    );
+                }
+            }
+            assert!(
+                !code.contains("getRandomValues"),
+                "{name} contains 'getRandomValues': the browser never rolls"
+            );
+            if let Some(literal) = has_die_literal(&code) {
+                panic!("{name} contains the die literal '{literal}': the UI knows no die");
+            }
+            let lower = code.to_lowercase();
+            for phrase in ["drop the lowest", "droplowest", "drop_lowest", "lowest die"] {
+                assert!(
+                    !lower.contains(phrase),
+                    "{name} contains '{phrase}': die arithmetic is the ruleset's"
                 );
             }
         }

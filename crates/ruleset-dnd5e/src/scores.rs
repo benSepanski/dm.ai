@@ -1,20 +1,25 @@
 //! Ability-score kind: the generation method (a Single over the shipped
-//! method records — `dnd-dice` appends rolling as a third record) and the
-//! assignment, a `Multi{6}` whose options carry their ability as the
-//! group. The array method offers each array value under every ability
-//! and validates one per ability and each value once; the point buy
-//! offers the cost table's scores under every ability against the budget,
-//! with a meter that shows true overshoot.
+//! method records), the roll slot a rolling method opens (its decision is
+//! the whole roll history — every set kept, the last one live, rendered
+//! as one option per set), and the assignment, a `Multi{6}` whose options
+//! carry their ability as the group. The array and the roll offer their
+//! values under every ability and validate one per ability and each value
+//! at most as often as offered; the point buy offers the cost table's
+//! scores under every ability against the budget, with a meter that shows
+//! true overshoot.
 
 use std::sync::Arc;
 
 use engine_core::{ApplyError, Availability, SlotRegistration};
-use types::{MeterView, OptionId, OptionView, SlotId, SlotViewKind, StepId};
+use types::{
+    check_roll_shape, MeterView, OptionId, OptionView, Selection, SlotId, SlotViewKind, StepId,
+};
 
-use crate::data::{RulesData, ScoreMethodRecord};
+use crate::data::{RollSpec, RulesData, ScoreMethodRecord};
 use crate::mechanics::{
-    describe_selection, illegal, incomplete, parse_score_option, score_option_id, sel_multi,
-    sel_single, Ability, Dnd5eState, SLOT_SCORES_ASSIGN, SLOT_SCORES_METHOD, STEP_SCORES,
+    describe_selection, dropped_faces, faces_text, group_total, illegal, incomplete, origin_label,
+    parse_score_option, roll_totals, score_option_id, sel_multi, sel_single, Ability, Dnd5eState,
+    SLOT_SCORES_ASSIGN, SLOT_SCORES_METHOD, SLOT_SCORES_ROLL, STEP_SCORES,
 };
 
 fn method<'a>(data: &'a RulesData, state: &Dnd5eState) -> Option<&'a ScoreMethodRecord> {
@@ -22,6 +27,14 @@ fn method<'a>(data: &'a RulesData, state: &Dnd5eState) -> Option<&'a ScoreMethod
         .score_method
         .as_ref()
         .and_then(|id| data.score_method(id))
+}
+
+/// The rolling method's die shape under the current state, if the chosen
+/// method rolls.
+fn roll_spec(data: &RulesData, state: &Dnd5eState) -> Option<RollSpec> {
+    method(data, state)
+        .filter(|m| m.is_roll())
+        .and_then(|m| m.roll)
 }
 
 /// Points spent under a point-buy method (unknown scores cost nothing —
@@ -32,6 +45,29 @@ fn points_spent(state: &Dnd5eState, method: &ScoreMethodRecord) -> i64 {
         .filter_map(|a| state.base_score(a))
         .map(|s| method.cost_of(s).unwrap_or(0) as i64)
         .sum()
+}
+
+/// Render-ready totals of a set: "14, 12, 12, 10, 9, 8".
+fn totals_text(set: &types::RolledSet, spec: RollSpec) -> String {
+    roll_totals(set, spec)
+        .iter()
+        .map(|t| t.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// The method's values with their multiplicity: how often each distinct
+/// value may be assigned (once per listing in an array, once per group
+/// that rolled it; unlimited under a point buy).
+fn offered_counts(state: &Dnd5eState, m: &ScoreMethodRecord) -> Vec<(u32, usize)> {
+    let mut out: Vec<(u32, usize)> = Vec::new();
+    for v in state.offered_scores(m) {
+        match out.iter_mut().find(|(value, _)| *value == v) {
+            Some((_, n)) => *n += 1,
+            None => out.push((v, 1)),
+        }
+    }
+    out
 }
 
 pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>> {
@@ -49,7 +85,10 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         presentation_hint: None,
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|_| Availability::Open),
-        dependents: vec![SlotId::new(SLOT_SCORES_ASSIGN)],
+        dependents: vec![
+            SlotId::new(SLOT_SCORES_ROLL),
+            SlotId::new(SLOT_SCORES_ASSIGN),
+        ],
         options: Box::new(move |_| {
             d.scores
                 .methods
@@ -66,6 +105,12 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
                                 .map(|s| format!("{s} = {}", m.cost_of(*s).unwrap_or(0)))
                                 .collect::<Vec<_>>()
                                 .join(", ")
+                        )]
+                    } else if let (true, Some(r)) = (m.is_roll(), m.roll) {
+                        vec![format!(
+                            "The app rolls for you, or you enter your own dice: {} sets of {}d{}, \
+                             keeping the highest {}. Every roll is kept in your record.",
+                            r.sets, r.dice, r.sides, r.keep
                         )]
                     } else {
                         vec![]
@@ -102,8 +147,144 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     });
 
+    // --- Roll (the rolling method's recorded input) ---
+    let d_kind = data.clone();
+    let d_unlock = data.clone();
+    let d_opts = data.clone();
+    let d_apply = data.clone();
+    let d_val = data.clone();
+    let d_desc = data.clone();
+    regs.push(SlotRegistration::<Dnd5eState> {
+        id: SlotId::new(SLOT_SCORES_ROLL),
+        step: StepId::new(STEP_SCORES),
+        label: "Roll ability scores".into(),
+        required: true,
+        presentation_hint: None,
+        kind: Box::new(move |state| {
+            // The shape sizes the entry grid; a hidden slot still reports
+            // the method's shape when one is known.
+            let spec = roll_spec(&d_kind, state).unwrap_or(RollSpec {
+                sides: 6,
+                dice: 4,
+                keep: 3,
+                sets: 6,
+            });
+            SlotViewKind::Roll {
+                sides: spec.sides,
+                dice: spec.dice,
+                groups: spec.sets,
+            }
+        }),
+        unlock: Box::new(move |state| match roll_spec(&d_unlock, state) {
+            Some(_) => Availability::Open,
+            None => Availability::Hidden,
+        }),
+        dependents: vec![SlotId::new(SLOT_SCORES_ASSIGN)],
+        // The history, one entry per set, render-ready: totals as the
+        // label, the faces with the dropped die in the details, the
+        // origin as the badge, the live set the only available one.
+        options: Box::new(move |state| {
+            let Some(spec) = roll_spec(&d_opts, state) else {
+                return vec![];
+            };
+            let last = state.rolled_sets.len();
+            state
+                .rolled_sets
+                .iter()
+                .enumerate()
+                .map(|(i, set)| {
+                    let live = i + 1 == last;
+                    OptionView {
+                        id: OptionId::new(format!("set.{}", i + 1)),
+                        label: totals_text(set, spec),
+                        summary: if live {
+                            format!("Set {} of {last} — live; assign these", i + 1)
+                        } else {
+                            format!("Set {} of {last} — superseded", i + 1)
+                        },
+                        details: set
+                            .groups
+                            .iter()
+                            .map(|g| {
+                                let dropped = dropped_faces(g, spec);
+                                if dropped.is_empty() {
+                                    format!("{} → {}", faces_text(g), group_total(g, spec))
+                                } else {
+                                    format!(
+                                        "{} → {} (dropped {})",
+                                        faces_text(g),
+                                        group_total(g, spec),
+                                        faces_text(&dropped)
+                                    )
+                                }
+                            })
+                            .collect(),
+                        available: live,
+                        unavailable_reason: (!live).then(|| "superseded by a later roll".into()),
+                        group: None,
+                        badge: Some(origin_label(set.origin).into()),
+                    }
+                })
+                .collect()
+        }),
+        apply: Box::new(move |state, decision| {
+            let Selection::Rolled(sets) = &decision.selection else {
+                return Err(ApplyError::new("expected rolled dice"));
+            };
+            let spec = roll_spec(&d_apply, state)
+                .ok_or_else(|| ApplyError::new("choose the rolling method before rolling"))?;
+            check_roll_shape(spec.sides, spec.dice, spec.sets, sets).map_err(ApplyError::new)?;
+            state.rolled_sets = sets.clone();
+            Ok(())
+        }),
+        validate: Box::new(move |state, _| {
+            let Some(m) = method(&d_val, state).filter(|m| m.is_roll()) else {
+                return vec![];
+            };
+            if state.rolled_sets.is_empty() {
+                vec![incomplete(
+                    SLOT_SCORES_ROLL,
+                    STEP_SCORES,
+                    &m.name,
+                    "Roll your ability scores, or enter the dice you rolled",
+                    &format!("from {}", m.name),
+                )]
+            } else {
+                vec![]
+            }
+        }),
+        meters: Box::new(|_, _| vec![]),
+        describe: Box::new(move |sel| match sel {
+            Selection::Rolled(sets) => {
+                let spec = d_desc
+                    .scores
+                    .methods
+                    .iter()
+                    .find_map(|m| m.roll)
+                    .unwrap_or(RollSpec {
+                        sides: 6,
+                        dice: 4,
+                        keep: 3,
+                        sets: 6,
+                    });
+                match sets.last() {
+                    Some(live) => format!(
+                        "{} ({}, set {} of {})",
+                        totals_text(live, spec),
+                        origin_label(live.origin),
+                        sets.len(),
+                        sets.len()
+                    ),
+                    None => "no sets".into(),
+                }
+            }
+            other => describe_selection(&d_desc, other),
+        }),
+    });
+
     // --- Assignment ---
     let d_opts = data.clone();
+    let d_unlock = data.clone();
     let d_apply = data.clone();
     let d_val = data.clone();
     let d_meter = data.clone();
@@ -117,43 +298,60 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         kind: Box::new(|_| SlotViewKind::Multi {
             count: Ability::ALL.len() as u32,
         }),
-        unlock: Box::new(|state| match state.score_method {
-            Some(_) => Availability::Open,
+        unlock: Box::new(move |state| match method(&d_unlock, state) {
             None => Availability::Locked {
                 reason: "choose a generation method first".into(),
             },
+            Some(m) if m.is_roll() && state.rolled_sets.is_empty() => Availability::Locked {
+                reason: "roll your ability scores first".into(),
+            },
+            Some(_) => Availability::Open,
         }),
         dependents: vec![],
         options: Box::new(move |state| {
             let Some(m) = method(&d_opts, state) else {
                 return vec![];
             };
-            let scores = m.offered_scores();
+            let counts = offered_counts(state, m);
             let mut out = Vec::new();
             for ability in Ability::ALL {
-                for score in &scores {
-                    // Under an array, a value assigned to another ability
-                    // is shown but not selectable here.
-                    let taken_by = if m.is_array() {
+                for (score, offered) in &counts {
+                    // Under an array or a roll, a value is available for
+                    // this ability while its assignments elsewhere have
+                    // not used up every listing of it.
+                    let taken_by: Vec<Ability> = if m.is_point_buy() {
+                        vec![]
+                    } else {
                         state
                             .assignments
                             .iter()
-                            .find(|(a, v)| *a != ability && v == score)
+                            .filter(|(a, v)| *a != ability && v == score)
                             .map(|(a, _)| *a)
-                    } else {
-                        None
+                            .collect()
                     };
+                    let available = taken_by.len() < *offered;
                     out.push(OptionView {
                         id: score_option_id(ability, *score),
                         label: score.to_string(),
                         summary: if m.is_point_buy() {
                             format!("{} points", m.cost_of(*score).unwrap_or(0))
+                        } else if *offered > 1 {
+                            format!("offered {offered} times")
                         } else {
                             String::new()
                         },
                         details: vec![],
-                        available: taken_by.is_none(),
-                        unavailable_reason: taken_by.map(|a| format!("assigned to {}", a.name())),
+                        available,
+                        unavailable_reason: (!available).then(|| {
+                            format!(
+                                "assigned to {}",
+                                taken_by
+                                    .iter()
+                                    .map(|a| a.name())
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            )
+                        }),
                         group: Some(ability.name().to_string()),
                         badge: None,
                     });
@@ -168,7 +366,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
                     "choose a generation method before assigning scores",
                 ));
             };
-            let offered = m.offered_scores();
+            let offered = state.offered_scores(m);
             let mut picks = Vec::new();
             for id in ids {
                 let (ability, value) = parse_score_option(id)
@@ -227,34 +425,47 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
                 out.push(incomplete(
                     SLOT_SCORES_ASSIGN,
                     STEP_SCORES,
-                    "Assign Ability Scores",
+                    "Ability Scores",
                     &format!("No score assigned to {}", missing.join(", ")),
                     &source,
                 ));
             }
-            if m.is_array() {
-                // Each array value used once.
-                let mut values: Vec<u32> = state.assignments.iter().map(|(_, v)| *v).collect();
-                values.sort_unstable();
-                let mut dupes: Vec<u32> = Vec::new();
-                for w in values.windows(2) {
-                    if w[0] == w[1] && !dupes.contains(&w[0]) {
-                        dupes.push(w[0]);
+            if m.is_array() || m.is_roll() {
+                // Each offered value used at most as often as offered: an
+                // array lists each value once; a roll offers a total once
+                // per group that rolled it.
+                let counts = offered_counts(state, m);
+                let mut over: Vec<String> = Vec::new();
+                for (value, offered) in &counts {
+                    let used = state
+                        .assignments
+                        .iter()
+                        .filter(|(_, v)| v == value)
+                        .count();
+                    if used > *offered {
+                        over.push(if m.is_array() {
+                            value.to_string()
+                        } else {
+                            format!("{value} assigned {used} times, rolled {offered}")
+                        });
                     }
                 }
-                if !dupes.is_empty() {
+                if !over.is_empty() {
                     out.push(illegal(
                         SLOT_SCORES_ASSIGN,
                         STEP_SCORES,
                         &m.name,
-                        &format!(
-                            "Each array value is used exactly once ({} assigned more than once)",
-                            dupes
-                                .iter()
-                                .map(|v| v.to_string())
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        ),
+                        &if m.is_array() {
+                            format!(
+                                "Each array value is used exactly once ({} assigned more than once)",
+                                over.join(", ")
+                            )
+                        } else {
+                            format!(
+                                "Each rolled total is used as often as it was rolled ({})",
+                                over.join("; ")
+                            )
+                        },
                         &source,
                     ));
                 }

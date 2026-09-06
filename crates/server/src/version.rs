@@ -347,5 +347,6 @@ fn describe_selection(selection: &Selection) -> String {
             .collect::<Vec<_>>()
             .join(", "),
         Selection::Text(text) => text.clone(),
+        Selection::Rolled(sets) => format!("{} rolled set(s)", sets.len()),
     }
 }

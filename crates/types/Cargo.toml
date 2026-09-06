@@ -16,3 +16,6 @@ ts = ["dep:tsify", "dep:wasm-bindgen"]
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+serde_json = { workspace = true }

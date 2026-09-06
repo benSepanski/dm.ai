@@ -52,6 +52,7 @@ fn confirm(
         Selection::Option(id) => id.as_str().to_string(),
         Selection::Options(ids) => ids.iter().map(|i| i.as_str()).collect::<Vec<_>>().join("+"),
         Selection::Text(t) => t.clone(),
+        Selection::Rolled(sets) => format!("rolled{}", sets.len()),
     };
     let input = DecisionInput {
         id: DecisionId::new(format!("{slot}={key}")),

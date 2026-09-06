@@ -1970,6 +1970,14 @@ mod properties {
                             types::SlotViewKind::Text { .. } => {
                                 Selection::Text(format!("text-{pick}"))
                             }
+                            // PF2e registers no roll slot; the fuzz driver
+                            // would submit one deterministic set if it did.
+                            types::SlotViewKind::Roll { sides, dice, groups } => {
+                                Selection::Rolled(vec![types::RolledSet {
+                                    groups: vec![vec![1u8.max(*sides); *dice as usize]; *groups as usize],
+                                    origin: types::RollOrigin::Entered,
+                                }])
+                            }
                         };
                         n += 1;
                         let input = DecisionInput {

@@ -49,8 +49,9 @@ pub struct SkillRecord {
 /// One ability-score generation method. `kind` selects the machinery:
 /// `array` offers each of `array`'s values under every ability and
 /// requires each value once; `point-buy` offers every score in `costs`
-/// under every ability against `budget`. A rolling method arrives as a
-/// third kind in `dnd-dice` without touching the method slot.
+/// under every ability against `budget`; `roll` records `roll.sets` sets
+/// of `roll.dice` d`roll.sides` and offers each set's total of its
+/// highest `roll.keep` dice, as often as it was rolled.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ScoreMethodRecord {
     pub id: String,
@@ -63,7 +64,20 @@ pub struct ScoreMethodRecord {
     pub budget: u32,
     #[serde(default)]
     pub costs: BTreeMap<String, u32>,
+    #[serde(default)]
+    pub roll: Option<RollSpec>,
     pub source: SourceRef,
+}
+
+/// The die shape of a rolling method, transcribed from the rules text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub struct RollSpec {
+    pub sides: u8,
+    pub dice: u8,
+    /// How many of a group's dice count toward its total (the highest).
+    pub keep: u8,
+    /// How many groups one roll records (one per ability).
+    pub sets: u8,
 }
 
 impl ScoreMethodRecord {
@@ -72,6 +86,9 @@ impl ScoreMethodRecord {
     }
     pub fn is_point_buy(&self) -> bool {
         self.kind == "point-buy"
+    }
+    pub fn is_roll(&self) -> bool {
+        self.kind == "roll"
     }
     /// The point cost of a score under this method, when the method is a
     /// point buy and the score is purchasable.
@@ -610,6 +627,21 @@ impl RulesData {
                         }
                     }
                 }
+                "roll" => match m.roll {
+                    Some(r)
+                        if r.sides >= 2
+                            && r.dice >= 1
+                            && r.keep >= 1
+                            && r.keep <= r.dice
+                            && r.sets as usize == Ability::ALL.len() => {}
+                    _ => {
+                        return Err(integrity(format!(
+                            "score method '{}' needs a roll spec: sides >= 2, 1 <= keep <= dice, \
+                             and one set per ability",
+                            m.id
+                        )));
+                    }
+                },
                 other => {
                     return Err(integrity(format!(
                         "score method '{}' has unknown kind '{other}'",

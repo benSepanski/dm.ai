@@ -22,6 +22,25 @@
       }
     },
     {
+      "id": "method.roll",
+      "name": "Random Generation",
+      "kind": "roll",
+      "text": "Roll four d6s and record the total of the highest three dice. Do this five more times, so you have six numbers.",
+      "roll": {
+        "sides": 6,
+        "dice": 4,
+        "keep": 3,
+        "sets": 6
+      },
+      "source": {
+        "book": "System Reference Document 5.2.1",
+        "page": 21,
+        "url": "https://www.dndbeyond.com/srd",
+        "license": "CC-BY-4.0",
+        "attribution": "This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode."
+      }
+    },
+    {
       "id": "method.point-buy",
       "name": "Point Buy",
       "kind": "point-buy",

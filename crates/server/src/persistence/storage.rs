@@ -10,9 +10,10 @@ use types::{Decision, SheetDiff, SheetView, StepId};
 /// decision source (quick build); v3 = v2 plus the `random` and `clone`
 /// decision sources (roster ergonomics); v4 = v3 plus `finalized_through`
 /// (level-up: how much of the log the stored sheet reflects); v5 = v4 plus
-/// `system` (the game the character belongs to). Structurally identical
-/// otherwise; absent fields are fixed up on read.
-pub(crate) const SCHEMA_VERSION: u32 = 5;
+/// `system` (the game the character belongs to); v6 = v5 plus the `rolled`
+/// selection kind (dnd-dice: recorded dice in the log). Structurally
+/// identical otherwise; absent fields are fixed up on read.
+pub(crate) const SCHEMA_VERSION: u32 = 6;
 /// Oldest schema this binary still reads. v1 files are accepted on load,
 /// never rewritten by loading, and upgraded on their next ordinary write.
 pub(crate) const MIN_SCHEMA_VERSION: u32 = 1;

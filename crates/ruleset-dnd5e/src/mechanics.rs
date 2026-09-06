@@ -8,11 +8,11 @@ use std::collections::BTreeMap;
 use engine_core::ApplyError;
 use serde::Deserialize;
 use types::{
-    ChecklistEntry, ChecklistSeverity, OptionId, Selection, SheetEntry, SheetSection, SheetView,
-    SlotId, StepId,
+    ChecklistEntry, ChecklistSeverity, OptionId, RollOrigin, RolledSet, Selection, SheetEntry,
+    SheetSection, SheetView, SlotId, StepId,
 };
 
-use crate::data::{ArmorRecord, Effect, RulesData, WeaponRecord};
+use crate::data::{ArmorRecord, Effect, RollSpec, RulesData, WeaponRecord};
 
 /// The six abilities, in the published order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
@@ -107,6 +107,50 @@ pub fn format_weight(lb: f64) -> String {
 
 pub fn format_gp(gp: u32) -> String {
     format!("{gp} GP")
+}
+
+// ---- Dice ------------------------------------------------------------
+
+/// A group's total under a rolling method: the highest `keep` faces,
+/// summed. Pure arithmetic over recorded faces — the roll itself is a
+/// recorded input, never regenerated.
+pub fn group_total(faces: &[u8], spec: RollSpec) -> u32 {
+    let mut sorted: Vec<u8> = faces.to_vec();
+    sorted.sort_unstable_by(|a, b| b.cmp(a));
+    sorted
+        .iter()
+        .take(spec.keep as usize)
+        .map(|f| *f as u32)
+        .sum()
+}
+
+/// The faces a group drops (its lowest beyond `keep`), for rendering.
+pub fn dropped_faces(faces: &[u8], spec: RollSpec) -> Vec<u8> {
+    let mut sorted: Vec<u8> = faces.to_vec();
+    sorted.sort_unstable_by(|a, b| b.cmp(a));
+    sorted.iter().skip(spec.keep as usize).copied().collect()
+}
+
+/// Every group's total of one rolled set, in group order.
+pub fn roll_totals(set: &RolledSet, spec: RollSpec) -> Vec<u32> {
+    set.groups.iter().map(|g| group_total(g, spec)).collect()
+}
+
+/// Render-ready tag for a set's origin.
+pub fn origin_label(origin: RollOrigin) -> &'static str {
+    match origin {
+        RollOrigin::App => "rolled",
+        RollOrigin::Entered => "entered",
+    }
+}
+
+/// Render-ready faces: "6, 5, 3, 1".
+pub fn faces_text(faces: &[u8]) -> String {
+    faces
+        .iter()
+        .map(|f| f.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 // ---- Option-id conventions -------------------------------------------
@@ -216,8 +260,12 @@ pub struct Dnd5eState {
     pub species_feat: Option<String>,
     pub species_ancestry: Option<String>,
     pub score_method: Option<String>,
+    /// The rolling method's recorded history, oldest first, the last set
+    /// live (dnd-dice). Empty under every other method.
+    pub rolled_sets: Vec<RolledSet>,
     /// Assignment picks in pick order; validators judge one per ability
-    /// and (array) each value once. The first pick per ability counts.
+    /// and (array, roll) each value at most as often as offered. The
+    /// first pick per ability counts.
     pub assignments: Vec<(Ability, u32)>,
     pub class_skills: Vec<String>,
     pub fighting_style: Option<String>,
@@ -254,6 +302,30 @@ pub struct Carried {
 impl Dnd5eState {
     pub fn level(&self) -> u32 {
         1 + self.level_advances
+    }
+
+    /// The live rolled set (the most recent), if the rolling method has
+    /// recorded one.
+    pub fn live_roll(&self) -> Option<&RolledSet> {
+        self.rolled_sets.last()
+    }
+
+    /// The scores a method offers under the current state: the array's
+    /// values, the cost table's scores, or the live rolled set's totals
+    /// (highest first). Empty for a rolling method with nothing rolled.
+    pub fn offered_scores(&self, method: &crate::data::ScoreMethodRecord) -> Vec<u32> {
+        match (method.is_roll(), method.roll) {
+            (true, Some(spec)) => self
+                .live_roll()
+                .map(|set| {
+                    let mut totals = roll_totals(set, spec);
+                    totals.sort_unstable_by(|a, b| b.cmp(a));
+                    totals
+                })
+                .unwrap_or_default(),
+            (true, None) => Vec::new(),
+            _ => method.offered_scores(),
+        }
     }
 
     pub fn proficiency_bonus(&self) -> i32 {
@@ -620,6 +692,8 @@ pub fn describe_selection(data: &std::sync::Arc<RulesData>, selection: &Selectio
                 format!("\"{t}\"")
             }
         }
+        // Roll slots register their own describe (totals are theirs).
+        Selection::Rolled(sets) => format!("{} rolled set(s)", sets.len()),
     }
 }
 
@@ -648,6 +722,7 @@ pub const SLOT_SPECIES_SKILL: &str = "dnd5e.species.skill";
 pub const SLOT_SPECIES_FEAT: &str = "dnd5e.species.feat";
 pub const SLOT_SPECIES_ANCESTRY: &str = "dnd5e.species.ancestry";
 pub const SLOT_SCORES_METHOD: &str = "dnd5e.scores.method";
+pub const SLOT_SCORES_ROLL: &str = "dnd5e.scores.roll";
 pub const SLOT_SCORES_ASSIGN: &str = "dnd5e.scores.assign";
 pub const SLOT_FEAT_SKILLED: &str = "dnd5e.feats.skilled";
 pub const SLOT_EQUIPMENT_PACKAGE: &str = "dnd5e.equipment.package";
@@ -750,23 +825,47 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
 
     let mut sections = Vec::new();
 
-    // Ability scores: score and modifier, with the composition.
-    let method_name = state
+    // Ability scores: score and modifier, with the composition. Under a
+    // rolling method the composition names the faces behind the value
+    // and whether the app rolled them or the player entered them.
+    let method = state
         .score_method
         .as_ref()
-        .and_then(|id| data.score_method(id))
-        .map(|m| m.name.clone());
+        .and_then(|id| data.score_method(id));
+    let method_name = method.map(|m| m.name.clone());
     let increases = state.increases(data);
     let mut ability_entries = Vec::new();
+    // Groups of the live set already shown for an earlier ability, so two
+    // equal totals each name their own faces.
+    let mut shown_groups: Vec<usize> = Vec::new();
     for ability in Ability::ALL {
         let base = state.base_score(ability);
         let score = state.score(ability, data);
         let mut parts = Vec::new();
         if let Some(b) = base {
-            parts.push(format!(
-                "{b} ({})",
-                method_name.clone().unwrap_or_else(|| "assigned".into())
-            ));
+            let rolled = method
+                .filter(|m| m.is_roll())
+                .and_then(|m| m.roll)
+                .and_then(|spec| {
+                    let set = state.live_roll()?;
+                    let (index, faces) =
+                        set.groups.iter().enumerate().find(|(i, g)| {
+                            !shown_groups.contains(i) && group_total(g, spec) == b
+                        })?;
+                    shown_groups.push(index);
+                    Some(format!(
+                        "{b} ({}: {} → {b}, {})",
+                        method_name.clone().unwrap_or_default(),
+                        faces_text(faces),
+                        origin_label(set.origin)
+                    ))
+                });
+            parts.push(rolled.unwrap_or_else(|| {
+                format!(
+                    "{b} ({})",
+                    method_name.clone().unwrap_or_else(|| "assigned".into())
+                )
+            }));
         }
         if let (Some(inc), Some(bg)) = (increases.get(&ability), background) {
             parts.push(format!("+{inc} ({})", bg.name));

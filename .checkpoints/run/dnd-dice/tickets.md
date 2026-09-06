@@ -84,24 +84,24 @@ points) split off as `dnd-hp-dice`.
 
 ## Tickets
 
-- [ ] 1. Constraints wiring: entropy dependency scan inverted to the whole
+- [x] 1. Constraints wiring: entropy dependency scan inverted to the whole
   workspace (only `server` reaches `rand*`/`getrandom`); purity tokens
   `getrandom`, `Math::random` + `crates/wasm/src` coverage; `clippy.toml`
   entropy bans; UI dice-blind scan (word-bounded `d4..d20`, `Math.random`,
   `getRandomValues`); single-module `RollOrigin::App` scan (skips until the
   type exists); `SelectionKind` exhaustiveness left to the compiler. All
   green on the unchanged tree.
-- [ ] 2. Types + engine-core + schema: `roll.rs` types, `Selection::Rolled`,
+- [x] 2. Types + engine-core + schema: `roll.rs` types, `Selection::Rolled`,
   `SlotViewKind::Roll`, `check_roll_shape`; amend/preview composition;
   every exhaustive `Selection` match gains an arm (server version.rs,
   routes.rs, both rulesets' describe/sel helpers); engine-core tests
   (composition, shape helper property test in `checks/replay.rs`); schema
   v6 + persistence rows (v5 reads, v7 refused, v6 round-trip fixture).
-- [ ] 3. ruleset-dnd5e scores: `method.roll` record + version bump 0.2.0 +
+- [x] 3. ruleset-dnd5e scores: `method.roll` record + version bump 0.2.0 +
   shipped-versions + attestation re-run; `dnd5e.scores.roll` slot with
   history options; multiplicity-aware assignment; sheet ability entries
   name faces and tag; crate tests; every existing 5.5e golden unchanged.
-- [ ] 3b. ruleset-dnd5e hit dice: per-level unrequired `hit-die` slots; HP
+- [~] 3b. ruleset-dnd5e hit dice: per-level unrequired `hit-die` slots; HP
   fold per-level with the published minimum; describe; gains/deltas/pending
   carry the roll; Brannock goldens byte-identical.
 - [ ] 4. Server: `dice.rs` (OS + seeded, keyed), `--dice-seed`, `seeded_dice`

@@ -17,4 +17,11 @@ disallowed-methods = [
     { path = "std::time::Instant::now", reason = "no ambient clock in domain code (perf checks may allow explicitly)" },
     { path = "std::env::var", reason = "no ambient config; everything arrives via CLI flags or function arguments" },
     { path = "std::env::vars", reason = "no ambient config; everything arrives via CLI flags or function arguments" },
+    # Entropy is drawn at one call site (dnd-dice architecture): the server's
+    # dice helper, behind a scoped allow. Nothing else rolls.
+    { path = "getrandom::getrandom", reason = "entropy enters through the server's dice helper only (server::dice is the one allowed exception)", allow-invalid = true },
+    { path = "getrandom::fill", reason = "entropy enters through the server's dice helper only (server::dice is the one allowed exception)", allow-invalid = true },
+    { path = "rand::random", reason = "entropy enters through the server's dice helper only; the app takes no rand dependency", allow-invalid = true },
+    { path = "rand::thread_rng", reason = "entropy enters through the server's dice helper only; the app takes no rand dependency", allow-invalid = true },
+    { path = "rand::rng", reason = "entropy enters through the server's dice helper only; the app takes no rand dependency", allow-invalid = true },
 ]

@@ -197,6 +197,13 @@ fn complete_character(engine: &ruleset_pf2e::Pf2eEngine, class_id: &str) -> Vec<
                 }
                 SlotViewKind::List => Some(Selection::Options(vec![])),
                 SlotViewKind::Text { .. } => Some(Selection::Text("T".into())),
+                // A roll slot takes one entered set of the smallest faces.
+                SlotViewKind::Roll { dice, groups, .. } => {
+                    Some(Selection::Rolled(vec![types::RolledSet {
+                        groups: vec![vec![1u8; *dice as usize]; *groups as usize],
+                        origin: types::RollOrigin::Entered,
+                    }]))
+                }
             };
             if let Some(selection) = selection {
                 append(&mut log, slot.id.as_str(), selection);

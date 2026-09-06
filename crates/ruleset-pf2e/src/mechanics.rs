@@ -1649,6 +1649,8 @@ pub fn describe_selection(data: &std::sync::Arc<RulesData>, selection: &Selectio
                 format!("\"{t}\"")
             }
         }
+        // PF2e registers no roll slot; the arm exists for the type.
+        Selection::Rolled(sets) => format!("{} rolled set(s)", sets.len()),
     }
 }
 
