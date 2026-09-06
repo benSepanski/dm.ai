@@ -1,0 +1,369 @@
+{
+  "name": "Brannock",
+  "summary": [
+    "Human Fighter 1",
+    "Medium · Speed 30 ft."
+  ],
+  "sections": [
+    {
+      "title": "Ability Scores",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "17 (+3)",
+          "detail": "15 (Standard Array) +2 (Soldier)"
+        },
+        {
+          "label": "Dexterity",
+          "value": "13 (+1)",
+          "detail": "13 (Standard Array)"
+        },
+        {
+          "label": "Constitution",
+          "value": "15 (+2)",
+          "detail": "14 (Standard Array) +1 (Soldier)"
+        },
+        {
+          "label": "Intelligence",
+          "value": "8 (-1)",
+          "detail": "8 (Standard Array)"
+        },
+        {
+          "label": "Wisdom",
+          "value": "12 (+1)",
+          "detail": "12 (Standard Array)"
+        },
+        {
+          "label": "Charisma",
+          "value": "10 (+0)",
+          "detail": "10 (Standard Array)"
+        }
+      ]
+    },
+    {
+      "title": "Combat",
+      "entries": [
+        {
+          "label": "Hit Points",
+          "value": "12",
+          "detail": "10 + 2 Con"
+        },
+        {
+          "label": "Armor Class",
+          "value": "17",
+          "detail": "16 (Chain Mail) +1 (Defense)"
+        },
+        {
+          "label": "Initiative",
+          "value": "+3",
+          "detail": "1 Dex, +2 proficiency (Alert)"
+        },
+        {
+          "label": "Speed",
+          "value": "30 ft.",
+          "detail": "Human"
+        },
+        {
+          "label": "Proficiency Bonus",
+          "value": "+2",
+          "detail": "level 1"
+        },
+        {
+          "label": "Hit Dice",
+          "value": "1d10",
+          "detail": "d10 per Fighter level"
+        },
+        {
+          "label": "Passive Perception",
+          "value": "13",
+          "detail": "10 + 1 Wis + 2 proficiency (from Human)"
+        }
+      ]
+    },
+    {
+      "title": "Saving Throws",
+      "entries": [
+        {
+          "label": "Strength",
+          "value": "+5",
+          "detail": "3 Str + 2 proficiency (from Fighter)"
+        },
+        {
+          "label": "Dexterity",
+          "value": "+1",
+          "detail": "1 Dex"
+        },
+        {
+          "label": "Constitution",
+          "value": "+4",
+          "detail": "2 Con + 2 proficiency (from Fighter)"
+        },
+        {
+          "label": "Intelligence",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Wisdom",
+          "value": "+1",
+          "detail": "1 Wis"
+        },
+        {
+          "label": "Charisma",
+          "value": "+0",
+          "detail": "0 Cha"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "entries": [
+        {
+          "label": "Acrobatics",
+          "value": "+3",
+          "detail": "1 Dex + 2 proficiency (from Fighter)"
+        },
+        {
+          "label": "Animal Handling",
+          "value": "+1",
+          "detail": "1 Wis"
+        },
+        {
+          "label": "Arcana",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Athletics",
+          "value": "+5",
+          "detail": "3 Str + 2 proficiency (from Soldier)"
+        },
+        {
+          "label": "Deception",
+          "value": "+0",
+          "detail": "0 Cha"
+        },
+        {
+          "label": "History",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Insight",
+          "value": "+3",
+          "detail": "1 Wis + 2 proficiency (from Fighter)"
+        },
+        {
+          "label": "Intimidation",
+          "value": "+2",
+          "detail": "0 Cha + 2 proficiency (from Soldier)"
+        },
+        {
+          "label": "Investigation",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Medicine",
+          "value": "+1",
+          "detail": "1 Wis"
+        },
+        {
+          "label": "Nature",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Perception",
+          "value": "+3",
+          "detail": "1 Wis + 2 proficiency (from Human)"
+        },
+        {
+          "label": "Performance",
+          "value": "+0",
+          "detail": "0 Cha"
+        },
+        {
+          "label": "Persuasion",
+          "value": "+0",
+          "detail": "0 Cha"
+        },
+        {
+          "label": "Religion",
+          "value": "-1",
+          "detail": "-1 Int"
+        },
+        {
+          "label": "Sleight of Hand",
+          "value": "+1",
+          "detail": "1 Dex"
+        },
+        {
+          "label": "Stealth",
+          "value": "+1",
+          "detail": "1 Dex"
+        },
+        {
+          "label": "Survival",
+          "value": "+1",
+          "detail": "1 Wis"
+        }
+      ]
+    },
+    {
+      "title": "Attacks",
+      "entries": [
+        {
+          "label": "Greatsword",
+          "value": "+5 · 2d6+3 Slashing",
+          "detail": "3 Str, +2 proficiency; Heavy, Two-Handed; mastery: Graze (chosen)"
+        },
+        {
+          "label": "Flail",
+          "value": "+5 · 1d8+3 Bludgeoning",
+          "detail": "3 Str, +2 proficiency; mastery: Sap (chosen)"
+        },
+        {
+          "label": "Javelin",
+          "value": "+5 · 1d6+3 Piercing",
+          "detail": "3 Str, +2 proficiency; Thrown (range 30/120); mastery: Slow (chosen); ×8"
+        },
+        {
+          "label": "Spear",
+          "value": "+5 · 1d6+3 Piercing (1d8+3 two-handed)",
+          "detail": "3 Str, +2 proficiency; Thrown, Versatile (range 20/60); mastery: Sap"
+        },
+        {
+          "label": "Shortbow",
+          "value": "+3 · 1d6+1 Piercing",
+          "detail": "1 Dex, +2 proficiency; Ammunition, Two-Handed (range 80/320); mastery: Vex"
+        }
+      ]
+    },
+    {
+      "title": "Features",
+      "entries": [
+        {
+          "label": "Fighting Style",
+          "value": "Defense",
+          "detail": "While you're wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class. — You have honed your martial prowess and gain a Fighting Style feat of your choice (see \"Feats\"). Defense is recommended. Whenever you gain a Fighter level, you can replace the feat you chose with a different Fighting Style feat."
+        },
+        {
+          "label": "Second Wind",
+          "value": "Fighter 1",
+          "detail": "You have a limited well of physical and mental stamina that you can draw on. As a Bonus Action, you can use it to regain Hit Points equal to 1d10 plus your Fighter level. You can use this feature twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. When you reach certain Fighter levels, you gain more uses of this feature, as shown in the Second Wind column of the Fighter Features table."
+        },
+        {
+          "label": "Weapon Mastery",
+          "value": "Greatsword (Graze), Flail (Sap), Javelin (Slow)",
+          "detail": "Your training with weapons allows you to use the mastery properties of three kinds of Simple or Martial weapons of your choice. Whenever you finish a Long Rest, you can practice weapon drills and change one of those weapon choices. When you reach certain Fighter levels, you gain the ability to use the mastery properties of more kinds of weapons, as shown in the Weapon Mastery column of the Fighter Features table."
+        },
+        {
+          "label": "Resourceful",
+          "value": "Human",
+          "detail": "You gain Heroic Inspiration whenever you finish a Long Rest."
+        },
+        {
+          "label": "Skillful",
+          "value": "Human",
+          "detail": "You gain proficiency in one skill of your choice."
+        },
+        {
+          "label": "Versatile",
+          "value": "Human",
+          "detail": "You gain an Origin feat of your choice (see \"Feats\"). Skilled is recommended."
+        },
+        {
+          "label": "Savage Attacker",
+          "value": "origin feat from Soldier",
+          "detail": "You've trained to deal particularly damaging strikes. Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target."
+        },
+        {
+          "label": "Alert",
+          "value": "origin feat from Human",
+          "detail": "Initiative Proficiency. When you roll Initiative, you can add your Proficiency Bonus to the roll. Initiative Swap. Immediately after you roll Initiative, you can swap your Initiative with the Initiative of one willing ally in the same combat. You can't make this swap if you or the ally has the Incapacitated condition."
+        },
+        {
+          "label": "Tool Proficiency",
+          "value": "Gaming Set",
+          "detail": "from Soldier"
+        }
+      ]
+    },
+    {
+      "title": "Equipment",
+      "entries": [
+        {
+          "label": "Chain Mail",
+          "value": "55 lb.",
+          "detail": "heavy armor (worn); from Fighter package A"
+        },
+        {
+          "label": "Greatsword",
+          "value": "6 lb.",
+          "detail": "martial melee weapon; from Fighter package A"
+        },
+        {
+          "label": "Flail",
+          "value": "2 lb.",
+          "detail": "martial melee weapon; from Fighter package A"
+        },
+        {
+          "label": "Javelin ×8",
+          "value": "16 lb.",
+          "detail": "simple melee weapon; from Fighter package A"
+        },
+        {
+          "label": "Dungeoneer's Pack",
+          "value": "55 lb.",
+          "detail": "gear; from Fighter package A"
+        },
+        {
+          "label": "Spear",
+          "value": "3 lb.",
+          "detail": "simple melee weapon; from Soldier"
+        },
+        {
+          "label": "Shortbow",
+          "value": "2 lb.",
+          "detail": "simple ranged weapon; from Soldier"
+        },
+        {
+          "label": "Arrows (20)",
+          "value": "1 lb.",
+          "detail": "gear; from Soldier"
+        },
+        {
+          "label": "Gaming Set",
+          "value": "0 lb.",
+          "detail": "tool; from Soldier"
+        },
+        {
+          "label": "Healer's Kit",
+          "value": "3 lb.",
+          "detail": "gear; from Soldier"
+        },
+        {
+          "label": "Quiver",
+          "value": "1 lb.",
+          "detail": "gear; from Soldier"
+        },
+        {
+          "label": "Traveler's Clothes",
+          "value": "4 lb.",
+          "detail": "gear; from Soldier"
+        },
+        {
+          "label": "Total Weight",
+          "value": "148 lb.",
+          "detail": "carrying capacity 255 lb. (Strength 17 × 15)"
+        },
+        {
+          "label": "Coin",
+          "value": "18 GP",
+          "detail": "4 GP from Fighter package A + 14 GP from Soldier"
+        }
+      ]
+    }
+  ]
+}

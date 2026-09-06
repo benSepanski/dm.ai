@@ -59,6 +59,16 @@ jobs:
           wasm-pack build crates/wasm --target web --out-dir ../../ui/src/engine/pkg --no-pack
           rm -f ui/src/engine/pkg/.gitignore
 
+      - name: WASM bundle budget (both rulesets, one module, <= 2.5 MB raw)
+        # chargen-dnd architecture: one .wasm holds every shipped ruleset;
+        # the size budget is asserted, not admired.
+        run: |
+          count=$(ls ui/src/engine/pkg/*.wasm | wc -l)
+          test "$count" -eq 1
+          size=$(stat -c%s ui/src/engine/pkg/wasm_bg.wasm)
+          echo "wasm_bg.wasm: ${size} bytes (budget 2621440)"
+          test "$size" -le 2621440
+
       - name: Generated bindings never stale
         # porcelain (not diff) so UNTRACKED drift fails too. The TS surface
         # (.js/.d.ts) must match byte-for-byte — wasm-bindgen's version is

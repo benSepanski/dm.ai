@@ -424,6 +424,28 @@ fn server_and_wasm_parse_no_slot_ids() {
     }
 }
 
+/// Routes, the version guard, and persistence never name a ruleset crate:
+/// the two-arm selector in `main.rs` (and the wasm `lib.rs`) is the only
+/// place a concrete ruleset appears above the boundary.
+#[test]
+fn only_the_selectors_name_a_ruleset_crate() {
+    let root = checks::workspace_root();
+    for (path, src) in rust_sources(&root.join("crates/server/src")) {
+        if path.file_name().is_some_and(|n| n == "main.rs") {
+            continue;
+        }
+        let code = code_lines(&src);
+        for krate in RULESET_CRATES {
+            let ident = krate.replace('-', "_");
+            assert!(
+                !code.contains(&ident),
+                "{} names {krate}: only the selector in main.rs may",
+                path.display()
+            );
+        }
+    }
+}
+
 /// Every shipped rules-data directory has a selector arm in the server
 /// and the wasm bundle, and a ruleset crate of its own — the two-arm
 /// selectors ARE the registry.

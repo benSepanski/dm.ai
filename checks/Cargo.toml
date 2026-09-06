@@ -75,6 +75,10 @@ path = "clone.rs"
 name = "campaign"
 path = "campaign.rs"
 
+[[test]]
+name = "dnd5e"
+path = "dnd5e.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }

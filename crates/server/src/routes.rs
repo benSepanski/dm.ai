@@ -1346,7 +1346,7 @@ async fn random_mint(
     }
     let class_input = DecisionInput {
         id: DecisionId::new(format!("{}.class-pick", request.request_id)),
-        slot: SlotId::new(ruleset_pf2e::CLASS_SLOT_ID),
+        slot: cx.rs.class_slot(),
         selection: Selection::Option(types::OptionId::new(class_id)),
         source: class_source,
     };
