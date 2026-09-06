@@ -48,7 +48,8 @@ export function slot(page: Page, id: string) {
 }
 
 export async function gotoStep(page: Page, title: string) {
-  await page.getByRole('button', { name: new RegExp(`\\d+\\. ${title}`) }).click();
+  // Anchored at the end: "Class" must not also match "Class Choices".
+  await page.getByRole('button', { name: new RegExp(`\\d+\\. ${title}$`) }).click();
   // The layout sweep rides every step visit: every walk checks every
   // screen it reaches, for free.
   await expectSaneLayout(page);
