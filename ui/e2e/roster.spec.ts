@@ -4,12 +4,14 @@
 // screen visited rides the generic layout sweep via the shared helpers.
 import { expect, test } from '@playwright/test';
 import { expectSaneLayout } from './layout';
+import { declareFirstGame } from './helpers';
 import { TestServer } from './server';
 
 const server = new TestServer();
 
 test.beforeAll(async () => {
   await server.start();
+  await declareFirstGame(server);
 });
 test.afterAll(async () => {
   await server.stop();

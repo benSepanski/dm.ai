@@ -2,6 +2,7 @@
 // generated engine types — the single source of truth for the wire.
 import type {
   AbandonLevelOutcome,
+  CampaignView,
   CharacterView,
   ClearOutcome,
   CloneResult,
@@ -40,6 +41,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return undefined as T;
   }
   return (await response.json()) as T;
+}
+
+/** The campaign view: which game this directory plays (if resolved), the
+ * games this build ships, and every shipped license paragraph. Fetched
+ * before anything else — the roster label, the choose-game screen, and
+ * the engine façade all read it. */
+export function fetchCampaign(): Promise<CampaignView> {
+  return request('/api/campaign');
+}
+
+/** Declare which game an empty campaign plays. The server refuses typed
+ * (422 with a message) when the id is unknown, the campaign already holds
+ * a character, or another tab declared a moment ago. */
+export function declareCampaign(system: string): Promise<CampaignView> {
+  return request('/api/campaign', {
+    method: 'POST',
+    body: JSON.stringify({ system }),
+  });
 }
 
 export function fetchRoster(): Promise<RosterView> {

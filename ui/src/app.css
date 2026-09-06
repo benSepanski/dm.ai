@@ -178,6 +178,77 @@ textarea {
     url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b6156' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
     no-repeat right 0.5rem center;
 }
+/* ---- Campaign: the game label, the problem banner, the choose-game screen ---- */
+.campaign-label {
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+}
+.campaign-game {
+  color: var(--ink);
+}
+.campaign-inferred {
+  font-size: 0.85rem;
+}
+.campaign-problem {
+  border: 1px solid var(--bad);
+  border-left: 4px solid var(--bad);
+  background: var(--card);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  margin: 1rem 0;
+  overflow-wrap: anywhere;
+}
+.choose-game {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 4rem;
+}
+.choose-game-form {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+}
+.choose-game-form h2 {
+  margin-top: 0;
+}
+.choose-game-intro {
+  color: var(--ink-soft);
+}
+.choose-game-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.choose-game-option label {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+.choose-game-option.selected label {
+  border-color: var(--accent);
+  background: var(--paper);
+}
+.choose-game-error {
+  color: var(--bad);
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+.choose-game-error p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 .license-notice {
   border-top: 1px solid var(--line);
   margin-top: 3rem;
@@ -580,22 +651,22 @@ textarea {
   margin-top: 1rem;
 }
 
-.boost-rows {
+.select-rows {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   margin-bottom: 0.4rem;
 }
-.boost-row {
+.select-row {
   display: flex;
   gap: 0.7rem;
   align-items: center;
 }
-.boost-row span {
+.select-row span {
   min-width: 4.5rem;
   color: var(--ink-soft);
 }
-.boost-row select {
+.select-row select {
   font: inherit;
   padding: 0.3rem 0.5rem;
   border-radius: 6px;
@@ -647,7 +718,7 @@ textarea {
   font-weight: 600;
   margin: 0 0 0.5rem;
 }
-.boost-row select {
+.select-row select {
   flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
@@ -899,6 +970,14 @@ li.option-group-heading {
 }
 .level-deltas {
   margin: 1rem 0;
+  /* The sidebar is 22rem; a four-column diff table's min-content can
+     exceed it on wide fonts. Scroll rather than spill (layout sweep). */
+  overflow-x: auto;
+}
+/* The explanation column is prose (a sheet entry's own detail line); let
+   it wrap anywhere so its longest token never sets the table's floor. */
+.version-diff td.diff-why {
+  overflow-wrap: anywhere;
 }
 .level-deltas h3 {
   margin: 0 0 0.4rem;

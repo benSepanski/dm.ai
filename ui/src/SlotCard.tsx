@@ -313,16 +313,32 @@ function SlotEditor({
       // Attribute boosts render as one picker per boost so a player can
       // (wrongly) put two boosts on the same attribute and watch the
       // checklist flag it — the engine judges, the UI never blocks.
-      return slot.presentation_hint === 'attribute-boosts' ? (
-        <BoostsEditor
-          slot={slot}
-          count={slot.kind.count}
-          tentative={tentative}
-          onTentative={onTentative}
-          onConfirm={onConfirm}
-          busy={busy}
-        />
-      ) : (
+      if (slot.presentation_hint === 'attribute-boosts') {
+        return (
+          <BoostsEditor
+            slot={slot}
+            count={slot.kind.count}
+            tentative={tentative}
+            onTentative={onTentative}
+            onConfirm={onConfirm}
+            busy={busy}
+          />
+        );
+      }
+      // One pick per group: a select per distinct option group (the
+      // group string is the label), one option id per group.
+      if (slot.presentation_hint === 'one-per-group') {
+        return (
+          <PerGroupEditor
+            slot={slot}
+            tentative={tentative}
+            onTentative={onTentative}
+            onConfirm={onConfirm}
+            busy={busy}
+          />
+        );
+      }
+      return (
         <MultiEditor
           slot={slot}
           count={slot.kind.count}
@@ -618,9 +634,9 @@ function SingleBoostEditor({
   const picked = tentative?.kind === 'option' ? tentative.value : '';
   return (
     <div>
-      <div className="boost-rows">
-        <label className="boost-row">
-          <span>Boost</span>
+      <div className="select-rows">
+        <label className="select-row">
+          <span>Pick</span>
           <select
             value={picked}
             disabled={busy}
@@ -630,13 +646,8 @@ function SingleBoostEditor({
               )
             }
           >
-            <option value="">— choose an attribute —</option>
-            {slot.options.map((option) => (
-              <option key={option.id} value={option.id} disabled={!option.available}>
-                {option.label}
-                {option.available ? '' : ` (${option.unavailable_reason ?? 'unavailable'})`}
-              </option>
-            ))}
+            <option value="">— choose —</option>
+            <SelectOptions options={slot.options} />
           </select>
         </label>
       </div>
@@ -677,26 +688,19 @@ function BoostsEditor({
   return (
     <div>
       <p className="multi-counter" id={`counter-${slot.id}`} data-testid={`counter-${slot.id}`}>
-        {remaining > 0
-          ? `${remaining} of ${count} boost${count === 1 ? '' : 's'} left`
-          : 'All boosts assigned'}
+        {remaining > 0 ? `${remaining} of ${count} left` : 'All choices made'}
       </p>
-      <div className="boost-rows">
+      <div className="select-rows">
         {rows.map((value, index) => (
-          <label key={index} className="boost-row">
-            <span>Boost {count > 1 ? index + 1 : ''}</span>
+          <label key={index} className="select-row">
+            <span>Pick {count > 1 ? index + 1 : ''}</span>
             <select
               value={value}
               disabled={busy}
               onChange={(e) => setRow(index, e.target.value)}
             >
-              <option value="">— choose an attribute —</option>
-              {slot.options.map((option) => (
-                <option key={option.id} value={option.id} disabled={!option.available}>
-                  {option.label}
-                  {option.available ? '' : ` (${option.unavailable_reason ?? 'unavailable'})`}
-                </option>
-              ))}
+              <option value="">— choose —</option>
+              <SelectOptions options={slot.options} />
             </select>
           </label>
         ))}
@@ -705,6 +709,120 @@ function BoostsEditor({
         slotId={slot.id}
         label={slot.label.toLowerCase()}
         disabledReason={picked.length === 0 ? 'Pick at least one to save.' : null}
+        busy={busy}
+        onClick={() => onConfirm({ kind: 'options', value: picked })}
+      />
+    </div>
+  );
+}
+
+/** The option rows of a select: an unavailable option stays visible but
+ * disabled, and says why (in its text and its tooltip) — a greyed control
+ * with no reason is a banned state. */
+function SelectOptions({ options }: { options: OptionView[] }) {
+  return (
+    <>
+      {options.map((option) => (
+        <option
+          key={option.id}
+          value={option.id}
+          disabled={!option.available}
+          title={option.available ? undefined : (option.unavailable_reason ?? 'unavailable')}
+        >
+          {option.label}
+          {option.available ? '' : ` (${option.unavailable_reason ?? 'unavailable'})`}
+        </option>
+      ))}
+    </>
+  );
+}
+
+/** The distinct groups of a catalog in first-appearance order, each with
+ * its options. Grouping is the render-ready `group` string and nothing
+ * else — never an id prefix. Options with no group share one unlabeled
+ * remainder. */
+export function optionGroups(
+  options: OptionView[],
+): { group: string; options: OptionView[] }[] {
+  const groups: { group: string; options: OptionView[] }[] = [];
+  for (const option of options) {
+    const key = option.group ?? '';
+    const existing = groups.find((g) => g.group === key);
+    if (existing) {
+      existing.options.push(option);
+    } else {
+      groups.push({ group: key, options: [option] });
+    }
+  }
+  return groups;
+}
+
+/**
+ * One pick per group: a Multi slot whose options carry a group renders a
+ * labeled select per distinct group; the selection is one option id per
+ * group. The confirm opens once every group has a pick — legality (each
+ * value once, budgets) is the engine's verdict through the meters and the
+ * checklist, exactly as for every other editor.
+ */
+function PerGroupEditor({
+  slot,
+  tentative,
+  onTentative,
+  onConfirm,
+  busy,
+}: {
+  slot: SlotView;
+  tentative: TentativeSelection;
+  onTentative: (selection: TentativeSelection) => void;
+  onConfirm: (selection: Selection) => void;
+  busy: boolean;
+}) {
+  const picked = tentative?.kind === 'options' ? tentative.value : [];
+  const groups = optionGroups(slot.options);
+  const pickFor = (group: { options: OptionView[] }): string =>
+    group.options.find((o) => picked.includes(o.id))?.id ?? '';
+  const setGroup = (group: { options: OptionView[] }, value: string) => {
+    const own = new Set(group.options.map((o) => o.id));
+    const kept = picked.filter((id) => !own.has(id));
+    // Keep the selection in group order so the same picks always
+    // serialize the same way.
+    const next = groups.flatMap((g) => {
+      if (g === group) {
+        return value === '' ? [] : [value];
+      }
+      return g.options.filter((o) => kept.includes(o.id)).map((o) => o.id);
+    });
+    onTentative(next.length === 0 ? null : { kind: 'options', value: next });
+  };
+  const remaining = groups.filter((g) => pickFor(g) === '').length;
+  return (
+    <div>
+      <p className="multi-counter" id={`counter-${slot.id}`} data-testid={`counter-${slot.id}`}>
+        {remaining > 0 ? `${remaining} of ${groups.length} left` : 'All choices made'}
+      </p>
+      <div className="select-rows">
+        {groups.map((group) => (
+          <label key={group.group} className="select-row">
+            <span>{group.group === '' ? 'Other' : group.group}</span>
+            <select
+              value={pickFor(group)}
+              disabled={busy}
+              onChange={(e) => setGroup(group, e.target.value)}
+            >
+              <option value="">— choose —</option>
+              <SelectOptions options={group.options} />
+            </select>
+          </label>
+        ))}
+      </div>
+      <ConfirmButton
+        slotId={slot.id}
+        label={slot.label.toLowerCase()}
+        disabledReason={
+          remaining > 0
+            ? `Pick one for every row to save (${remaining} left).`
+            : null
+        }
         busy={busy}
         onClick={() => onConfirm({ kind: 'options', value: picked })}
       />

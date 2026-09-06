@@ -2,11 +2,17 @@
 // (#/c/<id>/sheet). Refresh-safe; resume lands on the server's step cursor.
 // A draft flagged by the rules-data version guard opens blocked behind the
 // resolution panel instead of the wizard.
+//
+// The campaign view comes first on every load: it names the game this
+// directory plays (stamped once into the engine façade so the browser
+// selects the ruleset the server did), or asks for it on an empty campaign.
 import { useCallback, useEffect, useState } from 'react';
 import {
   cloneCharacter,
   createCharacter,
+  declareCampaign,
   deleteCharacter,
+  fetchCampaign,
   fetchCharacter,
   fetchRoster,
   levelUp,
@@ -15,7 +21,9 @@ import {
   resolveVersion,
   type VersionAction,
 } from './api';
-import type { CharacterView, RosterView } from './engine';
+import { ChooseGame } from './ChooseGame';
+import type { CampaignView, CharacterView, RosterView } from './engine';
+import { selectSystem } from './engine';
 import { Roster } from './Roster';
 import { Sheet } from './Sheet';
 import { VersionFlagPanel } from './VersionFlag';
@@ -33,6 +41,9 @@ function parseHash(): Route {
 
 export function App() {
   const [route, setRoute] = useState<Route>(parseHash);
+  const [campaign, setCampaign] = useState<CampaignView | null>(null);
+  const [declareBusy, setDeclareBusy] = useState(false);
+  const [declareError, setDeclareError] = useState<string | null>(null);
   const [roster, setRoster] = useState<RosterView | null>(null);
   const [character, setCharacter] = useState<CharacterView | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,20 +57,43 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  const loadRoute = useCallback(async (current: Route) => {
-    setError(null);
-    setResolveError(null);
-    try {
-      if (current.view === 'roster') {
-        setCharacter(null);
-        setRoster(await fetchRoster());
-      } else {
-        setCharacter(await fetchCharacter(current.id));
-      }
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+  // The campaign view is (re)fetched before any route loads — a direct
+  // #/c/<id> link included — so the engine façade knows the game before
+  // the wizard's first preview. Refetched on every return to the roster:
+  // whether the game may still be chosen changes as characters come and go.
+  const refreshCampaign = useCallback(async (): Promise<CampaignView> => {
+    const view = await fetchCampaign();
+    if (view.system !== undefined) {
+      selectSystem(view.system);
     }
+    setCampaign(view);
+    return view;
   }, []);
+
+  const loadRoute = useCallback(
+    async (current: Route) => {
+      setError(null);
+      setResolveError(null);
+      try {
+        const view = await refreshCampaign();
+        if (current.view === 'roster') {
+          setCharacter(null);
+          setRoster(await fetchRoster());
+        } else if (view.system === undefined) {
+          // No game, no characters: a stale character link falls back to
+          // whatever the roster shell offers (the question, or the problem).
+          setCharacter(null);
+          setRoster(await fetchRoster());
+          window.location.hash = '#/';
+        } else {
+          setCharacter(await fetchCharacter(current.id));
+        }
+      } catch (e) {
+        setError(String(e instanceof Error ? e.message : e));
+      }
+    },
+    [refreshCampaign],
+  );
 
   useEffect(() => {
     void loadRoute(route);
@@ -67,6 +101,25 @@ export function App() {
 
   const goto = (hash: string) => {
     window.location.hash = hash;
+  };
+
+  const declare = (system: string) => {
+    setDeclareBusy(true);
+    setDeclareError(null);
+    declareCampaign(system)
+      .then((view) => {
+        if (view.system !== undefined) {
+          selectSystem(view.system);
+        }
+        setCampaign(view);
+        return loadRoute({ view: 'roster' });
+      })
+      .catch((e: unknown) => {
+        // A typed refusal (someone declared a moment ago, an unknown id)
+        // shows where the question was asked; Reload fetches the truth.
+        setDeclareError(String(e instanceof Error ? e.message : e));
+      })
+      .finally(() => setDeclareBusy(false));
   };
 
   const resolve = (id: string, version: number) => (action: VersionAction) => {
@@ -102,12 +155,27 @@ export function App() {
   }
 
   if (route.view === 'roster') {
-    if (roster === null) {
+    if (roster === null || campaign === null) {
       return <p className="loading">Loading…</p>;
+    }
+    if (campaign.system === undefined && campaign.problem === undefined && campaign.can_declare) {
+      return (
+        <ChooseGame
+          games={campaign.games}
+          onDeclare={declare}
+          onReload={() => {
+            setDeclareError(null);
+            void loadRoute({ view: 'roster' });
+          }}
+          busy={declareBusy}
+          error={declareError}
+        />
+      );
     }
     return (
       <Roster
         roster={roster}
+        campaign={campaign}
         onCreate={(name) => {
           void createCharacter(name).then((created) => goto(`#/c/${created.id}`));
         }}

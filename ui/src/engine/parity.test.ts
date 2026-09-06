@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { initEngine, project } from './index';
+import { initEngine, project, selectSystem } from './index';
 import type { Decision, SheetView } from './index';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -24,6 +24,9 @@ describe('wasm/native parity', () => {
   for (const name of ['torvald', 'elyse', 'krivvy']) {
     it(`replays ${name} to the native sheet`, async () => {
       await initEngine(wasmBytes);
+      // A test may name a system; shipped source only ever relays the
+      // campaign view's id.
+      selectSystem('pf2e');
       const log = JSON.parse(
         readFileSync(join(fixtures, `${name}.log.json`), 'utf8'),
       ) as Decision[];
