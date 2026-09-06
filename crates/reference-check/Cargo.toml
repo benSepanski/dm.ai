@@ -1,7 +1,9 @@
-# Verification-only dev tool (architecture: chargen-content). Fetches a
-# pinned Foundry pf2e snapshot into a gitignored cache and writes
-# rules-data/attestation.json. Never shipped; nothing depends on it; CI
-# never invokes it (checks/attestation.rs scans for that).
+# Verification-only dev tool (architecture: chargen-content; chargen-dnd for
+# the second source). Fetches a pinned ground-truth snapshot per system
+# (Foundry pf2e tag; a pinned commit of an SRD 5.2.1 Markdown mirror) into a
+# gitignored cache and writes rules-data/<system>/attestation.json. Never
+# shipped; nothing depends on it; CI never invokes it (checks/attestation.rs
+# scans for that).
 
 [package]
 name = "reference-check"

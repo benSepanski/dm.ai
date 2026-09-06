@@ -1,0 +1,1725 @@
+{
+  "claims_full_breadth": false,
+  "generated": "2026-09-06",
+  "missing_from_data": {
+    "armor": {
+      "count": 0,
+      "names": []
+    },
+    "backgrounds": {
+      "count": 0,
+      "names": []
+    },
+    "fighting_styles": {
+      "count": 0,
+      "names": []
+    },
+    "origin_feats": {
+      "count": 0,
+      "names": []
+    },
+    "species": {
+      "count": 5,
+      "names": [
+        "Dragonborn",
+        "Elf",
+        "Gnome",
+        "Orc",
+        "Tiefling"
+      ]
+    },
+    "weapons": {
+      "count": 0,
+      "names": []
+    }
+  },
+  "overrides_used": [],
+  "records": {
+    "armor.breastplate": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "5a726bdbf063db159b9968b687b9516ee6d41f97a817bacfb683af3b032a523e",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.chain-mail": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "4db48c36e9d6207c64991d4a5c9a3bb9f9ee9615fb423987a94702806382ad5f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.chain-shirt": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "2df119da6f0aafa8e734f51e7d58d0dc2ec8c4fffbe3fdbcd0012ab803694b76",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.half-plate-armor": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "8b0946bb37f32b695629959628fe50ffa0cd7a7e60175a554f2333e5a955cd84",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.hide-armor": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "8de48874ae8add6dacebdb73bfb92d8093128e87fac612c6bbadc74ec9606b19",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.leather-armor": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "cc9f8fef803bc5348ae44d7f3ccf05d7ddd02b5a823d7f7af3120e08073a2de8",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.padded-armor": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "da2dc47fa008b0b105724085309d32d4ee995b5c9575bc3b7efcf42b80f7c5f6",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.plate-armor": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "fe01b122a12527554eb29550a5ea0782c74d06b73dc376e4b1dd3497360e670d",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.ring-mail": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "3f80f97e5e037313b41fa756b3ce96ca5bc5aad5b2ab38c03380c81dea78116f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.scale-mail": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "c75f0c3eb19c8b128f9d64fd1568aaa1e2db986b81a9f6f9669156de7a3b143c",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.shield": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "444882119a0bce9a59970e392a07e5c1633cc39f90db47bf64505049889ce441",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.splint-armor": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "3831c301e129a3d39f7e09091c184498d4a154c0f2a278574185abbaf4bbe78a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "armor.studded-leather-armor": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "base_ac",
+        "add_dex",
+        "dex_max",
+        "weight",
+        "cost",
+        "strength_requirement",
+        "stealth_disadvantage"
+      ],
+      "file_hash": "6c6d296e9a21b4efe1551874d8008ea4e34243c09b02c512c7a0f52c3bac304e",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "background.acolyte": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "abilities",
+        "feat",
+        "skills",
+        "tool",
+        "equipment_items",
+        "equipment_gold",
+        "gold_alternative"
+      ],
+      "file_hash": "6bdeb1ceabe822fbe6a389677b7af1d45d345e347635e33f55101c261b60a8f8",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "background.criminal": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "abilities",
+        "feat",
+        "skills",
+        "tool",
+        "equipment_items",
+        "equipment_gold",
+        "gold_alternative"
+      ],
+      "file_hash": "3b8ee027e495b322095fa3943b7a6a3ff9fe917d2ca5f4315220d29d98e4a1dc",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "background.sage": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "abilities",
+        "feat",
+        "skills",
+        "tool",
+        "equipment_items",
+        "equipment_gold",
+        "gold_alternative"
+      ],
+      "file_hash": "b3de21e25d16fec02cfed27353f1dd5dfe540bdc6632ad3e76bc2266b7679c8a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "background.soldier": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "abilities",
+        "feat",
+        "skills",
+        "tool",
+        "equipment_items",
+        "equipment_gold",
+        "gold_alternative"
+      ],
+      "file_hash": "bafd28c8d51abaa10572809665f89ec2984af7b157746903d91d29ff015d4356",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "class.fighter": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "primary_abilities",
+        "hit_die",
+        "hit_points",
+        "saving_throws",
+        "skill_choice",
+        "weapon_proficiencies",
+        "armor_training",
+        "features_l1",
+        "advancement",
+        "weapon_mastery_count",
+        "equipment_packages",
+        "gold_alternative"
+      ],
+      "file_hash": "cd4f5c366e4427e2bfa1152fc47b9dbca010bf439a90491ff78f248f4c0916b4",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.origin.alert": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category"
+      ],
+      "file_hash": "c52ff85a146899fc863e42d8a82994ea11cf421103bfa60a31b74664dd5aa917",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.origin.magic-initiate": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category"
+      ],
+      "file_hash": "a0550342ea126148c0f778d8942f32e3dc8dc3bd9e7829031f8238c4ba6ef012",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.origin.savage-attacker": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category"
+      ],
+      "file_hash": "93bd33d592ef2f55231647fb42f911022cc9710409dc2408111efe0c98a601ce",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.origin.skilled": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category"
+      ],
+      "file_hash": "5d7fceda4afcff93a5e0a0346ecbb3302a6763c0c21ccb4faa38642ac401fbae",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.style.archery": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category"
+      ],
+      "file_hash": "b430dcf74874c1ec2fdb9aaf97d0f2ff77144d2ebe107b1508ad2ce56ce015e5",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.style.defense": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category"
+      ],
+      "file_hash": "f36f136494a327986ab4d7da85931b6e072d654f269d525be3ede0b521be2312",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.style.great-weapon-fighting": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category"
+      ],
+      "file_hash": "d0f617e3c84b35a802714a616cb9c865f9144e38b0fa7d86ce5487f443d52eb8",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.style.two-weapon-fighting": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category"
+      ],
+      "file_hash": "dfdf08c4a8cca4a13bd9ed9c4cb8f02253c5a85c18e618922f5f169658732de7",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.arrows": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost",
+        "amount"
+      ],
+      "file_hash": "9cd8271892967cd2c40dfccf9a7b6764d1b72fbf8a7c16d0c57decb00cb49f8a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.book": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "fdec220b085836ce5cf2844668d981c893e196c4a9ad6cd43263c54bac5849af",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.crowbar": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "2244511ade47bcbece3b2612f3eb3c3fe0568e9c3a51f501f995f2af52624f65",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.dungeoneers-pack": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "ca6586cc75973449fb7a2768820077f54ff3aa945ab1106e45d3eb28adb5aeb4",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.healers-kit": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "5de3cdee5127d371d499ad74f71ec4b65f72d8feb3fe032cfb22266b531846cb",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.holy-symbol": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "6ca93739f46b12a5ae163e08c13b5ffd32395c8ff89b68d03adca2811a48cc52",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.parchment": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "0d558810ac9a08c8e362d1823a3981cb32a442e1053a4f6e9df4bfb0da204666",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.pouch": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "71ea2d0de58580239b934d9542bda56fcac83e599ed0029b78feeab6a7dbc5cb",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.quiver": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "67837ccc39835450586b333f5bf4f3d33f17b014787a8c958691f65481532be8",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.robe": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "8cf847e3883c039221e4392589a54853b24e49d9a8e33c042414105eff765782",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "gear.travelers-clothes": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "7e09872ff1ba50b2404fec6c373c54585b7c036a398afd76f41e4096363b1332",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "method.point-buy": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "budget",
+        "costs"
+      ],
+      "file_hash": "9cc5ee98da5a14028c31f03c60c11461a553a710857714e05b342b2712a60fed",
+      "mismatches": [
+        "name"
+      ],
+      "verdict": "waived",
+      "waiver": {
+        "reason": "The SRD 5.2.1 names this score-generation method 'Point Cost' (SRD p. 21); the spec (chargen-dnd req 3) calls it Point Buy and the record's name is that display label, so the record is matched to the source by its kind rather than its name. The budget and the score-to-cost table agree.",
+        "state_hash": "3dd2b319abb3a7585906f635dd0d7a71a79aecb73f05a5eb8d427cb56376b2f1"
+      }
+    },
+    "method.standard-array": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "array"
+      ],
+      "file_hash": "1f8a3a862019892452abb2e988f1285c64cfcf38c3b6db5e1a17e73d1a7a0e0b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.acrobatics": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "db84e481f4a1927182e3c6419d10dd85fa5c4eb76e21f18772eeae5203a0f3b1",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.animal-handling": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "bae300c3cc87289c03ea57308472de9e3203105a424d547046de582a43cac2a6",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.arcana": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "7ce5f894e655fbd522fa0d7908c97a98721bf98358935f60f6105a24d39ad9b0",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.athletics": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "ffd09768ae487f1c60f59179c16644721720b6d8cab4048734168b8b776d402e",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.deception": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "fe21d97ee74ad04562e0560508cc89a21449427a4cc2b8d649e987965931c5ca",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.history": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "17a094a410ed6d6efcfe07622cd08d993be553ca7e884cba3bf73033b9f63c1d",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.insight": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "f8633dc103ea244fa6b2b31003f1e13f9337e70e0f8ee3476dffc4a3ec4f4739",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.intimidation": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "6057609591d7f2c50e114cebe64dfbf6797bd1d9fc1187ef113e5d799209d0a9",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.investigation": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "668c198cad8cc2eba74d9d77dbb7ddb2dbff07fa215c537168f3b4ddf9995bca",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.medicine": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "8ac38fb1edff519ab7fa79f8797aea2b963b32d1abb45df9cd0efbd1b1ba4f46",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.nature": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "518f69e12d193b4fd5dfb09ab758d3921b1bdf6c7b774b12e363d368ec0d5b3a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.perception": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "06c95ba4c48cf2eb3e643b2c75a16d91336cb038d5b71321b637c2f619808655",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.performance": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "1aa4beb2e69b07c36ee8d2da1a5dd478be45c2f287f9177002dbb4613979a67a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.persuasion": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "dc09a0090e042de0db42460624b6df5a67d61fc950b0e98d795d9b7a61cfc7c9",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.religion": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "a248acda49a92502e1be40e94faad5b0b411e111f91b4dd62637d57149e8cd8a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.sleight-of-hand": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "70b5609ed4aeac008d62381af0d23a423d2b7599bcdcb3e28f284592ec86e2d2",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.stealth": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "ab2eedee81a5f483f5c4907fd76868f17e143cbec1ad57ac49cfb884027f4801",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "skill.survival": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "ability"
+      ],
+      "file_hash": "79a3f25535d51b513c5710aada748f1722296f2762957c30efeec3daa2065835",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "species.dwarf": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "creature_type",
+        "size",
+        "speed",
+        "darkvision",
+        "traits"
+      ],
+      "file_hash": "02d73345a106b3e332704027f9d3eb7f5b68e35e8aeb868c0647cccc7b9778cc",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "species.goliath": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "creature_type",
+        "size",
+        "speed",
+        "darkvision",
+        "traits",
+        "choice_options"
+      ],
+      "file_hash": "def78684a6ee6cb467b3c7d16e466c19df4a8b5b35c28d6fbd4c95725564abe1",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "species.halfling": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "creature_type",
+        "size",
+        "speed",
+        "darkvision",
+        "traits"
+      ],
+      "file_hash": "72dadb1b76927ec97a6e6714517482fe1f6c6132495b06d691dac839c11e4623",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "species.human": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "creature_type",
+        "size",
+        "speed",
+        "darkvision",
+        "traits"
+      ],
+      "file_hash": "8fcde78fd6dde77f1e526d2d257a98877e3dddd2b2eaf8131a9340f956d24d50",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "subclass.fighter.champion": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "class",
+        "features"
+      ],
+      "file_hash": "fd1bdb9bbce6d2e3a4714ce76d5485b47dc9a50d829b0c643721cd0943b62f19",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "tool.calligraphers-supplies": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "543604ff340dbbed574cf9dc45a10c012527a53e61cbe9d8ed59d764a202dc04",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "tool.gaming-set": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "1305dcec195dde980f26f624a69642c499678b656de75de3188812d6276b636a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "tool.thieves-tools": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "c9ecb8ef7d2f36683499831bad8b2309732f1da8bd5255423300e84855d6bcd8",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.battleaxe": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "75eb52a7f379b7457a339ba492a4c2cf02334cbc770ac66953ab277c5becf7b8",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.blowgun": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "6d3cb3a74b499154e2ed967ea5fa3ae330f5acf07052df9fc94582cb2e761723",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.club": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "d212011f3b0fd037e0ddf3b935523df0e55c92dec8b5c25b7477e38f098659a4",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.dagger": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "9b296fb27f5b83b1e7f1356312ee8deeb7c6d45c70f09049d0a305e6cad623be",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.dart": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "a9484e27e9e7adb57ed5c9078f32365f6128f3404f588faf710c5b69db9fc3b8",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.flail": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "5c9bb066194d0730611c41ab3f48b3d2b338d2ecbadacc8e6276287b6cc0de35",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.glaive": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "c2a6208b76fe4f6912fccc7c7b7bc95c8e4db5ed763b08d40a182449564a9fa2",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.greataxe": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "7b91969780e3e803e8b08fe8ea535412adfc97095ee4626a92eeb2ae9ead3f36",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.greatclub": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "b85d44fb0a76b06f97be4b03cb68c101a24531879cbd9514bf7df2e65b566841",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.greatsword": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "90b389496894717e59c0f25fe3485505863e732a60dcad1596250716d9009c74",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.halberd": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "befb61085f8b36bde962bdeb3c43cb081304dc02dfdcd9707f6f34ca792a19d0",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.hand-crossbow": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "f96cffce39c391ed25b0bbd507c0ff21fe723d083d84a4f68dede5cfc6b6e223",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.handaxe": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "c2055fdb9d95d2636dbbf0a6cd621c018fbdc3e54500a05e714cb3b3903db36e",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.heavy-crossbow": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "04a27c6094ef6e90440ad856d8d26c6a65d0795f2f2e67d19b19528f3757d943",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.javelin": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "8377a1836c536c7ac4134a26f1397e33f2b33ef260a14bbb3f7f8ce9a24c83c8",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.lance": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "442ea226a35dfadb7a4be6958227614c06ced333608991e00b81ba0b5e32fca0",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.light-crossbow": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "15e8ab65ae57ced045b653adf34d1de64c2e42c03a28086ac3feccecca35da97",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.light-hammer": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "d9ef2857dff55f128803ea702f36ab7c3e1af12689f5e8e1e9a7f352fa8a7ad8",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.longbow": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "5623b15160c4d9e99d477533cbf38a03ec8400af1d575b418858efe1c8e0dd3a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.longsword": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "2fb7965482c129008afcd96f56a8be58268acf4e513293955b30a3d08adc6693",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.mace": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "00979ba05a1815ab2e4bcfcec0e85102c2c01afbca1c8f3b07f2d5ed30206339",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.maul": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "86ff7d05ea9d81a9bf313d36aa22225e7c1dd88890a3f27611bfa6c750754c94",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.morningstar": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "41e2d77ebf05a32e607242fae5971f2b38f74d17a12edac91ed4a850109142a3",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.musket": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "9a5fbcc3936fcf9a93ed9efd0ee19ceb97294865d8c1520aef21e682e6f396f2",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.pike": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "6024dba46f5d5584e5e637cc4fbfb2724a48f5b238701ae6844058259bd48135",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.pistol": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "851460dc2c92806867e6855e99a58597afdb9dc973b381df137d99d395c3c248",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.quarterstaff": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "b0ad578b4e0b585655be91dd1e517882eef0d04c71b95c24061aed169a3a3ed4",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.rapier": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "519844ea1e1162a302710f071f10a1d4081620a218f40280d7798ba97d5f9703",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.scimitar": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "3093eb24282d85bf444016b46d0bd62f3acb0c0210faaf5fe8c1cd0017336444",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.shortbow": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "ba4e3417660239bceca241f0542d94879a51044b5350a6b3b327fcc65cec1d8b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.shortsword": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "d163ac5ef8f69db0ff7ab10dc870498071b318413035de49f2321d5149c6d8ba",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.sickle": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "f7865466bb857b566d68f99a29538b5e689d44d3bf01519a0fba6f82b8d8e647",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.sling": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "341369f7e08e135862ffa2faff4a8e038940f370f5a66567951449bb81cc5a2f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.spear": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "92631e02cc21062c601edc3b2bae71a0fef1a18f2e037a4f6ffe3c6c601857ec",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.trident": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "4f6fcfb868a6a348120f90bef4f49f9aaf3935535349e1fe2b5d4778b3ab4bb3",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.war-pick": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "6f873c1dcfdeda3fa914615b593d0dd2e404f47e500d4564a4b70307c697077d",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.warhammer": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "7d1f72dcb00e699a39bcb0df771a801dd15deccbbeb1a7e0b79aa7402a57411a",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "weapon.whip": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "category",
+        "kind",
+        "damage",
+        "damage_type",
+        "properties",
+        "versatile_damage",
+        "range",
+        "ammunition",
+        "mastery",
+        "weight",
+        "cost"
+      ],
+      "file_hash": "0355d1cf53f3b6c739dd490faae60b5a6fc2335ea03a40c9d59d35f5a785d111",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    }
+  },
+  "rules_version": "dnd5e-srd.0.1.0",
+  "source": {
+    "commit": "f1f5060fd975aa2ffc3e4b336560ded479934d80",
+    "kind": "srd521-markdown",
+    "pdf_sha256": "8974902d109d6e63672d7c490bde9ccf052410503d9cfa768237154fbc5e3d87",
+    "repo": "your5e/5e-srd-markdown",
+    "sha256": "aa80f8b8d768a1b54d4426a3f3194b061ec0d4ae0b4462784670758e545b6dc6",
+    "url": "https://github.com/your5e/5e-srd-markdown/archive/f1f5060fd975aa2ffc3e4b336560ded479934d80.tar.gz"
+  },
+  "tool_version": "0.1.0"
+}

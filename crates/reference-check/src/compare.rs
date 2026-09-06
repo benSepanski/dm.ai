@@ -97,6 +97,18 @@ pub fn compare(our: &OurRecord, foundry: &FoundryRecord, ctx: &Ctx) -> Outcome {
         // Skills and kits have no Foundry counterpart partition; the match
         // loop never gets here for them.
         Kind::Skill | Kind::Kit => unreachable!("no Foundry partition for skills/kits"),
+        // 5.5e records never reach the Foundry comparator (dnd5e.rs).
+        Kind::DndSpecies
+        | Kind::DndBackground
+        | Kind::DndFeat
+        | Kind::DndClass
+        | Kind::DndSubclass
+        | Kind::DndSkill
+        | Kind::DndScoreMethod
+        | Kind::DndWeapon
+        | Kind::DndArmor
+        | Kind::DndGear
+        | Kind::DndTool => unreachable!("5.5e records compare in dnd5e.rs"),
     }
 }
 
