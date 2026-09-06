@@ -81,15 +81,19 @@ every row green before the report.
   `license_notice` moved to the campaign view), undeclared refusals and roster
   shell, `system` field + fixup from a registered pin prefix, refusal in place
   (`StoreError::Refused` → 422), verify prints CAMPAIGN problems.
-- [ ] 4. ruleset-dnd5e crate + rules-data/dnd5e (SRD 5.2.1 subset): species,
-  backgrounds, origin feats, Fighter (styles, masteries), weapons/armor/gear,
-  packages, advancement + Champion; derive_sheet; unit tests; goldens.
-- [ ] 5. reference-check `--system dnd5e`: SRD source fetch (pinned sha256),
+- [x] 4. ruleset-dnd5e crate + rules-data/dnd5e (SRD 5.2.1 subset): species
+  (Human, Dwarf, Goliath, Halfling), backgrounds (4), origin + fighting-style
+  feats, Fighter (styles, masteries, packages A/B/gold), all SRD weapons and
+  armor, advancement + Champion; derive_sheet; 13 crate tests. Random mint:
+  `Ruleset::mint_pin` (5.5e pins the standard array) + group-aware shuffle.
+- [~] 5. reference-check `--system dnd5e`: SRD source fetch (pinned sha256),
   5.5e comparator, per-system attestation with a `source` block; PF2e
   attestation re-shaped (keys moved under `source`) without regeneration.
-- [ ] 6. UI: campaign view fetch + choose-game screen; roster label + license
-  lines; `one-per-group` editor; boost copy from slot label; façade passes the
-  system id; quick build hidden when absent; e2e `dnd.spec.ts`.
+  (subagent running)
+- [~] 6. UI: DONE — campaign view fetch + choose-game screen; roster label +
+  license lines; `one-per-group` editor; game-free boost copy; façade passes
+  the system id; quick build only when the roster names a class;
+  `campaign.spec.ts`. PENDING: `dnd.spec.ts` 5.5e walks (subagent running).
 - [ ] 7. Checks: every 5.5e row green (goldens, sweep, clone, crash, api
   authority, persistence, version guard, ability machinery, perf, size).
 - [ ] 8. Report `.checkpoints/run/chargen-dnd/report.md` with the
