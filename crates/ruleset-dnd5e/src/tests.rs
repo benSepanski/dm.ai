@@ -11,7 +11,7 @@ use types::{
 };
 
 use crate::mechanics::{
-    slot_level_advance, slot_level_subclass, step_level, Ability, Increase,
+    slot_level_advance, slot_level_hit_die, slot_level_subclass, step_level, Ability, Increase,
     BACKGROUND_EQUIPMENT_GOLD, BACKGROUND_EQUIPMENT_PACKAGE, SLOT_BACKGROUND,
     SLOT_BACKGROUND_EQUIPMENT, SLOT_BACKGROUND_INCREASE, SLOT_CLASS, SLOT_CLASS_MASTERIES,
     SLOT_CLASS_SKILLS, SLOT_CLASS_STYLE, SLOT_EQUIPMENT_PACKAGE, SLOT_FEAT_SKILLED, SLOT_NAME,
@@ -328,7 +328,11 @@ fn brannock_levels_to_3_through_the_advance_and_subclass_slots() {
     assert!(p.can_finalize);
     let live: Vec<String> = p.steps.iter().map(|s| s.id.as_str().to_string()).collect();
     assert_eq!(live, vec![step_level(2)]);
-    assert!(p.steps[0].slots.is_empty(), "level 2 grants no choice slot");
+    // Level 2 grants no choice slot: its only card is the unrequired
+    // hit-die roll (dnd-dice), which never blocks finalize.
+    assert_eq!(p.steps[0].slots.len(), 1);
+    assert_eq!(p.steps[0].slots[0].id.as_str(), slot_level_hit_die(2));
+    assert!(!p.steps[0].slots[0].required);
     assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "20");
     assert_eq!(value(&p.sheet, "Features", "Action Surge"), "Fighter 2");
     assert!(p.sheet.entry("Features", "Tactical Mind").is_some());
@@ -345,8 +349,10 @@ fn brannock_levels_to_3_through_the_advance_and_subclass_slots() {
     assert!(!p.can_finalize);
     let step = &p.steps[0];
     assert_eq!(step.id.as_str(), step_level(3));
-    assert_eq!(step.slots.len(), 1);
-    let slot = &step.slots[0];
+    // One required choice (the subclass) beside the unrequired hit die.
+    let required: Vec<&SlotView> = step.slots.iter().filter(|s| s.required).collect();
+    assert_eq!(required.len(), 1);
+    let slot = required[0];
     assert_eq!(slot.id.as_str(), slot_level_subclass(3));
     assert_eq!(slot.kind, SlotViewKind::Single);
     let ids: Vec<&str> = slot.options.iter().map(|o| o.id.as_str()).collect();
@@ -1332,5 +1338,206 @@ mod dice {
             detail(&p.sheet, "Ability Scores", "Constitution"),
             "12 (Random Generation: 5, 4, 3, 3 → 12, entered) +1 (Soldier)"
         );
+    }
+}
+
+// ---- dnd-dice: rolled hit dice at level-up ---------------------------------
+
+mod hit_dice {
+    use super::*;
+    use types::{RollOrigin, RolledSet};
+
+    fn die(face: u8, origin: RollOrigin) -> Selection {
+        Selection::Rolled(vec![RolledSet {
+            groups: vec![vec![face]],
+            origin,
+        }])
+    }
+
+    #[test]
+    fn absent_means_fixed_and_a_roll_replaces_one_level() {
+        let engine = engine();
+        let mut log = brannock_log(&engine);
+        assert_eq!(
+            value(&log_sheet(&engine, &log), "Combat", "Hit Points"),
+            "12"
+        );
+        // Not yet at level 2: the level-2 hit die is hidden and refused.
+        let p = engine.project(&log).unwrap();
+        assert!(slot_view(&p, &slot_level_hit_die(2)).is_none());
+        assert!(try_confirm(
+            &engine,
+            &log,
+            &slot_level_hit_die(2),
+            die(8, RollOrigin::App)
+        )
+        .is_err());
+
+        confirm(&engine, &mut log, &slot_level_advance(2), one("advance.2"));
+        let p = engine.project(&log).unwrap();
+        let card = slot_view(&p, &slot_level_hit_die(2)).unwrap();
+        assert_eq!(
+            card.kind,
+            SlotViewKind::Roll {
+                sides: 10,
+                dice: 1,
+                groups: 1
+            }
+        );
+        assert!(!card.required);
+        assert!(card.options.is_empty());
+        assert!(
+            p.can_finalize,
+            "the unrequired hit die never blocks finalize"
+        );
+        // Fixed: 12 + (6 + 2) = 20, the exact pre-dice detail text.
+        assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "20");
+        assert_eq!(
+            detail(&p.sheet, "Combat", "Hit Points"),
+            "10 + 2 Con + 1 × (6 + 2 Con)"
+        );
+
+        // Roll a 3, then reroll an 8: the history keeps both, the 8 is live.
+        confirm(
+            &engine,
+            &mut log,
+            &slot_level_hit_die(2),
+            die(3, RollOrigin::App),
+        );
+        assert_eq!(
+            value(&log_sheet(&engine, &log), "Combat", "Hit Points"),
+            "17"
+        );
+        let AppendOutcome::Appended(new_log) = engine
+            .amend(
+                &log,
+                DecisionInput {
+                    id: DecisionId::new("reroll-hp"),
+                    slot: SlotId::new(slot_level_hit_die(2)),
+                    selection: die(8, RollOrigin::Entered),
+                    source: DecisionSource::Player,
+                },
+            )
+            .unwrap()
+        else {
+            panic!()
+        };
+        log = new_log;
+        let p = engine.project(&log).unwrap();
+        let card = slot_view(&p, &slot_level_hit_die(2)).unwrap();
+        assert_eq!(card.options.len(), 2);
+        assert_eq!(card.options[0].label, "3");
+        assert!(!card.options[0].available);
+        assert_eq!(card.options[1].label, "8");
+        assert!(card.options[1].available);
+        assert_eq!(card.options[1].badge.as_deref(), Some("entered"));
+        assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "22");
+        assert_eq!(
+            detail(&p.sheet, "Combat", "Hit Points"),
+            "10 + 2 Con + level 2: 8 (entered) + 2 Con"
+        );
+        let described = engine
+            .describe_decision(
+                log.iter()
+                    .find(|d| d.slot.as_str() == slot_level_hit_die(2))
+                    .unwrap(),
+            )
+            .unwrap();
+        assert_eq!(described.selection_label, "8 (entered, roll 2 of 2)");
+
+        // Level 3 without a roll takes the fixed value for that level only.
+        confirm(&engine, &mut log, &slot_level_advance(3), one("advance.3"));
+        confirm(
+            &engine,
+            &mut log,
+            &slot_level_subclass(3),
+            one("subclass.fighter.champion"),
+        );
+        let p = engine.project(&log).unwrap();
+        assert!(slot_view(&p, &slot_level_hit_die(2)).is_none());
+        assert!(slot_view(&p, &slot_level_hit_die(3)).is_some());
+        assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "30");
+        assert_eq!(
+            detail(&p.sheet, "Combat", "Hit Points"),
+            "10 + 2 Con + level 2: 8 (entered) + 2 Con + level 3: 6 (fixed) + 2 Con"
+        );
+        // Out of shape: an 11 on a d10, or two dice.
+        assert!(try_confirm(
+            &engine,
+            &log,
+            &slot_level_hit_die(3),
+            die(11, RollOrigin::Entered)
+        )
+        .is_err());
+        assert!(try_confirm(
+            &engine,
+            &log,
+            &slot_level_hit_die(3),
+            Selection::Rolled(vec![RolledSet {
+                groups: vec![vec![4, 5]],
+                origin: RollOrigin::Entered,
+            }])
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn a_low_roll_with_a_negative_constitution_gains_the_published_minimum() {
+        let engine = engine();
+        let mut log = Vec::new();
+        confirm(&engine, &mut log, SLOT_CLASS, one("class.fighter"));
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_BACKGROUND,
+            one("background.soldier"),
+        );
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_BACKGROUND_INCREASE,
+            Selection::Option(Increase::TwoOne(Ability::Str, Ability::Dex).option_id()),
+        );
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_SCORES_METHOD,
+            one("method.standard-array"),
+        );
+        confirm(
+            &engine,
+            &mut log,
+            SLOT_SCORES_ASSIGN,
+            many(&[
+                &score("str", 15),
+                &score("dex", 14),
+                &score("con", 8),
+                &score("wis", 13),
+                &score("int", 12),
+                &score("cha", 10),
+            ]),
+        );
+        assert_eq!(
+            value(&log_sheet(&engine, &log), "Combat", "Hit Points"),
+            "9"
+        );
+        confirm(&engine, &mut log, &slot_level_advance(2), one("advance.2"));
+        confirm(
+            &engine,
+            &mut log,
+            &slot_level_hit_die(2),
+            die(1, RollOrigin::App),
+        );
+        let p = engine.project(&log).unwrap();
+        // 1 + (−1) = 0 → minimum 1 for the level: 9 + 1.
+        assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "10");
+        assert_eq!(
+            detail(&p.sheet, "Combat", "Hit Points"),
+            "10 + -1 Con + level 2: 1 (rolled) + -1 Con, minimum 1"
+        );
+    }
+
+    fn log_sheet(engine: &Dnd5eEngine, log: &[Decision]) -> SheetView {
+        engine.sheet(log).unwrap()
     }
 }

@@ -398,15 +398,28 @@ fn level_2_is_empty_and_level_3_offers_the_subclass_records() {
         vec!["level-2".to_string()],
         "only the pending level's step is live"
     );
-    assert!(p2.steps[0].slots.is_empty(), "level 2 renders no card");
+    // Level 2 renders no choice card: its one card is the unrequired hit
+    // die (dnd-dice), which never blocks finalize.
+    let required: Vec<&types::SlotView> = p2.steps[0].slots.iter().filter(|s| s.required).collect();
+    assert!(required.is_empty(), "level 2 renders no required card");
+    assert_eq!(p2.steps[0].slots.len(), 1);
+    assert_eq!(
+        p2.steps[0].slots[0].id.as_str(),
+        ruleset_dnd5e::slot_level_hit_die(2)
+    );
 
     advance(&engine, &mut log, 3);
     let p3 = engine.project(&log).unwrap();
-    let slots: Vec<&types::SlotView> = p3.steps.iter().flat_map(|s| s.slots.iter()).collect();
+    let slots: Vec<&types::SlotView> = p3
+        .steps
+        .iter()
+        .flat_map(|s| s.slots.iter())
+        .filter(|s| s.required)
+        .collect();
     assert_eq!(
         slots.len(),
         1,
-        "one slot at 3: {:?}",
+        "one required slot at 3: {:?}",
         slots.iter().map(|s| &s.id).collect::<Vec<_>>()
     );
     assert_eq!(slots[0].kind, SlotViewKind::Single);
@@ -682,9 +695,10 @@ fn minted_5e_characters_finalize_and_level_to_the_cap_across_seeds() {
             .as_array()
             .unwrap()
             .iter()
-            .map(|s| s["slots"].as_array().unwrap().len())
-            .sum();
-        assert_eq!(cards, 0, "level 2 has no choice slot");
+            .flat_map(|s| s["slots"].as_array().unwrap().iter())
+            .filter(|s| s["required"].as_bool().unwrap())
+            .count();
+        assert_eq!(cards, 0, "level 2 has no required choice slot");
         assert!(draft["projection"]["can_finalize"].as_bool().unwrap());
         assert!(
             draft["level_up"]["gains"]

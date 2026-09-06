@@ -101,10 +101,10 @@ points) split off as `dnd-hp-dice`.
   shipped-versions + attestation re-run; `dnd5e.scores.roll` slot with
   history options; multiplicity-aware assignment; sheet ability entries
   name faces and tag; crate tests; every existing 5.5e golden unchanged.
-- [~] 3b. ruleset-dnd5e hit dice: per-level unrequired `hit-die` slots; HP
+- [x] 3b. ruleset-dnd5e hit dice: per-level unrequired `hit-die` slots; HP
   fold per-level with the published minimum; describe; gains/deltas/pending
   carry the roll; Brannock goldens byte-identical.
-- [ ] 4. Server: `dice.rs` (OS + seeded, keyed), `--dice-seed`, `seeded_dice`
+- [~] 4. Server: `dice.rs` (OS + seeded, keyed), `--dice-seed`, `seeded_dice`
   on the campaign view, the roll route (three phases), shared
   `write_decision`, origin refusal on confirm/amend; checks:
   `api_authority.rs` (refusals, append-by-construction M+N, injected failing

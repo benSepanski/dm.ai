@@ -5,13 +5,14 @@
 use std::sync::Arc;
 
 use engine_core::{ApplyError, Availability, SlotRegistration};
-use types::{OptionId, OptionView, SlotId, SlotViewKind, StepId};
+use types::{check_roll_shape, OptionId, OptionView, Selection, SlotId, SlotViewKind, StepId};
 
 use crate::data::RulesData;
 use crate::mechanics::{
-    describe_selection, illegal, incomplete, sel_multi, sel_single, slot_level_subclass,
-    step_level, Dnd5eState, SLOT_CLASS, SLOT_CLASS_MASTERIES, SLOT_CLASS_SKILLS, SLOT_CLASS_STYLE,
-    SLOT_EQUIPMENT_PACKAGE, STEP_CLASS, STEP_CLASS_CHOICES,
+    describe_selection, illegal, incomplete, origin_label, sel_multi, sel_single,
+    slot_level_hit_die, slot_level_subclass, step_level, Dnd5eState, SLOT_CLASS,
+    SLOT_CLASS_MASTERIES, SLOT_CLASS_SKILLS, SLOT_CLASS_STYLE, SLOT_EQUIPMENT_PACKAGE, STEP_CLASS,
+    STEP_CLASS_CHOICES,
 };
 
 fn option(id: &str, label: &str, summary: String, details: Vec<String>) -> OptionView {
@@ -468,6 +469,110 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
             }),
             meters: Box::new(|_, _| vec![]),
             describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
+        });
+    }
+
+    // --- Hit die, one unrequired roll slot per advancement level ---
+    // Absent, the class's fixed value applies (the SRD's "instead of
+    // rolling" — a default the fold applies, never one written into a
+    // log). Present, the live face replaces the fixed value for that level.
+    for level in 2..=data.max_advancement_level() {
+        let d_kind = data.clone();
+        let d_unlock = data.clone();
+        let d_apply = data.clone();
+        regs.push(SlotRegistration::<Dnd5eState> {
+            id: SlotId::new(slot_level_hit_die(level)),
+            step: StepId::new(step_level(level)),
+            label: "Hit Points".into(),
+            required: false,
+            presentation_hint: None,
+            kind: Box::new(move |state| {
+                let sides = state
+                    .class
+                    .as_ref()
+                    .and_then(|id| d_kind.class(id))
+                    .map(|c| c.hit_die as u8)
+                    .unwrap_or(10);
+                SlotViewKind::Roll {
+                    sides,
+                    dice: 1,
+                    groups: 1,
+                }
+            }),
+            unlock: Box::new(move |state| {
+                let known = state.class.as_ref().and_then(|id| d_unlock.class(id));
+                if known.is_some() && state.level() == level {
+                    Availability::Open
+                } else {
+                    Availability::Hidden
+                }
+            }),
+            dependents: vec![],
+            // The history: one entry per rolled die, the live one available.
+            options: Box::new(move |state| {
+                let sets = state.hit_die_rolls.get(&level).cloned().unwrap_or_default();
+                let last = sets.len();
+                sets.iter()
+                    .enumerate()
+                    .map(|(i, set)| {
+                        let live = i + 1 == last;
+                        let face = set.groups.first().and_then(|g| g.first()).copied();
+                        OptionView {
+                            id: OptionId::new(format!("set.{}", i + 1)),
+                            label: face.map(|f| f.to_string()).unwrap_or_default(),
+                            summary: if live {
+                                format!("Roll {} of {last} — live; replaces the fixed value", i + 1)
+                            } else {
+                                format!("Roll {} of {last} — superseded", i + 1)
+                            },
+                            details: vec![],
+                            available: live,
+                            unavailable_reason: (!live)
+                                .then(|| "superseded by a later roll".into()),
+                            group: None,
+                            badge: Some(origin_label(set.origin).into()),
+                        }
+                    })
+                    .collect()
+            }),
+            apply: Box::new(move |state, decision| {
+                let Selection::Rolled(sets) = &decision.selection else {
+                    return Err(ApplyError::new("expected a rolled hit die"));
+                };
+                let class = state
+                    .class
+                    .as_ref()
+                    .and_then(|id| d_apply.class(id))
+                    .ok_or_else(|| ApplyError::new("choose a class before rolling hit points"))?;
+                if state.level() != level {
+                    return Err(ApplyError::new(format!(
+                        "the level {level} hit die is rolled at level {level}, not {}",
+                        state.level()
+                    )));
+                }
+                check_roll_shape(class.hit_die as u8, 1, 1, sets).map_err(ApplyError::new)?;
+                state.hit_die_rolls.insert(level, sets.clone());
+                Ok(())
+            }),
+            validate: Box::new(|_, _| vec![]),
+            meters: Box::new(|_, _| vec![]),
+            describe: Box::new(move |sel| match sel {
+                Selection::Rolled(sets) => match sets.last() {
+                    Some(live) => format!(
+                        "{} ({}, roll {} of {})",
+                        live.groups
+                            .first()
+                            .and_then(|g| g.first())
+                            .map(|f| f.to_string())
+                            .unwrap_or_default(),
+                        origin_label(live.origin),
+                        sets.len(),
+                        sets.len()
+                    ),
+                    None => "no roll".into(),
+                },
+                other => format!("{other:?}"),
+            }),
         });
     }
 

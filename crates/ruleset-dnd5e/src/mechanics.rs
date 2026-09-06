@@ -279,6 +279,9 @@ pub struct Dnd5eState {
     /// Level advances applied, in order: the character's level is one plus
     /// this count. Set only by the advance slots' `apply`.
     pub level_advances: u32,
+    /// Rolled hit dice by level (dnd-dice): each level's recorded history,
+    /// the last set live. A level absent here takes the class's fixed value.
+    pub hit_die_rolls: BTreeMap<u32, Vec<RolledSet>>,
     /// Fixed class features granted by advances, (level, feature ID).
     pub granted_features: Vec<(u32, String)>,
     pub subclass: Option<String>,
@@ -308,6 +311,14 @@ impl Dnd5eState {
     /// recorded one.
     pub fn live_roll(&self) -> Option<&RolledSet> {
         self.rolled_sets.last()
+    }
+
+    /// The live hit-die face for a level, with its origin, when that level
+    /// rolled; `None` means the fixed value applies.
+    pub fn hit_die_live(&self, level: u32) -> Option<(u8, RollOrigin)> {
+        let set = self.hit_die_rolls.get(&level)?.last()?;
+        let face = *set.groups.first()?.first()?;
+        Some((face, set.origin))
     }
 
     /// The scores a method offers under the current state: the array's
@@ -743,6 +754,11 @@ pub fn slot_level_advance(level: u32) -> String {
 pub fn slot_level_subclass(level: u32) -> String {
     format!("dnd5e.level.{level}.subclass")
 }
+/// The unrequired hit-die roll slot of a level (dnd-dice): absent, the
+/// class's fixed value applies.
+pub fn slot_level_hit_die(level: u32) -> String {
+    format!("dnd5e.level.{level}.hit-die")
+}
 /// The level an advance slot ID advances to, if it is one.
 pub fn advance_level_of(slot: &str) -> Option<u32> {
     slot.strip_prefix("dnd5e.level.")?
@@ -897,7 +913,10 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
         Some(c) => {
             let mut hp = c.hp_at_level_1 as i32 + con;
             let mut detail = format!("{} + {con} Con", c.hp_at_level_1);
-            if level > 1 {
+            let any_rolled = (2..=level).any(|l| state.hit_die_live(l).is_some());
+            if level > 1 && !any_rolled {
+                // No level rolled its hit die: the fixed value, exactly as
+                // before dice existed (the detail text is a golden fact).
                 let per = c.hp_per_level as i32 + con;
                 hp += per * (level as i32 - 1);
                 detail.push_str(&format!(
@@ -905,6 +924,22 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
                     level - 1,
                     c.hp_per_level
                 ));
+            } else if level > 1 {
+                // Per level: the live rolled face or the fixed value, plus
+                // Con, minimum 1 per level (SRD 5.2.1 p. 23, "Gaining a
+                // Level").
+                for l in 2..=level {
+                    let (value, how) = match state.hit_die_live(l) {
+                        Some((face, origin)) => (face as i32, origin_label(origin)),
+                        None => (c.hp_per_level as i32, "fixed"),
+                    };
+                    let gain = (value + con).max(1);
+                    hp += gain;
+                    detail.push_str(&format!(" + level {l}: {value} ({how}) + {con} Con"));
+                    if value + con < 1 {
+                        detail.push_str(", minimum 1");
+                    }
+                }
             }
             if let Some(sp) = species.filter(|s| s.hp_bonus_per_level > 0) {
                 let bonus = sp.hp_bonus_per_level * level;
