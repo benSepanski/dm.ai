@@ -114,7 +114,10 @@ fn verify(
     rulesets: Vec<Arc<dyn Ruleset>>,
     known: std::collections::BTreeMap<String, version::KnownVersions>,
 ) {
-    let systems: Vec<String> = rulesets.iter().map(|r| r.system().to_string()).collect();
+    let systems: Vec<(String, String)> = rulesets
+        .iter()
+        .map(|r| (r.system().to_string(), r.system_name().to_string()))
+        .collect();
     let store = match Store::open(&data_dir, &systems) {
         Ok(s) => s,
         Err(e) => {
@@ -286,7 +289,10 @@ fn serve(
         eprintln!("{e}");
         std::process::exit(3);
     }
-    let systems: Vec<String> = rulesets.iter().map(|r| r.system().to_string()).collect();
+    let systems: Vec<(String, String)> = rulesets
+        .iter()
+        .map(|r| (r.system().to_string(), r.system_name().to_string()))
+        .collect();
     let store = match Store::open(&data_dir, &systems) {
         Ok(s) => s,
         Err(e) => {

@@ -173,6 +173,8 @@ pub(crate) struct Store {
     data_dir: PathBuf,
     /// Every shipped system id (declaration values and pin prefixes).
     systems: Vec<String>,
+    /// Render-ready game names by system id, for messages.
+    names: Vec<(String, String)>,
     declaration: Declaration,
 }
 
@@ -180,12 +182,13 @@ impl Store {
     /// Open the data directory: create the layout, sweep stray temp files
     /// into trash, read the declaration, and refuse to open if any
     /// character file was written by a newer schema (downgrade guard).
-    pub fn open(data_dir: &Path, systems: &[String]) -> Result<Store, StoreError> {
+    pub fn open(data_dir: &Path, systems: &[(String, String)]) -> Result<Store, StoreError> {
         fs::create_dir_all(data_dir.join("characters"))?;
         fs::create_dir_all(data_dir.join("trash"))?;
         let mut store = Store {
             data_dir: data_dir.to_path_buf(),
-            systems: systems.to_vec(),
+            systems: systems.iter().map(|(id, _)| id.clone()).collect(),
+            names: systems.to_vec(),
             declaration: Declaration::Absent,
         };
         store.sweep_temp_files()?;
@@ -204,6 +207,15 @@ impl Store {
             }
         }
         Ok(store)
+    }
+
+    /// The render-ready name of a system id (the id itself when unknown).
+    fn game_name(&self, system: &str) -> String {
+        self.names
+            .iter()
+            .find(|(id, _)| id == system)
+            .map(|(_, name)| name.clone())
+            .unwrap_or_else(|| system.to_string())
     }
 
     fn declaration_path(&self) -> PathBuf {
@@ -345,7 +357,7 @@ impl Store {
     /// hard-link to the declaration name (fails if one exists), unlink the
     /// temp. A change is temp → fsync → rename. Anything else refuses,
     /// typed, and writes nothing.
-    pub fn declare(&mut self, system: &str) -> Result<(), StoreError> {
+    pub fn declare(&mut self, system: &str, replaces: Option<&str>) -> Result<(), StoreError> {
         if !self.systems.iter().any(|s| s == system) {
             return Err(StoreError::Refused(format!(
                 "'{system}' is not a game this build ships"
@@ -354,13 +366,35 @@ impl Store {
         if !self.is_empty() {
             return Err(StoreError::Refused(match &self.declaration {
                 Declaration::Declared(current) if current == system => {
-                    format!("this campaign already plays {system}")
+                    format!("this campaign already plays {}", self.game_name(system))
                 }
                 Declaration::Declared(current) => format!(
-                    "this campaign plays {current} and holds characters — its game cannot change"
+                    "this campaign plays {} and holds characters — its game cannot change",
+                    self.game_name(current)
                 ),
                 _ => "this campaign already holds characters — its game is fixed (an undeclared campaign with characters is Pathfinder 2e)".to_string(),
             }));
+        }
+        // A first answer meeting an existing declaration is a race, not a
+        // change: the client believed the campaign undeclared. A change
+        // names the declaration it replaces.
+        if let Declaration::Declared(current) = &self.declaration {
+            match replaces {
+                None if current != system => {
+                    return Err(StoreError::Refused(format!(
+                        "this campaign was declared {} a moment ago — reload",
+                        self.game_name(current)
+                    )));
+                }
+                Some(believed) if believed != current => {
+                    return Err(StoreError::Refused(format!(
+                        "this campaign plays {}, not {} — reload",
+                        self.game_name(current),
+                        self.game_name(believed)
+                    )));
+                }
+                _ => {}
+            }
         }
         let text = format!(
             "{{\n  \"schema_version\": {DECLARATION_SCHEMA},\n  \"system\": \"{system}\"\n}}\n"
@@ -492,7 +526,8 @@ impl Store {
             Some(campaign) if campaign == system => Ok(loaded_from(doc, system)),
             Some(campaign) => Err(format!(
                 "belongs to a {} campaign, and this campaign plays {} — copy it into a campaign of its game; the file is untouched",
-                system, campaign
+                self.game_name(&system),
+                self.game_name(campaign)
             )),
             None => Err(
                 "this campaign has no resolvable game, so no character can load — see the campaign declaration".to_string(),

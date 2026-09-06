@@ -430,7 +430,7 @@ async fn declare_campaign(
     Json(request): Json<DeclareCampaignRequest>,
 ) -> Result<Json<CampaignView>, Failure> {
     let mut store = app.store.lock().await;
-    store.declare(&request.system)?;
+    store.declare(&request.system, request.replaces.as_deref())?;
     Ok(Json(campaign_view(&app, &store)))
 }
 

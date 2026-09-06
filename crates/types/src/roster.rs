@@ -105,8 +105,14 @@ pub struct GameOption {
 }
 
 /// Declare (or, while the campaign is empty, change) the campaign's game.
+/// `replaces` is the game the client believes is currently declared:
+/// absent from the choose-game screen (the client believes none), so a
+/// racing second answer meets an existing declaration and is refused;
+/// present for a deliberate change while the campaign is still empty.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(tsify::Tsify))]
 pub struct DeclareCampaignRequest {
     pub system: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub replaces: Option<String>,
 }

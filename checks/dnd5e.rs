@@ -259,10 +259,9 @@ fn value(sheet: &types::SheetView, section: &str, label: &str) -> String {
         .unwrap_or_else(|| panic!("sheet has no {section} / {label}"))
 }
 
-fn golden_names() -> [(
-    &'static str,
-    fn(&ruleset_dnd5e::Dnd5eEngine) -> Vec<Decision>,
-); 3] {
+type GoldenBuild = fn(&ruleset_dnd5e::Dnd5eEngine) -> Vec<Decision>;
+
+fn golden_names() -> [(&'static str, GoldenBuild); 3] {
     [
         ("brannock", brannock_log),
         ("brannock-3", brannock_3_log),
@@ -568,6 +567,7 @@ fn ability_score_machinery_holds_across_a_seed_sweep() {
 
 /// Fold of a complete 5.5e level-3 log stays under the 5 ms budget.
 #[test]
+#[allow(clippy::disallowed_methods)] // a perf check reads the clock on purpose
 fn fold_of_a_level_3_log_is_under_5ms() {
     let engine = engine();
     let log = brannock_3_log(&engine);

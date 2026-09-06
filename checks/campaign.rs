@@ -198,7 +198,17 @@ fn the_game_changes_only_while_empty_and_change_survives_a_restart() {
     let (status, view) = declare(&client, url, &first);
     assert_eq!(status, 200, "{view}");
     if let Some(second) = games.get(1) {
-        let (status, view) = declare(&client, url, second);
+        // A second differing ANSWER (no `replaces`) is a race: refused.
+        let (status, body) = declare(&client, url, second);
+        assert_eq!(status, 422, "a racing second answer is refused: {body}");
+        assert!(body["message"].as_str().unwrap().contains("reload"));
+        assert_eq!(campaign(&client, url)["system"], first.as_str());
+        // A deliberate change names the declaration it replaces.
+        let (status, view) = post(
+            &client,
+            &format!("{url}/api/campaign"),
+            json!({ "system": second, "replaces": first }),
+        );
         assert_eq!(status, 200, "empty campaigns may change their game: {view}");
         assert_eq!(view["system"], second.as_str());
         drop(server);
@@ -351,7 +361,11 @@ fn wrong_drawer_is_refused_in_place() {
     let problems = view["problems"].as_array().unwrap();
     assert_eq!(problems.len(), 1, "{problems:?}");
     let message = problems[0]["message"].as_str().unwrap();
-    assert!(message.contains("dnd5e"), "{message}");
+    assert!(message.contains("5.5e"), "names the file's game: {message}");
+    assert!(
+        message.contains("Pathfinder"),
+        "names the campaign's game: {message}"
+    );
     assert!(message.contains("untouched"), "{message}");
     assert!(
         !problems[0]["message"]
