@@ -153,4 +153,10 @@ pub trait Ruleset: Send + Sync {
     /// The record id a random mint keys its name pool on (the ancestry or
     /// species chosen in the log), if any.
     fn name_pool_key(&self, log: &[Decision]) -> Option<String>;
+    /// The option a random mint always takes for a slot, when the ruleset
+    /// pins one (a generation method the mint should not vary); `None`
+    /// lets the mint sample the slot's legal options.
+    fn mint_pin(&self, _slot: &SlotId) -> Option<OptionId> {
+        None
+    }
 }

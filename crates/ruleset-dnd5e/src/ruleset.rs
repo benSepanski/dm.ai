@@ -98,6 +98,19 @@ impl Ruleset for Dnd5eRuleset {
     fn text_fill_candidates(&self, _slot: &SlotId) -> Vec<String> {
         Vec::new()
     }
+    /// A random mint assigns the standard array (spec req 8): the method
+    /// slot is pinned to the first array-kind method record.
+    fn mint_pin(&self, slot: &SlotId) -> Option<OptionId> {
+        if slot.as_str() != mechanics::SLOT_SCORES_METHOD {
+            return None;
+        }
+        self.data
+            .scores
+            .methods
+            .iter()
+            .find(|m| !m.is_point_buy())
+            .map(|m| OptionId::new(&m.id))
+    }
     fn name_pool_key(&self, log: &[Decision]) -> Option<String> {
         log.iter()
             .rev()

@@ -1184,6 +1184,53 @@ async fn fill_remaining(
 const RANDOM_MINT_ID_PREFIX: &str = "c-rn-";
 const CLONE_ID_PREFIX: &str = "c-cl-";
 
+/// A random candidate order over a slot's legal options. Ungrouped
+/// options are simply shuffled. Grouped options (a pick per group, as the
+/// `one-per-group` presentation renders them) come one per group first —
+/// groups in random order, each group's pick random among its options
+/// whose label no earlier pick used, so distinct groups take distinct
+/// values where the catalog allows — then the rest, shuffled. Labels are
+/// data; the server knows nothing about what a group is.
+fn grouped_shuffle(sampler: &mut Sampler, legal: &[&types::OptionView]) -> Vec<types::OptionId> {
+    if legal.iter().all(|o| o.group.is_none()) {
+        let ids: Vec<types::OptionId> = legal.iter().map(|o| o.id.clone()).collect();
+        return sampler.shuffled(&ids);
+    }
+    let mut groups: Vec<String> = Vec::new();
+    for o in legal {
+        let g = o.group.clone().unwrap_or_default();
+        if !groups.contains(&g) {
+            groups.push(g);
+        }
+    }
+    let groups = sampler.shuffled(&groups);
+    let mut head: Vec<types::OptionId> = Vec::new();
+    let mut used_labels: Vec<&str> = Vec::new();
+    for group in &groups {
+        let members: Vec<&types::OptionView> = legal
+            .iter()
+            .copied()
+            .filter(|o| o.group.as_deref().unwrap_or_default() == group)
+            .collect();
+        let order = sampler.shuffled(&members);
+        let pick = order
+            .iter()
+            .find(|o| !used_labels.contains(&o.label.as_str()))
+            .or_else(|| order.first());
+        if let Some(pick) = pick {
+            used_labels.push(&pick.label);
+            head.push(pick.id.clone());
+        }
+    }
+    let rest: Vec<types::OptionId> = legal
+        .iter()
+        .map(|o| o.id.clone())
+        .filter(|id| !head.contains(id))
+        .collect();
+    head.extend(sampler.shuffled(&rest));
+    head
+}
+
 /// The name-pools document (`app-data/name-pools.json`).
 #[derive(serde::Deserialize)]
 struct NamePools {
@@ -1331,16 +1378,19 @@ async fn random_mint(
                     Some(SlotSuggestion::Text(topic.clone()))
                 }
                 _ => {
-                    let legal: Vec<types::OptionId> = ctx
-                        .options
-                        .iter()
-                        .filter(|o| o.available)
-                        .map(|o| o.id.clone())
-                        .collect();
+                    // A pinned pick (a generation method the mint never
+                    // varies) goes first; the ruleset says which.
+                    if let Some(pinned) = cx.rs.mint_pin(ctx.slot) {
+                        if ctx.options.iter().any(|o| o.available && o.id == pinned) {
+                            return Some(SlotSuggestion::Candidates(vec![pinned]));
+                        }
+                    }
+                    let legal: Vec<&types::OptionView> =
+                        ctx.options.iter().filter(|o| o.available).collect();
                     if legal.is_empty() {
                         return None;
                     }
-                    Some(SlotSuggestion::Candidates(sampler.shuffled(&legal)))
+                    Some(SlotSuggestion::Candidates(grouped_shuffle(sampler, &legal)))
                 }
             }
         };
