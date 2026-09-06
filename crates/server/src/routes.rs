@@ -882,7 +882,7 @@ async fn level_up(
         )));
     };
     let input = DecisionInput {
-        id: DecisionId::new(format!("level-{level}.advance")),
+        id: DecisionId::new(format!("level-{level}-advance")),
         slot: cx.rs.advance_slot(level),
         selection: Selection::Option(cx.rs.advance_option(level)),
         source: DecisionSource::Player,

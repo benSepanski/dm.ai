@@ -71,6 +71,10 @@ path = "random_mint.rs"
 name = "clone"
 path = "clone.rs"
 
+[[test]]
+name = "campaign"
+path = "campaign.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }

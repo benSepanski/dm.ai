@@ -2495,7 +2495,7 @@ mod leveling {
         append_one(
             engine,
             log,
-            &format!("level-{level}.advance"),
+            &format!("level-{level}-advance"),
             ruleset_pf2e::slot_level_advance(level),
             one(&format!("advance.{level}")),
         );

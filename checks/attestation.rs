@@ -27,6 +27,27 @@ use sha2::{Digest, Sha256};
 
 const CACHE_DIR: &str = ".reference-cache";
 
+/// Meta files of a system directory — everything else is a record file.
+const META_FILES: &[&str] = &[
+    "manifest.json",
+    "denylist.json",
+    "shipped-versions.json",
+    "attestation.json",
+];
+
+/// Every system directory under rules-data/, each attested on its own.
+fn system_dirs() -> Vec<(String, std::path::PathBuf)> {
+    let mut dirs: Vec<(String, std::path::PathBuf)> =
+        std::fs::read_dir(checks::workspace_root().join("rules-data"))
+            .unwrap()
+            .flatten()
+            .filter(|e| e.path().is_dir())
+            .map(|e| (e.file_name().to_string_lossy().to_string(), e.path()))
+            .collect();
+    dirs.sort();
+    dirs
+}
+
 #[test]
 fn ground_truth_cache_is_gitignored_and_untracked() {
     let root = checks::workspace_root();
@@ -82,36 +103,28 @@ fn ci_never_invokes_the_reference_check_tool() {
 /// Record files the attestation must cover — keep in lockstep with
 /// RECORD_FILES in checks/rules_data.rs and FLAT_FILES/EQUIPMENT_CATEGORIES
 /// in crates/reference-check/src/ours.rs.
-const ATTESTED_RECORD_FILES: &[&str] = &[
-    "ancestries.json",
-    "heritages.json",
-    "ancestry-feats.json",
-    "backgrounds.json",
-    "classes.json",
-    "class-feats.json",
-    "general-feats.json",
-    "skills.json",
-    "equipment.json",
-    "spells.json",
-];
-
-/// (id, record) for every shipped record, from the committed JSON bytes.
-fn current_records() -> Vec<(String, serde_json::Value)> {
-    let root = checks::workspace_root().join("rules-data/pf2e");
+/// (id, record) for every shipped record of a system, from the committed
+/// JSON bytes (every non-meta file: flat arrays or categorized objects).
+fn current_records(dir: &std::path::Path) -> Vec<(String, serde_json::Value)> {
+    let mut files: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == "json"))
+        .filter(|p| !META_FILES.contains(&p.file_name().unwrap().to_str().unwrap()))
+        .collect();
+    files.sort();
     let mut out = Vec::new();
-    for file in ATTESTED_RECORD_FILES {
-        let text = std::fs::read_to_string(root.join(file)).unwrap();
+    for file in files {
+        let text = std::fs::read_to_string(&file).unwrap();
         let value: serde_json::Value = serde_json::from_str(&text).unwrap();
-        let records: Vec<serde_json::Value> = if *file == "equipment.json" || *file == "spells.json"
-        {
-            value
-                .as_object()
-                .unwrap()
+        let records: Vec<serde_json::Value> = match value {
+            serde_json::Value::Array(items) => items,
+            serde_json::Value::Object(map) => map
                 .values()
                 .flat_map(|arr| arr.as_array().unwrap().clone())
-                .collect()
-        } else {
-            value.as_array().unwrap().clone()
+                .collect(),
+            _ => panic!("{}: not a record file", file.display()),
         };
         for record in records {
             let id = record["id"].as_str().expect("record id").to_string();
@@ -121,12 +134,14 @@ fn current_records() -> Vec<(String, serde_json::Value)> {
     out
 }
 
-fn attestation() -> serde_json::Value {
-    let path = checks::workspace_root().join("rules-data/pf2e/attestation.json");
-    let text = std::fs::read_to_string(&path).expect(
-        "rules-data/attestation.json must exist: run \
-         `cargo run -p reference-check -- fetch` then `-- attest`",
-    );
+fn attestation(dir: &std::path::Path) -> serde_json::Value {
+    let path = dir.join("attestation.json");
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|_| {
+        panic!(
+            "{} must exist: run `cargo run -p reference-check -- fetch --system <system>` then `-- attest --system <system>`",
+            path.display()
+        )
+    });
     serde_json::from_str(&text).expect("attestation.json parses")
 }
 
@@ -181,24 +196,30 @@ fn is_field_name(s: &str) -> bool {
 
 #[test]
 fn attestation_matches_manifest_version() {
-    let manifest: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(checks::workspace_root().join("rules-data/pf2e/manifest.json"))
-            .unwrap(),
-    )
-    .unwrap();
-    assert_eq!(
-        attestation()["rules_version"].as_str(),
-        manifest["version"].as_str(),
-        "attestation is for a different rules-data version: re-run \
-         `cargo run -p reference-check -- attest`"
-    );
+    for (system, dir) in system_dirs() {
+        let manifest: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(dir.join("manifest.json")).unwrap())
+                .unwrap();
+        assert_eq!(
+            attestation(&dir)["rules_version"].as_str(),
+            manifest["version"].as_str(),
+            "{system}: attestation is for a different rules-data version: re-run \
+             `cargo run -p reference-check -- attest --system {system}`"
+        );
+    }
 }
 
 #[test]
 fn attestation_covers_every_record_and_hashes_are_current() {
-    let att = attestation();
+    for (_system, dir) in system_dirs() {
+        covers_every_record(&dir);
+    }
+}
+
+fn covers_every_record(dir: &std::path::Path) {
+    let att = attestation(dir);
     let records = att["records"].as_object().expect("records object");
-    let current = current_records();
+    let current = current_records(dir);
 
     // Coverage, both directions: exactly the shipped ID set, no more, no
     // less.
@@ -230,7 +251,12 @@ fn attestation_covers_every_record_and_hashes_are_current() {
 
 #[test]
 fn attestation_has_zero_unwaived_mismatches_and_sound_waivers() {
-    let att = attestation();
+    for (_system, dir) in system_dirs() {
+        zero_unwaived_mismatches(&attestation(&dir));
+    }
+}
+
+fn zero_unwaived_mismatches(att: &serde_json::Value) {
     for (id, entry) in att["records"].as_object().expect("records object") {
         let verdict = entry["verdict"].as_str().unwrap_or("");
         assert_ne!(
@@ -271,12 +297,19 @@ fn attestation_has_zero_unwaived_mismatches_and_sound_waivers() {
 /// to hide in.
 #[test]
 fn attestation_schema_admits_no_ground_truth_values() {
-    let att = attestation();
+    for (_system, dir) in system_dirs() {
+        schema_admits_no_ground_truth(&attestation(&dir));
+    }
+}
+
+/// One top-level schema for every system; the per-source facts live in a
+/// `source` block whose `kind` and `sha256` are shared and whose other
+/// keys are short identifiers (a tag, a url) — never content.
+fn schema_admits_no_ground_truth(att: &serde_json::Value) {
     let top = att.as_object().expect("attestation is an object");
     let expected_top: BTreeSet<&str> = [
         "tool_version",
-        "foundry_tag",
-        "foundry_sha256",
+        "source",
         "rules_version",
         "generated",
         "claims_full_breadth",
@@ -289,17 +322,35 @@ fn attestation_schema_admits_no_ground_truth_values() {
     let actual_top: BTreeSet<&str> = top.keys().map(String::as_str).collect();
     assert_eq!(actual_top, expected_top, "unexpected top-level keys");
 
-    for key in ["tool_version", "foundry_tag", "rules_version"] {
+    for key in ["tool_version", "rules_version"] {
         let v = att[key].as_str().unwrap_or("");
         assert!(
             !v.is_empty() && v.len() <= 64 && !v.contains(char::is_whitespace),
             "'{key}' must be a short identifier"
         );
     }
+    let source = att["source"].as_object().expect("source block");
     assert!(
-        is_hex64(att["foundry_sha256"].as_str().unwrap_or("")),
-        "foundry_sha256 must be a sha256 hex digest"
+        is_hex64(source["sha256"].as_str().unwrap_or("")),
+        "source.sha256 must be a sha256 hex digest"
     );
+    let kind = source["kind"].as_str().unwrap_or("");
+    assert!(
+        !kind.is_empty()
+            && kind.len() <= 32
+            && kind.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'),
+        "source.kind must be a short identifier"
+    );
+    for (key, value) in source {
+        if key == "sha256" || key == "kind" {
+            continue;
+        }
+        let v = value.as_str().unwrap_or("");
+        assert!(
+            !v.is_empty() && v.len() <= 200 && !v.contains('\n'),
+            "source.{key} must be a short identifier or url, never content"
+        );
+    }
     let generated = att["generated"].as_str().unwrap_or("");
     assert!(
         generated.len() == 10
@@ -419,7 +470,12 @@ fn attestation_schema_admits_no_ground_truth_values() {
 
 #[test]
 fn full_breadth_claim_requires_empty_missing_from_data() {
-    let att = attestation();
+    for (_system, dir) in system_dirs() {
+        full_breadth_claim(&attestation(&dir));
+    }
+}
+
+fn full_breadth_claim(att: &serde_json::Value) {
     if att["claims_full_breadth"].as_bool() != Some(true) {
         // Slice-1 subset data: the reverse-completeness sections are
         // informational until the T3–T5 content tickets land and the tool's

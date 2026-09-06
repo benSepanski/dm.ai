@@ -21,6 +21,7 @@ use cargo_metadata::{CargoOpt, MetadataCommand};
 /// Workspace-internal edges. Sorted, exact: extra or missing edges fail.
 const ALLOWED_INTERNAL_EDGES: &[(&str, &str)] = &[
     ("checks", "engine-core"),
+    ("checks", "ruleset-dnd5e"),
     ("checks", "ruleset-pf2e"),
     ("checks", "types"),
     ("engine-core", "types"),
@@ -28,20 +29,29 @@ const ALLOWED_INTERNAL_EDGES: &[(&str, &str)] = &[
     // allowlist makes any inbound edge an unexpected-edge failure).
     ("reference-check", "ruleset-pf2e"),
     ("reference-check", "types"),
+    // Rulesets never see each other; server and wasm hold both behind a
+    // two-arm selector (chargen-dnd architecture: no registry crate).
+    ("ruleset-dnd5e", "engine-core"),
+    ("ruleset-dnd5e", "types"),
     ("ruleset-pf2e", "engine-core"),
     ("ruleset-pf2e", "types"),
     ("server", "engine-core"),
+    ("server", "ruleset-dnd5e"),
     ("server", "ruleset-pf2e"),
     ("server", "types"),
     ("wasm", "engine-core"),
+    ("wasm", "ruleset-dnd5e"),
     ("wasm", "ruleset-pf2e"),
     ("wasm", "types"),
 ];
 
+/// Every shipped ruleset crate; the scans below run per crate.
+const RULESET_CRATES: &[&str] = &["ruleset-pf2e", "ruleset-dnd5e"];
+
 const BANNED_CRATE_NAMES: &[&str] = &["common", "utils", "helpers", "shared"];
 
 /// Crates whose code must stay pure: no fs, net, clock, env, randomness.
-const ENGINE_CRATES: &[&str] = &["types", "engine-core", "ruleset-pf2e"];
+const ENGINE_CRATES: &[&str] = &["types", "engine-core", "ruleset-pf2e", "ruleset-dnd5e"];
 
 /// Tokens banned from engine-crate sources. Coarse text scan by design —
 /// the goal is tripping review, not outsmarting obfuscation.
@@ -54,14 +64,32 @@ const BANNED_ENGINE_TOKENS: &[&str] = &[
     "unsafe ",
 ];
 
-/// Ruleset option-kind modules: no kind may reference another kind.
-const RULESET_KIND_MODULES: &[&str] = &[
-    "ancestry",
-    "background",
-    "class",
-    "feats",
-    "skills",
-    "equipment",
+/// Ruleset option-kind modules, per crate: no kind may reference another
+/// kind (kinds -> mechanics -> engine-core). Each ruleset names its own
+/// taxonomy — the list is the crate's, never a shared one.
+const RULESET_KIND_MODULES: &[(&str, &[&str])] = &[
+    (
+        "ruleset-pf2e",
+        &[
+            "ancestry",
+            "background",
+            "class",
+            "feats",
+            "skills",
+            "equipment",
+        ],
+    ),
+    (
+        "ruleset-dnd5e",
+        &[
+            "class",
+            "background",
+            "species",
+            "scores",
+            "feats",
+            "equipment",
+        ],
+    ),
 ];
 
 fn metadata() -> cargo_metadata::Metadata {
@@ -235,8 +263,9 @@ fn engine_sources_are_pure() {
 #[test]
 fn ruleset_kind_modules_do_not_reference_each_other() {
     let root = checks::workspace_root();
-    for ruleset_src in [root.join("crates/ruleset-pf2e/src")] {
-        for kind in RULESET_KIND_MODULES {
+    for (krate, kinds) in RULESET_KIND_MODULES {
+        let ruleset_src = root.join("crates").join(krate).join("src");
+        for kind in *kinds {
             let kind_dir = ruleset_src.join(kind);
             let kind_file = ruleset_src.join(format!("{kind}.rs"));
             let mut sources = rust_sources(&kind_dir);
@@ -245,7 +274,7 @@ fn ruleset_kind_modules_do_not_reference_each_other() {
                 sources.push((kind_file, src));
             }
             for (path, src) in sources {
-                for other in RULESET_KIND_MODULES {
+                for other in *kinds {
                     if other == kind {
                         continue;
                     }
@@ -319,13 +348,15 @@ fn storage_documents_stay_private_to_persistence() {
 #[test]
 fn level_is_derived_and_the_marker_is_storage_private() {
     let root = checks::workspace_root();
-    for (path, src) in rust_sources(&root.join("crates/ruleset-pf2e/src")) {
-        for token in ["const LEVEL", "LEVEL:"] {
-            assert!(
-                !src.contains(token),
-                "{} contains '{token}': level is derived from the log's advance decisions, never a constant",
-                path.display()
-            );
+    for krate in RULESET_CRATES {
+        for (path, src) in rust_sources(&root.join("crates").join(krate).join("src")) {
+            for token in ["const LEVEL", "LEVEL:"] {
+                assert!(
+                    !src.contains(token),
+                    "{} contains '{token}': level is derived from the log's advance decisions, never a constant",
+                    path.display()
+                );
+            }
         }
     }
     for (path, src) in rust_sources(&root.join("crates/types/src")) {
@@ -335,6 +366,161 @@ fn level_is_derived_and_the_marker_is_storage_private() {
             path.display()
         );
     }
+}
+
+// ---- chargen-dnd architecture rows: the boundary is a contract, not a type ----
+
+/// The source with comment lines dropped (doc examples may name a game
+/// or a slot id; code may not).
+fn code_lines(src: &str) -> String {
+    src.lines()
+        .filter(|l| !l.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Game-free core: no system id literal in engine-core or types (the
+/// trait names slots, levels, versions, and pools — never a game).
+#[test]
+fn engine_core_and_types_name_no_system() {
+    let root = checks::workspace_root();
+    for krate in ["engine-core", "types"] {
+        for (path, src) in rust_sources(&root.join("crates").join(krate).join("src")) {
+            let code = code_lines(&src);
+            for token in ["pf2e", "dnd5e"] {
+                assert!(
+                    !code.contains(token),
+                    "{} contains '{token}': the core and the wire types carry no game",
+                    path.display()
+                );
+            }
+        }
+    }
+}
+
+/// No slot-id parsing in the server or the browser bundle: the advance
+/// slot is a ruleset query, and no `"<system>.` slot-id literal appears.
+#[test]
+fn server_and_wasm_parse_no_slot_ids() {
+    let root = checks::workspace_root();
+    for krate in ["server", "wasm"] {
+        for (path, src) in rust_sources(&root.join("crates").join(krate).join("src")) {
+            let code = code_lines(&src);
+            for token in [
+                "\".advance\"",
+                ".advance\")",
+                "advance.{",
+                "slot_level_advance",
+                "\"pf2e.",
+                "\"dnd5e.",
+            ] {
+                assert!(
+                    !code.contains(token),
+                    "{} contains '{token}': slot ids are the ruleset's to interpret",
+                    path.display()
+                );
+            }
+        }
+    }
+}
+
+/// Every shipped rules-data directory has a selector arm in the server
+/// and the wasm bundle, and a ruleset crate of its own — the two-arm
+/// selectors ARE the registry.
+#[test]
+fn every_rules_data_directory_has_a_selector_arm_and_a_crate() {
+    let root = checks::workspace_root();
+    let systems: Vec<String> = std::fs::read_dir(root.join("rules-data"))
+        .unwrap()
+        .flatten()
+        .filter(|e| e.path().is_dir())
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .collect();
+    assert!(
+        !systems.is_empty(),
+        "rules-data/ holds one directory per system"
+    );
+    let server = fs::read_to_string(root.join("crates/server/src/main.rs")).unwrap();
+    let wasm = fs::read_to_string(root.join("crates/wasm/src/lib.rs")).unwrap();
+    for system in &systems {
+        assert!(
+            root.join(format!("crates/ruleset-{system}")).is_dir(),
+            "rules-data/{system}/ has no crate crates/ruleset-{system}"
+        );
+        let crate_ident = format!("ruleset_{system}::embedded()");
+        assert!(
+            server.contains(&crate_ident),
+            "crates/server/src/main.rs has no selector arm for '{system}'"
+        );
+        assert!(
+            wasm.contains(&format!("\"{system}\"")) && wasm.contains(&crate_ident),
+            "crates/wasm/src/lib.rs has no selector arm for '{system}'"
+        );
+    }
+}
+
+/// No HTTP client in the server's or the wasm bundle's normal dependency
+/// tree: the reference-check tool is the repo's only network path.
+#[test]
+fn server_and_wasm_carry_no_http_client() {
+    for krate in ["server", "wasm"] {
+        let out = std::process::Command::new(env!("CARGO"))
+            .args(["tree", "-p", krate, "-e", "normal", "--prefix", "none"])
+            .current_dir(checks::workspace_root())
+            .output()
+            .expect("cargo tree");
+        assert!(out.status.success(), "cargo tree -p {krate} failed");
+        let tree = String::from_utf8_lossy(&out.stdout);
+        for banned in ["reqwest", "ureq"] {
+            assert!(
+                !tree.lines().any(|l| l.starts_with(banned)),
+                "{krate}'s dependency tree contains '{banned}': no network path outside reference-check"
+            );
+        }
+    }
+}
+
+/// System on the wire once: in the types crate a `system` field exists
+/// only on the campaign view; character and wizard views never carry one.
+#[test]
+fn system_field_lives_only_on_the_campaign_view() {
+    let root = checks::workspace_root();
+    let mut hits = Vec::new();
+    for (path, src) in rust_sources(&root.join("crates/types/src")) {
+        let mut current_struct = String::new();
+        for line in src.lines() {
+            let t = line.trim_start();
+            if let Some(rest) = t.strip_prefix("pub struct ") {
+                current_struct = rest
+                    .split(|c: char| !c.is_alphanumeric())
+                    .next()
+                    .unwrap_or("")
+                    .to_string();
+            } else if let Some(rest) = t.strip_prefix("pub enum ") {
+                current_struct = rest
+                    .split(|c: char| !c.is_alphanumeric())
+                    .next()
+                    .unwrap_or("")
+                    .to_string();
+            }
+            if t.starts_with("pub system:") || t.starts_with("system:") {
+                hits.push(format!(
+                    "{}::{current_struct}",
+                    path.file_name().unwrap().to_string_lossy()
+                ));
+            }
+        }
+    }
+    // The declare request names the system it asks for; every VIEW but the
+    // campaign view is system-free.
+    assert_eq!(
+        hits,
+        vec![
+            "roster.rs::CampaignView".to_string(),
+            "roster.rs::DeclareCampaignRequest".to_string()
+        ],
+        "a `system` field on the wire belongs to the campaign view (and the declare request) alone"
+    );
 }
 
 /// One dialog machine, structural half: no level-specific wizard exists.
@@ -363,7 +549,31 @@ fn ui_has_no_level_specific_wizard() {
                 !name.contains("LevelUp") && !name.to_lowercase().contains("level-up"),
                 "{name}: no level-specific UI file — the wizard renders live steps"
             );
+            let lower = name.to_lowercase();
+            assert!(
+                !lower.contains("pf2e") && !lower.contains("dnd5e") && !lower.contains("dnd"),
+                "{name}: no UI file is named for a game system"
+            );
             let src = std::fs::read_to_string(&path).unwrap();
+            // System-blind UI: no system id and no ability name in shipped
+            // source (test files may name both).
+            if !name.contains(".test.") {
+                for token in [
+                    "pf2e",
+                    "dnd5e",
+                    "Strength",
+                    "Dexterity",
+                    "Constitution",
+                    "Intelligence",
+                    "Wisdom",
+                    "Charisma",
+                ] {
+                    assert!(
+                        !src.contains(token),
+                        "{name} contains '{token}': the UI learns no game — labels arrive as data"
+                    );
+                }
+            }
             for token in [
                 "export function LevelUp",
                 "export const LevelUp",
@@ -387,5 +597,19 @@ fn ui_has_no_level_specific_wizard() {
     assert!(
         wizard.contains("SheetDiffTable"),
         "the level-up gains render through the shared SheetDiffTable, not a new diff component"
+    );
+    // One WASM module, one init site.
+    let pkg = root.join("engine/pkg");
+    let wasm_files = std::fs::read_dir(&pkg)
+        .unwrap()
+        .flatten()
+        .filter(|e| e.path().extension().is_some_and(|x| x == "wasm"))
+        .count();
+    assert_eq!(wasm_files, 1, "exactly one .wasm under ui/src/engine/pkg");
+    let facade = std::fs::read_to_string(root.join("engine/index.ts")).unwrap();
+    assert_eq!(
+        facade.matches("initWasm(").count(),
+        1,
+        "one module-init site in the façade"
     );
 }
