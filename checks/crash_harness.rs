@@ -643,3 +643,200 @@ fn level_transitions_under_sigkill_are_prior_or_next_state() {
     let (code, output) = TestServer::run_verify(dir.path(), &[]);
     assert_eq!(code, 0, "{output}");
 }
+
+/// dnd-dice: a roll under SIGKILL — the app's roll route, an entered-dice
+/// amend, and a hit-die roll on a pending level — leaves the file in the
+/// prior or the next state: the history is exactly the acknowledged sets,
+/// or one more, never torn, never a duplicate.
+#[test]
+fn rolls_under_sigkill_are_prior_or_next_state() {
+    #[path = "leveling_helpers.rs"]
+    mod leveling;
+    let dir = tempfile::tempdir().unwrap();
+    checks::declare_campaign(dir.path(), "dnd5e");
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+        .unwrap();
+    let id;
+    {
+        let server = TestServer::spawn(dir.path());
+        let draft: Value = client
+            .post(format!("{}/api/characters", server.url))
+            .json(&json!({"name": "Crash Roller"}))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        id = draft["id"].as_str().unwrap().to_string();
+        let (status, outcome) = leveling::post_json(
+            &client,
+            &server.url,
+            &format!("/api/characters/{id}/confirm"),
+            json!({"version": 1, "decision": {
+                "id": "m", "slot": "dnd5e.scores.method",
+                "selection": {"kind": "option", "value": "method.roll"}, "source": "player"
+            }}),
+        );
+        assert_eq!(status, 200, "{outcome}");
+    }
+    let sets_in = |doc: &Value| -> Vec<Value> {
+        doc["log"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|d| d["slot"] == "dnd5e.scores.roll")
+            .map(|d| d["selection"]["value"].as_array().unwrap().clone())
+            .unwrap_or_default()
+    };
+    let mut expected = 0usize;
+    for (cycle, delay_ms) in [0u64, 3, 8, 1].into_iter().enumerate() {
+        let mut server = TestServer::spawn(dir.path());
+        let before = sets_in(&leveling::read_doc(dir.path(), &id));
+        assert_eq!(before.len(), expected);
+        let acked = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let fire = std::thread::spawn({
+            let client = client.clone();
+            let url = server.url.clone();
+            let id = id.clone();
+            let acked = acked.clone();
+            move || {
+                let get = |path: &str| -> Option<Value> {
+                    client.get(format!("{url}{path}")).send().ok()?.json().ok()
+                };
+                let Some(view) = get(&format!("/api/characters/{id}")) else {
+                    return;
+                };
+                let version = view["version"].as_u64().unwrap_or(1);
+                // Even cycles roll through the route; odd cycles enter dice.
+                let (path, body) = if cycle % 2 == 0 {
+                    (
+                        format!("/api/characters/{id}/roll"),
+                        json!({"slot": "dnd5e.scores.roll", "version": version,
+                               "decision_id": format!("crash-roll-{cycle}")}),
+                    )
+                } else {
+                    (
+                        format!("/api/characters/{id}/amend"),
+                        json!({"version": version, "decision": {
+                            "id": format!("crash-enter-{cycle}"), "slot": "dnd5e.scores.roll",
+                            "selection": {"kind": "rolled", "value": [{
+                                "groups": [[1,2,3,4],[2,3,4,5],[3,4,5,6],[6,5,4,3],[5,4,3,2],[4,3,2,1]],
+                                "origin": "entered"}]},
+                            "source": "player"
+                        }}),
+                    )
+                };
+                let outcome: Option<Value> = client
+                    .post(format!("{url}{path}"))
+                    .json(&body)
+                    .send()
+                    .ok()
+                    .and_then(|r| r.json().ok());
+                if outcome.is_some_and(|o| o["outcome"] == "confirmed") {
+                    acked.store(true, std::sync::atomic::Ordering::SeqCst);
+                }
+            }
+        });
+        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        server.kill();
+        fire.join().unwrap();
+        let after = sets_in(&leveling::read_doc(dir.path(), &id));
+        assert!(
+            after.len() == expected || after.len() == expected + 1,
+            "cycle {cycle}: {} sets before, {} after",
+            expected,
+            after.len()
+        );
+        assert_eq!(&after[..expected], &before[..], "earlier sets never move");
+        if acked.load(std::sync::atomic::Ordering::SeqCst) {
+            assert_eq!(after.len(), expected + 1, "an acknowledged roll is durable");
+        }
+        expected = after.len();
+        // The file loads clean on the next start.
+        let server = TestServer::spawn(dir.path());
+        let roster: Value = client
+            .get(format!("{}/api/roster", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert!(
+            roster["problems"].as_array().unwrap().is_empty(),
+            "{roster}"
+        );
+    }
+
+    // A hit-die roll on a pending level, once: a minted 5.5e character
+    // finalized and leveled, the roll fired under the kill.
+    let leveler;
+    {
+        let server = TestServer::spawn(dir.path());
+        let (status, mint) = leveling::post_json(
+            &client,
+            &server.url,
+            "/api/characters/random-mint",
+            json!({"request_id": "crash-hd", "class_id": null, "name": "Hit Die"}),
+        );
+        assert_eq!(status, 200, "{mint}");
+        leveler = mint["draft"]["id"].as_str().unwrap().to_string();
+        let v = mint["draft"]["version"].as_u64().unwrap();
+        let (status, fin) = leveling::post_json(
+            &client,
+            &server.url,
+            &format!("/api/characters/{leveler}/finalize"),
+            json!({"version": v}),
+        );
+        assert_eq!(status, 200, "{fin}");
+        leveling::start_level(&client, &server.url, &leveler);
+    }
+    let hit_die_sets = |doc: &Value| -> usize {
+        doc["log"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|d| d["slot"] == "dnd5e.level.2.hit-die")
+            .map(|d| d["selection"]["value"].as_array().unwrap().len())
+            .unwrap_or(0)
+    };
+    let mut server = TestServer::spawn(dir.path());
+    let fire = std::thread::spawn({
+        let client = client.clone();
+        let url = server.url.clone();
+        let id = leveler.clone();
+        move || {
+            let Some(view) = client
+                .get(format!("{url}/api/characters/{id}"))
+                .send()
+                .ok()
+                .and_then(|r| r.json::<Value>().ok())
+            else {
+                return;
+            };
+            let version = view["draft"]["version"].as_u64().unwrap_or(1);
+            let _ = client
+                .post(format!("{url}/api/characters/{id}/roll"))
+                .json(&json!({"slot": "dnd5e.level.2.hit-die", "version": version,
+                              "decision_id": "crash-hd-1"}))
+                .send();
+        }
+    });
+    std::thread::sleep(std::time::Duration::from_millis(4));
+    server.kill();
+    fire.join().unwrap();
+    let doc = leveling::read_doc(dir.path(), &leveler);
+    assert!(hit_die_sets(&doc) <= 1);
+    let marker = doc["finalized_through"].as_u64().unwrap() as usize;
+    assert!(marker <= doc["log"].as_array().unwrap().len());
+    let server = TestServer::spawn(dir.path());
+    let roster: Value = client
+        .get(format!("{}/api/roster", server.url))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert!(
+        roster["problems"].as_array().unwrap().is_empty(),
+        "{roster}"
+    );
+}

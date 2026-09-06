@@ -95,6 +95,10 @@ pub struct CampaignView {
     pub games: Vec<GameOption>,
     /// Every shipped ruleset's license paragraphs, in display order.
     pub license_lines: Vec<String>,
+    /// True when the server was started with the testing-only dice seed:
+    /// every die is deterministic and the roster wears a badge (dnd-dice).
+    #[serde(default)]
+    pub seeded_dice: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

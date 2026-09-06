@@ -5,6 +5,7 @@
 //! Verify: `cargo run --release -p server -- --data-dir ./campaign verify`
 
 mod clock;
+mod dice;
 mod persistence;
 mod routes;
 mod version;
@@ -53,6 +54,13 @@ struct Cli {
     /// in production passes it. Its use is announced on stderr.
     #[arg(long, hide = true)]
     extra_known_versions: Option<PathBuf>,
+    /// TESTING ONLY: draw every die from this seed instead of the
+    /// operating system, keyed by character and decision, so a scripted
+    /// session reproduces its rolls. The campaign view says so and the
+    /// roster wears a badge whenever it is set; the seed is never written
+    /// to any file.
+    #[arg(long)]
+    dice_seed: Option<u64>,
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -105,7 +113,14 @@ fn main() {
     }
     match cli.command {
         Some(Command::Verify) => verify(cli.data_dir, rulesets, known),
-        None => serve(cli.data_dir, cli.port, rulesets, known, cli.name_pools),
+        None => serve(
+            cli.data_dir,
+            cli.port,
+            rulesets,
+            known,
+            cli.name_pools,
+            cli.dice_seed,
+        ),
     }
 }
 
@@ -280,6 +295,7 @@ fn serve(
     rulesets: Vec<Arc<dyn Ruleset>>,
     known: std::collections::BTreeMap<String, version::KnownVersions>,
     name_pools: PathBuf,
+    dice_seed: Option<u64>,
 ) {
     if let Err(e) = std::fs::create_dir_all(&data_dir) {
         eprintln!("cannot create data directory: {e}");
@@ -310,11 +326,17 @@ fn serve(
     let url = format!("http://127.0.0.1:{}", addr.port());
     let _ = persistence::write_lock(&data_dir, &url);
 
+    let dice: Arc<dyn dice::Entropy> = match dice_seed {
+        Some(seed) => Arc::new(dice::SeededEntropy { seed }),
+        None => Arc::new(dice::OsEntropy),
+    };
     let app = Arc::new(App {
         rulesets,
         known,
         store: Mutex::new(store),
         name_pools,
+        dice,
+        seeded_dice: dice_seed.is_some(),
     });
 
     println!("Serving at {url}");

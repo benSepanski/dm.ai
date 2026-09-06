@@ -104,7 +104,7 @@ points) split off as `dnd-hp-dice`.
 - [x] 3b. ruleset-dnd5e hit dice: per-level unrequired `hit-die` slots; HP
   fold per-level with the published minimum; describe; gains/deltas/pending
   carry the roll; Brannock goldens byte-identical.
-- [~] 4. Server: `dice.rs` (OS + seeded, keyed), `--dice-seed`, `seeded_dice`
+- [x] 4. Server: `dice.rs` (OS + seeded, keyed), `--dice-seed`, `seeded_dice`
   on the campaign view, the roll route (three phases), shared
   `write_decision`, origin refusal on confirm/amend; checks:
   `api_authority.rs` (refusals, append-by-construction M+N, injected failing
@@ -113,7 +113,7 @@ points) split off as `dnd-hp-dice`.
   (one id → one set), `crash_harness.rs` (roll, entered amend, hit-die roll),
   seeded rows (same seed → same faces across two clones; no flag → differ;
   badge iff flag; no `seed` key in any written file).
-- [ ] 5. WASM bindings rebuild; UI `RollEditor`, `rollDice` API, clear-before-
+- [~] 5. WASM bindings rebuild; UI `RollEditor`, `rollDice` API, clear-before-
   reroll, roster badge, ConfirmedSummary `rolled` arm, pending/prune
   handling; vitest rows; UI dice-blind scan green; `campaign.spec.ts`
   untouched.

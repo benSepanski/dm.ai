@@ -106,6 +106,17 @@ pub struct ConfirmRequest {
     pub version: u64,
 }
 
+/// Ask the server to roll a roll slot's dice and record the set (dnd-dice).
+/// The client mints the decision id — the idempotency key: a retry with
+/// the same id returns the roll already recorded, never a second one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct RollRequest {
+    pub slot: SlotId,
+    pub version: u64,
+    pub decision_id: crate::DecisionId,
+}
+
 /// Outcome of a confirm. `Conflict` carries the current draft so a stale
 /// tab can reload; `Rejected` is the server refusing an illegal confirm.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -238,9 +238,17 @@ fn wasm_sources_draw_no_entropy() {
 #[test]
 fn app_rolled_origin_is_minted_in_one_server_module() {
     let root = checks::workspace_root();
-    let token = "RollOrigin::App";
+    // The constructing form (a struct literal's field), not a match arm:
+    // rulesets render the tag, only the server mints it.
+    let token = "origin: RollOrigin::App";
+    // Shipped sources only: a crate's own test module may build app-rolled
+    // fixtures to exercise the fold.
+    let is_test_file = |p: &Path| p.file_name().is_some_and(|n| n == "tests.rs");
     for krate in ENGINE_CRATES.iter().chain(["wasm"].iter()) {
         for (path, src) in rust_sources(&root.join("crates").join(krate).join("src")) {
+            if is_test_file(&path) {
+                continue;
+            }
             assert!(
                 !code_lines(&src).contains(token),
                 "{} constructs {token}: only the server's entropy helper mints an app roll",
@@ -250,6 +258,7 @@ fn app_rolled_origin_is_minted_in_one_server_module() {
     }
     let minting: Vec<String> = rust_sources(&root.join("crates/server/src"))
         .into_iter()
+        .filter(|(path, _)| !is_test_file(path))
         .filter(|(_, src)| code_lines(src).contains(token))
         .map(|(p, _)| p.file_name().unwrap().to_string_lossy().to_string())
         .collect();

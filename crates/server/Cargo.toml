@@ -18,6 +18,7 @@ clap = { workspace = true }
 libc = { workspace = true }
 rust-embed = { workspace = true, features = ["interpolate-folder-path"] }
 mime_guess = { workspace = true }
+getrandom = { workspace = true }
 
 [lints]
 workspace = true
