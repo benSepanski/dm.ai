@@ -56,8 +56,8 @@ fn selection_id(selection: &Selection) -> Result<String, ApplyError> {
 
 fn toy_engine() -> Engine<ToyState> {
     let steps = vec![
-        (StepId::new("one"), "Step One".to_string()),
-        (StepId::new("two"), "Step Two".to_string()),
+        crate::StepRegistration::always("one", "Step One"),
+        crate::StepRegistration::always("two", "Step Two"),
     ];
     let slots = vec![
         SlotRegistration::<ToyState> {

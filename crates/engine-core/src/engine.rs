@@ -10,12 +10,12 @@ use types::{
     SlotId, SlotStatus, SlotView, SlotViewKind, StepId, StepStatus, StepView, UnresolvedSuggestion,
 };
 
-use crate::{Availability, SlotRegistration};
+use crate::{Availability, SlotRegistration, StepRegistration};
 
 /// A ruleset assembled into a runnable engine. `S` is the ruleset's folded
 /// state; the engine orchestrates, the registrations know the game.
 pub struct Engine<S> {
-    steps: Vec<(StepId, String)>,
+    steps: Vec<StepRegistration<S>>,
     slots: Vec<SlotRegistration<S>>,
     new_state: Box<dyn Fn() -> S + Send + Sync>,
     sheet: Box<dyn Fn(&S) -> SheetView + Send + Sync>,
@@ -94,7 +94,7 @@ impl<S> Engine<S> {
     /// a slot, or an unknown slot in a dependents list — these are ruleset
     /// authoring bugs, caught by the ruleset's own construction test.
     pub fn new(
-        steps: Vec<(StepId, String)>,
+        steps: Vec<StepRegistration<S>>,
         slots: Vec<SlotRegistration<S>>,
         new_state: Box<dyn Fn() -> S + Send + Sync>,
         sheet: Box<dyn Fn(&S) -> SheetView + Send + Sync>,
@@ -107,7 +107,7 @@ impl<S> Engine<S> {
                 slot.id
             );
             assert!(
-                steps.iter().any(|(id, _)| *id == slot.step),
+                steps.iter().any(|st| st.id == slot.step),
                 "slot {} names unknown step {}",
                 slot.id,
                 slot.step
@@ -165,8 +165,17 @@ impl<S> Engine<S> {
         let state = self.fold(log)?;
         let mut checklist: Vec<ChecklistEntry> = Vec::new();
         let mut slot_views: Vec<(StepId, SlotView)> = Vec::new();
+        // Step liveness: only live steps render, and a dead step's slots
+        // are neither rendered nor validated (they stay appendable — that
+        // is what lets a ruleset keep a slot open to a route without ever
+        // showing it as a card).
+        let live: Vec<&StepRegistration<S>> =
+            self.steps.iter().filter(|st| (st.live)(&state)).collect();
 
         for reg in &self.slots {
+            if !live.iter().any(|st| st.id == reg.step) {
+                continue;
+            }
             let availability = (reg.unlock)(&state);
             if availability == Availability::Hidden {
                 continue;
@@ -237,10 +246,10 @@ impl<S> Engine<S> {
             ));
         }
 
-        let steps = self
-            .steps
+        let steps = live
             .iter()
-            .map(|(id, title)| {
+            .map(|st| {
+                let (id, title) = (&st.id, &st.title);
                 let slots: Vec<SlotView> = slot_views
                     .iter()
                     .filter(|(step, _)| step == id)
@@ -651,7 +660,28 @@ impl<S> Engine<S> {
         doomed
     }
 
-    pub fn steps(&self) -> &[(StepId, String)] {
-        &self.steps
+    /// The steps live under a log's folded state, in registration order —
+    /// the only step list a client ever sees (resume labels, cursors, and
+    /// the projection all index this).
+    pub fn live_steps(&self, log: &[Decision]) -> Result<Vec<(StepId, String)>, EngineError> {
+        let state = self.fold(log)?;
+        Ok(self
+            .steps
+            .iter()
+            .filter(|st| (st.live)(&state))
+            .map(|st| (st.id.clone(), st.title.clone()))
+            .collect())
+    }
+
+    /// Render-ready description of one logged decision (slot label +
+    /// selection label), the shape the clear-confirmation prompt uses.
+    pub fn describe_decision(&self, decision: &Decision) -> Option<ClearedDecision> {
+        let reg = self.registration(&decision.slot)?;
+        Some(ClearedDecision {
+            slot: decision.slot.clone(),
+            slot_label: reg.label.clone(),
+            selection_label: (reg.describe)(&decision.selection),
+            selection: decision.selection.clone(),
+        })
     }
 }

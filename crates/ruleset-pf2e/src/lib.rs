@@ -7,6 +7,7 @@
 //! never import each other; kinds -> mechanics -> engine-core.
 #![forbid(unsafe_code)]
 
+mod advancement;
 mod ancestry;
 mod background;
 mod boosts;
@@ -23,7 +24,7 @@ mod tests;
 
 use std::sync::Arc;
 
-use engine_core::Engine;
+use engine_core::{Engine, StepRegistration};
 use types::StepId;
 
 pub use data::{DataError, RulesData, RulesDataFiles};
@@ -33,29 +34,39 @@ pub type Pf2eEngine = Engine<Pf2eState>;
 
 /// Assemble the PF2e engine over a parsed rules-data set.
 pub fn engine(data: Arc<RulesData>) -> Pf2eEngine {
-    let steps = vec![
-        (StepId::new(mechanics::STEP_CONCEPT), "Concept".to_string()),
-        (
-            StepId::new(mechanics::STEP_ANCESTRY),
-            "Ancestry".to_string(),
-        ),
-        (
-            StepId::new(mechanics::STEP_BACKGROUND),
-            "Background".to_string(),
-        ),
-        (StepId::new(mechanics::STEP_CLASS), "Class".to_string()),
-        (
-            StepId::new(mechanics::STEP_BOOSTS),
-            "Attribute Boosts".to_string(),
-        ),
-        (
-            StepId::new(mechanics::STEP_EQUIPMENT),
-            "Equipment".to_string(),
-        ),
-        (StepId::new(mechanics::STEP_DETAILS), "Details".to_string()),
+    // Creation steps are live while the character is level 1 — the
+    // creation dialog. Each further level has a rendered step (live while
+    // that level is the character's current one) and a never-live step
+    // holding its advance slot.
+    let creation = |id: &str, title: &str| StepRegistration::<Pf2eState> {
+        id: StepId::new(id),
+        title: title.to_string(),
+        live: Box::new(|state| state.level() == 1),
+    };
+    let mut steps = vec![
+        creation(mechanics::STEP_CONCEPT, "Concept"),
+        creation(mechanics::STEP_ANCESTRY, "Ancestry"),
+        creation(mechanics::STEP_BACKGROUND, "Background"),
+        creation(mechanics::STEP_CLASS, "Class"),
+        creation(mechanics::STEP_BOOSTS, "Attribute Boosts"),
+        creation(mechanics::STEP_EQUIPMENT, "Equipment"),
+        creation(mechanics::STEP_DETAILS, "Details"),
     ];
+    for level in 2..=data.max_advancement_level() {
+        steps.push(StepRegistration::<Pf2eState> {
+            id: StepId::new(mechanics::step_level_advance(level)),
+            title: format!("Advance to level {level}"),
+            live: Box::new(|_| false),
+        });
+        steps.push(StepRegistration::<Pf2eState> {
+            id: StepId::new(mechanics::step_level(level)),
+            title: format!("Level {level}"),
+            live: Box::new(move |state| state.level() as u32 == level),
+        });
+    }
 
     let mut registrations = Vec::new();
+    registrations.extend(advancement::registrations(&data));
     registrations.extend(details::registrations(&data));
     registrations.extend(ancestry::registrations(&data));
     registrations.extend(background::registrations(&data));
@@ -81,6 +92,15 @@ pub fn rules_version(data: &RulesData) -> &str {
 }
 
 pub use mechanics::SLOT_ANCESTRY as ANCESTRY_SLOT_ID;
+pub use mechanics::{advance_level_of, level_grants, slot_level_advance, step_level, LevelGrants};
+
+/// The level a finalized log's class can advance to next, if any: one past
+/// the log's level while that is within the class's shipped cap.
+pub fn next_level(data: &RulesData, state: &Pf2eState) -> Option<u32> {
+    let cap = data.class(state.class.as_ref()?)?.level_cap();
+    let next = state.level() as u32 + 1;
+    (next <= cap).then_some(next)
+}
 /// The class-selection slot ID — lets the server steer fill-remaining to
 /// the chosen class's suggested build without hardcoding game vocabulary.
 pub use mechanics::SLOT_CLASS as CLASS_SLOT_ID;

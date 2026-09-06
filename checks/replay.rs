@@ -2461,3 +2461,436 @@ fn every_school_has_a_satisfiable_spellbook_and_no_dead_ends() {
         }));
     }
 }
+
+// ---- level-up goldens and properties (level-up architecture) ----
+//
+// Level is a fact of the log: these builders append advance decisions and
+// the level's choices to the existing level-1 goldens through the real
+// engine, and the sheets are hand-verified against the Player Core's
+// proficiency, HP, and spells-per-day rules.
+
+mod leveling {
+    use super::*;
+
+    pub fn append_one(
+        engine: &ruleset_pf2e::Pf2eEngine,
+        log: &mut Vec<Decision>,
+        id: &str,
+        slot: String,
+        selection: Selection,
+    ) {
+        let input = DecisionInput {
+            id: DecisionId::new(id),
+            slot: SlotId::new(slot),
+            selection,
+            source: DecisionSource::Player,
+        };
+        match engine.append(log, input) {
+            Ok(AppendOutcome::Appended(new_log)) => *log = new_log,
+            other => panic!("level-up golden confirm on '{id}' rejected: {other:?}"),
+        }
+    }
+
+    pub fn advance(engine: &ruleset_pf2e::Pf2eEngine, log: &mut Vec<Decision>, level: u32) {
+        append_one(
+            engine,
+            log,
+            &format!("level-{level}.advance"),
+            ruleset_pf2e::slot_level_advance(level),
+            one(&format!("advance.{level}")),
+        );
+    }
+
+    /// Torvald through level 3: Lunge + Titan Wrestler (the prerequisite-
+    /// bearing level-2 skill feat: trained in Athletics, which the Fighter
+    /// gave him) at 2; Toughness + an Athletics increase at 3.
+    pub fn torvald_3(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+        let mut log = torvald_log(engine);
+        advance(engine, &mut log, 2);
+        append_one(
+            engine,
+            &mut log,
+            "t-l2-cf",
+            "pf2e.level.2.class-feat".into(),
+            one("feat.class.fighter.lunge"),
+        );
+        append_one(
+            engine,
+            &mut log,
+            "t-l2-sf",
+            "pf2e.level.2.skill-feat".into(),
+            one("feat.skill.titan-wrestler"),
+        );
+        advance(engine, &mut log, 3);
+        append_one(
+            engine,
+            &mut log,
+            "t-l3-gf",
+            "pf2e.level.3.general-feat".into(),
+            one("feat.general.toughness"),
+        );
+        append_one(
+            engine,
+            &mut log,
+            "t-l3-si",
+            "pf2e.level.3.skill-increase".into(),
+            one("skill.athletics"),
+        );
+        log
+    }
+
+    /// Sylvenne through level 3: Conceal Spell + Arcane Sense (trained in
+    /// Arcana) and two more rank-1 spells at 2; Fleet, an Arcana increase,
+    /// and two rank-2 spells at 3.
+    pub fn sylvenne_3(engine: &ruleset_pf2e::Pf2eEngine) -> Vec<Decision> {
+        let mut log = sylvenne_log(engine);
+        advance(engine, &mut log, 2);
+        append_one(
+            engine,
+            &mut log,
+            "s-l2-cf",
+            "pf2e.level.2.class-feat".into(),
+            one("feat.class.wizard.conceal-spell"),
+        );
+        append_one(
+            engine,
+            &mut log,
+            "s-l2-sf",
+            "pf2e.level.2.skill-feat".into(),
+            one("feat.skill.arcane-sense"),
+        );
+        // Two rank-1 spells the book does not hold yet.
+        let book: Vec<String> = log
+            .iter()
+            .filter(|d| d.slot.as_str() == "pf2e.class.spellbook.rank1")
+            .flat_map(|d| match &d.selection {
+                Selection::Options(ids) => ids
+                    .iter()
+                    .map(|i| i.as_str().to_string())
+                    .collect::<Vec<_>>(),
+                _ => vec![],
+            })
+            .collect();
+        let data = checks::load_rules_data();
+        let fresh: Vec<&str> = data
+            .spells
+            .spells
+            .iter()
+            .filter(|s| {
+                s.rank == 1
+                    && !s.focus
+                    && s.traditions.iter().any(|t| t == "arcane")
+                    && !book.contains(&s.id)
+            })
+            .map(|s| s.id.as_str())
+            .take(2)
+            .collect();
+        assert_eq!(fresh.len(), 2, "two unlearned rank-1 arcane spells exist");
+        append_one(
+            engine,
+            &mut log,
+            "s-l2-sb",
+            "pf2e.level.2.spellbook".into(),
+            many(&fresh),
+        );
+        advance(engine, &mut log, 3);
+        append_one(
+            engine,
+            &mut log,
+            "s-l3-gf",
+            "pf2e.level.3.general-feat".into(),
+            one("feat.general.fleet"),
+        );
+        append_one(
+            engine,
+            &mut log,
+            "s-l3-si",
+            "pf2e.level.3.skill-increase".into(),
+            one("skill.arcana"),
+        );
+        append_one(
+            engine,
+            &mut log,
+            "s-l3-sb",
+            "pf2e.level.3.spellbook".into(),
+            many(&["spell.acid-grip", "spell.blur"]),
+        );
+        log
+    }
+}
+
+/// Golden: Torvald, Dwarf Fighter 3 (Str +4, Dex +1, Con +3, Wis +2,
+/// Cha −1). Hand-verified: HP 10 + (10 + 3) × 3 + 3 Toughness = 52;
+/// proficiency bonus = rank + level (trained 5, expert 7 at level 3);
+/// Bravery lifts Will to expert; the level-3 increase makes Athletics
+/// expert (7 + 4 = +11); untrained skills stay at attribute only.
+#[test]
+fn golden_torvald_fighter_3() {
+    let engine = engine();
+    let log = leveling::torvald_3(&engine);
+    let projection = engine.project(&log).unwrap();
+    assert!(
+        projection.checklist.is_empty(),
+        "{:#?}",
+        projection.checklist
+    );
+    assert!(projection.can_finalize);
+    let sheet = engine.sheet(&log).unwrap();
+    assert_eq!(sheet.summary[0], "Dwarf (Rock Dwarf) Fighter 3");
+    assert_entry(&sheet, "Defense", "Hit Points", "52");
+    assert_entry(&sheet, "Defense", "Armor Class", "19");
+    assert_entry(&sheet, "Defense", "Fortitude", "+10");
+    assert_entry(&sheet, "Defense", "Reflex", "+8");
+    assert_entry(&sheet, "Defense", "Will", "+9");
+    assert_entry(&sheet, "Defense", "Perception", "+9");
+    assert_entry(&sheet, "Defense", "Class DC", "19");
+    assert_entry(&sheet, "Skills", "Athletics", "+11");
+    assert_entry(&sheet, "Skills", "Acrobatics", "+1");
+    assert_entry(&sheet, "Skills", "Intimidation", "+4");
+    assert_entry(&sheet, "Features", "Bravery", "Fighter feature (level 3)");
+    assert_entry(&sheet, "Features", "Lunge", "class feat (level 2)");
+    assert_entry(&sheet, "Features", "Titan Wrestler", "skill feat (level 2)");
+    assert_entry(&sheet, "Features", "Toughness", "general feat (level 3)");
+    // Level is the count of advances plus one — never stored.
+    let state = engine.fold(&log).unwrap();
+    assert_eq!(state.level(), 3);
+    assert_eq!(state.level_advances, 2);
+}
+
+/// Golden: Sylvenne, Elf Wizard 3 (Int +4, Dex +2, Con 0, Wis +2). Hand-
+/// verified: HP 6 + 6 × 3 = 24; trained 5 / expert 7 at level 3; spell
+/// attack trained 5 + 4 = +9, DC 19; cantrips heighten to rank 2 (half
+/// level rounded up); slots from the printed table: rank 1 = 3 + 1 school,
+/// rank 2 = 2 + 1 school; the book grew by two rank-1 spells at 2 and two
+/// rank-2 spells at 3; the Arcana increase makes it expert (7 + 4 = +11);
+/// Fleet adds 5 feet of Speed.
+#[test]
+fn golden_sylvenne_wizard_3() {
+    let engine = engine();
+    let log = leveling::sylvenne_3(&engine);
+    let projection = engine.project(&log).unwrap();
+    assert!(
+        projection.checklist.is_empty(),
+        "{:#?}",
+        projection.checklist
+    );
+    assert!(projection.can_finalize);
+    let sheet = engine.sheet(&log).unwrap();
+    assert!(
+        sheet.summary[0].ends_with("Wizard 3"),
+        "{}",
+        sheet.summary[0]
+    );
+    assert!(
+        sheet.summary[1].contains("Speed 35 feet"),
+        "{}",
+        sheet.summary[1]
+    );
+    assert_entry(&sheet, "Defense", "Hit Points", "24");
+    assert_entry(&sheet, "Defense", "Fortitude", "+5");
+    assert_entry(&sheet, "Defense", "Reflex", "+7");
+    assert_entry(&sheet, "Defense", "Will", "+9");
+    assert_entry(&sheet, "Defense", "Perception", "+7");
+    assert_entry(&sheet, "Spellcasting", "Spell attack", "+9");
+    assert_entry(&sheet, "Spellcasting", "Spell DC", "19");
+    assert_entry(&sheet, "Spellcasting", "Rank 1 slots", "4");
+    assert_entry(&sheet, "Spellcasting", "Rank 2 slots", "3");
+    assert_entry(&sheet, "Skills", "Arcana", "+11");
+    let cantrips = sheet.entry("Spellcasting", "Cantrips").unwrap();
+    assert!(
+        cantrips.detail.as_deref().unwrap_or("").contains("rank 2"),
+        "{cantrips:?}"
+    );
+    let rank1 = sheet.entry("Spellcasting", "Spellbook (rank 1)").unwrap();
+    assert_eq!(
+        rank1.value.split(", ").count(),
+        9,
+        "7 at creation + 2 at level 2: {}",
+        rank1.value
+    );
+    let rank2 = sheet.entry("Spellcasting", "Spellbook (rank 2)").unwrap();
+    assert_eq!(rank2.value, "Acid Grip, Blur");
+    assert_entry(&sheet, "Features", "Conceal Spell", "class feat (level 2)");
+    assert_entry(&sheet, "Features", "Arcane Sense", "skill feat (level 2)");
+}
+
+/// Level is derived, never stored: for every fixture log and every leveled
+/// golden, the fold's level equals one plus the advance decisions in the
+/// log; and pre-slice logs (no advances) fold to exactly level 1.
+#[test]
+fn level_equals_one_plus_the_advance_decisions() {
+    let engine = engine();
+    let mut logs: Vec<Vec<Decision>> =
+        vec![leveling::torvald_3(&engine), leveling::sylvenne_3(&engine)];
+    for name in ["torvald", "elyse", "garrek", "wenna"] {
+        let path = checks::workspace_root().join(format!("checks/fixtures/{name}.log.json"));
+        logs.push(serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap());
+    }
+    for log in &logs {
+        let advances = log
+            .iter()
+            .filter(|d| ruleset_pf2e::advance_level_of(d.slot.as_str()).is_some())
+            .count();
+        let state = engine.fold(log).unwrap();
+        assert_eq!(state.level() as usize, 1 + advances);
+        // Every prefix ending at a level boundary is itself a complete,
+        // finalizable character — the replay-prefix history seam.
+        for (index, d) in log.iter().enumerate() {
+            if ruleset_pf2e::advance_level_of(d.slot.as_str()).is_some() {
+                let before = &log[..index];
+                assert!(
+                    engine.project(before).unwrap().can_finalize,
+                    "prefix before advance at {index} is complete"
+                );
+            }
+        }
+    }
+    // Advances are strictly sequential: skipping from 1 to 3 refuses, and
+    // a second advance to 3 on a level-3 log refuses.
+    let level_1 = torvald_log(&engine);
+    let skip = DecisionInput {
+        id: DecisionId::new("skip"),
+        slot: SlotId::new(ruleset_pf2e::slot_level_advance(3)),
+        selection: one("advance.3"),
+        source: DecisionSource::Player,
+    };
+    assert!(
+        engine.append(&level_1, skip).is_err(),
+        "level 1 cannot advance straight to 3"
+    );
+    let leveled = leveling::torvald_3(&engine);
+    let again = DecisionInput {
+        id: DecisionId::new("again"),
+        slot: SlotId::new(ruleset_pf2e::slot_level_advance(3)),
+        selection: one("advance.3"),
+        source: DecisionSource::Player,
+    };
+    assert!(
+        engine.append(&leveled, again).is_err(),
+        "a second advance to 3 cannot fold"
+    );
+}
+
+/// Gains are derived: the gains panel equals the sheet diff between the
+/// finalized sheet and the fold through the advance decision alone; the
+/// finalize deltas equal the diff against the whole tail. Asserted here
+/// against the checks' own independent diff of the two folds, with the
+/// route's numbers read through the real server.
+#[path = "leveling_helpers.rs"]
+mod leveling_http;
+
+#[test]
+fn gains_and_deltas_are_the_sheet_diff_between_folds() {
+    use leveling_http::{confirm_option, finalized_fighter, slot_view, start_level};
+    let dir = tempfile::tempdir().unwrap();
+    let server = checks::TestServer::spawn(dir.path());
+    let client = reqwest::blocking::Client::new();
+    let url = server.url.as_str();
+    let id = finalized_fighter(&client, url, "gains-fixture");
+    let pending = start_level(&client, url, &id);
+    let engine = engine();
+    let doc = leveling_http::read_doc(dir.path(), &id);
+    let log: Vec<Decision> = serde_json::from_value(doc["log"].clone()).unwrap();
+    let marker = doc["finalized_through"].as_u64().unwrap() as usize;
+    let stored: types::SheetView = serde_json::from_value(doc["sheet"].clone()).unwrap();
+    let advanced = engine.sheet(&log[..marker + 1]).unwrap();
+    let expected_gains = diff_sheets(&stored, &advanced);
+    let gains: Vec<types::SheetDiff> =
+        serde_json::from_value(pending["level_up"]["gains"].clone()).unwrap();
+    assert_eq!(sorted(gains.clone()), sorted(expected_gains));
+    assert!(gains.iter().any(|g| g.label == "Hit Points"), "{gains:#?}");
+    // After a choice, deltas track the whole tail.
+    let feat = slot_view(&pending, "pf2e.level.2.class-feat").unwrap();
+    let option = feat["options"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["available"] == true)
+        .unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let confirmed = confirm_option(
+        &client,
+        url,
+        &id,
+        pending["version"].as_u64().unwrap(),
+        "g-cf",
+        "pf2e.level.2.class-feat",
+        &option,
+    );
+    let doc = leveling_http::read_doc(dir.path(), &id);
+    let log: Vec<Decision> = serde_json::from_value(doc["log"].clone()).unwrap();
+    let full = engine.sheet(&log).unwrap();
+    let deltas: Vec<types::SheetDiff> =
+        serde_json::from_value(confirmed["draft"]["level_up"]["deltas"].clone()).unwrap();
+    assert_eq!(sorted(deltas), sorted(diff_sheets(&stored, &full)));
+}
+
+/// The comparable core of a diff — section, label, old, new. The `why`
+/// explanation is presentation (the sheet entry's detail line) and not part
+/// of the contract these rows judge.
+fn sorted(mut diffs: Vec<types::SheetDiff>) -> Vec<(String, String, String, String)> {
+    diffs.sort_by(|a, b| (&a.section, &a.label).cmp(&(&b.section, &b.label)));
+    diffs
+        .into_iter()
+        .map(|d| (d.section, d.label, d.old, d.new))
+        .collect()
+}
+
+/// The checks' own before/after diff — the same contract as the server's
+/// (section + label, old vs new, "(absent)" for missing entries), stated
+/// independently so the route is judged against it.
+fn diff_sheets(old: &types::SheetView, new: &types::SheetView) -> Vec<types::SheetDiff> {
+    let mut out = Vec::new();
+    if old.name != new.name {
+        out.push(types::SheetDiff {
+            section: "Identity".into(),
+            label: "Name".into(),
+            old: old.name.clone(),
+            new: new.name.clone(),
+            why: None,
+        });
+    }
+    if old.summary != new.summary {
+        out.push(types::SheetDiff {
+            section: "Identity".into(),
+            label: "Summary".into(),
+            old: old.summary.join(" · "),
+            new: new.summary.join(" · "),
+            why: None,
+        });
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for section in &new.sections {
+        for entry in &section.entries {
+            seen.insert((section.title.clone(), entry.label.clone()));
+            let before = old
+                .entry(&section.title, &entry.label)
+                .map(|e| e.value.clone());
+            if before.as_deref() != Some(entry.value.as_str()) {
+                out.push(types::SheetDiff {
+                    section: section.title.clone(),
+                    label: entry.label.clone(),
+                    old: before.unwrap_or_else(|| "(absent)".to_string()),
+                    new: entry.value.clone(),
+                    why: None,
+                });
+            }
+        }
+    }
+    for section in &old.sections {
+        for entry in &section.entries {
+            if !seen.contains(&(section.title.clone(), entry.label.clone())) {
+                out.push(types::SheetDiff {
+                    section: section.title.clone(),
+                    label: entry.label.clone(),
+                    old: entry.value.clone(),
+                    new: "(absent)".to_string(),
+                    why: None,
+                });
+            }
+        }
+    }
+    out
+}

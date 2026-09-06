@@ -99,6 +99,7 @@ fn additional_skill_count(data: &RulesData, state: &Pf2eState) -> Option<u32> {
 
 pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> {
     let mut regs = Vec::new();
+    regs.extend(increase_registrations(data));
 
     // --- Class skill choice (Acrobatics or Athletics) ---
     let d = data.clone();
@@ -449,4 +450,117 @@ fn chooser_slot(
         meters: Box::new(|_, _| vec![]),
         describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
     }
+}
+
+// ---- Skill increases (level 3 and every odd level after) ----
+
+/// Options for a skill increase: any skill below the rank ceiling the
+/// character's level allows (expert before level 7), labeled with the
+/// rank it would reach.
+fn increase_options(data: &RulesData, state: &Pf2eState, own_slot: &str) -> Vec<OptionView> {
+    use crate::mechanics::Proficiency;
+    let ceiling = if state.level() < 7 {
+        Proficiency::Expert
+    } else if state.level() < 15 {
+        Proficiency::Master
+    } else {
+        Proficiency::Legendary
+    };
+    let _ = own_slot;
+    data.skills
+        .iter()
+        .map(|s| {
+            let current = state.skill_rank(&s.id);
+            let capped = current >= ceiling;
+            OptionView {
+                id: OptionId::new(&s.id),
+                label: s.name.clone(),
+                summary: format!(
+                    "{} → {}",
+                    current.label(),
+                    if capped {
+                        current.label()
+                    } else {
+                        current.next().label()
+                    }
+                ),
+                details: vec![],
+                available: !capped,
+                unavailable_reason: capped.then(|| {
+                    format!(
+                        "already {} — the ceiling before level {}",
+                        current.label(),
+                        if state.level() < 7 { 7 } else { 15 }
+                    )
+                }),
+                group: None,
+                badge: None,
+            }
+        })
+        .collect()
+}
+
+fn increase_registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> {
+    use crate::mechanics::{level_grants, slot_level_skill_increase, step_level};
+    let mut regs = Vec::new();
+    for level in 2..=data.max_advancement_level() {
+        if !level_grants(level).skill_increase {
+            continue;
+        }
+        let slot = slot_level_skill_increase(level);
+        let step = step_level(level);
+        let (d, d_apply, d_desc) = (data.clone(), data.clone(), data.clone());
+        let (slot_o, slot_v, step_v) = (slot.clone(), slot.clone(), step.clone());
+        regs.push(SlotRegistration::<Pf2eState> {
+            id: SlotId::new(&slot),
+            step: StepId::new(&step),
+            label: format!("Skill increase (level {level})"),
+            required: true,
+            presentation_hint: None,
+            kind: Box::new(|_| SlotViewKind::Single),
+            unlock: Box::new(move |state| {
+                if state.level() as u32 >= level {
+                    Availability::Open
+                } else {
+                    Availability::Hidden
+                }
+            }),
+            dependents: vec![],
+            options: Box::new(move |state| increase_options(&d, state, &slot_o)),
+            apply: Box::new(move |state, decision| {
+                let id = sel_single(&decision.selection)?;
+                let skill = d_apply
+                    .skill(id.as_str())
+                    .ok_or_else(|| ApplyError::new(format!("unknown skill '{id}'")))?;
+                let options = increase_options(&d_apply, state, "");
+                if let Some(o) = options.iter().find(|o| o.id.as_str() == skill.id) {
+                    if !o.available {
+                        return Err(ApplyError::new(format!(
+                            "{} cannot be increased: {}",
+                            skill.name,
+                            o.unavailable_reason.clone().unwrap_or_default()
+                        )));
+                    }
+                }
+                state.skill_increases.push(skill.id.clone());
+                Ok(())
+            }),
+            validate: Box::new(move |state, decision| {
+                if state.level() as u32 >= level && decision.is_none() {
+                    vec![incomplete(
+                        &slot_v,
+                        &step_v,
+                        "Skill increase",
+                        &format!("Choose a skill to increase (level {level})"),
+                        &format!("from Level {level}"),
+                    )]
+                } else {
+                    vec![]
+                }
+            }),
+            meters: Box::new(|_, _| vec![]),
+            describe: Box::new(move |sel| describe_selection(&d_desc, sel)),
+        });
+    }
+    regs
 }

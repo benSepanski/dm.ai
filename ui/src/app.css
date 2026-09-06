@@ -878,3 +878,47 @@ li.option-group-heading {
   text-decoration: underline;
   font-size: 0.85rem;
 }
+
+/* ---- Level-up ---- */
+.level-up-bar {
+  margin: 0.5rem 0 1rem;
+}
+.level-cap-note {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin: 0.5rem 0 1rem;
+}
+.level-gains {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1.2rem;
+}
+.level-gains h2 {
+  margin-top: 0;
+}
+.level-deltas {
+  margin: 1rem 0;
+}
+.level-deltas h3 {
+  margin: 0 0 0.4rem;
+}
+.abandon-level {
+  margin-top: 0.4rem;
+}
+
+.level-gains-intro {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin: 0 0 0.6rem;
+}
+.diff-section {
+  color: var(--ink-soft);
+  font-weight: 400;
+  font-size: 0.8rem;
+  display: block;
+}
+.diff-why {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}

@@ -4,7 +4,48 @@
 // values — every difference and label arrives from the server's flag.
 import { useState } from 'react';
 import type { VersionAction } from './api';
-import type { VersionStatus } from './engine';
+import type { SheetDiff, VersionStatus } from './engine';
+
+/** Before/after sheet values, rendered verbatim from the server's diff —
+ * the one component for every "what changed" table (version review, the
+ * level-up gains and deltas). */
+export function SheetDiffTable({
+  differences,
+  oldHeading,
+  newHeading,
+}: {
+  differences: SheetDiff[];
+  oldHeading: string;
+  newHeading: string;
+}) {
+  // The explanation column appears whenever the server sent one: each
+  // "why" is the sheet entry's own detail line, never computed here.
+  const explained = differences.some((d) => d.why !== undefined && d.why !== null);
+  return (
+    <table className="version-diff">
+      <thead>
+        <tr>
+          <th scope="col">Value</th>
+          <th scope="col">{oldHeading}</th>
+          <th scope="col">{newHeading}</th>
+          {explained && <th scope="col">Why</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {differences.map((d, i) => (
+          <tr key={i}>
+            <th scope="row">
+              <span className="diff-section">{d.section}</span> {d.label}
+            </th>
+            <td className="version-old">{d.old}</td>
+            <td className="version-new">{d.new}</td>
+            {explained && <td className="diff-why">{d.why ?? ''}</td>}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 /** Small roster badge; renders nothing when the pin is current. */
 export function VersionBadge({ status }: { status: VersionStatus }) {
@@ -103,26 +144,11 @@ export function VersionFlagPanel({
             Replaying against the current data changes the values below. The stored sheet is
             untouched until you accept; accepting records the old values in the file.
           </p>
-          <table className="version-diff">
-            <thead>
-              <tr>
-                <th scope="col">Value</th>
-                <th scope="col">Stored (old)</th>
-                <th scope="col">Current data (new)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {outcome.differences.map((d, i) => (
-                <tr key={i}>
-                  <th scope="row">
-                    {d.section} — {d.label}
-                  </th>
-                  <td className="version-old">{d.old}</td>
-                  <td className="version-new">{d.new}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SheetDiffTable
+            differences={outcome.differences}
+            oldHeading="Stored (old)"
+            newHeading="Current data (new)"
+          />
           <div className="version-actions">
             <button type="button" className="confirm" disabled={busy} onClick={() => onResolve('accept')}>
               Accept new values

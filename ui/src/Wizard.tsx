@@ -3,6 +3,7 @@
 // change-confirmed-choice flow with its dependent-clearing prompt.
 import { useEffect, useMemo, useState } from 'react';
 import {
+  abandonLevel,
   amendDecision,
   clearSlot,
   confirmDecision,
@@ -25,6 +26,7 @@ import { clearPreview as engineClearPreview, initEngine, project as engineProjec
 import { logFromProjection, newDecisionId } from './log';
 import { Sheet } from './Sheet';
 import { ClearConfirmDialog, SlotCard } from './SlotCard';
+import { SheetDiffTable } from './VersionFlag';
 
 function badge(status: StepStatus): string {
   switch (status) {
@@ -73,10 +75,14 @@ export function isRealEdit(saved: Selection | undefined, selection: Selection): 
 export function Wizard({
   initial,
   onFinalized,
+  onAbandoned,
   onExit,
 }: {
   initial: DraftView;
   onFinalized: (sheet: SheetView) => void;
+  /** The draft's pending level was discarded (only offered when the
+   * draft view carries one). */
+  onAbandoned?: () => void;
   onExit: () => void;
 }) {
   const [draft, setDraft] = useState<DraftView>(initial);
@@ -98,6 +104,8 @@ export function Wizard({
   const [cardError, setCardError] = useState<{ slot: string; message: string } | null>(null);
   // Guard against silently discarding real unconfirmed edits on exit.
   const [leaveDialog, setLeaveDialog] = useState(false);
+  // The abandon confirmation for a pending level (lists what it discards).
+  const [abandonDialog, setAbandonDialog] = useState(false);
 
   useEffect(() => {
     if (ack === null) {
@@ -348,6 +356,25 @@ export function Wizard({
     }
   };
 
+  const executeAbandon = async () => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const outcome = await abandonLevel(draft.id, draft.version);
+      if (outcome.outcome === 'abandoned') {
+        onAbandoned?.();
+      } else {
+        setNotice('This character was changed from another tab — reloaded.');
+        onAbandoned?.();
+      }
+    } catch (error) {
+      setNotice(String(error instanceof Error ? error.message : error));
+    } finally {
+      setAbandonDialog(false);
+      setBusy(false);
+    }
+  };
+
   const finalize = async () => {
     setBusy(true);
     setNotice(null);
@@ -400,10 +427,11 @@ export function Wizard({
             </li>
           ))}
         </ol>
-        {!displayed.can_finalize && (
+        {!displayed.can_finalize && draft.level_up === undefined && (
           // Hidden (not disabled-with-no-reason) once there is nothing
-          // left to fill: a dead control the player can't explain is a
-          // banned state.
+          // left to fill — or when suggestions don't apply (a pending
+          // level: suggested builds cover creation only): a dead control
+          // the player can't explain is a banned state.
           <button
             type="button"
             className="fill-remaining"
@@ -432,8 +460,21 @@ export function Wizard({
               : undefined
           }
         >
-          Finalize character
+          {draft.level_up === undefined
+            ? 'Finalize character'
+            : `Finalize level ${draft.level_up.level}`}
         </button>
+        {draft.level_up !== undefined && (
+          <button
+            type="button"
+            className="abandon-level"
+            disabled={busy}
+            onClick={() => setAbandonDialog(true)}
+            title="Discard this level's choices; the finalized character is untouched"
+          >
+            Abandon level {draft.level_up.level}
+          </button>
+        )}
         {pendingSlots.length > 0 ? (
           <div className="finalize-blockers pending-chip" id="finalize-blockers" role="status">
             <p>Unconfirmed changes:</p>
@@ -472,6 +513,26 @@ export function Wizard({
           <div className="notice" role="alert">
             {notice}
           </div>
+        )}
+        {draft.level_up !== undefined && (
+          <section className="level-gains" aria-label="level gains">
+            <h2>At level {draft.level_up.level} you gain…</h2>
+            <p className="level-gains-intro">
+              These change on their own the moment you reach level{' '}
+              {draft.level_up.level} — before any choice below. Every value on
+              the sheet derives from your level and your choices; the Why column
+              is each value's own formula.
+            </p>
+            {draft.level_up.gains.length === 0 ? (
+              <p>Only the choices below — nothing changes on its own.</p>
+            ) : (
+              <SheetDiffTable
+                differences={draft.level_up.gains}
+                oldHeading={`Level ${draft.level_up.level - 1}`}
+                newHeading={`Level ${draft.level_up.level}`}
+              />
+            )}
+          </section>
         )}
         <h2>{step?.title}</h2>
         {step?.slots.map((slot) => (
@@ -516,6 +577,20 @@ export function Wizard({
           onJump={jumpToEntry}
           pendingCount={pendingSlots.length}
         />
+        {draft.level_up !== undefined &&
+          draft.level_up.deltas.length > 0 &&
+          JSON.stringify(draft.level_up.deltas) !== JSON.stringify(draft.level_up.gains) && (
+          // Shown once the level's choices changed something beyond the
+          // automatic gains — until then it would only repeat the panel.
+          <section className="level-deltas" aria-label="level changes so far">
+            <h3>Changes so far (with your choices)</h3>
+            <SheetDiffTable
+              differences={draft.level_up.deltas}
+              oldHeading="Before"
+              newHeading="After"
+            />
+          </section>
+        )}
         <Sheet sheet={displayed.sheet} compact />
       </aside>
 
@@ -552,6 +627,17 @@ export function Wizard({
           slotLabel={clearDialog.label}
           onConfirm={() => void executeClear()}
           onCancel={() => setClearDialog(null)}
+        />
+      )}
+      {abandonDialog && draft.level_up !== undefined && (
+        <ClearConfirmDialog
+          preview={{ slot: 'level-up', cleared: draft.level_up.pending }}
+          slotLabel={`level ${draft.level_up.level}`}
+          title={`Abandon level ${draft.level_up.level}?`}
+          intro="This discards the level's choices so far; the finalized character is untouched:"
+          confirmLabel="Discard and go back"
+          onConfirm={() => void executeAbandon()}
+          onCancel={() => setAbandonDialog(false)}
         />
       )}
     </div>

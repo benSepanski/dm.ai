@@ -301,3 +301,207 @@ fn finalize_is_blocked_while_the_checklist_is_nonempty() {
         .unwrap();
     assert_eq!(character["state"], "draft");
 }
+
+// ---- level-up route authority (level-up architecture) ----
+
+#[path = "leveling_helpers.rs"]
+mod leveling;
+use leveling::{
+    character, complete_level, confirm_option, finalized_fighter, post_json, slot_view, start_level,
+};
+
+/// Every refusal the pending-level representation demands, through the
+/// real server, each writing nothing: a second start returns the existing
+/// tail; start on a creation draft and at the cap refuses; a raw advance
+/// confirm, a second advance in a tail, an amend/clear below the marker,
+/// and fill-remaining during a tail all refuse; a confirm after abandon or
+/// finalize is rejected even when its decision ID once existed; draft
+/// versions never reset across abandon.
+#[test]
+fn level_up_routes_refuse_everything_below_the_marker_and_out_of_order() {
+    let dir = tempfile::tempdir().unwrap();
+    let server = TestServer::spawn(dir.path());
+    let client = reqwest::blocking::Client::new();
+    let url = server.url.as_str();
+
+    // Start on a creation draft: refused.
+    let (_, draft) = post_json(
+        &client,
+        url,
+        "/api/characters",
+        json!({"name": "Unfinished"}),
+    );
+    let draft_id = draft["id"].as_str().unwrap();
+    let (status, body) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{draft_id}/level-up"),
+        json!({"version": 1}),
+    );
+    assert_eq!(status, 422, "{body}");
+
+    let id = finalized_fighter(&client, url, "auth-lvl");
+    let pending = start_level(&client, url, &id);
+    let started_version = pending["version"].as_u64().unwrap();
+
+    // A second start (any version) lands in the existing pending level.
+    let (status, again) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/level-up"),
+        json!({"version": 999}),
+    );
+    assert_eq!(status, 200, "{again}");
+    assert_eq!(again["outcome"], "started");
+    assert_eq!(
+        again["draft"]["version"].as_u64().unwrap(),
+        started_version,
+        "no second advance"
+    );
+
+    // A raw advance confirm and a second advance in the tail: refused.
+    for slot in ["pf2e.level.3.advance", "pf2e.level.2.advance"] {
+        let (status, body) = post_json(
+            &client,
+            url,
+            &format!("/api/characters/{id}/confirm"),
+            json!({"version": started_version, "decision": {
+                "id": format!("raw-{slot}"), "slot": slot,
+                "selection": {"kind": "option", "value": "advance.3"},
+                "source": "player"
+            }}),
+        );
+        assert_eq!(status, 422, "{slot}: {body}");
+    }
+
+    // Below the marker: confirm, amend, clear all refuse.
+    let (status, body) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/confirm"),
+        json!({"version": started_version, "decision": {
+            "id": "below-confirm", "slot": "pf2e.ancestry",
+            "selection": {"kind": "option", "value": "ancestry.elf"}, "source": "player"
+        }}),
+    );
+    assert_eq!(status, 422, "{body}");
+    let (status, body) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/amend"),
+        json!({"version": started_version, "decision": {
+            "id": "below-amend", "slot": "pf2e.ancestry",
+            "selection": {"kind": "option", "value": "ancestry.elf"}, "source": "player"
+        }}),
+    );
+    assert_eq!(status, 422, "{body}");
+    let (status, body) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/clear"),
+        json!({"version": started_version, "slot": "pf2e.ancestry"}),
+    );
+    assert_eq!(status, 422, "{body}");
+
+    // Fill-remaining during a tail: refused.
+    let (status, body) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/fill-remaining"),
+        json!({"request_id": "fill-in-tail", "version": started_version}),
+    );
+    assert_eq!(status, 422, "{body}");
+
+    // Confirm a tail choice, then abandon: the version keeps climbing, and
+    // the confirmed decision's ID is no longer a success.
+    let feat = slot_view(&pending, "pf2e.level.2.class-feat").unwrap();
+    let option = feat["options"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["available"] == true)
+        .unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let confirmed = confirm_option(
+        &client,
+        url,
+        &id,
+        started_version,
+        "tail-cf",
+        "pf2e.level.2.class-feat",
+        &option,
+    );
+    assert_eq!(confirmed["outcome"], "confirmed", "{confirmed}");
+    let version_after_confirm = confirmed["draft"]["version"].as_u64().unwrap();
+    let (status, abandoned) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/level-up/abandon"),
+        json!({"version": version_after_confirm}),
+    );
+    assert_eq!(status, 200, "{abandoned}");
+    assert_eq!(abandoned["outcome"], "abandoned");
+    let after_abandon = abandoned["character"]["version"].as_u64().unwrap();
+    assert!(
+        after_abandon > version_after_confirm,
+        "versions are monotonic across abandon ({after_abandon} > {version_after_confirm})"
+    );
+    // The stale tab's retry (same decision ID, old version) is refused —
+    // the finalized-no-tail refusal precedes the ID-present success path.
+    let retry = confirm_option(
+        &client,
+        url,
+        &id,
+        version_after_confirm,
+        "tail-cf",
+        "pf2e.level.2.class-feat",
+        &option,
+    );
+    assert!(
+        retry["outcome"].is_null(),
+        "a confirm after abandon is refused, not confirmed: {retry}"
+    );
+    // Abandon with nothing pending: refused.
+    let (status, body) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/level-up/abandon"),
+        json!({"version": after_abandon}),
+    );
+    assert_eq!(status, 422, "{body}");
+
+    // Level to the cap; then start refuses, typed; a retried tail confirm
+    // after finalize is refused too.
+    let view = complete_level(&client, url, &id);
+    assert_eq!(view["state"], "finalized");
+    let view = complete_level(&client, url, &id);
+    assert!(view["next_level"].is_null(), "at the cap: {view}");
+    let (status, body) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/level-up"),
+        json!({"version": view["version"]}),
+    );
+    assert_eq!(status, 422, "{body}");
+    assert!(body["message"].as_str().unwrap().contains("higher levels"));
+    let retry = confirm_option(
+        &client,
+        url,
+        &id,
+        1,
+        format!("{id}-lvl-1-pf2e.level.3.general-feat").as_str(),
+        "pf2e.level.3.general-feat",
+        "feat.general.toughness",
+    );
+    assert!(
+        retry["outcome"].is_null(),
+        "confirm after finalize is refused: {retry}"
+    );
+    let final_view = character(&client, url, &id);
+    assert!(final_view["sheet"]["summary"][0]
+        .as_str()
+        .unwrap()
+        .contains("Fighter 3"));
+}

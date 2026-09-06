@@ -147,3 +147,76 @@ fn random_mint_is_under_250ms() {
         "a random mint took {per_run:?} — budget is 250 ms"
     );
 }
+
+/// level-up: the derivation fold of a complete level-3 log rides the same
+/// 5 ms budget — the longest logs the slice produces, both classes.
+#[test]
+#[allow(clippy::disallowed_methods)] // timing a budget needs a clock
+fn fold_of_level_3_logs_is_under_5ms() {
+    use types::{Selection, SlotId};
+    let engine = ruleset_pf2e::engine(std::sync::Arc::new(checks::load_rules_data()));
+    let base: Vec<Decision> = serde_json::from_str(
+        &std::fs::read_to_string(checks::workspace_root().join("checks/fixtures/torvald.log.json"))
+            .unwrap(),
+    )
+    .unwrap();
+    let mut log = base;
+    let mut n = 0u32;
+    let mut confirm = |log: &mut Vec<Decision>, slot: String, selection: Selection| {
+        n += 1;
+        let input = types::DecisionInput {
+            id: types::DecisionId::new(format!("perf-l{n}")),
+            slot: SlotId::new(slot),
+            selection,
+            source: types::DecisionSource::Player,
+        };
+        match engine.append(log, input) {
+            Ok(engine_core::AppendOutcome::Appended(new_log)) => *log = new_log,
+            other => panic!("perf fixture level confirm rejected: {other:?}"),
+        }
+    };
+    let one = |id: &str| Selection::Option(types::OptionId::new(id));
+    confirm(
+        &mut log,
+        ruleset_pf2e::slot_level_advance(2),
+        one("advance.2"),
+    );
+    confirm(
+        &mut log,
+        "pf2e.level.2.class-feat".into(),
+        one("feat.class.fighter.lunge"),
+    );
+    confirm(
+        &mut log,
+        "pf2e.level.2.skill-feat".into(),
+        one("feat.skill.additional-lore"),
+    );
+    confirm(
+        &mut log,
+        ruleset_pf2e::slot_level_advance(3),
+        one("advance.3"),
+    );
+    confirm(
+        &mut log,
+        "pf2e.level.3.general-feat".into(),
+        one("feat.general.toughness"),
+    );
+    confirm(
+        &mut log,
+        "pf2e.level.3.skill-increase".into(),
+        one("skill.athletics"),
+    );
+    for _ in 0..10 {
+        let _ = engine.sheet(&log).unwrap();
+    }
+    let runs = 100;
+    let start = std::time::Instant::now();
+    for _ in 0..runs {
+        std::hint::black_box(engine.sheet(std::hint::black_box(&log)).unwrap());
+    }
+    let per_run = start.elapsed() / runs;
+    assert!(
+        per_run < std::time::Duration::from_millis(5),
+        "level-3 fold took {per_run:?} per run — budget is 5 ms"
+    );
+}

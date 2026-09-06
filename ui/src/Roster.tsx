@@ -60,7 +60,9 @@ export function Roster({
                 <span className="roster-state">
                   {entry.state.state === 'draft'
                     ? `Resume creating (${entry.state.resume_label})`
-                    : 'View sheet'}
+                    : entry.state.state === 'leveling'
+                      ? `Leveling up — resume (${entry.state.resume_label})`
+                      : 'View sheet'}
                 </span>
                 <VersionBadge status={entry.version} />
               </button>

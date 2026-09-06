@@ -36,6 +36,12 @@ pub enum RosterCharacterState {
         resume_label: String,
     },
     Finalized,
+    /// Finalized with a level-up in progress; the finalized sheet stays
+    /// authoritative until the level is finalized. Label render-ready,
+    /// e.g. "level 2 — step 1 of 1".
+    Leveling {
+        resume_label: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

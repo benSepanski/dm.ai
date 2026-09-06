@@ -34,6 +34,10 @@ pub(crate) struct Loaded {
     pub draft_version: u64,
     pub sheet: SheetView,
     pub log: Vec<Decision>,
+    /// How many decisions the stored sheet reflects: the finalized prefix.
+    /// 0 on a creation draft; the log length on a finalized character with
+    /// no pending level; less than the log length while a level is pending.
+    pub finalized_through: usize,
     pub rules_version: String,
     /// Recorded version-resolution actions; preserved by every save.
     pub version_history: Vec<VersionEvent>,
@@ -41,8 +45,42 @@ pub(crate) struct Loaded {
     pub keep_old: Option<KeepOldMarker>,
 }
 
+impl Loaded {
+    /// The part of the log the stored sheet reflects — the ONLY thing
+    /// verify, version status, version accept, and clone ever fold: the
+    /// whole log for a creation draft (its sheet tracks every confirm),
+    /// the finalized prefix for a finalized character (a pending level's
+    /// tail is never part of the stored sheet).
+    pub fn finalized_prefix(&self) -> &[Decision] {
+        match self.state {
+            DocState::Draft => &self.log,
+            DocState::Finalized => &self.log[..self.finalized_through.min(self.log.len())],
+        }
+    }
+
+    /// The pending level's decisions (empty when none is pending).
+    pub fn pending_tail(&self) -> &[Decision] {
+        &self.log[self.finalized_through.min(self.log.len())..]
+    }
+
+    pub fn has_pending_tail(&self) -> bool {
+        self.state == DocState::Finalized && self.finalized_through < self.log.len()
+    }
+}
+
 impl From<CharacterDoc> for Loaded {
     fn from(doc: CharacterDoc) -> Self {
+        // Pre-v4 files carry no marker: a draft's whole log is pending
+        // creation work (0), a finalized file's whole log is reflected by
+        // its sheet (the log length). Never written back by loading.
+        // A finalized document can never carry a marker of 0 (the creation
+        // prefix is never empty), so 0 on a finalized file is "unset" — a
+        // hand-flipped state on a draft file — and reads as the log length.
+        let finalized_through = match (doc.state, doc.finalized_through) {
+            (DocState::Draft, _) => 0,
+            (DocState::Finalized, Some(marker)) if marker > 0 => marker,
+            (DocState::Finalized, _) => doc.log.len(),
+        };
         Loaded {
             id: CharacterId::new(doc.id),
             state: doc.state,
@@ -50,6 +88,7 @@ impl From<CharacterDoc> for Loaded {
             draft_version: doc.draft_version,
             sheet: doc.sheet,
             log: doc.log,
+            finalized_through,
             rules_version: doc.rules_version,
             version_history: doc.version_history,
             keep_old: doc.keep_old,
@@ -223,6 +262,7 @@ impl Store {
             draft_version: loaded.draft_version,
             sheet: loaded.sheet.clone(),
             log: loaded.log.clone(),
+            finalized_through: Some(loaded.finalized_through),
             version_history: loaded.version_history.clone(),
             keep_old: loaded.keep_old.clone(),
         };

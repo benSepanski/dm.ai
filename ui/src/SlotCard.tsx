@@ -890,17 +890,25 @@ export function ClearConfirmDialog({
   slotLabel,
   onConfirm,
   onCancel,
+  title,
+  intro,
+  confirmLabel,
 }: {
   preview: ClearPreview;
   slotLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Copy overrides for a caller discarding a whole set of choices
+   * (the level-up abandon) rather than changing one slot. */
+  title?: string;
+  intro?: string;
+  confirmLabel?: string;
 }) {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal">
-        <h3>Change {slotLabel}?</h3>
-        <p>This clears the following confirmed choices:</p>
+        <h3>{title ?? `Change ${slotLabel}?`}</h3>
+        <p>{intro ?? 'This clears the following confirmed choices:'}</p>
         <ul className="clear-list">
           {preview.cleared.map((cleared, i) => (
             <li key={i}>
@@ -913,7 +921,7 @@ export function ClearConfirmDialog({
             Keep everything
           </button>
           <button type="button" className="danger" onClick={onConfirm}>
-            Clear and change
+            {confirmLabel ?? 'Clear and change'}
           </button>
         </footer>
       </div>

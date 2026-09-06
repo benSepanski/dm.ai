@@ -91,6 +91,15 @@ impl Proficiency {
             Proficiency::Legendary => level + 8,
         }
     }
+    /// One rank up (Legendary stays Legendary).
+    pub fn next(self) -> Proficiency {
+        match self {
+            Proficiency::Untrained => Proficiency::Trained,
+            Proficiency::Trained => Proficiency::Expert,
+            Proficiency::Expert => Proficiency::Master,
+            Proficiency::Master | Proficiency::Legendary => Proficiency::Legendary,
+        }
+    }
     pub fn label(self) -> &'static str {
         match self {
             Proficiency::Untrained => "untrained",
@@ -227,9 +236,51 @@ pub struct Pf2eState {
     pub name: Option<String>,
     pub concept: Option<String>,
     pub description: Option<String>,
+
+    /// Level advances applied, in order: the character's level is one plus
+    /// this count. Set only by the advance slots' `apply`.
+    pub level_advances: u32,
+    /// Class feats taken at level-up, (level, feat ID).
+    pub level_class_feats: Vec<(u32, String)>,
+    /// Skill feats taken at level-up, (level, feat ID) — the same records
+    /// also land in `chosen_general_feats` (effects apply there).
+    pub level_skill_feats: Vec<(u32, String)>,
+    /// General feats taken at level-up, (level, feat ID).
+    pub level_general_feats: Vec<(u32, String)>,
+    /// Skill increases, in pick order (skill ID); each raises the skill
+    /// one rank above what training gave it.
+    pub skill_increases: Vec<String>,
+    /// Spells added to the spellbook at level-up, (level, spell ID).
+    pub spellbook_added: Vec<(u32, String)>,
 }
 
 impl Pf2eState {
+    /// The character's level: one plus the level advances applied — a
+    /// fact of the log, never stored.
+    pub fn level(&self) -> i32 {
+        1 + self.level_advances as i32
+    }
+
+    /// A skill's proficiency rank: training (any source) gives Trained,
+    /// each skill increase raises it one rank.
+    pub fn skill_rank(&self, skill: &str) -> Proficiency {
+        let trained = self
+            .skill_resolution()
+            .trained
+            .iter()
+            .any(|(id, _)| id == skill);
+        let mut rank = if trained {
+            Proficiency::Trained
+        } else {
+            Proficiency::Untrained
+        };
+        for inc in self.skill_increases.iter().filter(|s| *s == skill) {
+            let _ = inc;
+            rank = rank.next();
+        }
+        rank
+    }
+
     pub fn modifier(&self, attr: Attribute) -> i32 {
         let mut m = 0;
         for batch in self.boost_batches.values() {
@@ -291,13 +342,13 @@ impl Pf2eState {
     }
 
     /// Trained (or better) in the given skill ID under the folded state.
-    /// At level 1 every skill rank above untrained is exactly trained, so
-    /// membership in the resolution is the whole check.
     pub fn is_trained(&self, skill: &str) -> bool {
-        self.skill_resolution()
-            .trained
-            .iter()
-            .any(|(id, _)| id == skill)
+        self.skill_rank(skill) >= Proficiency::Trained
+            || self
+                .skill_resolution()
+                .trained
+                .iter()
+                .any(|(id, _)| id == skill)
     }
 
     /// The ancestry-language chooser's current pick count:
@@ -414,10 +465,10 @@ pub fn item_name(id: &str, data: &RulesData) -> String {
         .unwrap_or_else(|| id.to_string())
 }
 
-const LEVEL: i32 = 1;
-
 /// Derive the presentation-contract sheet from the folded state. Pure.
 pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
+    // Level is a fact of the log: one plus the advance decisions applied.
+    let level = state.level();
     let name = state.name.clone().unwrap_or_default();
     let ancestry = state.ancestry.as_ref().and_then(|id| data.ancestry(id));
     let heritage = state.heritage.as_ref().and_then(|id| data.heritage(id));
@@ -436,7 +487,7 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             if !identity.is_empty() {
                 identity.push(' ');
             }
-            identity.push_str(&format!("{} {LEVEL}", c.name));
+            identity.push_str(&format!("{} {level}", c.name));
         }
         if !identity.is_empty() {
             summary.push(identity);
@@ -509,15 +560,22 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             .effects
             .iter()
             .map(|e| match e {
-                Effect::HpPerLevel { value } => *value as i32 * LEVEL,
+                Effect::HpPerLevel { value } => *value as i32 * level,
                 _ => 0,
             })
             .sum();
-        let hp = ancestry_hp as i32 + c.hp_per_level as i32 + con * LEVEL + bonus_hp;
-        let mut hp_detail = format!(
-            "{ancestry_hp} ancestry + {} class + {con} Con",
-            c.hp_per_level
-        );
+        let hp = ancestry_hp as i32 + (c.hp_per_level as i32 + con) * level + bonus_hp;
+        let mut hp_detail = if level == 1 {
+            format!(
+                "{ancestry_hp} ancestry + {} class + {con} Con",
+                c.hp_per_level
+            )
+        } else {
+            format!(
+                "{ancestry_hp} ancestry + ({} class + {con} Con) × {level} levels",
+                c.hp_per_level
+            )
+        };
         if bonus_hp != 0 {
             hp_detail.push_str(&format!(" + {bonus_hp} Toughness"));
         }
@@ -525,7 +583,7 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
         let worn = worn_armor(state, data);
         let (ac, ac_detail) = match worn {
             Some(armor) => {
-                let prof = Proficiency::parse(&c.proficiencies.armor).bonus(LEVEL);
+                let prof = Proficiency::parse(&c.proficiencies.armor).bonus(level);
                 let dex_used = dex.min(armor.dex_cap);
                 (
                     10 + dex_used + armor.ac_bonus + prof,
@@ -541,7 +599,7 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
                 )
             }
             None => {
-                let prof = Proficiency::parse(&c.proficiencies.unarmored_defense).bonus(LEVEL);
+                let prof = Proficiency::parse(&c.proficiencies.unarmored_defense).bonus(level);
                 (
                     10 + dex + prof,
                     format!(
@@ -568,10 +626,10 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
                 .fold(Proficiency::parse(class_rank), Proficiency::max)
         };
         let save = |p: Proficiency, attr_mod: i32, attr: &str| -> (String, String) {
-            let total = p.bonus(LEVEL) + attr_mod;
+            let total = p.bonus(level) + attr_mod;
             (
                 format_signed(total),
-                format!("{} {} + {} {}", p.bonus(LEVEL), p.label(), attr_mod, attr),
+                format!("{} {} + {} {}", p.bonus(level), p.label(), attr_mod, attr),
             )
         };
         let (fort, fort_d) = save(
@@ -591,7 +649,7 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             "Wis",
         );
         let class_dc = 10
-            + Proficiency::parse(&c.proficiencies.class_dc).bonus(LEVEL)
+            + Proficiency::parse(&c.proficiencies.class_dc).bonus(level)
             + state.key_attribute.map(|a| state.modifier(a)).unwrap_or(0);
 
         let mut entries = vec![
@@ -632,7 +690,7 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
                 value: class_dc.to_string(),
                 detail: Some(format!(
                     "10 + {} trained + {} {}",
-                    Proficiency::parse(&c.proficiencies.class_dc).bonus(LEVEL),
+                    Proficiency::parse(&c.proficiencies.class_dc).bonus(level),
                     state.key_attribute.map(|a| state.modifier(a)).unwrap_or(0),
                     state
                         .key_attribute
@@ -697,6 +755,15 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
                 detail: Some(feature.text.clone()),
             });
         }
+        for adv in c.advancement.iter().filter(|a| a.level as i32 <= level) {
+            for feature in &adv.features {
+                features.push(SheetEntry {
+                    label: feature.name.clone(),
+                    value: format!("{} feature (level {})", c.name, adv.level),
+                    detail: Some(feature.text.clone()),
+                });
+            }
+        }
     }
     if let Some(f) = state.class_feat.as_ref().and_then(|id| data.class_feat(id)) {
         features.push(SheetEntry {
@@ -714,11 +781,29 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             });
         }
     }
-    for id in &state.chosen_general_feats {
-        if let Some(f) = data.general_feat(id) {
+    for (lvl, id) in &state.level_class_feats {
+        if let Some(f) = data.class_feat(id) {
             features.push(SheetEntry {
                 label: f.name.clone(),
-                value: "general feat".into(),
+                value: format!("class feat (level {lvl})"),
+                detail: Some(f.text.clone()),
+            });
+        }
+    }
+    for id in &state.chosen_general_feats {
+        if let Some(f) = data.general_feat(id) {
+            let value = if let Some((lvl, _)) =
+                state.level_skill_feats.iter().find(|(_, i)| i == id)
+            {
+                format!("skill feat (level {lvl})")
+            } else if let Some((lvl, _)) = state.level_general_feats.iter().find(|(_, i)| i == id) {
+                format!("general feat (level {lvl})")
+            } else {
+                "general feat".to_string()
+            };
+            features.push(SheetEntry {
+                label: f.name.clone(),
+                value,
                 detail: Some(f.text.clone()),
             });
         }
@@ -853,19 +938,19 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             },
             SheetEntry {
                 label: "Spell attack".into(),
-                value: format_signed(attack.bonus(LEVEL) + m),
+                value: format_signed(attack.bonus(level) + m),
                 detail: Some(format!(
                     "{} {} + {m} {attr_label}",
-                    attack.bonus(LEVEL),
+                    attack.bonus(level),
                     attack.label()
                 )),
             },
             SheetEntry {
                 label: "Spell DC".into(),
-                value: (10 + dc.bonus(LEVEL) + m).to_string(),
+                value: (10 + dc.bonus(level) + m).to_string(),
                 detail: Some(format!(
                     "10 + {} {} + {m} {attr_label}",
-                    dc.bonus(LEVEL),
+                    dc.bonus(level),
                     dc.label()
                 )),
             },
@@ -881,20 +966,23 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             value: format!("{}/day", sc.cantrips_prepared + extra),
             detail: Some(format!(
                 "heightened to rank {} (half level, rounded up){}",
-                (LEVEL + 1) / 2,
+                (level + 1) / 2,
                 school
                     .filter(|_| extra > 0)
                     .map(|s| format!(" · includes 1 school cantrip ({} curriculum)", s.name))
                     .unwrap_or_default()
             )),
         });
-        entries.push(SheetEntry {
-            label: "Rank 1 slots".into(),
-            value: (sc.rank1_slots + extra).to_string(),
-            detail: school
-                .filter(|_| extra > 0)
-                .map(|s| format!("includes 1 school slot ({} curriculum only)", s.name)),
-        });
+        for (index, slots) in sc.slots_at(level as u32).iter().enumerate() {
+            let rank = index as u32 + 1;
+            entries.push(SheetEntry {
+                label: format!("Rank {rank} slots"),
+                value: (slots + extra).to_string(),
+                detail: school
+                    .filter(|_| extra > 0)
+                    .map(|s| format!("includes 1 school slot ({} curriculum only)", s.name)),
+            });
+        }
         if let Some(t) = state.thesis.as_ref().and_then(|id| data.thesis(id)) {
             entries.push(SheetEntry {
                 label: "Arcane thesis".into(),
@@ -935,11 +1023,30 @@ pub fn derive_sheet(state: &Pf2eState, data: &RulesData) -> SheetView {
             value: book_names(&state.spellbook_cantrips),
             detail: None,
         });
-        entries.push(SheetEntry {
-            label: "Spellbook (rank 1)".into(),
-            value: book_names(&state.spellbook_rank1),
-            detail: school.map(|s| format!("includes the {} curriculum additions", s.name)),
-        });
+        let max_rank = sc.max_rank_at(level as u32).max(1);
+        for rank in 1..=max_rank {
+            let mut ids: Vec<String> = if rank == 1 {
+                state.spellbook_rank1.clone()
+            } else {
+                Vec::new()
+            };
+            ids.extend(
+                state
+                    .spellbook_added
+                    .iter()
+                    .filter(|(_, id)| data.spell(id).map(|sp| sp.rank == rank).unwrap_or(false))
+                    .map(|(_, id)| id.clone()),
+            );
+            entries.push(SheetEntry {
+                label: format!("Spellbook (rank {rank})"),
+                value: book_names(&ids),
+                detail: if rank == 1 {
+                    school.map(|s| format!("includes the {} curriculum additions", s.name))
+                } else {
+                    None
+                },
+            });
+        }
         entries.push(SheetEntry {
             label: "Preparation".into(),
             value: "at the table".into(),
@@ -1077,6 +1184,7 @@ fn attack_entries(
     data: &RulesData,
     class: &crate::data::ClassRecord,
 ) -> Vec<SheetEntry> {
+    let level = state.level();
     let str_ = state.modifier(Attribute::Str);
     let dex = state.modifier(Attribute::Dex);
     let mut entries = Vec::new();
@@ -1109,7 +1217,7 @@ fn attack_entries(
             label: "Fist".into(),
             value: format!(
                 "{} · 1d4{} B",
-                format_signed(unarmed_prof.bonus(LEVEL) + fist_attr),
+                format_signed(unarmed_prof.bonus(level) + fist_attr),
                 if str_ != 0 {
                     format_signed(str_)
                 } else {
@@ -1118,7 +1226,7 @@ fn attack_entries(
             ),
             detail: Some(format!(
                 "{} {} + {} {} · agile, finesse, nonlethal, unarmed",
-                unarmed_prof.bonus(LEVEL),
+                unarmed_prof.bonus(level),
                 unarmed_prof.label(),
                 fist_attr,
                 fist_attr_name
@@ -1152,7 +1260,7 @@ fn attack_entries(
                 label: name.clone(),
                 value: format!(
                     "{} · {}{}",
-                    format_signed(unarmed_prof.bonus(LEVEL) + attr),
+                    format_signed(unarmed_prof.bonus(level) + attr),
                     damage,
                     if dmg_mod != 0 {
                         format!(" ({})", format_signed(dmg_mod))
@@ -1162,7 +1270,7 @@ fn attack_entries(
                 ),
                 detail: Some(format!(
                     "{} {} + {} {}{} · {}",
-                    unarmed_prof.bonus(LEVEL),
+                    unarmed_prof.bonus(level),
                     unarmed_prof.label(),
                     attr,
                     attr_name,
@@ -1193,7 +1301,7 @@ fn attack_entries(
         } else {
             (str_, "Str")
         };
-        let bonus = prof.bonus(LEVEL) + attr;
+        let bonus = prof.bonus(level) + attr;
         let dmg_mod = if is_ranged {
             if propulsive && str_ > 0 {
                 str_ / 2
@@ -1219,7 +1327,7 @@ fn attack_entries(
             ),
             detail: Some(format!(
                 "{} {} ({}) + {} {}{}{}",
-                prof.bonus(LEVEL),
+                prof.bonus(level),
                 prof.label(),
                 w.category,
                 attr,
@@ -1244,6 +1352,7 @@ fn skill_entries(
     data: &RulesData,
     class: &crate::data::ClassRecord,
 ) -> Vec<SheetEntry> {
+    let level = state.level();
     let resolution = state.skill_resolution();
     let armor = worn_armor(state, data);
     let str_mod = state.modifier(Attribute::Str);
@@ -1260,18 +1369,19 @@ fn skill_entries(
                 .iter()
                 .find(|(id, _)| *id == skill.id)
                 .map(|(_, source)| source.clone());
-            let prof = if trained_source.is_some() {
-                Proficiency::Trained
-            } else {
-                Proficiency::Untrained
-            };
+            let prof = state.skill_rank(&skill.id);
+            let increases = state
+                .skill_increases
+                .iter()
+                .filter(|s| **s == skill.id)
+                .count();
             let attr_mod = state.modifier(skill.attribute);
             let physical = matches!(skill.attribute, Attribute::Str | Attribute::Dex);
             let penalty = if physical { check_penalty } else { 0 };
-            let total = prof.bonus(LEVEL) + attr_mod + penalty;
+            let total = prof.bonus(level) + attr_mod + penalty;
             let mut detail = format!(
                 "{} {} + {} {}",
-                prof.bonus(LEVEL),
+                prof.bonus(level),
                 prof.label(),
                 attr_mod,
                 skill.attribute.abbrev()
@@ -1281,6 +1391,12 @@ fn skill_entries(
             }
             if let Some(source) = trained_source {
                 detail.push_str(&format!(" · from {source}"));
+            }
+            if increases > 0 {
+                detail.push_str(&format!(
+                    " · {increases} skill increase{}",
+                    if increases == 1 { "" } else { "s" }
+                ));
             }
             SheetEntry {
                 label: skill.name.clone(),
@@ -1355,6 +1471,15 @@ pub fn prereq_description(data: &RulesData, p: &crate::data::Prerequisite) -> St
             ),
             None => "trained in a skill".to_string(),
         },
+        "skill_rank" => match (&p.skill, &p.rank) {
+            (Some(skill), Some(rank)) => format!(
+                "{rank} in {}",
+                data.skill(skill)
+                    .map(|s| s.name.clone())
+                    .unwrap_or_else(|| skill.clone())
+            ),
+            _ => "a skill rank".to_string(),
+        },
         other => other.replace('_', " "),
     }
 }
@@ -1380,6 +1505,10 @@ pub fn prereq_unavailable(
             "trained_skill" => match &p.skill {
                 Some(skill) => !state.is_trained(skill),
                 None => false,
+            },
+            "skill_rank" => match (&p.skill, &p.rank) {
+                (Some(skill), Some(rank)) => state.skill_rank(skill) < Proficiency::parse(rank),
+                _ => false,
             },
             _ => false,
         };
@@ -1590,11 +1719,93 @@ pub const SLOT_SCHOOL: &str = "pf2e.class.school";
 pub const SLOT_SPELLBOOK_CANTRIPS: &str = "pf2e.class.spellbook.cantrips";
 pub const SLOT_SPELLBOOK_RANK1: &str = "pf2e.class.spellbook.rank1";
 
-/// Every registered slot ID — the namespace suggested-build entries are
-/// integrity-checked against. Keep in lockstep with the SLOT_* constants
+// ---- Level-up identifiers (level 2 and up) ----
+// Every level's slots are distinct registrations; the IDs are minted from
+// the level so kind modules and the server agree without literals.
+
+/// The step that holds a level's advance decision — never live, so the
+/// advance is appendable by the start-level route but never rendered.
+pub fn step_level_advance(level: u32) -> String {
+    format!("level-{level}-advance")
+}
+/// The rendered step for a pending level's choices.
+pub fn step_level(level: u32) -> String {
+    format!("level-{level}")
+}
+pub fn slot_level_advance(level: u32) -> String {
+    format!("pf2e.level.{level}.advance")
+}
+pub fn slot_level_class_feat(level: u32) -> String {
+    format!("pf2e.level.{level}.class-feat")
+}
+pub fn slot_level_skill_feat(level: u32) -> String {
+    format!("pf2e.level.{level}.skill-feat")
+}
+pub fn slot_level_general_feat(level: u32) -> String {
+    format!("pf2e.level.{level}.general-feat")
+}
+pub fn slot_level_skill_increase(level: u32) -> String {
+    format!("pf2e.level.{level}.skill-increase")
+}
+pub fn slot_level_spellbook(level: u32) -> String {
+    format!("pf2e.level.{level}.spellbook")
+}
+/// The level an advance slot ID advances to, if the ID is one.
+pub fn advance_level_of(slot: &str) -> Option<u32> {
+    slot.strip_prefix("pf2e.level.")?
+        .strip_suffix(".advance")?
+        .parse()
+        .ok()
+}
+
+/// The published class-progression rhythm: which choice slots a level
+/// grants. Identical for every shipped class (the class-specific part of
+/// a level is its fixed features, which are data).
+pub struct LevelGrants {
+    pub class_feat: bool,
+    pub skill_feat: bool,
+    pub general_feat: bool,
+    pub skill_increase: bool,
+}
+
+pub fn level_grants(level: u32) -> LevelGrants {
+    let even = level.is_multiple_of(2);
+    LevelGrants {
+        class_feat: even,
+        skill_feat: even,
+        general_feat: !even && level > 1,
+        skill_increase: !even && level > 1,
+    }
+}
+
+/// Every registered slot ID for a ruleset whose advancement tables reach
+/// `cap` — the namespace suggested-build entries are integrity-checked
+/// against. Keep the creation part in lockstep with the SLOT_* constants
 /// above (the ruleset construction test asserts the engine registers
 /// exactly these).
-pub fn known_slot_ids() -> &'static [&'static str] {
+pub fn known_slot_ids(cap: u32) -> Vec<String> {
+    let mut ids: Vec<String> = creation_slot_ids().iter().map(|s| s.to_string()).collect();
+    for level in 2..=cap {
+        ids.push(slot_level_advance(level));
+        let grants = level_grants(level);
+        if grants.class_feat {
+            ids.push(slot_level_class_feat(level));
+        }
+        if grants.skill_feat {
+            ids.push(slot_level_skill_feat(level));
+        }
+        if grants.general_feat {
+            ids.push(slot_level_general_feat(level));
+        }
+        if grants.skill_increase {
+            ids.push(slot_level_skill_increase(level));
+        }
+        ids.push(slot_level_spellbook(level));
+    }
+    ids
+}
+
+fn creation_slot_ids() -> &'static [&'static str] {
     &[
         SLOT_CONCEPT,
         SLOT_ANCESTRY,

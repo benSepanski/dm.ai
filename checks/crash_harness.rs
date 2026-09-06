@@ -413,3 +413,233 @@ fn kill_dash_nine_loses_no_acknowledged_confirm() {
         );
     }
 }
+
+/// level-up: the four transitions under SIGKILL — start-level, a confirm
+/// into the tail, finalize-pending, abandon — each leave a loadable file
+/// in exactly the prior or the next state: the marker and stored sheet
+/// move only together (finalize), or not at all.
+#[test]
+fn level_transitions_under_sigkill_are_prior_or_next_state() {
+    #[path = "leveling_helpers.rs"]
+    mod leveling;
+    let dir = tempfile::tempdir().unwrap();
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .build()
+        .unwrap();
+    let id;
+    {
+        let server = TestServer::spawn(dir.path());
+        id = leveling::finalized_fighter(&client, &server.url, "crash-lvl");
+    }
+    let invariant = |doc: &Value| {
+        let marker = doc["finalized_through"].as_u64().unwrap() as usize;
+        let len = doc["log"].as_array().unwrap().len();
+        assert!(marker <= len);
+        (marker, len, serde_json::to_string(&doc["sheet"]).unwrap())
+    };
+    let baseline = invariant(&leveling::read_doc(dir.path(), &id));
+
+    for (cycle, delay_ms) in [0u64, 5].into_iter().enumerate() {
+        let mut server = TestServer::spawn(dir.path());
+        let fire = std::thread::spawn({
+            let client = client.clone();
+            let url = server.url.clone();
+            let id = id.clone();
+            move || {
+                // Start (idempotent), then a confirm, then abandon: whatever
+                // the kill interrupts, the file is one of the states. Every
+                // call may die under the kill — none may panic this thread.
+                let get = |path: &str| -> Option<Value> {
+                    client.get(format!("{url}{path}")).send().ok()?.json().ok()
+                };
+                let post = |path: &str, body: Value| -> Option<Value> {
+                    client
+                        .post(format!("{url}{path}"))
+                        .json(&body)
+                        .send()
+                        .ok()?
+                        .json()
+                        .ok()
+                };
+                let Some(view) = get(&format!("/api/characters/{id}")) else {
+                    return;
+                };
+                let version = view["version"]
+                    .as_u64()
+                    .or_else(|| view["draft"]["version"].as_u64())
+                    .unwrap_or(1);
+                let _ = post(
+                    &format!("/api/characters/{id}/level-up"),
+                    json!({"version": version}),
+                );
+                let Some(view) = get(&format!("/api/characters/{id}")) else {
+                    return;
+                };
+                if let Some(draft) = view.get("draft") {
+                    if let Some(feat) = leveling::slot_view(draft, "pf2e.level.2.class-feat") {
+                        if let Some(o) = feat["options"]
+                            .as_array()
+                            .and_then(|a| a.iter().find(|o| o["available"] == true))
+                        {
+                            let _ = post(
+                                &format!("/api/characters/{id}/confirm"),
+                                json!({"version": draft["version"], "decision": {
+                                    "id": format!("crash-cf-{cycle}"), "slot": "pf2e.level.2.class-feat",
+                                    "selection": {"kind": "option", "value": o["id"]}, "source": "player"
+                                }}),
+                            );
+                        }
+                    }
+                    let Some(view) = get(&format!("/api/characters/{id}")) else {
+                        return;
+                    };
+                    let v = view["draft"]["version"].as_u64().unwrap_or(1);
+                    let _ = post(
+                        &format!("/api/characters/{id}/level-up/abandon"),
+                        json!({"version": v}),
+                    );
+                }
+            }
+        });
+        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        server.kill();
+        fire.join().unwrap();
+
+        let doc = leveling::read_doc(dir.path(), &id);
+        let (marker, len, sheet) = invariant(&doc);
+        // Never a moved marker with the old sheet, never a pending tail
+        // with a re-derived sheet: the stored sheet is always the
+        // baseline's (only finalize-pending would move it, and none ran).
+        assert_eq!(
+            marker, baseline.0,
+            "start/confirm/abandon never move the marker"
+        );
+        assert_eq!(
+            sheet, baseline.2,
+            "the stored sheet never moves outside finalize"
+        );
+        assert!(len >= marker);
+        let server = TestServer::spawn(dir.path());
+        let roster: Value = client
+            .get(format!("{}/api/roster", server.url))
+            .send()
+            .unwrap()
+            .json()
+            .unwrap();
+        assert!(
+            roster["problems"].as_array().unwrap().is_empty(),
+            "{roster}"
+        );
+        // Leave the character clean for the next cycle.
+        let view = leveling::character(&client, &server.url, &id);
+        if view["state"] == "leveling" {
+            let v = view["draft"]["version"].as_u64().unwrap();
+            let (status, _) = leveling::post_json(
+                &client,
+                &server.url,
+                &format!("/api/characters/{id}/level-up/abandon"),
+                json!({"version": v}),
+            );
+            assert_eq!(status, 200);
+        }
+    }
+
+    // Finalize-pending under SIGKILL, once per remaining level (2 and 3):
+    // either the prior file (marker + sheet as before) or the leveled file
+    // (marker at the log's end and a re-derived sheet) — never a hybrid.
+    // A cycle that did not land is finished by an ordinary retry, so each
+    // cycle ends one level higher.
+    for (cycle, delay_ms) in [0u64, 4].into_iter().enumerate() {
+        let level = cycle as u64 + 2;
+        let mut server = TestServer::spawn(dir.path());
+        let before = invariant(&leveling::read_doc(dir.path(), &id));
+        let pending = leveling::start_level(&client, &server.url, &id);
+        let mut draft = pending;
+        let mut n = 0;
+        loop {
+            let open: Vec<Value> = draft["projection"]["steps"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|s| s["slots"].as_array().cloned().unwrap_or_default())
+                .filter(|sl| sl["decision"].is_null() && sl["required"] == true)
+                .collect();
+            let Some(slot) = open.first() else { break };
+            let slot_id = slot["id"].as_str().unwrap().to_string();
+            let o = slot["options"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|o| o["available"] == true)
+                .unwrap()["id"]
+                .as_str()
+                .unwrap()
+                .to_string();
+            n += 1;
+            let c = leveling::confirm_option(
+                &client,
+                &server.url,
+                &id,
+                draft["version"].as_u64().unwrap(),
+                &format!("fin-{cycle}-{n}"),
+                &slot_id,
+                &o,
+            );
+            assert_eq!(c["outcome"], "confirmed", "{c}");
+            draft = c["draft"].clone();
+        }
+        let version = draft["version"].as_u64().unwrap();
+        let fire = std::thread::spawn({
+            let client = client.clone();
+            let url = server.url.clone();
+            let id = id.clone();
+            move || {
+                // May die under the kill — must not panic this thread.
+                let _ = client
+                    .post(format!("{url}/api/characters/{id}/finalize"))
+                    .json(&json!({"version": version}))
+                    .send();
+            }
+        });
+        std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        server.kill();
+        fire.join().unwrap();
+        let doc = leveling::read_doc(dir.path(), &id);
+        let (marker, len, sheet) = invariant(&doc);
+        let server = TestServer::spawn(dir.path());
+        if marker == len {
+            assert_ne!(
+                sheet, before.2,
+                "finalized: marker and sheet moved together"
+            );
+        } else {
+            assert_eq!(
+                sheet, before.2,
+                "not finalized: the stored sheet is untouched"
+            );
+            assert_eq!(marker, before.0);
+            let view = leveling::character(&client, &server.url, &id);
+            let v = view["draft"]["version"].as_u64().unwrap();
+            let (status, out) = leveling::post_json(
+                &client,
+                &server.url,
+                &format!("/api/characters/{id}/finalize"),
+                json!({"version": v}),
+            );
+            assert_eq!(status, 200, "{out}");
+            assert_eq!(out["outcome"], "finalized");
+        }
+        let view = leveling::character(&client, &server.url, &id);
+        assert!(
+            view["sheet"]["summary"][0]
+                .as_str()
+                .unwrap()
+                .contains(&format!("Fighter {level}")),
+            "{}",
+            view["sheet"]["summary"][0]
+        );
+    }
+    let (code, output) = TestServer::run_verify(dir.path(), &[]);
+    assert_eq!(code, 0, "{output}");
+}

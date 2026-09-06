@@ -57,7 +57,20 @@ pub fn compare(our: &OurRecord, foundry: &FoundryRecord, ctx: &Ctx) -> Outcome {
         Kind::Background => background(&our.value, foundry.system(), ctx),
         Kind::Class => class(&our.value, foundry.system()),
         Kind::AncestryFeat => feat(&our.value, foundry.system(), "ancestry", None),
-        Kind::ClassFeat => feat(&our.value, foundry.system(), "class", Some("fighter")),
+        Kind::ClassFeat => {
+            // The class trait the upstream feat must carry is our record's
+            // own class ("class.wizard" → "wizard"), not a fixed class.
+            let class_trait = our.value["class"]
+                .as_str()
+                .and_then(|c| c.strip_prefix("class."))
+                .map(str::to_string);
+            feat(
+                &our.value,
+                foundry.system(),
+                "class",
+                class_trait.as_deref(),
+            )
+        }
         // Skill feats ship inside general-feats.json under the T2 ID
         // convention `feat.skill.<slug>`; they compare against Foundry's
         // `skill` category.

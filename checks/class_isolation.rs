@@ -18,6 +18,15 @@ fn shipped_names() -> Vec<String> {
     names.extend(data.ancestry_feats.iter().map(|r| r.name.clone()));
     names.extend(data.backgrounds.iter().map(|r| r.name.clone()));
     names.extend(data.classes.iter().map(|r| r.name.clone()));
+    // Fixed features gained at level-up are records too (level-up slice):
+    // their names may never be source literals in the ruleset.
+    names.extend(
+        data.classes
+            .iter()
+            .flat_map(|c| c.advancement.iter())
+            .flat_map(|a| a.features.iter())
+            .map(|f| f.name.clone()),
+    );
     names.extend(data.class_feats.iter().map(|r| r.name.clone()));
     names.extend(data.general_feats.iter().map(|r| r.name.clone()));
     names.extend(data.spells.spells.iter().map(|r| r.name.clone()));

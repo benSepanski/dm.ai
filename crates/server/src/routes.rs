@@ -15,21 +15,25 @@ use engine_core::{AppendOutcome, EngineError, Sampler, SlotSuggestion, Suggestio
 use ruleset_pf2e::Pf2eEngine;
 use tokio::sync::Mutex;
 use types::{
-    ApiError, CharacterId, CharacterView, ChecklistEntry, ChecklistSeverity, ClassOption,
-    ClearOutcome, ClearRequest, CloneRequest, CloneResult, ConfirmOutcome, ConfirmRequest,
-    CreateCharacterRequest, Decision, DecisionId, DecisionInput, DecisionSource, DraftView,
-    FillRemainingOutcome, FillRemainingRequest, FinalizeOutcome, FinalizeRequest,
-    QuickBuildRequest, QuickBuildResult, RandomMintRequest, ReplayOutcome, RosterCharacterState,
-    RosterEntry, RosterProblem, RosterView, Selection, SlotId, StepId, StepRequest,
-    VersionActionRequest, VersionFlaggedError, VersionResolutionOutcome, VersionStatus,
+    AbandonLevelOutcome, AbandonLevelRequest, ApiError, CharacterId, CharacterView, ChecklistEntry,
+    ChecklistSeverity, ClassOption, ClearOutcome, ClearRequest, CloneRequest, CloneResult,
+    ConfirmOutcome, ConfirmRequest, CreateCharacterRequest, Decision, DecisionId, DecisionInput,
+    DecisionSource, DraftView, FillRemainingOutcome, FillRemainingRequest, FinalizeOutcome,
+    FinalizeRequest, LevelUpOutcome, LevelUpRequest, LevelUpView, QuickBuildRequest,
+    QuickBuildResult, RandomMintRequest, ReplayOutcome, RosterCharacterState, RosterEntry,
+    RosterProblem, RosterView, Selection, SlotId, StepId, StepRequest, VersionActionRequest,
+    VersionFlaggedError, VersionResolutionOutcome, VersionStatus,
 };
 
 use crate::clock;
 use crate::persistence::{DocState, KeepOldMarker, Loaded, Store, StoreError, VersionEvent};
-use crate::version::{repair_replay, status_for, KnownVersions};
+use crate::version::{repair_replay, sheet_diffs, status_for, KnownVersions};
 
 pub(crate) struct App {
     pub engine: Pf2eEngine,
+    /// The parsed rules data the engine was built over (class caps for the
+    /// level-up routes; the engine itself stays the only rules authority).
+    pub rules: Arc<ruleset_pf2e::RulesData>,
     pub store: Mutex<Store>,
     pub rules_version: String,
     pub known: KnownVersions,
@@ -62,6 +66,8 @@ pub(crate) fn router(app: SharedApp) -> Router {
         .route("/api/characters/{id}/clear", post(clear))
         .route("/api/characters/{id}/step", post(set_step))
         .route("/api/characters/{id}/finalize", post(finalize))
+        .route("/api/characters/{id}/level-up", post(level_up))
+        .route("/api/characters/{id}/level-up/abandon", post(abandon_level))
         .route("/api/characters/{id}/version/repin", post(version_repin))
         .route("/api/characters/{id}/version/accept", post(version_accept))
         .route(
@@ -117,9 +123,21 @@ impl IntoResponse for Failure {
     }
 }
 
-fn step_index(engine: &Pf2eEngine, step: &StepId) -> usize {
-    engine
-        .steps()
+/// The steps live for a log (creation steps while creating, the pending
+/// level's step while leveling) — the only step list any client sees.
+fn live_steps(engine: &Pf2eEngine, log: &[Decision]) -> Vec<(StepId, String)> {
+    engine.live_steps(log).unwrap_or_default()
+}
+
+fn first_live_step(engine: &Pf2eEngine, log: &[Decision]) -> StepId {
+    live_steps(engine, log)
+        .first()
+        .map(|(id, _)| id.clone())
+        .unwrap_or_else(|| StepId::new("concept"))
+}
+
+fn step_index(engine: &Pf2eEngine, log: &[Decision], step: &StepId) -> usize {
+    live_steps(engine, log)
         .iter()
         .position(|(id, _)| id == step)
         .unwrap_or(0)
@@ -130,6 +148,11 @@ fn draft_view(app: &App, loaded: &Loaded) -> Result<DraftView, Failure> {
         .engine
         .project(&loaded.log)
         .map_err(|e| Failure::Internal(format!("stored log does not replay: {e}")))?;
+    let level_up = if loaded.has_pending_tail() {
+        Some(level_up_view(app, loaded)?)
+    } else {
+        None
+    };
     Ok(DraftView {
         id: loaded.id.clone(),
         version: loaded.draft_version,
@@ -139,7 +162,49 @@ fn draft_view(app: &App, loaded: &Loaded) -> Result<DraftView, Failure> {
         // Only current drafts are projected; flagged drafts arrive as
         // CharacterView::FlaggedDraft instead.
         version_status: VersionStatus::Current,
+        level_up,
     })
+}
+
+/// The pending level's derived companions (spec req 4): gains are the
+/// finalized sheet vs the fold through the advance decision alone; deltas
+/// are the finalized sheet vs the fold through the whole tail; pending is
+/// the tail described for the abandon dialog. Nothing hand-authored.
+fn level_up_view(app: &App, loaded: &Loaded) -> Result<LevelUpView, Failure> {
+    let prefix = loaded.finalized_prefix();
+    let tail = loaded.pending_tail();
+    let state = app
+        .engine
+        .fold(&loaded.log)
+        .map_err(|e| Failure::Internal(e.to_string()))?;
+    let advanced: Vec<Decision> = prefix.iter().chain(tail.iter().take(1)).cloned().collect();
+    let advance_sheet = app
+        .engine
+        .sheet(&advanced)
+        .map_err(|e| Failure::Internal(e.to_string()))?;
+    let full_sheet = app
+        .engine
+        .sheet(&loaded.log)
+        .map_err(|e| Failure::Internal(e.to_string()))?;
+    Ok(LevelUpView {
+        level: state.level() as u32,
+        gains: sheet_diffs(&loaded.sheet, &advance_sheet),
+        deltas: sheet_diffs(&loaded.sheet, &full_sheet),
+        pending: tail
+            .iter()
+            .filter_map(|d| app.engine.describe_decision(d))
+            .collect(),
+    })
+}
+
+/// The level a finalized character can advance to, when its pin is
+/// current and the class's advancement table has more (the cap is data).
+fn next_level_for(app: &App, loaded: &Loaded, status: &VersionStatus) -> Option<u32> {
+    if *status != VersionStatus::Current || loaded.state != DocState::Finalized {
+        return None;
+    }
+    let state = app.engine.fold(loaded.finalized_prefix()).ok()?;
+    ruleset_pf2e::next_level(&app.rules, &state)
 }
 
 /// The full character view, version flag included. A draft with an
@@ -149,9 +214,20 @@ fn draft_view(app: &App, loaded: &Loaded) -> Result<DraftView, Failure> {
 fn character_view(app: &App, loaded: &Loaded) -> Result<CharacterView, Failure> {
     let status = status_for(&app.engine, &app.known, loaded);
     Ok(match loaded.state {
+        // A pending level rides beside the still-authoritative sheet; the
+        // pin is current by construction (the level started under it and
+        // a flagged character cannot resume until resolved).
+        DocState::Finalized if loaded.has_pending_tail() && status == VersionStatus::Current => {
+            CharacterView::Leveling {
+                id: loaded.id.clone(),
+                sheet: loaded.sheet.clone(),
+                draft: draft_view(app, loaded)?,
+            }
+        }
         DocState::Finalized => CharacterView::Finalized {
             id: loaded.id.clone(),
             sheet: loaded.sheet.clone(),
+            next_level: next_level_for(app, loaded, &status),
             version_status: status,
             version: loaded.draft_version,
         },
@@ -172,7 +248,9 @@ fn character_view(app: &App, loaded: &Loaded) -> Result<CharacterView, Failure> 
 /// would replay (and extend) an old log against new data. Resolution is the
 /// only path forward; the refusal carries the flag.
 fn guard_wizard_write(app: &App, loaded: &Loaded) -> Result<(), Failure> {
-    if loaded.state == DocState::Draft && loaded.rules_version != app.rules_version {
+    if (loaded.state == DocState::Draft || loaded.has_pending_tail())
+        && loaded.rules_version != app.rules_version
+    {
         return Err(Failure::VersionFlagged(Box::new(status_for(
             &app.engine,
             &app.known,
@@ -182,14 +260,74 @@ fn guard_wizard_write(app: &App, loaded: &Loaded) -> Result<(), Failure> {
     Ok(())
 }
 
+/// Every wizard write lands on a creation draft or a pending level; a
+/// finalized character with no pending level refuses, typed — and this
+/// refusal precedes every idempotency shortcut, so a retried tail confirm
+/// after the level finalized can never answer "confirmed".
+fn guard_wizard_target(loaded: &Loaded) -> Result<(), Failure> {
+    if loaded.state == DocState::Finalized && !loaded.has_pending_tail() {
+        return Err(Failure::Unprocessable(
+            "character is finalized — build decisions are locked (start a level-up to make \
+             new ones)"
+                .into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Nothing below the finalized marker ever moves: a write naming a
+/// decision in the finalized prefix (directly, or through a cascade)
+/// refuses, typed. The prefix invariant is asserted by `verify`; this is
+/// the guard.
+fn guard_below_marker(
+    loaded: &Loaded,
+    slots: impl IntoIterator<Item = SlotId>,
+) -> Result<(), Failure> {
+    for slot in slots {
+        if let Some(index) = loaded.log.iter().position(|d| d.slot == slot) {
+            if index < loaded.finalized_through {
+                return Err(Failure::Unprocessable(format!(
+                    "'{slot}' is part of the finalized character — level-up choices can't \
+                     change it (editing finalized choices is a later feature)"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// After a wizard write: a creation draft's stored sheet tracks its whole
+/// log; a finalized character's stored sheet reflects ONLY its finalized
+/// prefix — a confirm into a pending level never touches it (the prefix
+/// invariant; only finalize-pending moves the sheet, with the marker).
+fn refresh_draft_sheet(app: &App, loaded: &mut Loaded) -> Result<(), Failure> {
+    if loaded.state == DocState::Draft {
+        loaded.sheet = app
+            .engine
+            .sheet(&loaded.log)
+            .map_err(|e| Failure::Internal(e.to_string()))?;
+    }
+    Ok(())
+}
+
 fn resume_label(app: &App, loaded: &Loaded) -> String {
-    let steps = app.engine.steps();
-    let index = step_index(&app.engine, &loaded.current_step);
+    let steps = live_steps(&app.engine, &loaded.log);
+    let index = step_index(&app.engine, &loaded.log, &loaded.current_step);
     let title = steps
         .get(index)
         .map(|(_, t)| t.as_str())
         .unwrap_or("Concept");
-    format!("step {} of {} — {}", index + 1, steps.len(), title)
+    if loaded.has_pending_tail() {
+        let level = app.engine.fold(&loaded.log).map(|s| s.level()).unwrap_or(0);
+        format!(
+            "level {level} — step {} of {} — {}",
+            index + 1,
+            steps.len(),
+            title
+        )
+    } else {
+        format!("step {} of {} — {}", index + 1, steps.len(), title)
+    }
 }
 
 fn summary_line(loaded: &Loaded) -> String {
@@ -216,6 +354,9 @@ async fn roster(State(app): State<SharedApp>) -> Result<Json<RosterView>, Failur
             summary: summary_line(c),
             state: match c.state {
                 DocState::Draft => RosterCharacterState::Draft {
+                    resume_label: resume_label(&app, c),
+                },
+                DocState::Finalized if c.has_pending_tail() => RosterCharacterState::Leveling {
                     resume_label: resume_label(&app, c),
                 },
                 DocState::Finalized => RosterCharacterState::Finalized,
@@ -284,10 +425,11 @@ async fn create_character(
     let loaded = Loaded {
         id: id.clone(),
         state: DocState::Draft,
-        current_step: app.engine.steps()[0].0.clone(),
+        current_step: first_live_step(&app.engine, &log),
         draft_version: 1,
         sheet,
         log,
+        finalized_through: 0,
         rules_version: app.rules_version.clone(),
         version_history: Vec::new(),
         keep_old: None,
@@ -332,12 +474,15 @@ async fn confirm(
 ) -> Result<Json<ConfirmOutcome>, Failure> {
     let store = app.store.lock().await;
     let mut loaded = store.load(&CharacterId::new(id))?;
-    if loaded.state == DocState::Finalized {
+    guard_wizard_target(&loaded)?;
+    guard_wizard_write(&app, &loaded)?;
+    // A level advance enters the log only through the level-up route.
+    if ruleset_pf2e::advance_level_of(request.decision.slot.as_str()).is_some() {
         return Err(Failure::Unprocessable(
-            "character is finalized — build decisions are locked".into(),
+            "level advances start through Level up, not as a confirmed choice".into(),
         ));
     }
-    guard_wizard_write(&app, &loaded)?;
+    guard_below_marker(&loaded, [request.decision.slot.clone()])?;
     // Idempotency first: a retry after a crash between save and ack carries
     // the version it was originally made against, which is stale by now —
     // but its decision ID is already in the log, so it's a success, not a
@@ -362,10 +507,7 @@ async fn confirm(
         }
         Ok(AppendOutcome::Appended(new_log)) => {
             loaded.log = new_log;
-            loaded.sheet = app
-                .engine
-                .sheet(&loaded.log)
-                .map_err(|e| Failure::Internal(e.to_string()))?;
+            refresh_draft_sheet(&app, &mut loaded)?;
             loaded.draft_version += 1;
             store.save(&loaded)?;
             Ok(Json(ConfirmOutcome::Confirmed {
@@ -373,13 +515,7 @@ async fn confirm(
             }))
         }
         Err(e) => {
-            let step = app
-                .engine
-                .steps()
-                .iter()
-                .map(|(id, _)| id.clone())
-                .next()
-                .unwrap_or_else(|| StepId::new("concept"));
+            let step = first_live_step(&app.engine, &loaded.log);
             let entry = match &e {
                 EngineError::UnknownSlot { .. }
                 | EngineError::InvalidDecision { .. }
@@ -404,12 +540,24 @@ async fn amend(
 ) -> Result<Json<ConfirmOutcome>, Failure> {
     let store = app.store.lock().await;
     let mut loaded = store.load(&CharacterId::new(id))?;
-    if loaded.state == DocState::Finalized {
+    guard_wizard_target(&loaded)?;
+    guard_wizard_write(&app, &loaded)?;
+    if ruleset_pf2e::advance_level_of(request.decision.slot.as_str()).is_some() {
         return Err(Failure::Unprocessable(
-            "character is finalized — build decisions are locked".into(),
+            "level advances start through Level up, not as a confirmed choice".into(),
         ));
     }
-    guard_wizard_write(&app, &loaded)?;
+    // An amend cascades like a clear: the slot and everything it drags
+    // along must sit above the marker.
+    let doomed: Vec<SlotId> = app
+        .engine
+        .clear_preview(&loaded.log, &request.decision.slot)
+        .map(|p| p.cleared.into_iter().map(|c| c.slot).collect())
+        .unwrap_or_default();
+    guard_below_marker(
+        &loaded,
+        std::iter::once(request.decision.slot.clone()).chain(doomed),
+    )?;
     if loaded.log.iter().any(|d| d.id == request.decision.id) {
         return Ok(Json(ConfirmOutcome::Confirmed {
             draft: draft_view(&app, &loaded)?,
@@ -427,10 +575,7 @@ async fn amend(
         })),
         Ok(AppendOutcome::Appended(new_log)) => {
             loaded.log = new_log;
-            loaded.sheet = app
-                .engine
-                .sheet(&loaded.log)
-                .map_err(|e| Failure::Internal(e.to_string()))?;
+            refresh_draft_sheet(&app, &mut loaded)?;
             loaded.draft_version += 1;
             store.save(&loaded)?;
             Ok(Json(ConfirmOutcome::Confirmed {
@@ -438,12 +583,7 @@ async fn amend(
             }))
         }
         Err(e) => {
-            let step = app
-                .engine
-                .steps()
-                .first()
-                .map(|(id, _)| id.clone())
-                .unwrap_or_else(|| StepId::new("concept"));
+            let step = first_live_step(&app.engine, &loaded.log);
             Ok(Json(ConfirmOutcome::Rejected {
                 reasons: vec![engine_error_entry(step, slot, e.to_string())],
                 draft: draft_view(&app, &loaded)?,
@@ -459,12 +599,13 @@ async fn clear(
 ) -> Result<Json<ClearOutcome>, Failure> {
     let store = app.store.lock().await;
     let mut loaded = store.load(&CharacterId::new(id))?;
-    if loaded.state == DocState::Finalized {
+    guard_wizard_target(&loaded)?;
+    guard_wizard_write(&app, &loaded)?;
+    if ruleset_pf2e::advance_level_of(request.slot.as_str()).is_some() {
         return Err(Failure::Unprocessable(
-            "character is finalized — build decisions are locked".into(),
+            "a pending level is discarded through Abandon level, not by clearing".into(),
         ));
     }
-    guard_wizard_write(&app, &loaded)?;
     if request.version != loaded.draft_version {
         return Ok(Json(ClearOutcome::Conflict {
             current: draft_view(&app, &loaded)?,
@@ -474,15 +615,16 @@ async fn clear(
         .engine
         .clear_preview(&loaded.log, &request.slot)
         .map_err(|e| Failure::Unprocessable(e.to_string()))?;
+    guard_below_marker(
+        &loaded,
+        std::iter::once(request.slot.clone()).chain(preview.cleared.iter().map(|c| c.slot.clone())),
+    )?;
     let new_log = app
         .engine
         .clear(&loaded.log, &request.slot)
         .map_err(|e| Failure::Unprocessable(e.to_string()))?;
     loaded.log = new_log;
-    loaded.sheet = app
-        .engine
-        .sheet(&loaded.log)
-        .map_err(|e| Failure::Internal(e.to_string()))?;
+    refresh_draft_sheet(&app, &mut loaded)?;
     loaded.draft_version += 1;
     store.save(&loaded)?;
     Ok(Json(ClearOutcome::Cleared {
@@ -498,13 +640,14 @@ async fn set_step(
 ) -> Result<Json<DraftView>, Failure> {
     let store = app.store.lock().await;
     let mut loaded = store.load(&CharacterId::new(id))?;
-    if loaded.state == DocState::Finalized {
-        return Err(Failure::Unprocessable("character is finalized".into()));
-    }
+    guard_wizard_target(&loaded)?;
     guard_wizard_write(&app, &loaded)?;
     // The step cursor is navigation, not a decision: last write wins and no
     // version bump (a stale-tab navigation shouldn't invalidate confirms).
-    if !app.engine.steps().iter().any(|(s, _)| *s == request.step) {
+    if !live_steps(&app.engine, &loaded.log)
+        .iter()
+        .any(|(s, _)| *s == request.step)
+    {
         return Err(Failure::Unprocessable(format!(
             "unknown step '{}'",
             request.step
@@ -522,7 +665,10 @@ async fn finalize(
 ) -> Result<Json<FinalizeOutcome>, Failure> {
     let store = app.store.lock().await;
     let mut loaded = store.load(&CharacterId::new(id))?;
-    if loaded.state == DocState::Finalized {
+    // "Finalize what is pending": nothing pending on a finalized character
+    // is an idempotent no-op returning the current sheet (the retry after
+    // a crash between a level finalize's save and its ack lands here).
+    if loaded.state == DocState::Finalized && !loaded.has_pending_tail() {
         return Ok(Json(FinalizeOutcome::Finalized {
             sheet: loaded.sheet.clone(),
         }));
@@ -542,12 +688,118 @@ async fn finalize(
             reasons: projection.checklist,
         }));
     }
+    // One atomic transition: marker and sheet move together, in one write.
     loaded.state = DocState::Finalized;
     loaded.sheet = projection.sheet;
+    loaded.finalized_through = loaded.log.len();
     loaded.draft_version += 1;
     store.save(&loaded)?;
     Ok(Json(FinalizeOutcome::Finalized {
         sheet: loaded.sheet.clone(),
+    }))
+}
+
+// ---- Level-up routes (level-up spec reqs 1-2) ----
+//
+// A pending level is the log's un-finalized tail behind the document's
+// finalized marker: start appends the level's advance decision (the tail's
+// head), the wizard routes append its choices, finalize moves the marker,
+// abandon truncates to it. Each transition is one crash-safe write.
+
+async fn level_up(
+    State(app): State<SharedApp>,
+    AxumPath(id): AxumPath<String>,
+    Json(request): Json<LevelUpRequest>,
+) -> Result<Json<LevelUpOutcome>, Failure> {
+    let store = app.store.lock().await;
+    let mut loaded = store.load(&CharacterId::new(id))?;
+    if loaded.state == DocState::Draft {
+        return Err(Failure::Unprocessable(
+            "finish creating this character before leveling it up".into(),
+        ));
+    }
+    // Idempotent: a character already leveling returns its pending level —
+    // a second tab, a retry, never a second advance.
+    if loaded.has_pending_tail() {
+        guard_wizard_write(&app, &loaded)?;
+        return Ok(Json(LevelUpOutcome::Started {
+            draft: Box::new(draft_view(&app, &loaded)?),
+        }));
+    }
+    let status = status_for(&app.engine, &app.known, &loaded);
+    if status != VersionStatus::Current {
+        // Kept-old or otherwise non-current: the log cannot be extended
+        // under today's data; resolve the flag first (kept-old characters
+        // never level).
+        return Err(Failure::VersionFlagged(Box::new(status)));
+    }
+    if request.version != loaded.draft_version {
+        return Ok(Json(LevelUpOutcome::Conflict {
+            character: Box::new(character_view(&app, &loaded)?),
+        }));
+    }
+    let state = app
+        .engine
+        .fold(&loaded.log)
+        .map_err(|e| Failure::Internal(e.to_string()))?;
+    let Some(level) = ruleset_pf2e::next_level(&app.rules, &state) else {
+        return Err(Failure::Unprocessable(format!(
+            "level {} is as far as this rules data goes — higher levels are coming",
+            state.level()
+        )));
+    };
+    let input = DecisionInput {
+        id: DecisionId::new(format!("level-{level}.advance")),
+        slot: SlotId::new(ruleset_pf2e::slot_level_advance(level)),
+        selection: Selection::Option(types::OptionId::new(format!("advance.{level}"))),
+        source: DecisionSource::Player,
+    };
+    match app.engine.append(&loaded.log, input) {
+        Ok(AppendOutcome::Appended(new_log)) => loaded.log = new_log,
+        Ok(AppendOutcome::AlreadyPresent) => {}
+        Err(e) => {
+            return Err(Failure::Unprocessable(format!(
+                "cannot start level {level}: {e}"
+            )))
+        }
+    }
+    // The stored sheet stays the finalized one; only the tail grew.
+    loaded.current_step = first_live_step(&app.engine, &loaded.log);
+    loaded.draft_version += 1;
+    store.save(&loaded)?;
+    Ok(Json(LevelUpOutcome::Started {
+        draft: Box::new(draft_view(&app, &loaded)?),
+    }))
+}
+
+async fn abandon_level(
+    State(app): State<SharedApp>,
+    AxumPath(id): AxumPath<String>,
+    Json(request): Json<AbandonLevelRequest>,
+) -> Result<Json<AbandonLevelOutcome>, Failure> {
+    let store = app.store.lock().await;
+    let mut loaded = store.load(&CharacterId::new(id))?;
+    if !loaded.has_pending_tail() {
+        return Err(Failure::Unprocessable(
+            "no level-up is in progress on this character".into(),
+        ));
+    }
+    // Abandon is always permitted — the exit from a tail whose replay no
+    // longer works — so no version-flag guard here.
+    if request.version != loaded.draft_version {
+        return Ok(Json(AbandonLevelOutcome::Conflict {
+            character: Box::new(character_view(&app, &loaded)?),
+        }));
+    }
+    // Truncate to the marker: the finalized prefix and sheet are untouched
+    // by construction; the version counter stays monotonic so a tab stale
+    // from this attempt can never land in the next.
+    loaded.log.truncate(loaded.finalized_through);
+    loaded.current_step = first_live_step(&app.engine, &loaded.log);
+    loaded.draft_version += 1;
+    store.save(&loaded)?;
+    Ok(Json(AbandonLevelOutcome::Abandoned {
+        character: Box::new(character_view(&app, &loaded)?),
     }))
 }
 
@@ -687,15 +939,14 @@ async fn quick_build(
         state: DocState::Draft,
         // Review state: resume lands on the final step, where the player
         // confirms the name and finalizes.
-        current_step: app
-            .engine
-            .steps()
+        current_step: live_steps(&app.engine, &plan.log)
             .last()
             .map(|(id, _)| id.clone())
             .unwrap_or_else(|| StepId::new("concept")),
         draft_version: 1,
         sheet,
         log: plan.log,
+        finalized_through: 0,
         rules_version: app.rules_version.clone(),
         version_history: Vec::new(),
         keep_old: None,
@@ -721,9 +972,11 @@ async fn fill_remaining(
     }
     let store = app.store.lock().await;
     let mut loaded = store.load(&CharacterId::new(id))?;
-    if loaded.state == DocState::Finalized {
+    guard_wizard_target(&loaded)?;
+    if loaded.has_pending_tail() {
         return Err(Failure::Unprocessable(
-            "character is finalized — build decisions are locked".into(),
+            "suggested builds cover character creation only — level-up choices are yours to make"
+                .into(),
         ));
     }
     guard_wizard_write(&app, &loaded)?;
@@ -768,10 +1021,7 @@ async fn fill_remaining(
         .map_err(|e| Failure::Internal(e.to_string()))?;
     if !plan.appended.is_empty() {
         loaded.log = plan.log;
-        loaded.sheet = app
-            .engine
-            .sheet(&loaded.log)
-            .map_err(|e| Failure::Internal(e.to_string()))?;
+        refresh_draft_sheet(&app, &mut loaded)?;
         loaded.draft_version += 1;
         store.save(&loaded)?;
     }
@@ -1083,15 +1333,14 @@ async fn random_mint(
         id,
         state: DocState::Draft,
         // Review state: resume lands on the final step, like quick build.
-        current_step: app
-            .engine
-            .steps()
+        current_step: live_steps(&app.engine, &log)
             .last()
             .map(|(id, _)| id.clone())
             .unwrap_or_else(|| StepId::new("concept")),
         draft_version: 1,
         sheet,
         log,
+        finalized_through: 0,
         rules_version: app.rules_version.clone(),
         version_history: Vec::new(),
         keep_old: None,
@@ -1160,8 +1409,12 @@ async fn clone_character(
     // version flag meets the clone on first open, exactly as it would the
     // source.)
     let current_pin = source.rules_version == app.rules_version;
+    // What the stored sheet reflects: the whole log for a creation draft,
+    // the finalized prefix for a finalized character (a pending tail is
+    // never part of the stored sheet).
+    let reflected: &[Decision] = source.finalized_prefix();
     if current_pin {
-        let replayed = app.engine.sheet(&source.log).map_err(|e| {
+        let replayed = app.engine.sheet(reflected).map_err(|e| {
             Failure::Unprocessable(format!(
                 "'{}' does not replay cleanly ({e}) — run `verify`; nothing \
                  was created",
@@ -1202,8 +1455,19 @@ async fn clone_character(
     // older-known pin, the stored sheet with the one field the changed
     // decision projects (the name) updated.
     let sheet = if current_pin {
+        // The clone's sheet is the fold of what its stored sheet reflects
+        // (the pending tail, if any, is copied along but stays pending);
+        // the whole log is folded once for cleanliness.
         app.engine
-            .sheet(&log)
+            .fold(&log)
+            .map_err(|e| Failure::Internal(format!("the cloned log does not replay: {e}")))?;
+        let reflected_len = if source.state == DocState::Draft {
+            log.len()
+        } else {
+            source.finalized_through.min(log.len())
+        };
+        app.engine
+            .sheet(&log[..reflected_len])
             .map_err(|e| Failure::Internal(format!("the cloned log does not replay: {e}")))?
     } else {
         let mut sheet = source.sheet.clone();
@@ -1217,6 +1481,7 @@ async fn clone_character(
         draft_version: source.draft_version,
         sheet,
         log,
+        finalized_through: source.finalized_through,
         rules_version: source.rules_version.clone(),
         version_history: source.version_history.clone(),
         keep_old: source.keep_old.clone(),
@@ -1329,7 +1594,7 @@ async fn version_accept(
             let from = pinned.clone();
             let replayed = app
                 .engine
-                .sheet(&loaded.log)
+                .sheet(loaded.finalized_prefix())
                 .map_err(|e| Failure::Internal(e.to_string()))?;
             let mut event = resolution_event(
                 "accept",

@@ -177,7 +177,30 @@
       "url": "https://2e.aonprd.com/Classes.aspx?ID=35",
       "license": "ORC",
       "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
-    }
+    },
+    "advancement": [
+      {
+        "level": 2,
+        "features": []
+      },
+      {
+        "level": 3,
+        "features": [
+          {
+            "id": "feature.fighter.bravery",
+            "name": "Bravery",
+            "text": "Having faced countless foes and the chaos of battle, you have learned how to stand strong in the face of fear. Your proficiency rank for Will saves increases to expert. When you roll a success at a Will save against a fear effect, you get a critical success instead.",
+            "effects": [
+              {
+                "type": "proficiency_override",
+                "target": "will",
+                "rank": "expert"
+              }
+            ]
+          }
+        ]
+      }
+    ]
   },
   {
     "id": "class.wizard",
@@ -236,7 +259,17 @@
       "spellbook_cantrips": 10,
       "spellbook_rank1": 5,
       "spellbook_curriculum_rank1": 2,
-      "school_extra_slot": true
+      "school_extra_slot": true,
+      "slots_by_level": {
+        "2": [
+          3
+        ],
+        "3": [
+          3,
+          2
+        ]
+      },
+      "spells_per_level": 2
     },
     "quick_build_deferred": true,
     "source": {
@@ -245,6 +278,16 @@
       "url": "https://2e.aonprd.com/Classes.aspx?ID=38",
       "license": "ORC",
       "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
-    }
+    },
+    "advancement": [
+      {
+        "level": 2,
+        "features": []
+      },
+      {
+        "level": 3,
+        "features": []
+      }
+    ]
   }
 ]

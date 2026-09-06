@@ -25,6 +25,29 @@ pub struct DraftView {
     /// here: a draft with an unresolved older pin arrives as
     /// `CharacterView::FlaggedDraft` instead, never with a projection).
     pub version_status: VersionStatus,
+    /// Present while this draft is a pending level on a finalized
+    /// character: what the level grants, the finalize deltas, and the
+    /// choices an abandon would discard. Absent on creation drafts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level_up: Option<LevelUpView>,
+}
+
+/// The pending level's derived companions (spec req 4): every value here
+/// comes from the sheet diff between folds — nothing is hand-authored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct LevelUpView {
+    /// The level being gained.
+    pub level: u32,
+    /// "At level N you gain…": the finalized sheet vs the sheet folded
+    /// through the advance decision alone (before any choice).
+    pub gains: Vec<crate::SheetDiff>,
+    /// Before/after for the values the level changed so far: the
+    /// finalized sheet vs the sheet folded through the whole tail.
+    pub deltas: Vec<crate::SheetDiff>,
+    /// The tail's decisions, described — what abandon discards (the
+    /// clear-confirmation shape, so the existing dialog renders it).
+    pub pending: Vec<crate::ClearedDecision>,
 }
 
 /// A single character as fetched by ID.
@@ -40,6 +63,19 @@ pub enum CharacterView {
         version_status: VersionStatus,
         /// Carried so resolution requests can pass the write version.
         version: u64,
+        /// The level a level-up would start, when one is available (below
+        /// the class's cap and the pin is current); `None` at the cap or
+        /// while the version flag needs resolving.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        next_level: Option<u32>,
+    },
+    /// A finalized character with a pending level: the finalized sheet
+    /// (still authoritative) beside the pending level's draft view, which
+    /// the unchanged wizard renders.
+    Leveling {
+        id: CharacterId,
+        sheet: SheetView,
+        draft: DraftView,
     },
     /// A draft whose pin is not current and unresolved: the wizard is
     /// blocked behind resolution, and no projection is computed (that would
@@ -202,6 +238,45 @@ pub enum FillRemainingOutcome {
     },
     /// The submitted version is stale — reload from `current`.
     Conflict { current: DraftView },
+}
+
+// ---- Level-up (level-up spec reqs 1-2) ----
+
+/// Start (or resume) a level-up; carries the write version like every
+/// wizard write. Idempotent: a character already leveling returns its
+/// pending level.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct LevelUpRequest {
+    pub version: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+#[serde(tag = "outcome", rename_all = "snake_case")]
+pub enum LevelUpOutcome {
+    /// The pending level (new or already in progress). Boxed: the draft
+    /// view dwarfs the other variant (clippy large_enum_variant);
+    /// serde/tsify treat the box as transparent.
+    Started { draft: Box<DraftView> },
+    /// The submitted version is stale — reload from `character`.
+    Conflict { character: Box<CharacterView> },
+}
+
+/// Abandon the pending level: the tail is discarded (atomically), the
+/// finalized state stands untouched.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct AbandonLevelRequest {
+    pub version: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+#[serde(tag = "outcome", rename_all = "snake_case")]
+pub enum AbandonLevelOutcome {
+    Abandoned { character: Box<CharacterView> },
+    Conflict { character: Box<CharacterView> },
 }
 
 // ---- Random mint & clone (roster-ergonomics spec reqs 1-5) ----

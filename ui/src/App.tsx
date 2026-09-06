@@ -9,6 +9,7 @@ import {
   deleteCharacter,
   fetchCharacter,
   fetchRoster,
+  levelUp,
   quickBuild,
   randomMint,
   resolveVersion,
@@ -37,6 +38,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [resolveBusy, setResolveBusy] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [levelBusy, setLevelBusy] = useState(false);
 
   useEffect(() => {
     const onHashChange = () => setRoute(parseHash());
@@ -142,21 +144,22 @@ export function App() {
     return <p className="loading">Loading…</p>;
   }
 
-  if (character.state === 'draft') {
+  if (character.state === 'draft' || character.state === 'leveling') {
+    // Creation drafts and pending levels are the same guided dialog over
+    // whatever steps the projection says are live; the router only picks
+    // which draft view to hand over.
+    const initial = character.state === 'draft' ? character : character.draft;
     return (
       <Wizard
-        key={character.id}
-        initial={character}
-        onFinalized={(finalSheet) => {
-          setCharacter({
-            state: 'finalized',
-            id: character.id,
-            sheet: finalSheet,
-            version_status: { status: 'current' },
-            version: 0,
-          });
-          goto(`#/c/${route.id}/sheet`);
+        key={`${character.id}:${initial.version}`}
+        initial={initial}
+        onFinalized={() => {
+          // Reload the truth (the finalized view carries the next level).
+          void loadRoute({ view: 'character', id: character.id }).then(() =>
+            goto(`#/c/${route.id}/sheet`),
+          );
         }}
+        onAbandoned={() => void loadRoute({ view: 'character', id: character.id })}
         onExit={() => goto('#/')}
       />
     );
@@ -195,6 +198,28 @@ export function App() {
           error={resolveError}
           onResolve={resolve(character.id, character.version)}
         />
+      )}
+      {character.next_level !== undefined ? (
+        <div className="level-up-bar">
+          <button
+            type="button"
+            className="confirm level-up"
+            disabled={levelBusy}
+            onClick={() => {
+              setLevelBusy(true);
+              levelUp(character.id, character.version)
+                .then(() => loadRoute({ view: 'character', id: character.id }))
+                .catch((e: unknown) => setError(String(e instanceof Error ? e.message : e)))
+                .finally(() => setLevelBusy(false));
+            }}
+          >
+            Level up to {character.next_level}
+          </button>
+        </div>
+      ) : (
+        character.version_status.status === 'current' && (
+          <p className="level-cap-note">Higher levels are coming.</p>
+        )
       )}
       <Sheet sheet={character.sheet} />
     </div>

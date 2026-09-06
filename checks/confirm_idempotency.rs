@@ -6,6 +6,9 @@
 use checks::TestServer;
 use serde_json::{json, Value};
 
+#[path = "leveling_helpers.rs"]
+mod leveling;
+
 fn decision(id: &str, slot: &str, value: &str) -> Value {
     json!({
         "id": id,
@@ -264,4 +267,47 @@ fn stale_confirms_conflict_with_current_state() {
     );
     // And nothing from tab B entered the log.
     assert_eq!(log_len(&b["current"]), log_len(&a["draft"]));
+}
+
+/// level-up: a retried start (crash between save and ack) lands in the
+/// existing pending level; a retried finalize-pending after the level
+/// finalized is an idempotent no-op returning the leveled sheet.
+#[test]
+fn replayed_level_starts_and_finalizes_append_nothing() {
+    use leveling::{character, finalized_fighter, post_json, start_level};
+    let dir = tempfile::tempdir().unwrap();
+    let server = TestServer::spawn(dir.path());
+    let client = reqwest::blocking::Client::new();
+    let url = server.url.as_str();
+    let id = finalized_fighter(&client, url, "idem-lvl");
+    let view = character(&client, url, &id);
+    let version = view["version"].as_u64().unwrap();
+    let first = start_level(&client, url, &id);
+    // Retry with the original (now stale) version: same pending level.
+    let (status, retry) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/level-up"),
+        json!({"version": version}),
+    );
+    assert_eq!(status, 200, "{retry}");
+    assert_eq!(retry["draft"]["version"], first["version"]);
+    assert_eq!(
+        log_len(&retry["draft"]),
+        log_len(&first),
+        "a replayed start appends nothing"
+    );
+    let view = leveling::complete_level(&client, url, &id);
+    let leveled_version = view["version"].as_u64().unwrap();
+    // A retried finalize (stale version) on the now-finalized level: the
+    // idempotent no-op path, returning the current sheet.
+    let (status, again) = post_json(
+        &client,
+        url,
+        &format!("/api/characters/{id}/finalize"),
+        json!({"version": leveled_version - 1}),
+    );
+    assert_eq!(status, 200, "{again}");
+    assert_eq!(again["outcome"], "finalized");
+    assert_eq!(again["sheet"], view["sheet"]);
 }

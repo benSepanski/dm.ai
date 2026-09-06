@@ -2,7 +2,7 @@
   "claims_full_breadth": true,
   "foundry_sha256": "b0a649e6f9859350f7eca86e85082ac68b20309f4335c77bf6e1643aff009c8a",
   "foundry_tag": "pf2e-8.4.1",
-  "generated": "2026-08-30",
+  "generated": "2026-09-05",
   "missing_from_data": {
     "ancestries": {
       "count": 0,
@@ -52,6 +52,10 @@
   "overrides_used": [
     "feat.ancestry.gnome.fey-world-magic",
     "feat.ancestry.orc.tusks",
+    "feat.class.wizard.cantrip-expansion",
+    "feat.class.wizard.conceal-spell",
+    "feat.class.wizard.energy-ablation",
+    "feat.class.wizard.nonlethal-spell",
     "gear.barding-light-small-or-medium",
     "gear.chalk",
     "gear.clothing-explorers",
@@ -994,7 +998,7 @@
         "attacks",
         "defenses"
       ],
-      "file_hash": "6cae8c0f7abd9b4b3bd5ac3596ebdb19974fe7eb4f56fb4e796b857479504ef7",
+      "file_hash": "8090ed1d450f3b12b7cf0ca73cf3c671fc71cd28fe0e13addf6bab6ffc463b43",
       "mismatches": [],
       "verdict": "match",
       "waiver": null
@@ -1010,7 +1014,7 @@
         "attacks",
         "defenses"
       ],
-      "file_hash": "ad04f3c42629d5f07cbeaf61aae359421ed22656aa13b92bd811dab5db4b477a",
+      "file_hash": "b47ef30d356052d1ce4456635d9b5e78741cd0d2241faddf30fb06d04002e543",
       "mismatches": [],
       "verdict": "match",
       "waiver": null
@@ -1886,6 +1890,36 @@
       "verdict": "match",
       "waiver": null
     },
+    "feat.class.fighter.aggressive-block": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "66ba8f8d3fd53848f4884acbe4ccc54eccd3cdda1dcc921ccbc3f2e27a868b04",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.brutish-shove": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "e2a7caece0222e0ad35b86a0a1546596301e1f177fbbf802b3cbfafe96ecb491",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "feat.class.fighter.combat-assessment": {
       "fields_checked": [
         "existence",
@@ -1897,6 +1931,21 @@
         "actions"
       ],
       "file_hash": "89b44f677e62a760b9715f12894a149ab473d97ce711004fe63fc86123b8794e",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.combat-grab": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "633ab4728782c5fdc1fdc93822f5270773a3d05e4894752d60045e7e46129ccc",
       "mismatches": [],
       "verdict": "match",
       "waiver": null
@@ -1916,6 +1965,21 @@
       "verdict": "match",
       "waiver": null
     },
+    "feat.class.fighter.dueling-parry": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "f8d977ee291b6f8ec35c2bad6c1cf2d87960726e6c7b8dcb07bb48620c14a001",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "feat.class.fighter.exacting-strike": {
       "fields_checked": [
         "existence",
@@ -1927,6 +1991,36 @@
         "actions"
       ],
       "file_hash": "fd47a587fbd60a1fab4d29e8151239d9d522498d89b50e1cac8efbe316774697",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.intimidating-strike": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "cef9c2a8b1289d2e96bceff0068790811fcc1c9a8f2068423542a6f77ba8a59f",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.fighter.lunge": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "ef8d85aa34af331bf888bf9d2220451fe9dc33910f280e6d0f54d6447ebfe0ce",
       "mismatches": [],
       "verdict": "match",
       "waiver": null
@@ -2002,6 +2096,66 @@
         "actions"
       ],
       "file_hash": "bc66f4df59df4727c9686ee3d2d29e65d2d098b0cadb8fa837a17ce796e411f5",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.wizard.cantrip-expansion": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "285a5176fa664500116e2359fe7be32bc70932b34003aab4f25a2ed7749ec083",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.wizard.conceal-spell": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "27de26c75e2cf3ca1a41fb1c9d2cd23b1d8914bcda2895fe9221c98a95722346",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.wizard.energy-ablation": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "352887e7fa71613bacedc70a6a25002882b6577e662499dff0385f44f76d5bb1",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.class.wizard.nonlethal-spell": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites",
+        "traits",
+        "actions"
+      ],
+      "file_hash": "a288121e0faec289d453b88fb8c2d66f65caf00121b22eb04cbcb885e38dc15d",
       "mismatches": [],
       "verdict": "match",
       "waiver": null
@@ -2136,6 +2290,19 @@
       "verdict": "match",
       "waiver": null
     },
+    "feat.general.prescient-planner": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "c73bca19a1985c0ac45df4e1fde484b99d254cf33c60bcff8d7356b8fe4a0002",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "feat.general.ride": {
       "fields_checked": [
         "existence",
@@ -2171,6 +2338,19 @@
         "prerequisites"
       ],
       "file_hash": "8aceeb2a62aa60820121ac30ea554a1ecc14e075493488838a9b0b26a3a8c70b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.general.untrained-improvisation": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "80b5f932bf8d6f886aa11f5e2c6043ac53dd9c782cf1960d1509c78fa46d63f9",
       "mismatches": [],
       "verdict": "match",
       "waiver": null
@@ -2474,6 +2654,19 @@
       "verdict": "match",
       "waiver": null
     },
+    "feat.skill.intimidating-prowess": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "7b4bda406e75d6a6201c44ce4c76fa69e3e909c1a925ad56ade1e7c8e81d416b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "feat.skill.lengthy-diversion": {
       "fields_checked": [
         "existence",
@@ -2526,6 +2719,19 @@
       "verdict": "match",
       "waiver": null
     },
+    "feat.skill.nimble-crawl": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "a532507f5bd07645bf0898e9191d7cbc5d250b5d335a76fbdb30ef8b5e8c9c8d",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "feat.skill.no-cause-for-alarm": {
       "fields_checked": [
         "existence",
@@ -2561,6 +2767,19 @@
         "prerequisites"
       ],
       "file_hash": "410970e5dbf094d4c6622607abc4f2c2ff407c8ebf47220404ead81a9c2b582b",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "feat.skill.powerful-leap": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "level",
+        "category",
+        "prerequisites"
+      ],
+      "file_hash": "f5571e15fa3d197d3594f3a121c76b836462c681830358119aecf499bb09f2e1",
       "mismatches": [],
       "verdict": "match",
       "waiver": null
@@ -4709,6 +4928,61 @@
         "state_hash": "c1696d69869d6ea99abef75e5ae7042a5c85ddaacdf0cb1671491f7ece863d7d"
       }
     },
+    "spell.acid-grip": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "97f39407303de7ecbdf66e837fc2841c556e76547455bcb9f19d69aa64e0cc45",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.blazing-bolt": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "4474fd7fed73fe534fb199d286dcfca425dc20fd722a45b76f531a7a03a0693c",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.blur": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "0d4d5d85f58ef0e1bb20cb4dc2d27d67716b1910f3e8383cfe50f083674213e3",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "spell.breathe-fire": {
       "fields_checked": [
         "existence",
@@ -5011,6 +5285,24 @@
       "verdict": "match",
       "waiver": null
     },
+    "spell.invisibility": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions"
+      ],
+      "file_hash": "621a6f19d060bda0bc6586f3c768165cafa05813366dbed07798950596af58ec",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "spell.jump": {
       "fields_checked": [
         "existence",
@@ -5085,6 +5377,26 @@
       "verdict": "match",
       "waiver": null
     },
+    "spell.noise-blast": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "area",
+        "heightening"
+      ],
+      "file_hash": "83682e52de007efc3815be64001d1dcb05d6c3e5358a1a5215d6cecb800931af",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "spell.pest-form": {
       "fields_checked": [
         "existence",
@@ -5117,6 +5429,25 @@
         "traditions"
       ],
       "file_hash": "6f943c3b5888091b13fd2061788da2b2c71024312c1c30ced852528234fc5844",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
+    "spell.resist-energy": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "rank",
+        "traits",
+        "actions",
+        "defense",
+        "range",
+        "targets",
+        "duration",
+        "traditions",
+        "heightening"
+      ],
+      "file_hash": "da6f30c73dbaf9309687d2425d8b404f8ba25190d04a93e448a8df1a22ff197a",
       "mismatches": [],
       "verdict": "match",
       "waiver": null
@@ -6401,6 +6732,6 @@
       "waiver": null
     }
   },
-  "rules_version": "pf2e-pc.0.3.1",
+  "rules_version": "pf2e-pc.0.4.0",
   "tool_version": "0.1.0"
 }

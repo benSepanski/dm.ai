@@ -391,3 +391,133 @@ fn unknown_class_refuses_and_writes_nothing() {
         .contains("unknown class"));
     assert!(character_files(dir.path()).is_empty());
 }
+
+// ---- Leveled seed sweep (level-up architecture): test-only random leveling ----
+//
+// The satisfiability and cross-level-prerequisite rows in one: for every
+// shipped class and a seed sweep, a minted character advances level by
+// level to the cap through the same sampler and planner, each level's
+// slots fillable, the checklist empty at each finalize, and the file
+// verify-clean. At least one seed takes a prerequisite-bearing level-2
+// feat. No route and no UI exist for this — it is harness machinery.
+
+fn level_randomly(
+    engine: &ruleset_pf2e::Pf2eEngine,
+    sampler: &mut Sampler,
+    log: &[types::Decision],
+    level: u32,
+    tag: &str,
+) -> Vec<types::Decision> {
+    let advance = DecisionInput {
+        id: DecisionId::new(format!("{tag}.level-{level}.advance")),
+        slot: SlotId::new(ruleset_pf2e::slot_level_advance(level)),
+        selection: Selection::Option(OptionId::new(format!("advance.{level}"))),
+        source: DecisionSource::Player,
+    };
+    let log = match engine.append(log, advance).expect("advance applies") {
+        engine_core::AppendOutcome::Appended(log) => log,
+        engine_core::AppendOutcome::AlreadyPresent => unreachable!(),
+    };
+    let mut source = random_source(sampler);
+    let mut plan = engine
+        .expand_suggestions(
+            &log,
+            &mut source,
+            &|slot| DecisionId::new(format!("{tag}.level-{level}.{slot}")),
+            DecisionSource::Random,
+        )
+        .expect("level expansion folds");
+    for _ in 0..8 {
+        let projection = engine.project(&plan.log).expect("projects");
+        let flagged: Vec<SlotId> = projection
+            .checklist
+            .iter()
+            .map(|e| e.slot.clone())
+            .filter(|slot| {
+                plan.log
+                    .iter()
+                    .any(|d| d.slot == *slot && d.source == DecisionSource::Random)
+            })
+            .collect();
+        if flagged.is_empty() {
+            break;
+        }
+        let mut cleared = plan.log.clone();
+        for slot in &flagged {
+            if let Ok(new_log) = engine.clear(&cleared, slot) {
+                cleared = new_log;
+            }
+        }
+        plan = engine
+            .expand_suggestions(
+                &cleared,
+                &mut source,
+                &|slot| DecisionId::new(format!("{tag}.level-{level}.{slot}")),
+                DecisionSource::Random,
+            )
+            .expect("re-expansion folds");
+    }
+    assert!(
+        plan.unresolved.is_empty(),
+        "level {level} left slots unresolved: {:#?}",
+        plan.unresolved
+    );
+    plan.log
+}
+
+#[test]
+fn minted_characters_level_randomly_to_the_cap_across_seeds() {
+    let engine = engine();
+    let data = checks::load_rules_data();
+    let cap = data.max_advancement_level();
+    let mut took_prerequisite_feat = false;
+    for (class_id, seed, base) in sweep() {
+        let mut sampler = Sampler::new(seed.wrapping_mul(7919));
+        let mut log = base.clone();
+        for level in 2..=cap {
+            log = level_randomly(
+                &engine,
+                &mut sampler,
+                &log,
+                level,
+                &format!("{class_id}-{seed}"),
+            );
+            let projection = engine.project(&log).expect("leveled log projects");
+            assert!(
+                projection.checklist.is_empty(),
+                "{class_id} seed {seed} level {level}: checklist not empty: {:#?}",
+                projection.checklist
+            );
+            assert!(projection.can_finalize);
+            let state = engine.fold(&log).unwrap();
+            assert_eq!(state.level() as u32, level);
+        }
+        // Cross-level prerequisites: did this seed take a level-2 feat that
+        // carries a prerequisite (judged against the leveled state)?
+        for d in &log {
+            if let Selection::Option(id) = &d.selection {
+                let has_prereq = data
+                    .general_feat(id.as_str())
+                    .map(|f| !f.prerequisites.is_empty())
+                    .or_else(|| {
+                        data.class_feat(id.as_str())
+                            .map(|f| !f.prerequisites.is_empty())
+                    })
+                    .unwrap_or(false);
+                if has_prereq && d.slot.as_str().starts_with("pf2e.level.") {
+                    took_prerequisite_feat = true;
+                }
+            }
+        }
+        // Every level boundary is a complete character (the history seam).
+        for (index, d) in log.iter().enumerate() {
+            if ruleset_pf2e::advance_level_of(d.slot.as_str()).is_some() {
+                assert!(engine.project(&log[..index]).unwrap().can_finalize);
+            }
+        }
+    }
+    assert!(
+        took_prerequisite_feat,
+        "no swept build took a prerequisite-bearing level-up feat"
+    );
+}

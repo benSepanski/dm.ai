@@ -1308,5 +1308,103 @@
       "license": "ORC",
       "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
     }
+  },
+  {
+    "id": "feat.skill.powerful-leap",
+    "level": 2,
+    "name": "Powerful Leap",
+    "prerequisites": [
+      {
+        "kind": "skill_rank",
+        "skill": "skill.athletics",
+        "rank": "expert"
+      }
+    ],
+    "text": "When you Leap, you can jump 5 feet up with a vertical Leap, and you increase the distance you can jump horizontally by 5 feet.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 261,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Powerful+Leap",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.skill.intimidating-prowess",
+    "level": 2,
+    "name": "Intimidating Prowess",
+    "prerequisites": [
+      {
+        "kind": "attribute",
+        "attribute": "str",
+        "value": 3
+      },
+      {
+        "kind": "skill_rank",
+        "skill": "skill.intimidation",
+        "rank": "expert"
+      }
+    ],
+    "text": "In situations where you can physically menace the target when you Coerce or Demoralize, you gain a +1 circumstance bonus to your Intimidation check and you ignore the penalty for not sharing a language. If your Intimidation rank is master, the bonus increases to +2.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 260,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Intimidating+Prowess",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.skill.nimble-crawl",
+    "level": 2,
+    "name": "Nimble Crawl",
+    "prerequisites": [
+      {
+        "kind": "skill_rank",
+        "skill": "skill.acrobatics",
+        "rank": "expert"
+      }
+    ],
+    "text": "You can Crawl at half your Speed rather than 5 feet; if your Acrobatics rank is master, you can Crawl at full Speed, and if it is legendary, you aren't off-guard while prone.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 261,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Nimble+Crawl",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.general.untrained-improvisation",
+    "level": 3,
+    "name": "Untrained Improvisation",
+    "prerequisites": [],
+    "text": "You have a knack for improvising in areas you have little training in: your proficiency bonus to untrained skill checks becomes equal to your level (instead of +0), and at 7th level it also applies to untrained Lore checks.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 263,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Untrained+Improvisation",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
+  },
+  {
+    "id": "feat.general.prescient-planner",
+    "level": 3,
+    "name": "Prescient Planner",
+    "prerequisites": [],
+    "text": "You always seem to have the right tool: once per day, when you spend 1 minute retrieving an item from your pack, you can produce an item of 1 Bulk or less that you could have purchased in the last settlement you visited, paying its price. You must have had the opportunity to buy it.",
+    "effects": [],
+    "source": {
+      "book": "Pathfinder Player Core",
+      "page": 262,
+      "url": "https://2e.aonprd.com/Search.aspx?query=Prescient+Planner",
+      "license": "ORC",
+      "attribution": "Pathfinder Player Core © 2023 Paizo Inc."
+    }
   }
 ]
