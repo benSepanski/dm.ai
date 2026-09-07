@@ -127,3 +127,7 @@ points) split off as `dnd-hp-dice`.
 - [x] 7. Full gate run (fmt, clippy, deny, tests + budget, wasm size,
   bindings fresh, npm typecheck/lint/test/e2e) and the report
   `.checkpoints/run/dnd-dice/report.md`.
+- [x] 8. Review iteration (2026-09-06): tap-to-place tray for array and
+  roll (per-listing option ids, state-dependent presentation hint), cost
+  stepper for point buy, fixed-height finalize status on narrow screens;
+  unit, e2e, and Rust checks updated; report reissued.

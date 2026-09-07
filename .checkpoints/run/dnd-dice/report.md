@@ -1,6 +1,46 @@
 # dnd-dice — rolled ability scores and hit points as recorded inputs — report
 
-Checkpoint: `dnd-dice` · Branch: `checkpoint/dnd-dice` · Status: delivered
+Checkpoint: `dnd-dice` · Branch: `checkpoint/dnd-dice` · Status: delivered (reissued after review feedback)
+
+## Review feedback and the iteration
+
+Ben's review of the first report (2026-09-06) raised three things, all
+in the ability-score step:
+
+1. **The assignment after rolling was confusing**: two equal totals
+   showed as one value, and a value already assigned could be picked
+   again. He asked for something closer to drag and drop.
+2. **On a narrow window the screen jumped** when picking options at the
+   Origin step.
+3. **Standard Array was hard to use through the same selects, and Point
+   Buy never showed what each score costs.**
+
+Reproduced in the browser at phone width, then fixed on the same branch:
+
+- **Tap-to-place assignment** for the array and the roll. The values to
+  place are a tray of chips — one chip per offered listing, so a total
+  rolled twice is two chips — and every ability is a row. Tap a chip,
+  then the row; tap a placed value to take it back; tap a filled row
+  while holding a chip to swap. A placed chip greys out, so a value can
+  never be picked twice by accident. Chips match rows by position and
+  the editor reads no id and adds nothing up.
+- **A cost stepper for Point Buy**: each ability row steps through the
+  published scores with that score's cost beside it ("9 points"); the
+  always-on Points meter shows what is left, and an overspend is still
+  the checklist's verdict.
+- **A steady step nav on narrow screens.** The cause was the
+  "Unconfirmed changes" chip: on a phone the step nav sits above the
+  cards, and the chip appearing grew it by 39 px the moment a tentative
+  pick landed. The nav's finalize status region now keeps a fixed height
+  on narrow screens (measured: 475 px before and after a pick, scroll
+  position unchanged).
+
+Under the hood the presentation hint became state-dependent (the same
+assignment slot renders as `assign-pool` under the array or a roll and
+as `assign-budget` under a point buy), and a value offered more than
+once is one option per listing with an instance-suffixed id
+(`score.str.12`, `score.str.12.2`); the fold ignores the suffix, so every
+existing log and fixture is unchanged.
 
 ## What changed and why
 
@@ -74,10 +114,12 @@ cargo run --release -p server -- --data-dir ./campaign-dice
    scores" card says nothing is rolled yet and the assignment waits on it.
    Tap **Roll**: six sets of four faces appear, the dropped die named per
    set ("6, 5, 3, 1 → 14 (dropped 1)"), the badge says *rolled*, and the
-   assignment offers the six totals under every ability. Assign them
-   (two equal totals go to two abilities) and hand-check each total from
-   its faces and the sidebar scores from totals plus the Soldier's
-   increases.
+   assignment card shows the six totals as chips — a total rolled twice
+   is two chips. Tap a chip, then the ability row it goes to; a placed
+   chip greys out, and tapping a placed value returns it. Hand-check each
+   total from its faces and the sidebar scores from totals plus the
+   Soldier's increases. Try it at phone width too: the cards stay put as
+   you pick.
 2. **The reroll.** Tap **Roll again**: the dialog says every earlier set
    stays and names the assignment it clears. Confirm: two sets listed in
    order, the first greyed as superseded, the second live; the assignment
@@ -87,10 +129,11 @@ cargo run --release -p server -- --data-dir ./campaign-dice
    dice**: twenty-four boxes. Type two identical sets and one 6, 6, 6, 1;
    put a 7 in one box — the card says every face must be 1 to 6 and
    Confirm stays disabled. Fix it, confirm: the set is tagged *entered*
-   and its totals read 18, 12, 12, 10, 9, 8. Assign 18 to Strength and
-   the twelves to two abilities: the sidebar reads Strength **20 (+5)**,
-   the cap, with the Ability Scores step complete. Then tap Roll again: a
-   *rolled* set lands live above the entered one.
+   and its totals read 18, 12, 12, 10, 9, 8 — the tray shows two 12
+   chips. Place 18 on Strength and the twelves on two abilities: the
+   sidebar reads Strength **20 (+5)**, the cap, with the Ability Scores
+   step complete. Then tap Roll again: a *rolled* set lands live above
+   the entered one.
 4. **The double tap.** Tap Roll again twice as fast as you can: one new
    set. (The button is busy after the first tap.)
 5. **The hit die.** Finish and finalize Ysolde (skills, style, masteries,
@@ -139,7 +182,9 @@ cargo run --release -p server -- --data-dir ./campaign-dice --dice-seed 7
 10. **Nothing else moved.** Torvald, Sylvenne, Brannock, and Nell open
     unchanged; a fresh PF2e character meets no roll card; a fresh 5.5e
     character choosing Standard Array or Point Cost meets none either;
-    random mint still pins the array.
+    random mint still pins the array. Standard Array now places by tap
+    from six chips; Point Cost steps each ability with its cost shown
+    ("15 — 9 points") and the meter draining.
 11. **Intent checks.** Read a rolled set in the file: is it obviously how
     an attack roll or a saving throw would be recorded later — faces on a
     die, grouped, tagged — or is it ability-score-shaped? Does keeping
@@ -209,6 +254,12 @@ cargo run --release -p server -- --data-dir ./campaign-dice --dice-seed 7
   equal totals each name their own group.
 - **The cut to `dnd-hp-dice` was not needed**: the score stories were
   green before the hit-dice tickets started.
+- **Presentation hints are now a function of state** in engine-core (a
+  boxed closure like `kind`), the smallest change that lets one slot
+  render two ways; every registration site updated mechanically.
+- **Chips match rows by position, not by id**: the k-th option of every
+  ability group is the same listing, so the tray never parses an id;
+  the engine keeps availability and legality by count as before.
 
 ## Agent evidence
 
@@ -219,12 +270,12 @@ Final run on the branch head (2026-09-06):
 | `cargo fmt --all -- --check` | clean |
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `cargo deny check` | advisories, bans, licenses, sources ok |
-| `cargo test --workspace --no-fail-fast` | 22 test binaries with tests, 229 passed, 0 failed, 2 ignored (fixture regenerators) |
+| `cargo test --workspace --no-fail-fast` | 22 test binaries with tests, 229 passed, 0 failed, 2 ignored (fixture regenerators) — rerun after the iteration, same |
 | `reference-check --system dnd5e attest` | 104 records: 103 match, 1 waived (the pre-existing Point Cost naming waiver), 0 mismatch |
 | WASM bundle (both rulesets) | 1,729,479 bytes, one module (budget 2,621,440); bindings fresh after a rebuild |
 | `npm run typecheck`, `npm run lint` | clean |
-| `npm test` (vitest) | 10 files, 65 tests passed |
-| `npm run e2e` (Playwright, full suite) | 53 passed, 0 failed (1.1 min) — `dice.spec.ts` 4 walks, `dnd.spec.ts` updated for the optional hit-die card, every PF2e spec unchanged |
+| `npm test` (vitest) | 10 files, 66 tests passed (the grouped-editor tests rewritten for the tray and the stepper) |
+| `npm run e2e` (Playwright, full suite) | 53 passed, 0 failed (1.2 min) — `dice.spec.ts` 4 walks and `dnd.spec.ts` drive the tray and the stepper through shared helpers; every PF2e spec unchanged |
 
 Test-suite wall time: on this machine the whole suite measures 33 s idle
 against main's 39 s measured the same way minutes apart — the noise floor
@@ -236,7 +287,7 @@ built through confirms instead of a mint). CI's 20 s gate is the arbiter;
 if it trips, the seeded and crash rows are the candidates to move behind
 a slow tag.
 
-Branch: 8 commits on `checkpoint/dnd-dice`; 59 files changed against `main`.
+Branch: 10 commits on `checkpoint/dnd-dice`; 79 files changed against `main`.
 
 ## Complaints logged
 
