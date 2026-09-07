@@ -81,6 +81,7 @@ pub struct WireTypeExports {
     pub create_request: types::CreateCharacterRequest,
     pub confirm_request: types::ConfirmRequest,
     pub confirm_outcome: types::ConfirmOutcome,
+    pub roll_request: types::RollRequest,
     pub clear_request: types::ClearRequest,
     pub clear_outcome: types::ClearOutcome,
     pub step_request: types::StepRequest,

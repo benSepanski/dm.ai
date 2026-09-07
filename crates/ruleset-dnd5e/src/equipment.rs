@@ -22,7 +22,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_EQUIPMENT),
         label: "Class starting equipment".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|state| match state.class {
             Some(_) => Availability::Open,

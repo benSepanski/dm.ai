@@ -144,6 +144,20 @@ export function amendDecision(
   });
 }
 
+/** Ask the server to roll a roll slot's dice and record the set as the
+ * app's own; the client mints the decision id (the idempotency key). */
+export function rollDice(
+  id: string,
+  version: number,
+  slot: SlotId,
+  decisionId: string,
+): Promise<ConfirmOutcome> {
+  return request(`/api/characters/${encodeURIComponent(id)}/roll`, {
+    method: 'POST',
+    body: JSON.stringify({ slot, version, decision_id: decisionId }),
+  });
+}
+
 export function clearSlot(id: string, version: number, slot: SlotId): Promise<ClearOutcome> {
   return request(`/api/characters/${encodeURIComponent(id)}/clear`, {
     method: 'POST',

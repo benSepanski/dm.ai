@@ -1,8 +1,16 @@
 // One choice slot: options, tentative selection, confirm, and the
 // change-with-dependent-clearing flow. Pure presentation — counts, legality,
 // and effects all come from the engine.
-import { useState } from 'react';
-import type { ClearPreview, Decision, MeterView, OptionView, Selection, SlotView } from './engine';
+import { useEffect, useRef, useState } from 'react';
+import type {
+  ClearPreview,
+  Decision,
+  MeterView,
+  OptionView,
+  RolledSet,
+  Selection,
+  SlotView,
+} from './engine';
 
 /**
  * Option lists longer than this get a text filter (spec req 8: full breadth
@@ -81,6 +89,8 @@ export function SlotCard({
   tentative,
   onTentative,
   onConfirm,
+  onRoll,
+  rollCooling = false,
   onRequestChange,
   busy,
   ack = null,
@@ -92,6 +102,10 @@ export function SlotCard({
   tentative: TentativeSelection;
   onTentative: (selection: TentativeSelection) => void;
   onConfirm: (selection: Selection) => void;
+  /** Ask the server to roll this slot's dice (roll slots only). */
+  onRoll?: () => void;
+  /** The Roll button rests for a moment after a roll answers. */
+  rollCooling?: boolean;
   onRequestChange: () => void;
   busy: boolean;
   /** Transient save acknowledgment ("Saved — 1 skill choice left"). */
@@ -116,8 +130,14 @@ export function SlotCard({
   // Partial AND illegal slots stay editable: the editor opens preloaded
   // with the confirmed picks so the fix happens in place, and Confirm
   // amends.
+  // A roll slot is always open: its history is the decision, and rolling
+  // again or entering more dice appends to it — there is nothing to
+  // "change", only more to record.
   const editing =
-    confirmed === null || slot.status === 'partial' || slot.status === 'illegal';
+    slot.kind.kind === 'roll' ||
+    confirmed === null ||
+    slot.status === 'partial' ||
+    slot.status === 'illegal';
   const effectiveTentative =
     tentative ??
     (slot.status === 'partial' || slot.status === 'illegal'
@@ -187,6 +207,8 @@ export function SlotCard({
           tentative={effectiveTentative}
           onTentative={onTentative}
           onConfirm={onConfirm}
+          onRoll={onRoll}
+          rollCooling={rollCooling}
           busy={busy}
         />
       ) : (
@@ -231,6 +253,13 @@ function ConfirmedSummary({ slot, decision }: { slot: SlotView; decision: Decisi
     case 'text':
       text = decision.selection.value;
       break;
+    case 'rolled': {
+      // The live set is the one available history entry.
+      const live = slot.options.find((o) => o.available);
+      text = live?.label ?? `${decision.selection.value.length} set(s) recorded`;
+      chosenIds = live !== undefined ? [live.id] : [];
+      break;
+    }
   }
   // A confirmed choice keeps its details readable — committing to an
   // option must never mean losing the ability to re-read what it does.
@@ -282,12 +311,16 @@ function SlotEditor({
   tentative,
   onTentative,
   onConfirm,
+  onRoll,
+  rollCooling,
   busy,
 }: {
   slot: SlotView;
   tentative: TentativeSelection;
   onTentative: (selection: TentativeSelection) => void;
   onConfirm: (selection: Selection) => void;
+  onRoll?: (() => void) | undefined;
+  rollCooling: boolean;
   busy: boolean;
 }) {
   switch (slot.kind.kind) {
@@ -325,11 +358,23 @@ function SlotEditor({
           />
         );
       }
-      // One pick per group: a select per distinct option group (the
-      // group string is the label), one option id per group.
-      if (slot.presentation_hint === 'one-per-group') {
+      // One pick per group, placed by tap from a tray of values (a fixed
+      // pool) or stepped through a cost table (a budget); the group string
+      // is the row label, one option id per group either way.
+      if (slot.presentation_hint === 'assign-pool') {
         return (
-          <PerGroupEditor
+          <PoolEditor
+            slot={slot}
+            tentative={tentative}
+            onTentative={onTentative}
+            onConfirm={onConfirm}
+            busy={busy}
+          />
+        );
+      }
+      if (slot.presentation_hint === 'assign-budget') {
+        return (
+          <BudgetEditor
             slot={slot}
             tentative={tentative}
             onTentative={onTentative}
@@ -366,6 +411,21 @@ function SlotEditor({
           tentative={tentative}
           onTentative={onTentative}
           onConfirm={onConfirm}
+          busy={busy}
+        />
+      );
+    case 'roll':
+      return (
+        <RollEditor
+          slot={slot}
+          sides={slot.kind.sides}
+          dice={slot.kind.dice}
+          groups={slot.kind.groups}
+          tentative={tentative}
+          onTentative={onTentative}
+          onConfirm={onConfirm}
+          onRoll={onRoll}
+          rollCooling={rollCooling}
           busy={busy}
         />
       );
@@ -758,13 +818,127 @@ export function optionGroups(
 }
 
 /**
- * One pick per group: a Multi slot whose options carry a group renders a
- * labeled select per distinct group; the selection is one option id per
- * group. The confirm opens once every group has a pick — legality (each
- * value once, budgets) is the engine's verdict through the meters and the
- * checklist, exactly as for every other editor.
+ * Tap-to-place assignment (hint `assign-pool`): the values to place are
+ * the first group's options, one chip per offered listing (a value rolled
+ * twice is two chips); every group is a row. Tap a chip, then a row, to
+ * place it; tap a placed value to return it to the tray; tap a row while
+ * holding a chip to swap. Chips and rows match by position — the k-th
+ * option of every group is the same value — so the editor reads no id and
+ * adds nothing up. Legality (each value once, budgets) stays the engine's
+ * verdict through the meters and the checklist.
  */
-function PerGroupEditor({
+function PoolEditor({
+  slot,
+  tentative,
+  onTentative,
+  onConfirm,
+  busy,
+}: {
+  slot: SlotView;
+  tentative: TentativeSelection;
+  onTentative: (selection: TentativeSelection) => void;
+  onConfirm: (selection: Selection) => void;
+  busy: boolean;
+}) {
+  const [held, setHeld] = useState<number | null>(null);
+  const picked = tentative?.kind === 'options' ? tentative.value : [];
+  const groups = optionGroups(slot.options);
+  const chips = groups[0]?.options ?? [];
+  const placements = groups.map((g) => g.options.findIndex((o) => picked.includes(o.id)));
+  const used = new Set(placements.filter((i) => i >= 0));
+  const emit = (next: number[]) => {
+    const ids = groups.flatMap((g, gi) => {
+      const index = next[gi] ?? -1;
+      const option = index >= 0 ? g.options[index] : undefined;
+      return option === undefined ? [] : [option.id];
+    });
+    onTentative(ids.length === 0 ? null : { kind: 'options', value: ids });
+  };
+  const tapRow = (gi: number) => {
+    const next = [...placements];
+    if (held !== null) {
+      next[gi] = held;
+      setHeld(null);
+      emit(next);
+    } else if ((next[gi] ?? -1) >= 0) {
+      next[gi] = -1;
+      emit(next);
+    }
+  };
+  const remaining = placements.filter((i) => i < 0).length;
+  return (
+    <div className="pool-editor">
+      <p className="multi-counter" id={`counter-${slot.id}`} data-testid={`counter-${slot.id}`}>
+        {remaining > 0 ? `${remaining} of ${groups.length} left` : 'All choices made'}
+      </p>
+      <div className="pool-tray" role="group" aria-label="values to place">
+        {chips.length === 0 ? (
+          <span className="pool-empty">Nothing to place yet.</span>
+        ) : (
+          chips.map((chip, k) => (
+            <button
+              type="button"
+              key={chip.id}
+              className={`pool-chip ${used.has(k) ? 'pool-used' : ''} ${held === k ? 'pool-held' : ''}`}
+              disabled={busy || used.has(k)}
+              aria-pressed={held === k}
+              title={used.has(k) ? 'placed — tap its row to take it back' : 'tap, then tap a row'}
+              onClick={() => setHeld(held === k ? null : k)}
+            >
+              {chip.label}
+              {chip.badge != null && <span className="option-badge">{chip.badge}</span>}
+            </button>
+          ))
+        )}
+      </div>
+      <p className="pool-hint">
+        {held !== null
+          ? 'Now tap a row to place it.'
+          : remaining > 0
+            ? 'Tap a value, then the row it goes to. Tap a placed value to take it back.'
+            : 'Every row is filled. Tap a placed value to take it back.'}
+      </p>
+      <div className="pool-rows">
+        {groups.map((g, gi) => {
+          const index = placements[gi] ?? -1;
+          const placed = index >= 0 ? g.options[index] : undefined;
+          return (
+            <button
+              type="button"
+              key={g.group}
+              className={`pool-row ${placed !== undefined ? 'pool-filled' : ''} ${held !== null ? 'pool-target' : ''}`}
+              data-testid={`pool-row-${g.group}`}
+              disabled={busy}
+              onClick={() => tapRow(gi)}
+              aria-label={`${g.group === '' ? 'Other' : g.group}: ${placed?.label ?? 'empty'}`}
+            >
+              <span className="pool-row-label">{g.group === '' ? 'Other' : g.group}</span>
+              <span className="pool-row-value">
+                {placed?.label ?? (held !== null ? 'place here' : '—')}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <ConfirmButton
+        slotId={slot.id}
+        label={slot.label.toLowerCase()}
+        disabledReason={remaining > 0 ? `Place a value on every row (${remaining} left).` : null}
+        busy={busy}
+        onClick={() => onConfirm({ kind: 'options', value: picked })}
+      />
+    </div>
+  );
+}
+
+/**
+ * Budget assignment (hint `assign-budget`): every group is a row with a
+ * stepper over that group's options in the order the engine lists them,
+ * showing the current option's render-ready cost beside it; the always-on
+ * budget meter above the card shows what is left. The editor never adds
+ * costs up — a spend over the budget is the engine's verdict.
+ */
+function BudgetEditor({
   slot,
   tentative,
   onTentative,
@@ -779,50 +953,76 @@ function PerGroupEditor({
 }) {
   const picked = tentative?.kind === 'options' ? tentative.value : [];
   const groups = optionGroups(slot.options);
-  const pickFor = (group: { options: OptionView[] }): string =>
-    group.options.find((o) => picked.includes(o.id))?.id ?? '';
-  const setGroup = (group: { options: OptionView[] }, value: string) => {
-    const own = new Set(group.options.map((o) => o.id));
-    const kept = picked.filter((id) => !own.has(id));
-    // Keep the selection in group order so the same picks always
-    // serialize the same way.
-    const next = groups.flatMap((g) => {
-      if (g === group) {
-        return value === '' ? [] : [value];
-      }
-      return g.options.filter((o) => kept.includes(o.id)).map((o) => o.id);
+  const placements = groups.map((g) => g.options.findIndex((o) => picked.includes(o.id)));
+  const emit = (next: number[]) => {
+    const ids = groups.flatMap((g, gi) => {
+      const index = next[gi] ?? -1;
+      const option = index >= 0 ? g.options[index] : undefined;
+      return option === undefined ? [] : [option.id];
     });
-    onTentative(next.length === 0 ? null : { kind: 'options', value: next });
+    onTentative(ids.length === 0 ? null : { kind: 'options', value: ids });
   };
-  const remaining = groups.filter((g) => pickFor(g) === '').length;
+  const step = (gi: number, delta: number) => {
+    const group = groups[gi];
+    if (group === undefined) {
+      return;
+    }
+    const current = placements[gi] ?? -1;
+    const last = group.options.length - 1;
+    const next = [...placements];
+    if (current < 0) {
+      next[gi] = delta > 0 ? 0 : -1;
+    } else {
+      next[gi] = Math.min(last, Math.max(0, current + delta));
+    }
+    emit(next);
+  };
+  const remaining = placements.filter((i) => i < 0).length;
   return (
-    <div>
+    <div className="budget-editor">
       <p className="multi-counter" id={`counter-${slot.id}`} data-testid={`counter-${slot.id}`}>
         {remaining > 0 ? `${remaining} of ${groups.length} left` : 'All choices made'}
       </p>
-      <div className="select-rows">
-        {groups.map((group) => (
-          <label key={group.group} className="select-row">
-            <span>{group.group === '' ? 'Other' : group.group}</span>
-            <select
-              value={pickFor(group)}
-              disabled={busy}
-              onChange={(e) => setGroup(group, e.target.value)}
-            >
-              <option value="">— choose —</option>
-              <SelectOptions options={group.options} />
-            </select>
-          </label>
-        ))}
+      <div className="budget-rows">
+        {groups.map((g, gi) => {
+          const index = placements[gi] ?? -1;
+          const current = index >= 0 ? g.options[index] : undefined;
+          const label = g.group === '' ? 'Other' : g.group;
+          return (
+            <div className="budget-row" key={g.group} data-testid={`budget-row-${g.group}`}>
+              <span className="budget-row-label">{label}</span>
+              <button
+                type="button"
+                className="budget-step"
+                aria-label={`${label} lower`}
+                disabled={busy || index <= 0}
+                onClick={() => step(gi, -1)}
+              >
+                −
+              </button>
+              <span className="budget-row-value" data-testid={`budget-value-${g.group}`}>
+                {current?.label ?? '—'}
+              </span>
+              <button
+                type="button"
+                className="budget-step"
+                aria-label={`${label} higher`}
+                disabled={busy || index >= g.options.length - 1}
+                onClick={() => step(gi, 1)}
+              >
+                +
+              </button>
+              <span className="budget-row-cost">
+                {current?.summary ?? (index < 0 ? 'tap + to start' : '')}
+              </span>
+            </div>
+          );
+        })}
       </div>
       <ConfirmButton
         slotId={slot.id}
         label={slot.label.toLowerCase()}
-        disabledReason={
-          remaining > 0
-            ? `Pick one for every row to save (${remaining} left).`
-            : null
-        }
+        disabledReason={remaining > 0 ? `Set every row to save (${remaining} left).` : null}
         busy={busy}
         onClick={() => onConfirm({ kind: 'options', value: picked })}
       />
@@ -998,6 +1198,195 @@ function TextEditor({
         busy={busy}
         onClick={() => onConfirm({ kind: 'text', value })}
       />
+    </div>
+  );
+}
+
+/**
+ * Recorded dice: the slot's history (one render-ready entry per set,
+ * from the engine — totals, faces, tag, which is live), a button that asks
+ * the server to roll, and a grid to enter physical dice by hand. The grid
+ * is sized from the slot's kind; every number the card shows arrives as
+ * text. The UI adds nothing up.
+ */
+function RollEditor({
+  slot,
+  sides,
+  dice,
+  groups,
+  tentative,
+  onTentative,
+  onConfirm,
+  onRoll,
+  rollCooling,
+  busy,
+}: {
+  slot: SlotView;
+  sides: number;
+  dice: number;
+  groups: number;
+  tentative: TentativeSelection;
+  onTentative: (selection: TentativeSelection) => void;
+  onConfirm: (selection: Selection) => void;
+  onRoll?: (() => void) | undefined;
+  rollCooling: boolean;
+  busy: boolean;
+}) {
+  const [entering, setEntering] = useState(false);
+  // Every set stays visible in a scrolling list; the live (last) set is
+  // scrolled into view whenever the history grows.
+  const liveRef = useRef<HTMLLIElement | null>(null);
+  useEffect(() => {
+    const live = liveRef.current;
+    if (live !== null && typeof live.scrollIntoView === 'function') {
+      live.scrollIntoView({ block: 'nearest' });
+    }
+  }, [slot.options.length]);
+  const [faces, setFaces] = useState<string[][]>(() =>
+    Array.from({ length: groups }, () => Array.from({ length: dice }, () => '')),
+  );
+  const history = slot.options;
+
+  const parsed: number[][] = faces.map((g) =>
+    g.map((f) => (f.trim() === '' ? Number.NaN : Number(f))),
+  );
+  const complete = parsed.every((g) => g.every((f) => Number.isInteger(f)));
+  // A typed value that is a number but not a whole one (3.5) is neither
+  // missing nor off the die: say what a face is.
+  const fractional = parsed.some((g) => g.some((f) => Number.isFinite(f) && !Number.isInteger(f)));
+  const onDie = parsed.every((g) => g.every((f) => !Number.isInteger(f) || (f >= 1 && f <= sides)));
+  const entered: RolledSet | null =
+    complete && onDie ? { groups: parsed, origin: 'entered' } : null;
+
+  const setFace = (g: number, d: number, value: string) => {
+    const next = faces.map((row) => [...row]);
+    const row = next[g];
+    if (row === undefined) {
+      return;
+    }
+    row[d] = value;
+    setFaces(next);
+    const nextParsed = next.map((row) => row.map((f) => (f.trim() === '' ? Number.NaN : Number(f))));
+    const ok =
+      nextParsed.every((row) => row.every((f) => Number.isInteger(f) && f >= 1 && f <= sides));
+    onTentative(ok ? { kind: 'rolled', value: [{ groups: nextParsed, origin: 'entered' }] } : null);
+  };
+
+  const disabledReason = fractional
+    ? `Faces are whole numbers from 1 to ${sides}.`
+    : !complete
+    ? groups === 1 && dice === 1
+      ? "Enter the die's face."
+      : groups === 1
+        ? `Enter all ${dice} dice.`
+        : `Enter every die (${groups} sets of ${dice}).`
+    : !onDie
+      ? `Every face must be from 1 to ${sides}.`
+      : null;
+
+  return (
+    <div className="roll-editor">
+      {history.length === 0 ? (
+        <p className="roll-empty">Nothing rolled yet.</p>
+      ) : (
+        <div className="roll-history" data-testid={`roll-history-${slot.id}`}>
+          <p className="roll-count" data-testid={`roll-count-${slot.id}`}>
+            {history.length === 1
+              ? '1 set recorded.'
+              : `${history.length} sets recorded — every one stays in your record; the last is live.`}
+          </p>
+          <ol className="roll-sets">
+            {history.map((set) => (
+              <li
+                key={set.id}
+                ref={set.available ? liveRef : null}
+                className={`roll-set ${set.available ? 'roll-live' : 'roll-superseded'}`}
+                data-testid="roll-set"
+                data-live={set.available || undefined}
+              >
+                <span className="roll-totals">{set.label}</span>
+                {set.badge != null && <span className="option-badge">{set.badge}</span>}
+                <span className="roll-summary">{set.summary}</span>
+                {set.details.length > 0 && (
+                  <ul className="roll-faces">
+                    {set.details.map((d, i) => (
+                      <li key={i}>{d}</li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      <div className="roll-actions">
+        <button
+          type="button"
+          className="roll-button"
+          disabled={busy || rollCooling || onRoll === undefined}
+          data-busy={busy || undefined}
+          onClick={onRoll}
+          title={history.length === 0 ? 'The app rolls for you' : 'Roll again — every earlier set stays in your record'}
+        >
+          {history.length === 0 ? 'Roll' : 'Roll again'}
+        </button>
+        <button
+          type="button"
+          className="roll-enter-toggle"
+          aria-expanded={entering}
+          disabled={busy}
+          onClick={() => setEntering((e) => !e)}
+        >
+          {entering ? 'Hide dice entry' : 'Enter dice'}
+        </button>
+      </div>
+      {entering && (
+        <div className="roll-grid" data-testid={`roll-grid-${slot.id}`}>
+          <p className="roll-grid-intro">
+            {groups === 1 && dice === 1
+              ? `Type the face you rolled (1 to ${sides}).`
+              : groups === 1
+                ? `Type the faces you rolled: ${dice} dice, each face 1 to ${sides}.`
+                : `Type the faces you rolled: ${groups} sets of ${dice} dice, each face 1 to ${sides}.`}
+          </p>
+          {faces.map((row, g) => (
+            <div className="roll-grid-row" key={g}>
+              {groups > 1 && <span className="roll-grid-label">Set {g + 1}</span>}
+              {row.map((value, d) => (
+                <input
+                  key={d}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={sides}
+                  aria-label={`Set ${g + 1} die ${d + 1}`}
+                  value={value}
+                  disabled={busy}
+                  onChange={(e) => setFace(g, d, e.target.value)}
+                />
+              ))}
+            </div>
+          ))}
+          <ConfirmButton
+            slotId={slot.id}
+            label="entered dice"
+            disabledReason={disabledReason}
+            busy={busy}
+            onClick={() => {
+              if (entered !== null) {
+                onConfirm({ kind: 'rolled', value: [entered] });
+                setFaces(
+                  Array.from({ length: groups }, () => Array.from({ length: dice }, () => '')),
+                );
+                onTentative(null);
+              }
+            }}
+          />
+        </div>
+      )}
+      {tentative?.kind === 'rolled' && !entering && (
+        <p className="roll-pending">Dice entered but not yet confirmed.</p>
+      )}
     </div>
   );
 }

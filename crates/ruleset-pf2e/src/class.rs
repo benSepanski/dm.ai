@@ -26,7 +26,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Class".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|_| Availability::Open),
         dependents: vec![
@@ -110,7 +110,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Key attribute".into(),
         required: true,
-        presentation_hint: Some("attribute-boosts".into()),
+        presentation_hint: Box::new(|_| Some("attribute-boosts".into())),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|state| match state.class {
             Some(_) => Availability::Open,

@@ -116,3 +116,47 @@ export function sideSheetEntry(page: Page, label: string) {
     .filter({ has: page.locator('dt', { hasText: new RegExp(`^${label}$`) }) })
     .locator('.sheet-value');
 }
+
+/**
+ * The tap-to-place assignment editor: for each row, tap the first free chip
+ * carrying the value, then the row. A value offered twice is two chips, so
+ * two rows may take the same value.
+ */
+export async function placeScores(page: Page, slotId: string, scores: Record<string, number>) {
+  const card = slot(page, slotId);
+  await card.scrollIntoViewIfNeeded();
+  for (const [row, value] of Object.entries(scores)) {
+    await card
+      .locator('.pool-chip:not([disabled])', { hasText: new RegExp(`^${value}$`) })
+      .first()
+      .click();
+    await card.getByTestId(`pool-row-${row}`).click();
+  }
+}
+
+/** The budget stepper: step each row up or down until it shows the value. */
+export async function buyScores(page: Page, slotId: string, scores: Record<string, number>) {
+  const card = slot(page, slotId);
+  await card.scrollIntoViewIfNeeded();
+  for (const [row, value] of Object.entries(scores)) {
+    const shown = card.getByTestId(`budget-value-${row}`);
+    for (let i = 0; i < 20; i += 1) {
+      const text = (await shown.textContent())?.trim() ?? '';
+      if (text === String(value)) {
+        break;
+      }
+      const current = text === '—' ? Number.NEGATIVE_INFINITY : Number(text);
+      await card
+        .getByRole('button', { name: `${row} ${current < value ? 'higher' : 'lower'}` })
+        .click();
+    }
+    await expect(shown).toHaveText(String(value));
+  }
+}
+
+export async function confirmAssignment(page: Page, slotId: string) {
+  const card = slot(page, slotId);
+  await expect(card.getByTestId(`counter-${slotId}`)).toHaveText('All choices made');
+  await card.getByRole('button', { name: /confirm/i }).click();
+  await expect(card.locator('.slot-confirmed-value')).toBeVisible();
+}

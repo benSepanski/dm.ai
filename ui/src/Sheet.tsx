@@ -3,7 +3,18 @@
 import { useState } from 'react';
 import type { SheetView } from './engine';
 
-export function Sheet({ sheet, compact }: { sheet: SheetView; compact?: boolean }) {
+export function Sheet({
+  sheet,
+  compact,
+  undecided,
+}: {
+  sheet: SheetView;
+  compact?: boolean;
+  /** Entry labels a card the player has not decided yet will set: those
+   * values render as "?" with the pointer as their title, so no default
+   * the player has not chosen is displayed anywhere on the screen. */
+  undecided?: Record<string, string> | undefined;
+}) {
   return (
     <div className={`sheet ${compact === true ? 'sheet-compact' : ''}`} data-testid="sheet">
       <header className="sheet-header">
@@ -25,6 +36,7 @@ export function Sheet({ sheet, compact }: { sheet: SheetView; compact?: boolean 
                 value={entry.value}
                 detail={entry.detail ?? null}
                 compact={compact === true}
+                pointer={undecided?.[entry.label] ?? null}
               />
             ))}
           </dl>
@@ -39,11 +51,14 @@ function SheetEntryRow({
   value,
   detail,
   compact,
+  pointer,
 }: {
   label: string;
   value: string;
   detail: string | null;
   compact: boolean;
+  /** Set when a card the player has not decided yet will set this value. */
+  pointer: string | null;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -62,7 +77,13 @@ function SheetEntryRow({
         )}
       </dt>
       <dd>
-        <span className="sheet-value">{value}</span>
+        {pointer === null ? (
+          <span className="sheet-value">{value}</span>
+        ) : (
+          <span className="sheet-value sheet-undecided" title={pointer}>
+            ?
+          </span>
+        )}
         {open && detail !== null && <span className="sheet-detail">{detail}</span>}
       </dd>
     </div>

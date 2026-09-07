@@ -101,4 +101,7 @@ pub fn next_level(data: &RulesData, state: &Dnd5eState) -> Option<u32> {
 pub use mechanics::SLOT_CLASS as CLASS_SLOT_ID;
 pub use mechanics::SLOT_NAME as NAME_SLOT_ID;
 pub use mechanics::SLOT_SPECIES as SPECIES_SLOT_ID;
-pub use mechanics::{advance_level_of, slot_level_advance, slot_level_subclass, step_level};
+pub use mechanics::{
+    advance_level_of, slot_level_advance, slot_level_hit_die, slot_level_hit_points,
+    slot_level_subclass, step_level,
+};

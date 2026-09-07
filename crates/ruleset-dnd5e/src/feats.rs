@@ -51,7 +51,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_CLASS_CHOICES),
         label: "Fighting style".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| {
             match state.class.as_ref().and_then(|id| d_unlock.class(id)) {
@@ -133,7 +133,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_ORIGIN),
         label: "Feat skills and tools".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(move |state| SlotViewKind::Multi {
             count: state.skilled_pick_count(&d_kind),
         }),

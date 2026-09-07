@@ -168,6 +168,7 @@ fn compare(
             let method = match str_of(&our["kind"]) {
                 "array" => source.score_array.as_ref(),
                 "point-buy" => source.score_points.as_ref(),
+                "roll" => source.score_roll.as_ref(),
                 _ => None,
             };
             match method {
@@ -792,6 +793,15 @@ fn score_method(our: &Value, method: &srd::ScoreMethod) -> Outcome {
             .map(|a| a.iter().filter_map(Value::as_i64).collect())
             .unwrap_or_default();
         check(&mut mm, "array", !ours.is_empty() && ours == method.array);
+    } else if str_of(&our["kind"]) == "roll" {
+        fields.push("roll");
+        let ours = (
+            our["roll"]["sides"].as_i64().unwrap_or(0),
+            our["roll"]["dice"].as_i64().unwrap_or(0),
+            our["roll"]["keep"].as_i64().unwrap_or(0),
+            our["roll"]["sets"].as_i64().unwrap_or(0),
+        );
+        check(&mut mm, "roll", method.roll == Some(ours));
     } else {
         fields.extend(["budget", "costs"]);
         check(&mut mm, "budget", our["budget"].as_i64() == method.budget);

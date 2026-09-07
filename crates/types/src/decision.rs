@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{DecisionId, OptionId, SlotId};
+use crate::{DecisionId, OptionId, RolledSet, SlotId};
 
 /// What was chosen in a slot.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -15,6 +15,12 @@ pub enum Selection {
     Options(Vec<OptionId>),
     /// Free text (name, appearance, backstory).
     Text(String),
+    /// Recorded dice (storage schema v6). Stored: the slot's whole history,
+    /// oldest first, the last set live. Submitted in a `DecisionInput`: the
+    /// sets to append — the engine composes them onto the stored history,
+    /// so dropping or reordering a set is not something a request can say.
+    /// The one variant whose input meaning differs from its stored meaning.
+    Rolled(Vec<RolledSet>),
 }
 
 /// Who (or what) made a decision. DM exceptions and auto-mode arrive in

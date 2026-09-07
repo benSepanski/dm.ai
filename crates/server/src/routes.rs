@@ -27,9 +27,12 @@ use types::{
     VersionStatus,
 };
 
+use types::{RollRequest, SlotViewKind};
+
 use crate::clock;
+use crate::dice::{self, Entropy, RollKey};
 use crate::persistence::{DocState, KeepOldMarker, Loaded, Store, StoreError, VersionEvent};
-use crate::version::{repair_replay, sheet_diffs, status_for, KnownVersions};
+use crate::version::{repair_replay, sheet_diffs_explained, status_for, KnownVersions};
 
 pub(crate) struct App {
     /// Every shipped ruleset; the campaign's declaration selects one.
@@ -41,6 +44,12 @@ pub(crate) struct App {
     /// mint time so editing it is a data change, not a rebuild; a
     /// malformed file fails the mint, never the server.
     pub name_pools: PathBuf,
+    /// The one entropy source (dnd-dice): the operating system's, or the
+    /// testing-only seeded mixer.
+    pub dice: Arc<dyn Entropy>,
+    /// Whether `dice` is the seeded mixer — the campaign view says so and
+    /// the roster wears a badge.
+    pub seeded_dice: bool,
 }
 
 /// The ruleset a campaign plays, resolved per request under the store
@@ -107,6 +116,7 @@ pub(crate) fn router(app: SharedApp) -> Router {
         )
         .route("/api/characters/{id}/confirm", post(confirm))
         .route("/api/characters/{id}/amend", post(amend))
+        .route("/api/characters/{id}/roll", post(roll))
         .route("/api/characters/{id}/clear", post(clear))
         .route("/api/characters/{id}/step", post(set_step))
         .route("/api/characters/{id}/finalize", post(finalize))
@@ -204,6 +214,7 @@ fn draft_view(cx: &Ctx, loaded: &Loaded) -> Result<DraftView, Failure> {
         version: loaded.draft_version,
         current_step: loaded.current_step.clone(),
         projection,
+        log: loaded.log.clone(),
         rules_version: loaded.rules_version.clone(),
         // Only current drafts are projected; flagged drafts arrive as
         // CharacterView::FlaggedDraft instead.
@@ -223,7 +234,19 @@ fn level_up_view(cx: &Ctx, loaded: &Loaded) -> Result<LevelUpView, Failure> {
         .rs
         .level_of(&loaded.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
-    let advanced: Vec<Decision> = prefix.iter().chain(tail.iter().take(1)).cloned().collect();
+    // What the level grants on its own: the advance plus any recorded
+    // input in the tail (a rolled die is an input, not a choice — the
+    // gains table follows it), before any choice.
+    let advanced: Vec<Decision> = prefix
+        .iter()
+        .chain(
+            tail.iter()
+                .enumerate()
+                .filter(|(i, d)| *i == 0 || matches!(d.selection, Selection::Rolled(_)))
+                .map(|(_, d)| d),
+        )
+        .cloned()
+        .collect();
     let advance_sheet = cx
         .rs
         .engine()
@@ -234,10 +257,18 @@ fn level_up_view(cx: &Ctx, loaded: &Loaded) -> Result<LevelUpView, Failure> {
         .engine()
         .sheet(&loaded.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
+    // Explanations are scoped against the finalized prefix folded under
+    // today's rules — the stored sheet may carry an earlier build's
+    // wording, and a wording change must not read as a level's gain.
+    let before_sheet = cx
+        .rs
+        .engine()
+        .sheet(prefix)
+        .map_err(|e| Failure::Internal(e.to_string()))?;
     Ok(LevelUpView {
         level,
-        gains: sheet_diffs(&loaded.sheet, &advance_sheet),
-        deltas: sheet_diffs(&loaded.sheet, &full_sheet),
+        gains: sheet_diffs_explained(&loaded.sheet, &advance_sheet, &before_sheet),
+        deltas: sheet_diffs_explained(&loaded.sheet, &full_sheet, &before_sheet),
         pending: tail
             .iter()
             .filter_map(|d| cx.rs.engine().describe_decision(d))
@@ -414,6 +445,7 @@ fn campaign_view(app: &App, store: &Store) -> CampaignView {
             })
             .collect(),
         license_lines: app.license_lines(),
+        seeded_dice: app.seeded_dice,
     }
 }
 
@@ -595,61 +627,14 @@ async fn confirm(
     let store = app.store.lock().await;
     let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
-    guard_wizard_target(&loaded)?;
-    guard_wizard_write(cx, &loaded)?;
-    // A level advance enters the log only through the level-up route.
-    if cx.rs.is_advance_slot(&request.decision.slot) {
-        return Err(Failure::Unprocessable(
-            "level advances start through Level up, not as a confirmed choice".into(),
-        ));
-    }
-    guard_below_marker(&loaded, [request.decision.slot.clone()])?;
-    // Idempotency first: a retry after a crash between save and ack carries
-    // the version it was originally made against, which is stale by now —
-    // but its decision ID is already in the log, so it's a success, not a
-    // conflict, and appends nothing.
-    if loaded.log.iter().any(|d| d.id == request.decision.id) {
-        return Ok(Json(ConfirmOutcome::Confirmed {
-            draft: draft_view(cx, &loaded)?,
-        }));
-    }
-    if request.version != loaded.draft_version {
-        return Ok(Json(ConfirmOutcome::Conflict {
-            current: draft_view(cx, &loaded)?,
-        }));
-    }
-    let slot = request.decision.slot.clone();
-    match cx.rs.engine().append(&loaded.log, request.decision) {
-        Ok(AppendOutcome::AlreadyPresent) => {
-            // Idempotent retry: already durable, acknowledge again.
-            Ok(Json(ConfirmOutcome::Confirmed {
-                draft: draft_view(cx, &loaded)?,
-            }))
-        }
-        Ok(AppendOutcome::Appended(new_log)) => {
-            loaded.log = new_log;
-            refresh_draft_sheet(cx, &mut loaded)?;
-            loaded.draft_version += 1;
-            store.save(&loaded)?;
-            Ok(Json(ConfirmOutcome::Confirmed {
-                draft: draft_view(cx, &loaded)?,
-            }))
-        }
-        Err(e) => {
-            let step = first_live_step(cx.rs.engine(), &loaded.log);
-            let entry = match &e {
-                EngineError::UnknownSlot { .. }
-                | EngineError::InvalidDecision { .. }
-                | EngineError::NothingToClear { .. } => {
-                    engine_error_entry(step, slot, e.to_string())
-                }
-            };
-            Ok(Json(ConfirmOutcome::Rejected {
-                reasons: vec![entry],
-                draft: draft_view(cx, &loaded)?,
-            }))
-        }
-    }
+    let request = entered_only(request)?;
+    Ok(Json(write_decision(
+        cx,
+        &store,
+        &mut loaded,
+        request,
+        WriteMode::Append,
+    )?))
 }
 
 /// Replace a slot's decision atomically (cascade + append in one durable
@@ -662,55 +647,220 @@ async fn amend(
     let store = app.store.lock().await;
     let cx = &app.ctx(&store)?;
     let mut loaded = store.load(&CharacterId::new(id))?;
-    guard_wizard_target(&loaded)?;
-    guard_wizard_write(cx, &loaded)?;
+    let request = entered_only(request)?;
+    Ok(Json(write_decision(
+        cx,
+        &store,
+        &mut loaded,
+        request,
+        WriteMode::Amend,
+    )?))
+}
+
+/// Origin is stamped by the route, never taken from the client: a
+/// submitted roll history claiming the app's own tag is refused typed
+/// (app-rolled sets come only from the roll route); everything else a
+/// client submits is entered by hand, by construction.
+fn entered_only(mut request: ConfirmRequest) -> Result<ConfirmRequest, Failure> {
+    if let Selection::Rolled(sets) = &request.decision.selection {
+        if dice::claims_app_origin(sets) {
+            return Err(Failure::Unprocessable(
+                "sets rolled by the app come only from the roll route — dice you entered are \
+                 recorded as entered"
+                    .into(),
+            ));
+        }
+        request.decision.selection = Selection::Rolled(dice::stamp_entered(sets));
+    }
+    Ok(request)
+}
+
+/// Roll a roll slot's dice on the server and record the set as the app's
+/// own (dnd-dice). Three phases: read the slot's shape under the lock;
+/// draw with the lock released (a slow draw stalls nothing); record
+/// through the shared write under the lock again, re-checking the
+/// idempotency key and the version. The decision id is the idempotency
+/// key: a retry returns the roll already recorded, never a second one.
+async fn roll(
+    State(app): State<SharedApp>,
+    AxumPath(id): AxumPath<String>,
+    Json(request): Json<RollRequest>,
+) -> Result<Json<ConfirmOutcome>, Failure> {
+    // Phase 1: the shape, under the lock.
+    let (sides, dice, groups) = {
+        let store = app.store.lock().await;
+        let cx = &app.ctx(&store)?;
+        let loaded = store.load(&CharacterId::new(&id))?;
+        guard_wizard_target(&loaded)?;
+        guard_wizard_write(cx, &loaded)?;
+        if loaded.log.iter().any(|d| d.id == request.decision_id) {
+            return Ok(Json(ConfirmOutcome::Confirmed {
+                draft: draft_view(cx, &loaded)?,
+            }));
+        }
+        if request.version != loaded.draft_version {
+            return Ok(Json(ConfirmOutcome::Conflict {
+                current: draft_view(cx, &loaded)?,
+            }));
+        }
+        let projection = cx
+            .rs
+            .engine()
+            .project(&loaded.log)
+            .map_err(|e| Failure::Internal(format!("stored log does not replay: {e}")))?;
+        let slot = projection
+            .steps
+            .iter()
+            .flat_map(|s| s.slots.iter())
+            .find(|s| s.id == request.slot)
+            .ok_or_else(|| {
+                Failure::Unprocessable(format!(
+                    "'{}' is not a slot on this character's checklist right now",
+                    request.slot
+                ))
+            })?;
+        if let Some(reason) = &slot.locked_reason {
+            return Err(Failure::Unprocessable(format!(
+                "'{}' is locked: {reason}",
+                slot.label
+            )));
+        }
+        match slot.kind {
+            SlotViewKind::Roll {
+                sides,
+                dice,
+                groups,
+            } => (sides, dice, groups),
+            _ => {
+                return Err(Failure::Unprocessable(format!(
+                    "'{}' does not record dice",
+                    slot.label
+                )))
+            }
+        }
+    };
+    // Phase 2: the draw, lock released.
+    let key = RollKey {
+        character: &id,
+        decision: request.decision_id.as_str(),
+    };
+    let set = dice::roll_set(app.dice.as_ref(), &key, sides, dice, groups)
+        .map_err(|e| Failure::Internal(format!("the dice could not be rolled: {e}")))?;
+    // Phase 3: record, under the lock, through the shared write.
+    let store = app.store.lock().await;
+    let cx = &app.ctx(&store)?;
+    let mut loaded = store.load(&CharacterId::new(&id))?;
+    let input = DecisionInput {
+        id: request.decision_id,
+        slot: request.slot,
+        selection: Selection::Rolled(vec![set]),
+        source: DecisionSource::Player,
+    };
+    Ok(Json(write_decision(
+        cx,
+        &store,
+        &mut loaded,
+        ConfirmRequest {
+            decision: input,
+            version: request.version,
+        },
+        WriteMode::Amend,
+    )?))
+}
+
+#[derive(Clone, Copy)]
+enum WriteMode {
+    /// A first decision in an empty slot (the client clears first to
+    /// change a choice).
+    Append,
+    /// Replace atomically: cascade-clear, then append; on an empty slot
+    /// it behaves as append. A roll input appends onto the stored history.
+    Amend,
+}
+
+/// The one decision-writing body behind confirm, amend, and roll: the
+/// guards, idempotency before version, the engine step, one durable
+/// write, and the typed outcomes.
+fn write_decision(
+    cx: &Ctx,
+    store: &Store,
+    loaded: &mut Loaded,
+    request: ConfirmRequest,
+    mode: WriteMode,
+) -> Result<ConfirmOutcome, Failure> {
+    guard_wizard_target(loaded)?;
+    guard_wizard_write(cx, loaded)?;
+    // A level advance enters the log only through the level-up route.
     if cx.rs.is_advance_slot(&request.decision.slot) {
         return Err(Failure::Unprocessable(
             "level advances start through Level up, not as a confirmed choice".into(),
         ));
     }
-    // An amend cascades like a clear: the slot and everything it drags
-    // along must sit above the marker.
-    let doomed: Vec<SlotId> = cx
-        .rs
-        .engine()
-        .clear_preview(&loaded.log, &request.decision.slot)
-        .map(|p| p.cleared.into_iter().map(|c| c.slot).collect())
-        .unwrap_or_default();
-    guard_below_marker(
-        &loaded,
-        std::iter::once(request.decision.slot.clone()).chain(doomed),
-    )?;
+    match mode {
+        WriteMode::Append => guard_below_marker(loaded, [request.decision.slot.clone()])?,
+        WriteMode::Amend => {
+            // An amend cascades like a clear: the slot and everything it
+            // drags along must sit above the marker.
+            let doomed: Vec<SlotId> = cx
+                .rs
+                .engine()
+                .clear_preview(&loaded.log, &request.decision.slot)
+                .map(|p| p.cleared.into_iter().map(|c| c.slot).collect())
+                .unwrap_or_default();
+            guard_below_marker(
+                loaded,
+                std::iter::once(request.decision.slot.clone()).chain(doomed),
+            )?;
+        }
+    }
+    // Idempotency first: a retry after a crash between save and ack carries
+    // the version it was originally made against, which is stale by now —
+    // but its decision ID is already in the log, so it's a success, not a
+    // conflict, and appends nothing.
     if loaded.log.iter().any(|d| d.id == request.decision.id) {
-        return Ok(Json(ConfirmOutcome::Confirmed {
-            draft: draft_view(cx, &loaded)?,
-        }));
+        return Ok(ConfirmOutcome::Confirmed {
+            draft: draft_view(cx, loaded)?,
+        });
     }
     if request.version != loaded.draft_version {
-        return Ok(Json(ConfirmOutcome::Conflict {
-            current: draft_view(cx, &loaded)?,
-        }));
+        return Ok(ConfirmOutcome::Conflict {
+            current: draft_view(cx, loaded)?,
+        });
     }
     let slot = request.decision.slot.clone();
-    match cx.rs.engine().amend(&loaded.log, request.decision) {
-        Ok(AppendOutcome::AlreadyPresent) => Ok(Json(ConfirmOutcome::Confirmed {
-            draft: draft_view(cx, &loaded)?,
-        })),
+    let outcome = match mode {
+        WriteMode::Append => cx.rs.engine().append(&loaded.log, request.decision),
+        WriteMode::Amend => cx.rs.engine().amend(&loaded.log, request.decision),
+    };
+    match outcome {
+        Ok(AppendOutcome::AlreadyPresent) => {
+            // Idempotent retry: already durable, acknowledge again.
+            Ok(ConfirmOutcome::Confirmed {
+                draft: draft_view(cx, loaded)?,
+            })
+        }
         Ok(AppendOutcome::Appended(new_log)) => {
             loaded.log = new_log;
-            refresh_draft_sheet(cx, &mut loaded)?;
+            refresh_draft_sheet(cx, loaded)?;
             loaded.draft_version += 1;
-            store.save(&loaded)?;
-            Ok(Json(ConfirmOutcome::Confirmed {
-                draft: draft_view(cx, &loaded)?,
-            }))
+            store.save(loaded)?;
+            Ok(ConfirmOutcome::Confirmed {
+                draft: draft_view(cx, loaded)?,
+            })
         }
         Err(e) => {
             let step = first_live_step(cx.rs.engine(), &loaded.log);
-            Ok(Json(ConfirmOutcome::Rejected {
-                reasons: vec![engine_error_entry(step, slot, e.to_string())],
-                draft: draft_view(cx, &loaded)?,
-            }))
+            let entry = match &e {
+                EngineError::UnknownSlot { .. }
+                | EngineError::InvalidDecision { .. }
+                | EngineError::NothingToClear { .. } => {
+                    engine_error_entry(step, slot, e.to_string())
+                }
+            };
+            Ok(ConfirmOutcome::Rejected {
+                reasons: vec![entry],
+                draft: draft_view(cx, loaded)?,
+            })
         }
     }
 }
@@ -1719,6 +1869,15 @@ async fn version_repin(
         } => {
             let from = pinned.clone();
             loaded.rules_version = cx.rs.rules_version().to_string();
+            // Identical means the same values; the replayed sheet may word
+            // its breakdowns as today's build does, so store it — the
+            // numbers the table saw are unchanged, the explanations are
+            // current.
+            loaded.sheet = cx
+                .rs
+                .engine()
+                .sheet(loaded.finalized_prefix())
+                .map_err(|e| Failure::Internal(e.to_string()))?;
             loaded.keep_old = None;
             loaded.version_history.push(resolution_event(
                 "re_pin",

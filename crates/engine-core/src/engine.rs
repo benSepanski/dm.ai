@@ -235,7 +235,7 @@ impl<S> Engine<S> {
                     id: reg.id.clone(),
                     label: reg.label.clone(),
                     kind,
-                    presentation_hint: reg.presentation_hint.clone(),
+                    presentation_hint: (reg.presentation_hint)(&state),
                     locked_reason,
                     required: reg.required,
                     status,
@@ -300,14 +300,34 @@ impl<S> Engine<S> {
         log: &[Decision],
         candidate: &DecisionInput,
     ) -> Result<ProjectionView, EngineError> {
+        let candidate = Self::compose_roll(log, candidate.clone());
         let mut hypothetical: Vec<Decision> = log
             .iter()
             .filter(|d| d.slot != candidate.slot)
             .cloned()
             .collect();
         let order = hypothetical.len() as u32;
-        hypothetical.push(candidate.clone().into_decision(order));
+        hypothetical.push(candidate.into_decision(order));
         self.project(&hypothetical)
+    }
+
+    /// A submitted roll means "sets to append": when the slot already holds
+    /// a rolled history, the input becomes stored ++ incoming, so a reroll
+    /// can never drop or reorder a set (the history is the decision). Every
+    /// other selection kind passes through untouched.
+    fn compose_roll(log: &[Decision], mut input: DecisionInput) -> DecisionInput {
+        if let Selection::Rolled(incoming) = &input.selection {
+            if let Some(Selection::Rolled(stored)) = log
+                .iter()
+                .find(|d| d.slot == input.slot)
+                .map(|d| &d.selection)
+            {
+                let mut sets = stored.clone();
+                sets.extend(incoming.iter().cloned());
+                input.selection = Selection::Rolled(sets);
+            }
+        }
+        input
     }
 
     /// Append a decision to a draft log — the confirm path. Validates
@@ -377,6 +397,7 @@ impl<S> Engine<S> {
         if log.iter().any(|d| d.id == input.id) {
             return Ok(AppendOutcome::AlreadyPresent);
         }
+        let input = Self::compose_roll(log, input);
         let base = if log.iter().any(|d| d.slot == input.slot) {
             self.clear(log, &input.slot)?
         } else {
@@ -605,6 +626,11 @@ impl<S> Engine<S> {
             (SlotViewKind::Text { .. }, SlotSuggestion::Candidates(_)) => {
                 Err("the suggestion lists options but this slot takes text".to_string())
             }
+            // A roll is a recorded input: no planner ever fills it (dice are
+            // drawn by the server's roll route, never suggested).
+            (SlotViewKind::Roll { .. }, _) => {
+                Err("this slot records dice; nothing suggests a roll".to_string())
+            }
             (_, SlotSuggestion::Text(_)) => {
                 Err("the suggestion is text but this slot takes options".to_string())
             }
@@ -639,7 +665,9 @@ impl<S> Engine<S> {
                         }
                     }
                     SlotViewKind::List => Ok(Selection::Options(legal)),
-                    SlotViewKind::Text { .. } => unreachable!("matched above"),
+                    SlotViewKind::Text { .. } | SlotViewKind::Roll { .. } => {
+                        unreachable!("matched above")
+                    }
                 }
             }
         }

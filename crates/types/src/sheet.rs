@@ -20,6 +20,9 @@ pub struct SheetSection {
     pub entries: Vec<SheetEntry>,
 }
 
+/// A multi-line `detail` follows one shape: the first line states the
+/// rule, every later line is one bullet ("• …"). Diffs keep the rule and
+/// only the bullets that changed; the UI renders the lines as written.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(tsify::Tsify))]
 pub struct SheetEntry {

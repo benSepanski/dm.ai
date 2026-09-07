@@ -311,3 +311,66 @@ fn replayed_level_starts_and_finalizes_append_nothing() {
     assert_eq!(again["outcome"], "finalized");
     assert_eq!(again["sheet"], view["sheet"]);
 }
+
+/// dnd-dice: a replayed roll decision id records one set and returns the
+/// same view — a retry after a crash between roll and ack never rolls
+/// again.
+#[test]
+fn a_replayed_roll_id_records_one_set() {
+    let dir = tempfile::tempdir().unwrap();
+    checks::declare_campaign(dir.path(), "dnd5e");
+    let server = TestServer::spawn(dir.path());
+    let client = reqwest::blocking::Client::new();
+    let draft: Value = client
+        .post(format!("{}/api/characters", server.url))
+        .json(&json!({"name": "Roller"}))
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    let id = draft["id"].as_str().unwrap();
+    let confirm_url = format!("{}/api/characters/{id}/confirm", server.url);
+    let method: Value = client
+        .post(&confirm_url)
+        .json(
+            &json!({"version": 1, "decision": decision("m", "dnd5e.scores.method", "method.roll")}),
+        )
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(method["outcome"], "confirmed", "{method}");
+    let version = method["draft"]["version"].as_u64().unwrap();
+    let roll_url = format!("{}/api/characters/{id}/roll", server.url);
+    let body = json!({"slot": "dnd5e.scores.roll", "version": version, "decision_id": "same"});
+    let first: Value = client
+        .post(&roll_url)
+        .json(&body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    let again: Value = client
+        .post(&roll_url)
+        .json(&body)
+        .send()
+        .unwrap()
+        .json()
+        .unwrap();
+    assert_eq!(first["outcome"], "confirmed", "{first}");
+    assert_eq!(again["outcome"], "confirmed", "{again}");
+    assert_eq!(
+        first["draft"], again["draft"],
+        "the retry returns the recorded roll"
+    );
+    let sets = leveling::read_doc(dir.path(), id)["log"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["slot"] == "dnd5e.scores.roll")
+        .unwrap()["selection"]["value"]
+        .as_array()
+        .unwrap()
+        .len();
+    assert_eq!(sets, 1);
+}

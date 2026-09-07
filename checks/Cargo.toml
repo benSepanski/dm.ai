@@ -79,6 +79,10 @@ path = "campaign.rs"
 name = "dnd5e"
 path = "dnd5e.rs"
 
+[[test]]
+name = "compat"
+path = "compat.rs"
+
 [dependencies]
 cargo_metadata = { workspace = true }
 types = { workspace = true }

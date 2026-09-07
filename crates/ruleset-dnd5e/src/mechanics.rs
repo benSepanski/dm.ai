@@ -8,11 +8,11 @@ use std::collections::BTreeMap;
 use engine_core::ApplyError;
 use serde::Deserialize;
 use types::{
-    ChecklistEntry, ChecklistSeverity, OptionId, Selection, SheetEntry, SheetSection, SheetView,
-    SlotId, StepId,
+    ChecklistEntry, ChecklistSeverity, OptionId, RollOrigin, RolledSet, Selection, SheetEntry,
+    SheetSection, SheetView, SlotId, StepId,
 };
 
-use crate::data::{ArmorRecord, Effect, RulesData, WeaponRecord};
+use crate::data::{ArmorRecord, Effect, RollSpec, RulesData, WeaponRecord};
 
 /// The six abilities, in the published order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
@@ -109,6 +109,50 @@ pub fn format_gp(gp: u32) -> String {
     format!("{gp} GP")
 }
 
+// ---- Dice ------------------------------------------------------------
+
+/// A group's total under a rolling method: the highest `keep` faces,
+/// summed. Pure arithmetic over recorded faces — the roll itself is a
+/// recorded input, never regenerated.
+pub fn group_total(faces: &[u8], spec: RollSpec) -> u32 {
+    let mut sorted: Vec<u8> = faces.to_vec();
+    sorted.sort_unstable_by(|a, b| b.cmp(a));
+    sorted
+        .iter()
+        .take(spec.keep as usize)
+        .map(|f| *f as u32)
+        .sum()
+}
+
+/// The faces a group drops (its lowest beyond `keep`), for rendering.
+pub fn dropped_faces(faces: &[u8], spec: RollSpec) -> Vec<u8> {
+    let mut sorted: Vec<u8> = faces.to_vec();
+    sorted.sort_unstable_by(|a, b| b.cmp(a));
+    sorted.iter().skip(spec.keep as usize).copied().collect()
+}
+
+/// Every group's total of one rolled set, in group order.
+pub fn roll_totals(set: &RolledSet, spec: RollSpec) -> Vec<u32> {
+    set.groups.iter().map(|g| group_total(g, spec)).collect()
+}
+
+/// Render-ready tag for a set's origin.
+pub fn origin_label(origin: RollOrigin) -> &'static str {
+    match origin {
+        RollOrigin::App => "rolled",
+        RollOrigin::Entered => "entered",
+    }
+}
+
+/// Render-ready faces: "6, 5, 3, 1".
+pub fn faces_text(faces: &[u8]) -> String {
+    faces
+        .iter()
+        .map(|f| f.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 // ---- Option-id conventions -------------------------------------------
 
 /// `score.<ability>.<value>` — one assignment option.
@@ -116,9 +160,30 @@ pub fn score_option_id(ability: Ability, value: u32) -> OptionId {
     OptionId::new(format!("score.{}.{value}", ability.key()))
 }
 
+/// `score.<ability>.<value>.<n>` — the n-th listing of a value offered
+/// more than once (a rolled total that came up twice); the first listing
+/// carries no suffix, so every pre-dice id is the first instance.
+pub fn score_instance_id(ability: Ability, value: u32, instance: usize) -> OptionId {
+    if instance <= 1 {
+        score_option_id(ability, value)
+    } else {
+        OptionId::new(format!("score.{}.{value}.{instance}", ability.key()))
+    }
+}
+
+/// The ability and value of a score option, with or without an instance
+/// suffix (which listing was picked never matters to the fold).
 pub fn parse_score_option(id: &OptionId) -> Option<(Ability, u32)> {
     let rest = id.as_str().strip_prefix("score.")?;
-    let (key, value) = rest.split_once('.')?;
+    let mut parts = rest.split('.');
+    let key = parts.next()?;
+    let value = parts.next()?;
+    if let Some(instance) = parts.next() {
+        instance.parse::<usize>().ok().filter(|n| *n >= 2)?;
+    }
+    if parts.next().is_some() {
+        return None;
+    }
     Some((Ability::from_key(key)?, value.parse().ok()?))
 }
 
@@ -216,8 +281,12 @@ pub struct Dnd5eState {
     pub species_feat: Option<String>,
     pub species_ancestry: Option<String>,
     pub score_method: Option<String>,
+    /// The rolling method's recorded history, oldest first, the last set
+    /// live (dnd-dice). Empty under every other method.
+    pub rolled_sets: Vec<RolledSet>,
     /// Assignment picks in pick order; validators judge one per ability
-    /// and (array) each value once. The first pick per ability counts.
+    /// and (array, roll) each value at most as often as offered. The
+    /// first pick per ability counts.
     pub assignments: Vec<(Ability, u32)>,
     pub class_skills: Vec<String>,
     pub fighting_style: Option<String>,
@@ -231,10 +300,26 @@ pub struct Dnd5eState {
     /// Level advances applied, in order: the character's level is one plus
     /// this count. Set only by the advance slots' `apply`.
     pub level_advances: u32,
+    /// How each level's hit points are decided (dnd-dice): take the fixed
+    /// value or roll the hit die. Absent means the fixed value.
+    pub hit_points_choice: BTreeMap<u32, HitPointsChoice>,
+    /// Rolled hit dice by level (dnd-dice): each level's recorded history,
+    /// the last set live. A level absent here takes the class's fixed value.
+    pub hit_die_rolls: BTreeMap<u32, Vec<RolledSet>>,
     /// Fixed class features granted by advances, (level, feature ID).
     pub granted_features: Vec<(u32, String)>,
     pub subclass: Option<String>,
 }
+
+/// The published choice at each level: the fixed value, or a roll.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HitPointsChoice {
+    Fixed,
+    Roll,
+}
+
+pub const HP_OPTION_FIXED: &str = "hp.fixed";
+pub const HP_OPTION_ROLL: &str = "hp.roll";
 
 /// One skill or tool proficiency and where it came from.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -254,6 +339,38 @@ pub struct Carried {
 impl Dnd5eState {
     pub fn level(&self) -> u32 {
         1 + self.level_advances
+    }
+
+    /// The live rolled set (the most recent), if the rolling method has
+    /// recorded one.
+    pub fn live_roll(&self) -> Option<&RolledSet> {
+        self.rolled_sets.last()
+    }
+
+    /// The live hit-die face for a level, with its origin, when that level
+    /// rolled; `None` means the fixed value applies.
+    pub fn hit_die_live(&self, level: u32) -> Option<(u8, RollOrigin)> {
+        let set = self.hit_die_rolls.get(&level)?.last()?;
+        let face = *set.groups.first()?.first()?;
+        Some((face, set.origin))
+    }
+
+    /// The scores a method offers under the current state: the array's
+    /// values, the cost table's scores, or the live rolled set's totals
+    /// (highest first). Empty for a rolling method with nothing rolled.
+    pub fn offered_scores(&self, method: &crate::data::ScoreMethodRecord) -> Vec<u32> {
+        match (method.is_roll(), method.roll) {
+            (true, Some(spec)) => self
+                .live_roll()
+                .map(|set| {
+                    let mut totals = roll_totals(set, spec);
+                    totals.sort_unstable_by(|a, b| b.cmp(a));
+                    totals
+                })
+                .unwrap_or_default(),
+            (true, None) => Vec::new(),
+            _ => method.offered_scores(),
+        }
     }
 
     pub fn proficiency_bonus(&self) -> i32 {
@@ -620,6 +737,8 @@ pub fn describe_selection(data: &std::sync::Arc<RulesData>, selection: &Selectio
                 format!("\"{t}\"")
             }
         }
+        // Roll slots register their own describe (totals are theirs).
+        Selection::Rolled(sets) => format!("{} rolled set(s)", sets.len()),
     }
 }
 
@@ -648,6 +767,7 @@ pub const SLOT_SPECIES_SKILL: &str = "dnd5e.species.skill";
 pub const SLOT_SPECIES_FEAT: &str = "dnd5e.species.feat";
 pub const SLOT_SPECIES_ANCESTRY: &str = "dnd5e.species.ancestry";
 pub const SLOT_SCORES_METHOD: &str = "dnd5e.scores.method";
+pub const SLOT_SCORES_ROLL: &str = "dnd5e.scores.roll";
 pub const SLOT_SCORES_ASSIGN: &str = "dnd5e.scores.assign";
 pub const SLOT_FEAT_SKILLED: &str = "dnd5e.feats.skilled";
 pub const SLOT_EQUIPMENT_PACKAGE: &str = "dnd5e.equipment.package";
@@ -667,6 +787,16 @@ pub fn slot_level_advance(level: u32) -> String {
 }
 pub fn slot_level_subclass(level: u32) -> String {
     format!("dnd5e.level.{level}.subclass")
+}
+/// The unrequired hit-die roll slot of a level (dnd-dice): absent, the
+/// class's fixed value applies.
+pub fn slot_level_hit_die(level: u32) -> String {
+    format!("dnd5e.level.{level}.hit-die")
+}
+/// The unrequired fixed-or-roll choice of a level (dnd-dice): absent means
+/// the fixed value; choosing to roll opens the hit-die slot.
+pub fn slot_level_hit_points(level: u32) -> String {
+    format!("dnd5e.level.{level}.hit-points")
 }
 /// The level an advance slot ID advances to, if it is one.
 pub fn advance_level_of(slot: &str) -> Option<u32> {
@@ -750,23 +880,47 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
 
     let mut sections = Vec::new();
 
-    // Ability scores: score and modifier, with the composition.
-    let method_name = state
+    // Ability scores: score and modifier, with the composition. Under a
+    // rolling method the composition names the faces behind the value
+    // and whether the app rolled them or the player entered them.
+    let method = state
         .score_method
         .as_ref()
-        .and_then(|id| data.score_method(id))
-        .map(|m| m.name.clone());
+        .and_then(|id| data.score_method(id));
+    let method_name = method.map(|m| m.name.clone());
     let increases = state.increases(data);
     let mut ability_entries = Vec::new();
+    // Groups of the live set already shown for an earlier ability, so two
+    // equal totals each name their own faces.
+    let mut shown_groups: Vec<usize> = Vec::new();
     for ability in Ability::ALL {
         let base = state.base_score(ability);
         let score = state.score(ability, data);
         let mut parts = Vec::new();
         if let Some(b) = base {
-            parts.push(format!(
-                "{b} ({})",
-                method_name.clone().unwrap_or_else(|| "assigned".into())
-            ));
+            let rolled = method
+                .filter(|m| m.is_roll())
+                .and_then(|m| m.roll)
+                .and_then(|spec| {
+                    let set = state.live_roll()?;
+                    let (index, faces) =
+                        set.groups.iter().enumerate().find(|(i, g)| {
+                            !shown_groups.contains(i) && group_total(g, spec) == b
+                        })?;
+                    shown_groups.push(index);
+                    Some(format!(
+                        "{b} ({}: {} → {b}, {})",
+                        method_name.clone().unwrap_or_default(),
+                        faces_text(faces),
+                        origin_label(set.origin)
+                    ))
+                });
+            parts.push(rolled.unwrap_or_else(|| {
+                format!(
+                    "{b} ({})",
+                    method_name.clone().unwrap_or_else(|| "assigned".into())
+                )
+            }));
         }
         if let (Some(inc), Some(bg)) = (increases.get(&ability), background) {
             parts.push(format!("+{inc} ({})", bg.name));
@@ -796,22 +950,69 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
     let mut combat = Vec::new();
     match class {
         Some(c) => {
-            let mut hp = c.hp_at_level_1 as i32 + con;
-            let mut detail = format!("{} + {con} Con", c.hp_at_level_1);
-            if level > 1 {
-                let per = c.hp_per_level as i32 + con;
-                hp += per * (level as i32 - 1);
-                detail.push_str(&format!(
-                    " + {} × ({} + {con} Con)",
-                    level - 1,
-                    c.hp_per_level
-                ));
+            // The breakdown is one rule line and one bullet per level (the
+            // UI renders the lines as written; a diff keeps the rule and
+            // the bullets that changed): what the class gives at level 1,
+            // what each later level added — the fixed value or the die that
+            // was rolled or entered — plus the Constitution modifier and any
+            // species bonus, each bullet complete on its own. The value
+            // column carries the total, so no bullet repeats it.
+            let con_term = if con >= 0 {
+                format!("+ {con}")
+            } else {
+                format!("− {}", -con)
+            };
+            let species_bonus = species
+                .filter(|s| s.hp_bonus_per_level > 0)
+                .map(|s| (s.hp_bonus_per_level as i32, s.name.clone()));
+            let species_term = species_bonus
+                .as_ref()
+                .map(|(b, name)| format!(" + {b} ({name})"))
+                .unwrap_or_default();
+            let species_rule = species_bonus
+                .as_ref()
+                .map(|(b, name)| format!(" and {b} from {name}"))
+                .unwrap_or_default();
+            let per_level_bonus = species_bonus.as_ref().map(|(b, _)| *b).unwrap_or(0);
+            let mut hp = c.hp_at_level_1 as i32 + con + per_level_bonus;
+            let mut lines = vec![
+                format!(
+                    "{}: {} hit points at level 1, then each level adds a d{} roll (or the fixed value {}) plus your Constitution modifier ({}){}.",
+                    c.name,
+                    c.hp_at_level_1,
+                    c.hit_die,
+                    c.hp_per_level,
+                    format_signed(con),
+                    species_rule
+                ),
+                format!(
+                    "• Level 1: {} {con_term}{species_term} = {hp}",
+                    c.hp_at_level_1
+                ),
+            ];
+            // Per level: the live rolled face or the fixed value, plus Con,
+            // minimum 1 per level (SRD 5.2.1 p. 23, "Gaining a Level"), plus
+            // the species bonus.
+            for l in 2..=level {
+                let (value, how) = match state.hit_die_live(l) {
+                    Some((face, origin)) => (face as i32, origin_label(origin).to_string()),
+                    None => (c.hp_per_level as i32, "fixed value".to_string()),
+                };
+                let raw = value + con;
+                let gain = raw.max(1) + per_level_bonus;
+                hp += gain;
+                if raw < 1 {
+                    lines.push(format!(
+                        "• Level {l}: {how} {value} {con_term} = {raw}, minimum 1 → 1{species_term}{}",
+                        if per_level_bonus > 0 { format!(" = {gain}") } else { String::new() }
+                    ));
+                } else {
+                    lines.push(format!(
+                        "• Level {l}: {how} {value} {con_term}{species_term} = {gain}"
+                    ));
+                }
             }
-            if let Some(sp) = species.filter(|s| s.hp_bonus_per_level > 0) {
-                let bonus = sp.hp_bonus_per_level * level;
-                hp += bonus as i32;
-                detail.push_str(&format!(" + {bonus} ({})", sp.name));
-            }
+            let detail = lines.join("\n");
             combat.push(entry("Hit Points", hp.max(1).to_string(), Some(detail)));
         }
         None => combat.push(entry("Hit Points", "—", Some("choose a class".into()))),

@@ -595,6 +595,17 @@
         "state_hash": "3dd2b319abb3a7585906f635dd0d7a71a79aecb73f05a5eb8d427cb56376b2f1"
       }
     },
+    "method.roll": {
+      "fields_checked": [
+        "existence",
+        "name",
+        "roll"
+      ],
+      "file_hash": "4d51e1407637ec58ac05ce98148fedc4f4bc392b26da23f328e7d575b1b06dbd",
+      "mismatches": [],
+      "verdict": "match",
+      "waiver": null
+    },
     "method.standard-array": {
       "fields_checked": [
         "existence",
@@ -1712,7 +1723,7 @@
       "waiver": null
     }
   },
-  "rules_version": "dnd5e-srd.0.1.0",
+  "rules_version": "dnd5e-srd.0.2.0",
   "source": {
     "commit": "f1f5060fd975aa2ffc3e4b336560ded479934d80",
     "kind": "srd521-markdown",

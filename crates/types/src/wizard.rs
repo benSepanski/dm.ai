@@ -56,6 +56,10 @@ pub enum SlotViewKind {
     List,
     /// Free text.
     Text { multiline: bool },
+    /// Recorded dice: `groups` groups of `dice` faces on a `sides`-sided
+    /// die per set. The counts size an entry grid; the slot's option list
+    /// carries the history, render-ready. The UI never computes a total.
+    Roll { sides: u8, dice: u8, groups: u8 },
 }
 
 /// The engine's verdict on one slot — delivered pre-joined so the UI never

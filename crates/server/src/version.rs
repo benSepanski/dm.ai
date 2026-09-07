@@ -163,7 +163,12 @@ pub fn status_for(engine: &dyn EngineOps, known: &KnownVersions, loaded: &Loaded
     // Only the finalized prefix is judged: a pending tail is never part
     // of the stored sheet (the prefix invariant).
     let outcome = match engine.sheet(loaded.finalized_prefix()) {
-        Ok(replayed) if replayed == loaded.sheet => ReplayOutcome::Identical,
+        // Identical means the same values: a newer build may word a
+        // breakdown differently (the detail text) without any number
+        // moving, and that is not a divergence the DM must review.
+        Ok(replayed) if sheet_diffs(&loaded.sheet, &replayed).is_empty() => {
+            ReplayOutcome::Identical
+        }
         Ok(replayed) => ReplayOutcome::Divergent {
             differences: sheet_diffs(&loaded.sheet, &replayed),
         },
@@ -206,7 +211,39 @@ fn failing_decision(log: &[Decision], e: &EngineError) -> (types::DecisionId, ty
 /// Every sheet value that differs, old → new. Identity lines (name and
 /// summary) are diffed alongside section entries; entries present on only
 /// one side show "(absent)" on the other.
+/// A multi-line explanation scoped to a change: the first line (the rule)
+/// plus every later line absent from the old explanation. Single-line
+/// explanations pass through untouched.
+pub fn scope_explanation(new_detail: &str, old_detail: &str) -> String {
+    let mut lines = new_detail.lines();
+    let Some(rule) = lines.next() else {
+        return String::new();
+    };
+    let rest: Vec<&str> = lines.collect();
+    if rest.is_empty() {
+        return new_detail.to_string();
+    }
+    let old_lines: Vec<&str> = old_detail.lines().collect();
+    let mut out = vec![rule];
+    out.extend(rest.into_iter().filter(|l| !old_lines.contains(l)));
+    out.join("\n")
+}
+
 pub fn sheet_diffs(old: &SheetView, new: &SheetView) -> Vec<SheetDiff> {
+    sheet_diffs_explained(old, new, old)
+}
+
+/// `sheet_diffs` with the explanations scoped against `baseline` rather
+/// than `old`: values still compare the stored sheet to the new fold (what
+/// the table saw against what it will see), but "which bullets are new" is
+/// judged against a fresh fold under today's rules and wording — a stored
+/// sheet written by an earlier build keeps its old detail text until the
+/// character is re-derived, and must not make every bullet look new.
+pub fn sheet_diffs_explained(
+    old: &SheetView,
+    new: &SheetView,
+    baseline: &SheetView,
+) -> Vec<SheetDiff> {
     const ABSENT: &str = "(absent)";
     let mut diffs = Vec::new();
     if old.name != new.name {
@@ -228,9 +265,17 @@ pub fn sheet_diffs(old: &SheetView, new: &SheetView) -> Vec<SheetDiff> {
         });
     }
     // The explanation rides with the value: the new sheet entry's own
-    // detail line, so a diff reader sees why a number moved.
+    // detail, so a diff reader sees why a number moved. A multi-line
+    // detail is a rule line followed by bullet lines (the wire type's
+    // shape convention); a diff keeps the rule and only the bullets that
+    // are new against the old entry — what changed, not the whole history.
     let why_of = |section: &str, label: &str| -> Option<String> {
-        new.entry(section, label).and_then(|e| e.detail.clone())
+        let detail = new.entry(section, label).and_then(|e| e.detail.clone())?;
+        let old_detail = baseline
+            .entry(section, label)
+            .and_then(|e| e.detail.clone())
+            .unwrap_or_default();
+        Some(scope_explanation(&detail, &old_detail))
     };
     for section in &old.sections {
         for entry in &section.entries {
@@ -347,5 +392,30 @@ fn describe_selection(selection: &Selection) -> String {
             .collect::<Vec<_>>()
             .join(", "),
         Selection::Text(text) => text.clone(),
+        Selection::Rolled(sets) => format!("{} rolled set(s)", sets.len()),
+    }
+}
+
+#[cfg(test)]
+mod scope_tests {
+    use super::scope_explanation;
+
+    #[test]
+    fn keeps_the_rule_and_only_the_new_bullets() {
+        let old = "Rule.\n• Level 1: 10 + 0 = 10";
+        let new = "Rule.\n• Level 1: 10 + 0 = 10\n• Level 2: fixed value 6 + 0 = 6";
+        assert_eq!(
+            scope_explanation(new, old),
+            "Rule.\n• Level 2: fixed value 6 + 0 = 6"
+        );
+        // A rule that itself changed still leads; every bullet is then new.
+        let changed = "Rule (+1).\n• Level 1: 10 + 1 = 11\n• Level 2: fixed value 6 + 1 = 7";
+        assert_eq!(scope_explanation(changed, old), changed);
+        // Single-line explanations pass through; an absent old one too.
+        assert_eq!(
+            scope_explanation("7 expert + 2 Con", "6 trained + 2 Con"),
+            "7 expert + 2 Con"
+        );
+        assert_eq!(scope_explanation(new, ""), new);
     }
 }

@@ -1,0 +1,249 @@
+[
+  {
+    "id": "dnd5e.class=class.fighter",
+    "slot": "dnd5e.class",
+    "selection": {
+      "kind": "option",
+      "value": "class.fighter"
+    },
+    "source": "player",
+    "order": 0
+  },
+  {
+    "id": "dnd5e.background=background.soldier",
+    "slot": "dnd5e.background",
+    "selection": {
+      "kind": "option",
+      "value": "background.soldier"
+    },
+    "source": "player",
+    "order": 1
+  },
+  {
+    "id": "dnd5e.background.increase=increase.str2-con1",
+    "slot": "dnd5e.background.increase",
+    "selection": {
+      "kind": "option",
+      "value": "increase.str2-con1"
+    },
+    "source": "player",
+    "order": 2
+  },
+  {
+    "id": "dnd5e.species=species.human",
+    "slot": "dnd5e.species",
+    "selection": {
+      "kind": "option",
+      "value": "species.human"
+    },
+    "source": "player",
+    "order": 3
+  },
+  {
+    "id": "dnd5e.species.skill=skill.perception",
+    "slot": "dnd5e.species.skill",
+    "selection": {
+      "kind": "option",
+      "value": "skill.perception"
+    },
+    "source": "player",
+    "order": 4
+  },
+  {
+    "id": "dnd5e.species.feat=feat.origin.alert",
+    "slot": "dnd5e.species.feat",
+    "selection": {
+      "kind": "option",
+      "value": "feat.origin.alert"
+    },
+    "source": "player",
+    "order": 5
+  },
+  {
+    "id": "dnd5e.scores.method=method.roll",
+    "slot": "dnd5e.scores.method",
+    "selection": {
+      "kind": "option",
+      "value": "method.roll"
+    },
+    "source": "player",
+    "order": 6
+  },
+  {
+    "id": "dnd5e.scores.roll=rolled1:[[[6, 6, 6, 1], [4, 4, 4, 1], [5, 4, 3, 3], [4, 3, 3, 2], [3, 3, 3, 1], [6, 1, 1, 1]]]",
+    "slot": "dnd5e.scores.roll",
+    "selection": {
+      "kind": "rolled",
+      "value": [
+        {
+          "groups": [
+            [
+              3,
+              3,
+              3,
+              1
+            ],
+            [
+              4,
+              2,
+              2,
+              1
+            ],
+            [
+              3,
+              3,
+              2,
+              2
+            ],
+            [
+              5,
+              1,
+              1,
+              1
+            ],
+            [
+              6,
+              4,
+              1,
+              1
+            ],
+            [
+              2,
+              2,
+              2,
+              1
+            ]
+          ],
+          "origin": "app"
+        },
+        {
+          "groups": [
+            [
+              6,
+              6,
+              6,
+              1
+            ],
+            [
+              4,
+              4,
+              4,
+              1
+            ],
+            [
+              5,
+              4,
+              3,
+              3
+            ],
+            [
+              4,
+              3,
+              3,
+              2
+            ],
+            [
+              3,
+              3,
+              3,
+              1
+            ],
+            [
+              6,
+              1,
+              1,
+              1
+            ]
+          ],
+          "origin": "entered"
+        }
+      ]
+    },
+    "source": "player",
+    "order": 7
+  },
+  {
+    "id": "dnd5e.scores.assign=score.str.18+score.dex.12+score.con.12+score.wis.10+score.int.9+score.cha.8",
+    "slot": "dnd5e.scores.assign",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "score.str.18",
+        "score.dex.12",
+        "score.con.12",
+        "score.wis.10",
+        "score.int.9",
+        "score.cha.8"
+      ]
+    },
+    "source": "player",
+    "order": 8
+  },
+  {
+    "id": "dnd5e.class.skills=skill.acrobatics+skill.insight",
+    "slot": "dnd5e.class.skills",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "skill.acrobatics",
+        "skill.insight"
+      ]
+    },
+    "source": "player",
+    "order": 9
+  },
+  {
+    "id": "dnd5e.class.style=feat.style.defense",
+    "slot": "dnd5e.class.style",
+    "selection": {
+      "kind": "option",
+      "value": "feat.style.defense"
+    },
+    "source": "player",
+    "order": 10
+  },
+  {
+    "id": "dnd5e.class.masteries=weapon.greatsword+weapon.flail+weapon.javelin",
+    "slot": "dnd5e.class.masteries",
+    "selection": {
+      "kind": "options",
+      "value": [
+        "weapon.greatsword",
+        "weapon.flail",
+        "weapon.javelin"
+      ]
+    },
+    "source": "player",
+    "order": 11
+  },
+  {
+    "id": "dnd5e.equipment.package=package.fighter.a",
+    "slot": "dnd5e.equipment.package",
+    "selection": {
+      "kind": "option",
+      "value": "package.fighter.a"
+    },
+    "source": "player",
+    "order": 12
+  },
+  {
+    "id": "dnd5e.background.equipment=background-equipment.package",
+    "slot": "dnd5e.background.equipment",
+    "selection": {
+      "kind": "option",
+      "value": "background-equipment.package"
+    },
+    "source": "player",
+    "order": 13
+  },
+  {
+    "id": "dnd5e.details.name=Ysolde",
+    "slot": "dnd5e.details.name",
+    "selection": {
+      "kind": "text",
+      "value": "Ysolde"
+    },
+    "source": "player",
+    "order": 14
+  }
+]

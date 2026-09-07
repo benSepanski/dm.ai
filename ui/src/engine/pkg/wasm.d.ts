@@ -45,6 +45,13 @@ export interface DraftView {
     current_step: StepId;
     projection: ProjectionView;
     /**
+     * The whole decision log the projection derives from — including
+     * decisions in steps that are not live (a finalized prefix, a level
+     * advance) — so the browser engine previews over the same log the
+     * server folds, never over a reconstruction from the live steps.
+     */
+    log: Decision[];
+    /**
      * The rules-data version this draft is built against.
      */
     rules_version: string;
@@ -60,6 +67,23 @@ export interface DraftView {
      * choices an abandon would discard. Absent on creation drafts.
      */
     level_up?: LevelUpView;
+}
+
+/**
+ * A multi-line `detail` follows one shape: the first line states the
+ * rule, every later line is one bullet ("• …"). Diffs keep the rule and
+ * only the bullets that changed; the UI renders the lines as written.
+ */
+export interface SheetEntry {
+    label: string;
+    /**
+     * Render-ready value, e.g. "18" or "+7" or "2 Bulk, 3 L".
+     */
+    value: string;
+    /**
+     * Optional provenance/breakdown, e.g. "10 + 2 Dex + 4 scale mail + 2 trained".
+     */
+    detail: string | undefined;
 }
 
 /**
@@ -142,6 +166,17 @@ export interface AbandonLevelRequest {
 }
 
 /**
+ * Ask the server to roll a roll slot's dice and record the set (dnd-dice).
+ * The client mints the decision id — the idempotency key: a retry with
+ * the same id returns the roll already recorded, never a second one.
+ */
+export interface RollRequest {
+    slot: SlotId;
+    version: number;
+    decision_id: DecisionId;
+}
+
+/**
  * Client-minted per confirm; a replayed ID appends nothing (idempotency).
  */
 export type DecisionId = string;
@@ -186,7 +221,17 @@ export interface FillRemainingRequest {
  * How a slot collects its selection. Presentation-mechanical only — the
  * meaning of the options is the ruleset's business.
  */
-export type SlotViewKind = { kind: "single" } | { kind: "multi"; count: number } | { kind: "list" } | { kind: "text"; multiline: boolean };
+export type SlotViewKind = { kind: "single" } | { kind: "multi"; count: number } | { kind: "list" } | { kind: "text"; multiline: boolean } | { kind: "roll"; sides: number; dice: number; groups: number };
+
+/**
+ * One rolled set: the faces, grouped as the slot's shape groups them
+ * (six groups of four for a 4d6-six-times method; one group of one for a
+ * single hit die).
+ */
+export interface RolledSet {
+    groups: number[][];
+    origin: RollOrigin;
+}
 
 /**
  * One sheet value that would change under current data, old → new.
@@ -204,9 +249,11 @@ export interface SheetDiff {
     new: string;
     /**
      * Render-ready explanation of the new value — the sheet entry's own
-     * detail line ("7 expert + 2 Con"), when the sheet carries one. So a
-     * reader of a diff (a level-up's gains, a version review) sees why a
-     * number moved, not only that it did.
+     * detail ("7 expert + 2 Con"), when the sheet carries one, scoped to
+     * the change: for a multi-line detail (a rule line, then bullet
+     * lines) only the rule and the bullets new against the old entry
+     * remain. So a reader of a diff (a level-up's gains, a version
+     * review) sees why a number moved, not the whole history.
      */
     why?: string;
 }
@@ -301,6 +348,7 @@ export interface WireTypeExports {
     create_request: CreateCharacterRequest;
     confirm_request: ConfirmRequest;
     confirm_outcome: ConfirmOutcome;
+    roll_request: RollRequest;
     clear_request: ClearRequest;
     clear_outcome: ClearOutcome;
     step_request: StepRequest;
@@ -354,6 +402,11 @@ export interface CampaignView {
      * Every shipped ruleset's license paragraphs, in display order.
      */
     license_lines: string[];
+    /**
+     * True when the server was started with the testing-only dice seed:
+     * every die is deterministic and the roster wears a badge (dnd-dice).
+     */
+    seeded_dice?: boolean;
 }
 
 /**
@@ -441,7 +494,7 @@ export interface ClearPreview {
 /**
  * What was chosen in a slot.
  */
-export type Selection = { kind: "option"; value: OptionId } | { kind: "options"; value: OptionId[] } | { kind: "text"; value: string };
+export type Selection = { kind: "option"; value: OptionId } | { kind: "options"; value: OptionId[] } | { kind: "text"; value: string } | { kind: "rolled"; value: RolledSet[] };
 
 /**
  * Where a character's pinned rules-data version stands relative to the
@@ -454,6 +507,12 @@ export type VersionStatus = { status: "current" } | { status: "older_known"; pin
  * later epochs as new variants.
  */
 export type DecisionSource = "player" | "suggested" | "random" | "clone";
+
+/**
+ * Who produced a rolled set's faces. Exactly two: the app's own dice, or
+ * physical dice the player entered by hand.
+ */
+export type RollOrigin = "app" | "entered";
 
 export interface ChecklistEntry {
     severity: ChecklistSeverity;
@@ -593,18 +652,6 @@ export interface RosterView {
      * none (the roster then shows no quick-build control).
      */
     quick_build?: ClassOption;
-}
-
-export interface SheetEntry {
-    label: string;
-    /**
-     * Render-ready value, e.g. "18" or "+7" or "2 Bulk, 3 L".
-     */
-    value: string;
-    /**
-     * Optional provenance/breakdown, e.g. "10 + 2 Dex + 4 scale mail + 2 trained".
-     */
-    detail: string | undefined;
 }
 
 export interface SheetSection {

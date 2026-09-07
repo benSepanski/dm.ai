@@ -1,7 +1,7 @@
 // The guided creation wizard: non-linear steps with badges, live checklist,
 // live summary sidebar, confirm-per-choice durability, and the
 // change-confirmed-choice flow with its dependent-clearing prompt.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   abandonLevel,
   amendDecision,
@@ -9,6 +9,7 @@ import {
   confirmDecision,
   fillRemaining,
   finalizeCharacter,
+  rollDice,
   setStep as apiSetStep,
 } from './api';
 import { Checklist } from './Checklist';
@@ -23,11 +24,14 @@ import type {
   StepStatus,
 } from './engine';
 import { clearPreview as engineClearPreview, initEngine, project as engineProject } from './engine';
-import { logFromProjection, newDecisionId } from './log';
+import { newDecisionId } from './log';
 import { Sheet } from './Sheet';
 import { ClearConfirmDialog, SlotCard } from './SlotCard';
 import { SheetDiffTable } from './VersionFlag';
 
+
+/** How long the Roll button rests after a roll answers (a double tap is one roll). */
+const ROLL_COOLDOWN_MS = 400;
 function badge(status: StepStatus): string {
   switch (status) {
     case 'complete':
@@ -54,6 +58,10 @@ export function sameSelection(a: Selection, b: Selection): boolean {
       [...a.value].sort().join('\u0000') === [...b.value].sort().join('\u0000')
     );
   }
+  if (a.kind === 'rolled' && b.kind === 'rolled') {
+    // Recorded dice compare by content: sets, groups, faces, tags.
+    return JSON.stringify(a.value) === JSON.stringify(b.value);
+  }
   return a.value === b.value;
 }
 
@@ -67,6 +75,9 @@ export function isRealEdit(saved: Selection | undefined, selection: Selection): 
     return selection.value.trim() !== '';
   }
   if (selection.kind === 'options') {
+    return selection.value.length > 0;
+  }
+  if (selection.kind === 'rolled') {
     return selection.value.length > 0;
   }
   return true;
@@ -91,10 +102,33 @@ export function Wizard({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [engineReady, setEngineReady] = useState(false);
+  // The first in-browser engine failure, shown as a notice until reload.
+  const [engineFailure, setEngineFailure] = useState<string | null>(null);
+  // A roll in flight: a second tap before the first answers is ignored
+  // outright (the disabled button covers real taps; this covers the
+  // synchronous double-dispatch a re-render has not caught up with), so
+  // it can never race the first request into a stale-version conflict.
+  const rollInFlight = useRef(false);
+  // After a roll answers, the Roll button rests for a moment: a hand-speed
+  // double tap is one roll, not two sets in the record. Only the roll
+  // button waits; every other control stays live.
+  const [rollCooling, setRollCooling] = useState(false);
+  const rollCoolTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (rollCoolTimer.current !== null) {
+        window.clearTimeout(rollCoolTimer.current);
+      }
+    },
+    [],
+  );
   const [clearDialog, setClearDialog] = useState<{
     slot: string;
     label: string;
     preview: ClearPreview;
+    /** What confirming the dialog does: clear the slot, or roll again
+     * (a reroll appends a set and clears the slot's dependents). */
+    then?: 'roll';
   } | null>(null);
   // Transient in-card acknowledgment for saves that leave the slot open —
   // without it, a successful 4-of-5 confirm looks like a dead button.
@@ -131,7 +165,9 @@ export function Wizard({
     };
   }, []);
 
-  const serverLog = useMemo(() => logFromProjection(draft.projection), [draft]);
+  // The server's own log for this draft (every decision, live step or
+  // not) — what the browser engine previews and clears against.
+  const serverLog = useMemo(() => draft.log, [draft]);
 
   // A tentative edit identical to the confirmed selection is not an edit.
   // Pruning on every draft change keeps `pending` meaning exactly "differs
@@ -139,9 +175,7 @@ export function Wizard({
   // chip both rely on that.
   useEffect(() => {
     setPending((p) => {
-      const confirmed = new Map(
-        logFromProjection(draft.projection).map((d) => [d.slot, d.selection]),
-      );
+      const confirmed = new Map(draft.log.map((d) => [d.slot, d.selection]));
       const kept = Object.entries(p).filter(([slot, selection]) =>
         isRealEdit(confirmed.get(slot), selection),
       );
@@ -187,10 +221,40 @@ export function Wizard({
         });
       }
       return engineProject(hypothetical);
-    } catch {
+    } catch (error) {
+      // A dead engine is loud, never a silently inert preview: say so once
+      // at the top of the step; confirms still work through the server.
+      const message = String(error instanceof Error ? error.message : error);
+      console.error('in-browser engine failed', error);
+      setEngineFailure((f) => f ?? message);
       return draft.projection;
     }
   }, [draft, pending, serverLog, engineReady]);
+
+  // Gains rows an undecided card in the pending level can still change,
+  // matched by label (the UI learns no game word): the table shows no
+  // value for them — the fold must have a number, the player has not
+  // chosen one — only a pointer to the card. The projection carries only
+  // live steps, so during a level-up these are the level's own cards.
+  const rollMarkers = useMemo(() => {
+    const markers: Record<string, string> = {};
+    if (draft.level_up === undefined) {
+      return markers;
+    }
+    for (const st of draft.projection.steps) {
+      for (const sl of st.slots) {
+        if (sl.decision !== undefined && sl.decision !== null) {
+          continue;
+        }
+        if (sl.kind.kind === 'roll') {
+          markers[sl.label] = '🎲 roll below';
+        } else if (markers[sl.label] === undefined) {
+          markers[sl.label] = '🎲 decide below';
+        }
+      }
+    }
+    return markers;
+  }, [draft]);
 
   // Step badges, checklist, and the sheet react to tentative selections;
   // the slot editors themselves render the server-confirmed state, so a
@@ -228,6 +292,79 @@ export function Wizard({
         selection,
         source: 'player',
       });
+      handleOutcome(slot, outcome);
+    } catch (error) {
+      setCardError({
+        slot,
+        message: `That choice did not save (${String(
+          error instanceof Error ? error.message : error,
+        )}). The server may be restarting — try again.`,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Ask the server to roll a roll slot's dice. A reroll appends a set and
+   * clears the slot's dependents, so when anything would be cleared the
+   * existing dialog asks first (the same idiom as changing any choice). */
+  const roll = (slot: string, label: string) => {
+    const occupied = serverLog.some((d) => d.slot === slot);
+    if (occupied && engineReady) {
+      try {
+        const preview = engineClearPreview(serverLog, slot);
+        const dependents = preview.cleared.filter((c) => c.slot !== slot);
+        if (dependents.length > 0) {
+          setClearDialog({ slot, label, preview: { slot, cleared: dependents }, then: 'roll' });
+          return;
+        }
+      } catch (error) {
+        setNotice(String(error instanceof Error ? error.message : error));
+        return;
+      }
+    }
+    void executeRoll(slot);
+  };
+
+  const executeRoll = async (slot: string) => {
+    if (rollInFlight.current) {
+      return;
+    }
+    rollInFlight.current = true;
+    setBusy(true);
+    setNotice(null);
+    setCardError(null);
+    try {
+      const outcome = await rollDice(draft.id, draft.version, slot, newDecisionId());
+      handleOutcome(slot, outcome);
+    } catch (error) {
+      setCardError({
+        slot,
+        message: `The dice did not roll (${String(
+          error instanceof Error ? error.message : error,
+        )}). Try again.`,
+      });
+    } finally {
+      rollInFlight.current = false;
+      setBusy(false);
+      setRollCooling(true);
+      if (rollCoolTimer.current !== null) {
+        window.clearTimeout(rollCoolTimer.current);
+      }
+      rollCoolTimer.current = window.setTimeout(() => {
+        rollCoolTimer.current = null;
+        setRollCooling(false);
+      }, ROLL_COOLDOWN_MS);
+    }
+  };
+
+  /** One confirm outcome, one set of reactions — confirm, amend, and roll
+   * all answer with the same shape. */
+  function handleOutcome(
+    slot: string,
+    outcome: Awaited<ReturnType<typeof confirmDecision>>,
+  ): void {
+    {
       switch (outcome.outcome) {
         case 'confirmed': {
           setDraft(outcome.draft);
@@ -277,17 +414,8 @@ export function Wizard({
           setDraft(outcome.draft);
           break;
       }
-    } catch (error) {
-      setCardError({
-        slot,
-        message: `That choice did not save (${String(
-          error instanceof Error ? error.message : error,
-        )}). The server may be restarting — try again.`,
-      });
-    } finally {
-      setBusy(false);
     }
-  };
+  }
 
   const requestChange = (slot: string, label: string) => {
     try {
@@ -475,6 +603,7 @@ export function Wizard({
             Abandon level {draft.level_up.level}
           </button>
         )}
+        <div className="finalize-status">
         {pendingSlots.length > 0 ? (
           <div className="finalize-blockers pending-chip" id="finalize-blockers" role="status">
             <p>Unconfirmed changes:</p>
@@ -506,6 +635,7 @@ export function Wizard({
             </p>
           )
         )}
+        </div>
       </nav>
 
       <main className="wizard-main">
@@ -514,14 +644,21 @@ export function Wizard({
             {notice}
           </div>
         )}
+        {engineFailure !== null && (
+          <div className="notice" role="alert" data-testid="engine-failure">
+            The in-browser engine failed ({engineFailure}). Live previews are off
+            until you reload; every confirm still goes through the server.
+          </div>
+        )}
         {draft.level_up !== undefined && (
           <section className="level-gains" aria-label="level gains">
             <h2>At level {draft.level_up.level} you gain…</h2>
             <p className="level-gains-intro">
               These change on their own the moment you reach level{' '}
-              {draft.level_up.level} — before any choice below. Every value on
-              the sheet derives from your level and your choices; the Why column
-              is each value's own formula.
+              {draft.level_up.level} — before any choice below. A value that
+              waits on a card below shows no number until you decide it.
+              Every value on the sheet derives from your level and your choices;
+              the Why column is the rule behind each change.
             </p>
             {draft.level_up.gains.length === 0 ? (
               <p>Only the choices below — nothing changes on its own.</p>
@@ -530,6 +667,7 @@ export function Wizard({
                 differences={draft.level_up.gains}
                 oldHeading={`Level ${draft.level_up.level - 1}`}
                 newHeading={`Level ${draft.level_up.level}`}
+                markers={rollMarkers}
               />
             )}
           </section>
@@ -554,6 +692,8 @@ export function Wizard({
               })
             }
             onConfirm={(selection) => void confirm(slot.id, selection)}
+            onRoll={() => roll(slot.id, slot.label)}
+            rollCooling={rollCooling}
             onRequestChange={() => requestChange(slot.id, slot.label)}
             busy={busy}
             ack={ack !== null && ack.slot === slot.id ? ack.message : null}
@@ -588,10 +728,11 @@ export function Wizard({
               differences={draft.level_up.deltas}
               oldHeading="Before"
               newHeading="After"
+              markers={rollMarkers}
             />
           </section>
         )}
-        <Sheet sheet={displayed.sheet} compact />
+        <Sheet sheet={displayed.sheet} compact undecided={rollMarkers} />
       </aside>
 
       {leaveDialog && (
@@ -621,11 +762,26 @@ export function Wizard({
           </div>
         </div>
       )}
-      {clearDialog !== null && (
+      {clearDialog !== null && clearDialog.then === undefined && (
         <ClearConfirmDialog
           preview={clearDialog.preview}
           slotLabel={clearDialog.label}
           onConfirm={() => void executeClear()}
+          onCancel={() => setClearDialog(null)}
+        />
+      )}
+      {clearDialog !== null && clearDialog.then === 'roll' && (
+        <ClearConfirmDialog
+          preview={clearDialog.preview}
+          slotLabel={clearDialog.label}
+          title="Roll again?"
+          intro="Every earlier set stays in your record. Rolling again clears these choices:"
+          confirmLabel="Roll again"
+          onConfirm={() => {
+            const target = clearDialog.slot;
+            setClearDialog(null);
+            void executeRoll(target);
+          }}
           onCancel={() => setClearDialog(null)}
         />
       )}

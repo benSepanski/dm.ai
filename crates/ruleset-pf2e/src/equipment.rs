@@ -28,7 +28,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Class kit".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|state| match state.class {
             Some(_) => Availability::Open,
@@ -138,7 +138,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Additional items".into(),
         required: false,
-        presentation_hint: Some("shopping-list".into()),
+        presentation_hint: Box::new(|_| Some("shopping-list".into())),
         kind: Box::new(|_| SlotViewKind::List),
         unlock: Box::new(|_| Availability::Open),
         dependents: vec![],

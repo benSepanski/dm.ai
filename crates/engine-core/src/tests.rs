@@ -65,7 +65,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("one"),
             label: "Primary".into(),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Single),
             unlock: Box::new(|_| Availability::Open),
             dependents: vec![SlotId::new("secondary"), SlotId::new("bonus")],
@@ -93,7 +93,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("one"),
             label: "Secondary".into(),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Single),
             unlock: Box::new(|s| match s.primary {
                 Some(_) => Availability::Open,
@@ -138,7 +138,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("two"),
             label: "Picks".into(),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Multi { count: 2 }),
             unlock: Box::new(|_| Availability::Open),
             dependents: vec![],
@@ -188,7 +188,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("two"),
             label: "Name".into(),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Text { multiline: false }),
             unlock: Box::new(|_| Availability::Open),
             dependents: vec![],
@@ -216,7 +216,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("two"),
             label: "Bonus".into(),
             required: false,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Single),
             unlock: Box::new(|s| match s.primary.as_deref() {
                 Some("b") => Availability::Open,
@@ -817,4 +817,250 @@ fn planner_reports_slots_without_suggestions() {
     // Everything else still filled.
     assert!(plan.log.iter().any(|d| d.slot.as_str() == "primary"));
     assert!(plan.log.iter().any(|d| d.slot.as_str() == "name"));
+}
+
+/// Recorded dice (dnd-dice architecture): a roll slot's history is one
+/// decision; submitted sets append onto it under amend and preview; the
+/// slot's own `apply` runs the shared shape check.
+mod rolls {
+    use super::*;
+    use types::{RollOrigin, RolledSet};
+
+    #[derive(Default, Clone)]
+    struct DiceState {
+        sets: Vec<RolledSet>,
+        assigned: Option<String>,
+    }
+
+    fn set(faces: &[u8], origin: RollOrigin) -> RolledSet {
+        RolledSet {
+            groups: vec![faces.to_vec()],
+            origin,
+        }
+    }
+
+    fn dice_engine() -> Engine<DiceState> {
+        let steps = vec![crate::StepRegistration::always("one", "Step One")];
+        let slots = vec![
+            SlotRegistration::<DiceState> {
+                id: SlotId::new("roll"),
+                step: StepId::new("one"),
+                label: "Roll".into(),
+                required: true,
+                presentation_hint: Box::new(|_| None),
+                kind: Box::new(|_| SlotViewKind::Roll {
+                    sides: 6,
+                    dice: 2,
+                    groups: 1,
+                }),
+                unlock: Box::new(|_| Availability::Open),
+                dependents: vec![SlotId::new("assign")],
+                options: Box::new(|s| {
+                    s.sets
+                        .iter()
+                        .enumerate()
+                        .map(|(i, _)| opt(&format!("set.{}", i + 1)))
+                        .collect()
+                }),
+                apply: Box::new(|s, d| {
+                    let Selection::Rolled(sets) = &d.selection else {
+                        return Err(ApplyError::new("expected rolled dice"));
+                    };
+                    types::check_roll_shape(6, 2, 1, sets).map_err(ApplyError::new)?;
+                    s.sets = sets.clone();
+                    Ok(())
+                }),
+                validate: Box::new(|s, _| {
+                    if s.sets.is_empty() {
+                        vec![incomplete("roll", "Roll", "roll the dice")]
+                    } else {
+                        vec![]
+                    }
+                }),
+                meters: Box::new(|_, _| vec![]),
+                describe: Box::new(|sel| match sel {
+                    Selection::Rolled(sets) => format!("{} sets", sets.len()),
+                    other => format!("{other:?}"),
+                }),
+            },
+            SlotRegistration::<DiceState> {
+                id: SlotId::new("assign"),
+                step: StepId::new("one"),
+                label: "Assign".into(),
+                required: true,
+                presentation_hint: Box::new(|_| None),
+                kind: Box::new(|_| SlotViewKind::Single),
+                unlock: Box::new(|s| {
+                    if s.sets.is_empty() {
+                        Availability::Locked {
+                            reason: "roll first".into(),
+                        }
+                    } else {
+                        Availability::Open
+                    }
+                }),
+                dependents: vec![],
+                options: Box::new(|_| vec![opt("hi"), opt("lo")]),
+                apply: Box::new(|s, d| {
+                    s.assigned = Some(selection_id(&d.selection)?);
+                    Ok(())
+                }),
+                validate: Box::new(|_, _| vec![]),
+                meters: Box::new(|_, _| vec![]),
+                describe: Box::new(|sel| format!("{sel:?}")),
+            },
+        ];
+        Engine::new(
+            steps,
+            slots,
+            Box::new(DiceState::default),
+            Box::new(|_| SheetView {
+                name: String::new(),
+                summary: vec![],
+                sections: vec![],
+            }),
+        )
+    }
+
+    fn rolled(id: &str, sets: Vec<RolledSet>) -> DecisionInput {
+        input(id, "roll", Selection::Rolled(sets))
+    }
+
+    fn stored_sets(log: &[Decision]) -> Vec<RolledSet> {
+        match &log
+            .iter()
+            .find(|d| d.slot.as_str() == "roll")
+            .unwrap()
+            .selection
+        {
+            Selection::Rolled(sets) => sets.clone(),
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn append_takes_the_first_history_as_is() {
+        let engine = dice_engine();
+        let first = set(&[3, 4], RollOrigin::App);
+        let AppendOutcome::Appended(log) = engine
+            .append(&[], rolled("r1", vec![first.clone()]))
+            .unwrap()
+        else {
+            panic!("expected an append")
+        };
+        assert_eq!(stored_sets(&log), vec![first]);
+    }
+
+    #[test]
+    fn amend_appends_sets_onto_the_stored_history_and_clears_dependents() {
+        let engine = dice_engine();
+        let first = set(&[3, 4], RollOrigin::App);
+        let AppendOutcome::Appended(log) = engine
+            .append(&[], rolled("r1", vec![first.clone()]))
+            .unwrap()
+        else {
+            panic!()
+        };
+        let AppendOutcome::Appended(log) = engine
+            .append(
+                &log,
+                input("a1", "assign", Selection::Option(OptionId::new("hi"))),
+            )
+            .unwrap()
+        else {
+            panic!()
+        };
+        let second = set(&[6, 1], RollOrigin::Entered);
+        let AppendOutcome::Appended(log) = engine
+            .amend(&log, rolled("r2", vec![second.clone()]))
+            .unwrap()
+        else {
+            panic!()
+        };
+        // The history grew by exactly the submitted set, in order; the
+        // assignment (a dependent) was cleared; one decision per slot.
+        assert_eq!(stored_sets(&log), vec![first, second]);
+        assert_eq!(log.iter().filter(|d| d.slot.as_str() == "roll").count(), 1);
+        assert!(!log.iter().any(|d| d.slot.as_str() == "assign"));
+        // A third append of two sets at once keeps order.
+        let third = set(&[2, 2], RollOrigin::App);
+        let fourth = set(&[5, 5], RollOrigin::Entered);
+        let AppendOutcome::Appended(log) = engine
+            .amend(&log, rolled("r3", vec![third.clone(), fourth.clone()]))
+            .unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(stored_sets(&log).len(), 4);
+        assert_eq!(stored_sets(&log)[2], third);
+        assert_eq!(stored_sets(&log)[3], fourth);
+    }
+
+    #[test]
+    fn preview_composes_without_recording() {
+        let engine = dice_engine();
+        let first = set(&[3, 4], RollOrigin::App);
+        let AppendOutcome::Appended(log) = engine.append(&[], rolled("r1", vec![first])).unwrap()
+        else {
+            panic!()
+        };
+        let projection = engine
+            .preview(&log, &rolled("r2", vec![set(&[1, 1], RollOrigin::Entered)]))
+            .unwrap();
+        let roll = projection.steps[0]
+            .slots
+            .iter()
+            .find(|s| s.id.as_str() == "roll")
+            .unwrap();
+        // The projected history holds both sets (the options list is one
+        // per stored set); the log itself is untouched.
+        assert_eq!(roll.options.len(), 2);
+        assert_eq!(stored_sets(&log).len(), 1);
+    }
+
+    #[test]
+    fn a_replayed_decision_id_is_idempotent_under_amend() {
+        let engine = dice_engine();
+        let AppendOutcome::Appended(log) = engine
+            .append(&[], rolled("r1", vec![set(&[3, 4], RollOrigin::App)]))
+            .unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!(
+            engine
+                .amend(&log, rolled("r1", vec![set(&[6, 6], RollOrigin::App)]))
+                .unwrap(),
+            AppendOutcome::AlreadyPresent
+        );
+    }
+
+    #[test]
+    fn out_of_shape_sets_are_apply_errors() {
+        let engine = dice_engine();
+        for bad in [
+            vec![],
+            vec![set(&[3], RollOrigin::App)],
+            vec![set(&[3, 7], RollOrigin::App)],
+            vec![set(&[0, 4], RollOrigin::App)],
+            vec![RolledSet {
+                groups: vec![vec![1, 2], vec![3, 4]],
+                origin: RollOrigin::App,
+            }],
+        ] {
+            let err = engine.append(&[], rolled("r1", bad)).unwrap_err();
+            assert!(matches!(err, EngineError::InvalidDecision { .. }), "{err}");
+        }
+        // Composition never rescues a bad appended set either.
+        let AppendOutcome::Appended(log) = engine
+            .append(&[], rolled("r1", vec![set(&[3, 4], RollOrigin::App)]))
+            .unwrap()
+        else {
+            panic!()
+        };
+        assert!(engine
+            .amend(&log, rolled("r2", vec![set(&[3, 9], RollOrigin::Entered)]))
+            .is_err());
+        assert_eq!(stored_sets(&log).len(), 1);
+    }
 }

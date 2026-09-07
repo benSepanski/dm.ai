@@ -19,6 +19,11 @@ pub struct DraftView {
     /// Server-side step cursor: where resume lands.
     pub current_step: StepId,
     pub projection: ProjectionView,
+    /// The whole decision log the projection derives from — including
+    /// decisions in steps that are not live (a finalized prefix, a level
+    /// advance) — so the browser engine previews over the same log the
+    /// server folds, never over a reconstruction from the live steps.
+    pub log: Vec<crate::Decision>,
     /// The rules-data version this draft is built against.
     pub rules_version: String,
     /// Where that pin stands against the shipped data (always `Current`
@@ -104,6 +109,17 @@ pub struct ConfirmRequest {
     pub decision: DecisionInput,
     /// The draft version this confirm was made against.
     pub version: u64,
+}
+
+/// Ask the server to roll a roll slot's dice and record the set (dnd-dice).
+/// The client mints the decision id — the idempotency key: a retry with
+/// the same id returns the roll already recorded, never a second one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(tsify::Tsify))]
+pub struct RollRequest {
+    pub slot: SlotId,
+    pub version: u64,
+    pub decision_id: crate::DecisionId,
 }
 
 /// Outcome of a confirm. `Conflict` carries the current draft so a stale

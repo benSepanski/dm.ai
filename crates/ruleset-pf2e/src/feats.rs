@@ -218,7 +218,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Class feat".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new({
             let d = data.clone();
@@ -278,7 +278,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP_ANCESTRY),
         label: "General feat (heritage)".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| {
             if heritage_grants_general_feat(&d_unlock, state) {
@@ -325,7 +325,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP_ANCESTRY),
         label: "General feat (ancestry feat)".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| {
             if feat_grants(&d_unlock, state, "general_feats") {
@@ -368,7 +368,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP_ANCESTRY),
         label: "Proficiency choice".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| {
             if proficiency_choice_grant(state).is_some() {
@@ -451,7 +451,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP_ANCESTRY),
         label: "Bonus class feat (Natural Ambition)".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| {
             if !feat_grants(&d_unlock, state, "class_feats") {
@@ -544,7 +544,7 @@ fn level_registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>
                 step: StepId::new(&step),
                 label: format!("Class feat (level {level})"),
                 required: true,
-                presentation_hint: None,
+                presentation_hint: Box::new(|_| None),
                 kind: Box::new(|_| SlotViewKind::Single),
                 unlock: Box::new(at_level),
                 dependents: vec![],
@@ -604,7 +604,7 @@ fn level_registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>
                 step: StepId::new(&step),
                 label: format!("Skill feat (level {level})"),
                 required: true,
-                presentation_hint: None,
+                presentation_hint: Box::new(|_| None),
                 kind: Box::new(|_| SlotViewKind::Single),
                 unlock: Box::new(at_level),
                 dependents: vec![],
@@ -648,7 +648,7 @@ fn level_registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>
                 step: StepId::new(&step),
                 label: format!("General feat (level {level})"),
                 required: true,
-                presentation_hint: None,
+                presentation_hint: Box::new(|_| None),
                 kind: Box::new(|_| SlotViewKind::Single),
                 unlock: Box::new(at_level),
                 dependents: vec![],

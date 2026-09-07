@@ -609,6 +609,8 @@ textarea {
   font-weight: 700;
 }
 .sheet-detail {
+  /* Breakdowns arrive as lines (a rule, then one bullet per part). */
+  white-space: pre-line;
   display: block;
   color: var(--ink-soft);
   font-size: 0.85rem;
@@ -651,27 +653,117 @@ textarea {
   margin-top: 1rem;
 }
 
-.select-rows {
+/* ---- Tap-to-place assignment (a fixed pool of values) ---- */
+.pool-editor,
+.budget-editor {
+  display: grid;
+  gap: 0.5rem;
+}
+.pool-tray {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 0.4rem;
-  margin-bottom: 0.4rem;
+  min-height: 2.4rem;
+  padding: 0.4rem;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
 }
-.select-row {
+.pool-empty {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+.pool-chip {
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  min-width: 2.6rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+}
+.pool-chip.pool-held {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.pool-chip.pool-used {
+  opacity: 0.35;
+  cursor: default;
+  text-decoration: line-through;
+}
+.pool-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  min-height: 1.2rem;
+}
+.pool-rows,
+.budget-rows {
+  display: grid;
+  gap: 0.35rem;
+}
+.pool-row {
   display: flex;
-  gap: 0.7rem;
+  justify-content: space-between;
   align-items: center;
+  gap: 0.7rem;
+  font: inherit;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
 }
-.select-row span {
-  min-width: 4.5rem;
+.pool-row.pool-target {
+  border-style: dashed;
+  border-color: var(--accent);
+}
+.pool-row.pool-filled .pool-row-value {
+  font-weight: 700;
+}
+.pool-row-label {
   color: var(--ink-soft);
 }
-.select-row select {
+.pool-row-value {
+  font-size: 1.05rem;
+  min-width: 4.5rem;
+  text-align: right;
+}
+/* ---- Budget assignment (a cost table) ---- */
+.budget-row {
+  display: grid;
+  grid-template-columns: 6.5rem auto 3rem auto 1fr;
+  align-items: center;
+  gap: 0.4rem;
+}
+.budget-row-label {
+  color: var(--ink-soft);
+}
+.budget-step {
   font: inherit;
-  padding: 0.3rem 0.5rem;
-  border-radius: 6px;
+  font-size: 1.1rem;
+  width: 2.2rem;
+  height: 2.2rem;
   border: 1px solid var(--line);
+  border-radius: 6px;
   background: #fff;
+  cursor: pointer;
+}
+.budget-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.budget-row-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+}
+.budget-row-cost {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
 }
 
 .step-badge.status-waiting {
@@ -765,13 +857,26 @@ textarea {
   border-collapse: collapse;
   margin: 0.6rem 0;
   width: 100%;
+  table-layout: fixed;
 }
 .version-diff th,
 .version-diff td {
   border: 1px solid var(--line);
   padding: 0.3rem 0.6rem;
   text-align: left;
+  vertical-align: top;
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.version-diff thead th:nth-child(1) {
+  width: 24%;
+}
+.version-diff thead th:nth-child(2),
+.version-diff thead th:nth-child(3) {
+  width: 15%;
+}
+.diff-undecided {
+  font-weight: 700;
 }
 .version-old {
   color: var(--bad);
@@ -857,6 +962,21 @@ textarea {
   }
   .wizard-steps {
     position: static;
+  }
+  /* The step nav sits above the cards on a narrow screen: its finalize
+   * status region keeps a fixed height whether it shows nothing, the
+   * checklist line, or the unconfirmed-changes chip, so a tentative pick
+   * never pushes the card under the player's thumb. */
+  .finalize-status {
+    min-height: 4.6rem;
+  }
+  .pending-chip ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.8rem;
+  }
+  .budget-row {
+    grid-template-columns: 5.5rem auto 2.6rem auto 1fr;
   }
   .wizard-side {
     position: static;
@@ -977,6 +1097,7 @@ li.option-group-heading {
 /* The explanation column is prose (a sheet entry's own detail line); let
    it wrap anywhere so its longest token never sets the table's floor. */
 .version-diff td.diff-why {
+  white-space: pre-line;
   overflow-wrap: anywhere;
 }
 .level-deltas h3 {
@@ -1000,4 +1121,119 @@ li.option-group-heading {
 .diff-why {
   color: var(--ink-soft);
   font-size: 0.85rem;
+}
+
+/* ---- Recorded dice (dnd-dice) ---- */
+.campaign-seeded {
+  margin: 0.25rem 0 0;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--bad);
+  border-left: 4px solid var(--bad);
+  background: var(--card);
+  font-size: 0.9rem;
+}
+.roll-editor {
+  display: grid;
+  gap: 0.6rem;
+}
+.roll-empty {
+  color: var(--ink-soft);
+  margin: 0;
+}
+.roll-sets {
+  list-style: none;
+  margin: 0;
+  padding: 0.15rem;
+  display: grid;
+  gap: 0.4rem;
+  /* Every set stays; past a few the list scrolls rather than hides. */
+  max-height: 16rem;
+  overflow-y: auto;
+}
+.roll-count {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.roll-set {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0.2rem 0.5rem;
+  align-items: baseline;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.roll-set.roll-superseded {
+  color: var(--ink-soft);
+}
+.roll-set.roll-live {
+  border-color: var(--ok, var(--accent));
+}
+.roll-totals {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.roll-summary {
+  font-size: 0.85rem;
+}
+.roll-faces {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.85rem;
+}
+.roll-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.roll-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+.roll-grid-intro {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.roll-grid-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.roll-grid-label {
+  min-width: 3.5rem;
+  font-size: 0.85rem;
+}
+.roll-grid-row input {
+  width: 3.2rem;
+}
+.roll-pending {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.diff-marker {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+/* Narrow screens: let the diff table size its columns by content — the
+   fixed shares squeeze the level columns into letter-by-letter wraps. */
+@media (max-width: 600px) {
+  .version-diff {
+    table-layout: auto;
+  }
+  .version-diff thead th:nth-child(1),
+  .version-diff thead th:nth-child(2),
+  .version-diff thead th:nth-child(3) {
+    width: auto;
+  }
+  .version-diff td.version-old,
+  .version-diff td.version-new {
+    min-width: 5.5em;
+  }
 }
