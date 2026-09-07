@@ -262,9 +262,11 @@ test('entered dice: a face off the die is refused, duplicates assign, the cap is
   await expect(card.locator('.roll-set').nth(1)).toContainText('rolled');
   await expect(card.locator('.roll-set').nth(1)).toHaveClass(/roll-live/);
 
-  // The double tap: two clicks as fast as the page can take them record
-  // exactly one more set (the button is busy after the first).
+  // The double tap: once the button has rested after the last roll, two
+  // clicks as fast as the page can take them record exactly one more set
+  // (the button is busy after the first, then rests again).
   const again = card.getByRole('button', { name: 'Roll again' });
+  await expect(again).toBeEnabled();
   await again.dispatchEvent('click');
   await again.dispatchEvent('click');
   await expect(card.locator('.roll-set')).toHaveCount(3);

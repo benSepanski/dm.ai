@@ -163,7 +163,12 @@ pub fn status_for(engine: &dyn EngineOps, known: &KnownVersions, loaded: &Loaded
     // Only the finalized prefix is judged: a pending tail is never part
     // of the stored sheet (the prefix invariant).
     let outcome = match engine.sheet(loaded.finalized_prefix()) {
-        Ok(replayed) if replayed == loaded.sheet => ReplayOutcome::Identical,
+        // Identical means the same values: a newer build may word a
+        // breakdown differently (the detail text) without any number
+        // moving, and that is not a divergence the DM must review.
+        Ok(replayed) if sheet_diffs(&loaded.sheet, &replayed).is_empty() => {
+            ReplayOutcome::Identical
+        }
         Ok(replayed) => ReplayOutcome::Divergent {
             differences: sheet_diffs(&loaded.sheet, &replayed),
         },

@@ -90,6 +90,7 @@ export function SlotCard({
   onTentative,
   onConfirm,
   onRoll,
+  rollCooling = false,
   onRequestChange,
   busy,
   ack = null,
@@ -103,6 +104,8 @@ export function SlotCard({
   onConfirm: (selection: Selection) => void;
   /** Ask the server to roll this slot's dice (roll slots only). */
   onRoll?: () => void;
+  /** The Roll button rests for a moment after a roll answers. */
+  rollCooling?: boolean;
   onRequestChange: () => void;
   busy: boolean;
   /** Transient save acknowledgment ("Saved — 1 skill choice left"). */
@@ -205,6 +208,7 @@ export function SlotCard({
           onTentative={onTentative}
           onConfirm={onConfirm}
           onRoll={onRoll}
+          rollCooling={rollCooling}
           busy={busy}
         />
       ) : (
@@ -308,6 +312,7 @@ function SlotEditor({
   onTentative,
   onConfirm,
   onRoll,
+  rollCooling,
   busy,
 }: {
   slot: SlotView;
@@ -315,6 +320,7 @@ function SlotEditor({
   onTentative: (selection: TentativeSelection) => void;
   onConfirm: (selection: Selection) => void;
   onRoll?: (() => void) | undefined;
+  rollCooling: boolean;
   busy: boolean;
 }) {
   switch (slot.kind.kind) {
@@ -419,6 +425,7 @@ function SlotEditor({
           onTentative={onTentative}
           onConfirm={onConfirm}
           onRoll={onRoll}
+          rollCooling={rollCooling}
           busy={busy}
         />
       );
@@ -1211,6 +1218,7 @@ function RollEditor({
   onTentative,
   onConfirm,
   onRoll,
+  rollCooling,
   busy,
 }: {
   slot: SlotView;
@@ -1221,6 +1229,7 @@ function RollEditor({
   onTentative: (selection: TentativeSelection) => void;
   onConfirm: (selection: Selection) => void;
   onRoll?: (() => void) | undefined;
+  rollCooling: boolean;
   busy: boolean;
 }) {
   const [entering, setEntering] = useState(false);
@@ -1242,6 +1251,9 @@ function RollEditor({
     g.map((f) => (f.trim() === '' ? Number.NaN : Number(f))),
   );
   const complete = parsed.every((g) => g.every((f) => Number.isInteger(f)));
+  // A typed value that is a number but not a whole one (3.5) is neither
+  // missing nor off the die: say what a face is.
+  const fractional = parsed.some((g) => g.some((f) => Number.isFinite(f) && !Number.isInteger(f)));
   const onDie = parsed.every((g) => g.every((f) => !Number.isInteger(f) || (f >= 1 && f <= sides)));
   const entered: RolledSet | null =
     complete && onDie ? { groups: parsed, origin: 'entered' } : null;
@@ -1260,7 +1272,9 @@ function RollEditor({
     onTentative(ok ? { kind: 'rolled', value: [{ groups: nextParsed, origin: 'entered' }] } : null);
   };
 
-  const disabledReason = !complete
+  const disabledReason = fractional
+    ? `Faces are whole numbers from 1 to ${sides}.`
+    : !complete
     ? groups === 1 && dice === 1
       ? "Enter the die's face."
       : groups === 1
@@ -1309,7 +1323,7 @@ function RollEditor({
         <button
           type="button"
           className="roll-button"
-          disabled={busy || onRoll === undefined}
+          disabled={busy || rollCooling || onRoll === undefined}
           data-busy={busy || undefined}
           onClick={onRoll}
           title={history.length === 0 ? 'The app rolls for you' : 'Roll again — every earlier set stays in your record'}

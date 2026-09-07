@@ -1220,3 +1220,20 @@ li.option-group-heading {
   color: var(--ink-soft);
   font-size: 0.85rem;
 }
+
+/* Narrow screens: let the diff table size its columns by content — the
+   fixed shares squeeze the level columns into letter-by-letter wraps. */
+@media (max-width: 600px) {
+  .version-diff {
+    table-layout: auto;
+  }
+  .version-diff thead th:nth-child(1),
+  .version-diff thead th:nth-child(2),
+  .version-diff thead th:nth-child(3) {
+    width: auto;
+  }
+  .version-diff td.version-old,
+  .version-diff td.version-new {
+    min-width: 5.5em;
+  }
+}

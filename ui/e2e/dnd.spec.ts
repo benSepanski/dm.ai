@@ -291,8 +291,8 @@ test('the buy: the point-buy meter drains, an overspend is against the rules, th
   await gotoStep(page, 'Ability Scores');
   await confirmOption(page, 'dnd5e.scores.method', 'Point Buy');
   const card = slot(page, 'dnd5e.scores.assign');
-  const meter = card.getByTestId('meter-Points');
-  await expect(meter).toHaveText('Points 27 of 27');
+  const meter = card.getByTestId('meter-Points left');
+  await expect(meter).toHaveText('Points left 27 of 27');
 
   // Each row shows its cost as it steps; 15, 15, 15, 8, 8, 8 costs exactly
   // 27 — the meter drains to zero.
@@ -306,14 +306,14 @@ test('the buy: the point-buy meter drains, an overspend is against the rules, th
     Wisdom: 8,
     Charisma: 8,
   });
-  await expect(meter).toHaveText('Points 0 of 27');
+  await expect(meter).toHaveText('Points left 0 of 27');
   const checklist = page.getByTestId('checklist');
   await expect(checklist.getByText('Against the rules')).toHaveCount(0);
 
   // One more point is one too many: the meter shows the true overshoot
   // and the checklist names the rule, live, before anything is confirmed.
   await buyScores(page, 'dnd5e.scores.assign', { Intelligence: 9 });
-  await expect(meter).toHaveText('Points -1 of 27 — over the limit');
+  await expect(meter).toHaveText('Points left -1 of 27 — over the limit');
   await expect(meter).toHaveClass(/meter-exceeded/);
   await expect(checklist.getByText('Against the rules')).toBeVisible();
   const illegal = checklist.locator('.checklist-item.illegal');

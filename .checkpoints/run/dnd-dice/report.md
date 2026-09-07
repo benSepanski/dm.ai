@@ -37,6 +37,15 @@ in the ability-score step:
     step predated the hit point choice slot, so the Change dialog's
     engine call met an unknown slot. The wizard's preview fallbacks had
     masked the stale engine in every automated walk.
+12. **Every pre-slice character was flagged "Review: values changed" with
+    an empty diff** (found by the by-hand plan below, on files written by
+    main's build). The guard judged identical replays by comparing whole
+    sheets, breakdown text included, so the reworded Hit Points breakdown
+    read as a divergence. Identical is now judged by values; the explicit
+    re-pin stores the replayed sheet so today's wording enters the file
+    with the same numbers. My earlier "quiet re-pin" claim was also wrong:
+    the established flow flags an identical replay mildly and re-pins by
+    one explicit action — the report now says so.
 11. **After a roll on an existing character, the Why still listed the
     level-1 line.** The character had been finalized by an earlier build,
     so its stored sheet carried the old one-line wording; the scoping
@@ -45,6 +54,28 @@ in the ability-score step:
     are now scoped against a fresh fold of the finalized prefix under
     today's rules, and a check rewrites a stored sheet to the old wording
     before leveling and asserts the level-1 line stays out.
+
+Found by the by-hand plan (below) on 2026-09-07 and fixed on the same
+branch:
+
+13. **A hand-speed double tap on Roll recorded two sets.** The in-flight
+    guard only spans the request, and on localhost the roll answers in a
+    few milliseconds, so a second tap 120 ms later was an honest "Roll
+    again". My earlier "double tap → one set" claim came from a
+    synchronous double-dispatch, not a hand-speed tap. The Roll button
+    now rests for 400 ms after a roll answers — only that button; dice
+    entry and every other control stay live — and a unit test pins it.
+    Retested by hand: the second tap finds the button disabled, one set.
+14. **At phone width the gains table's level columns wrapped letter by
+    letter** ("Hu ma n Fig hte r"): the fixed 24 / 15 / 15 column shares
+    squeezed them. Under 600 px the table now sizes columns by content
+    with a minimum width on the value columns.
+15. **The point-buy meter read "Points 0 of 27"** on a fully spent buy,
+    which reads as "spent 0". It is the points-left meter; it now says
+    "Points left 0 of 27".
+16. **A fractional face ("3.5") was refused with "Enter every die"**,
+    which does not say why. It now says "Faces are whole numbers from 1
+    to 10."
 
 Reproduced in the browser at phone width, then fixed on the same branch:
 
@@ -99,7 +130,12 @@ Reproduced in the browser at phone width, then fixed on the same branch:
   out before the disabled button re-rendered, and it came back as a
   stale-version "changed from another tab" notice — one set was still
   recorded, but the notice lied) are now stopped by an in-flight guard
-  in the wizard; the double-tap walk asserts no notice.
+  in the wizard; the double-tap walk asserts no notice. A hand-speed
+  double tap (item 13) is a second matter: the request had already
+  answered, so the guard let it through as a reroll. The Roll button
+  now rests for 400 ms after every answer, so one intended tap is one
+  set; Playwright waits for the button to re-enable, so the walks that
+  roll twice on purpose are unchanged.
 - **The sidebar sheet honours undecided values too**: entries a card the
   player has not decided will set render "?" with the pointer as their
   title, matching the gains table.
@@ -211,17 +247,25 @@ The design that makes it hold:
 
 PF2e is untouched: no roll slot, no data change, every golden byte-identical.
 The 5.5e rules version moved to `dnd5e-srd.0.2.0` for the new record; the
-established quiet re-pin covers existing characters. Character files are
+established older-known flag covers existing characters: identical values,
+one explicit re-pin. Character files are
 schema v6 (the selection enum grew); v1–v5 read and never rewrite on load.
 
 ## How to verify
 
-Your existing 5.5e directory works as before after a quiet re-pin on first
+Your existing 5.5e directory works as before after one explicit re-pin per
+character (the flag reads "identical") on first
 open; a fresh directory is cleanest for the walks:
 
 ```bash
 cargo run --release -p server -- --data-dir ./campaign-dice
 ```
+
+The binary embeds `ui/dist`, which is committed; if you touch a ruleset,
+rebuild the browser engine before the UI (`wasm-pack build crates/wasm
+--target web --out-dir ../../ui/src/engine/pkg --no-pack`, then `npm run
+build` in `ui/`) — the tentative previews come from that binding, and a
+stale one disagrees with the server quietly.
 
 1. **The roll.** Declare D&D 5.5e, create "Ysolde", walk Class (Fighter)
    and Origin (Soldier, +2 Strength / +1 Constitution, Human, Perception,
@@ -384,22 +428,70 @@ cargo run --release -p server -- --data-dir ./campaign-dice --dice-seed 7
   ability group is the same listing, so the tray never parses an id;
   the engine keeps availability and legality by count as before.
 
+## By-hand test plan and results
+
+Ben asked (2026-09-07) what my testing plan had been, after a roll on
+his existing character still listed the level-1 line. The honest answer:
+the automated walks and my earlier hand runs all used characters created
+by the current build, so nothing exercised a file written by the
+pre-slice build — the shape of his real data. This plan was written
+first, then executed case by case in the Browser pane against a debug
+server built from the branch, with the console and the engine-failure
+notice checked after every case. Two campaigns:
+
+**Campaign A** — files written by main's build (a separate worktree
+running main's server), then opened with the branch. Every character
+Ben has is one of these.
+
+| Case | What I did | Result |
+|---|---|---|
+| A1 | Open Brannock (finalized at level 1 by main) with the branch | **FAIL, then fixed** (item 12): every pre-slice character was flagged "values changed" with an empty diff. After the fix: "Data updated — re-pin available", values unchanged (HP 12), the stored breakdown keeps the old wording until the explicit re-pin, then reads the new lines; `verify` clean |
+| A2 | Level Brannock to 2, choose Roll, roll, finalize | "?" + "decide below", Why = rule only; after the roll Why = rule + "• Level 2: rolled 1 + 2 = 3", no level-1 line; sheet breakdown lists levels 1 and 2 |
+| A3 | Sylvenne (leveled to 2 by main with the fixed value): re-pin, level to 3 with the fixed value | HP 20 → 28, Why = rule + "• Level 3: fixed value 6 + 2 = 8" only |
+| A4 | A main-built draft parked at the array step with no assignment | Re-pin resumes at Class; the assignment is the tray; Change to Random Generation names only the method; roll → three 16s are three chips; paced taps place them (Dexterity 16, Constitution 17) |
+| A5 | A main-built point-buy draft (27 points spent) | Stepper shows costs, values unchanged; the meter read "Points 0 of 27" (item 15) |
+| A6 | `verify` on campaign A after all of the above | OK ×4 |
+
+**Campaign B** — fresh under the branch.
+
+| Case | What I did | Result |
+|---|---|---|
+| B1 | Ysolde: Random Generation → Roll → assign → finalize | Six groups with the dropped die named; hand-checked 5, 3, 6, 5 → 16; Strength 16 + 2 = 18 (+4) |
+| B2 | Twelve rerolls with an assignment in place | The first reroll's dialog names the sets kept and the assignment cleared; then no dialog; 13 sets, count line, list scrolls to the live set |
+| B3 | Entered dice: 0, 7, −2, 1e1, blank, "06", 3.5, then a valid set | Each off-die face refused with the rule, no tentative preview; "06" reads as 6; 3.5 got the wrong hint (item 16); the valid set confirms as "entered" with the right totals |
+| B4 | Switch methods with 14 sets and an assignment | Change lists the method, the live set ("set 14 of 14"), and the assignment; Standard Array shows no roll card; back to Random Generation starts empty (the accepted rule: history leaves the live log with the method) |
+| B5 | Two tabs, one stale, both rolling and entering | The stale tab gets "changed from another tab — reloaded" and no second set; reload-and-stop, never an auto-retry; the file holds exactly the two sets (app, entered) |
+| B6 | Close the tab mid-roll; stop and restart the server | Resumes at Ability Scores with both sets intact; `verify` OK |
+| B7 | Clone Ysolde mid-wizard | The clone carries both sets and resumes at the same card |
+| B8 | Marrow's level-up: Change with a die, Change without one, three rolls then Abandon, level again with the fixed value, level 3 with an entered die (11 refused, 7 taken), finalize | Every dialog names what it clears; a tentative pick of the fixed value still shows "?"; the file after Abandon has no level-2 trace; the finalized breakdown reads levels 1, 2 (fixed) and 3 (entered) on their own lines |
+| B9 | Double tap Roll 120 ms apart | **FAIL, then fixed** (item 13): two sets. After the fix: one set, the second tap finds the button disabled |
+| B10 | Marrow's level-up at 375 px | No horizontal overflow, the "?" row, the die card and the entry grid fit, the nav grows 6 px on a tentative pick (scroll position unchanged); the level columns wrapped letter by letter (item 14, fixed) |
+| B11 | Two servers with `--dice-seed 7`, one without | Identical faces on the seeded pair, different on the third; the badge follows the flag; no file mentions a seed |
+| B12 | A PF2e campaign: random mint, all seven steps, finalize, level up | 21 cards, no roll UI, no dice glyph, no "?" and no marker; the gains table's Why stays one line |
+| B13 | 5.5e random mint | Pins Standard Array (no roll set in the log); level 2 with a roll then reads "• Level 2: rolled 2 + 2 = 4"; the breakdown lists both levels |
+| B14 | `verify`; then a face edited in a copy of Marrow's file | Clean; the tampered copy: "BROKEN … decision 9 on slot 'dnd5e.scores.assign' is invalid: Random Generation does not offer a score of 11"; `verify` writes nothing |
+
+Two things I measured rather than assumed: the "5 of 6 left" I first saw
+in A4 was my own script placing chips faster than React re-rendered
+(paced taps are right), and the "live set out of view" I first saw in B2
+was a rect-padding artifact (the list is scrolled to its bottom).
+
 ## Agent evidence
 
-Final run on the branch head (2026-09-06):
+Final run on the branch head (2026-09-07, after the by-hand plan's fixes):
 
 | Check | Result |
 |---|---|
 | `cargo fmt --all -- --check` | clean |
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `cargo deny check` | advisories, bans, licenses, sources ok |
-| `cargo test --workspace --no-fail-fast` | 231 passed, 0 failed, 2 ignored (fixture regenerators), rerun after the last iteration |
+| `cargo test --workspace --no-fail-fast` | 232 passed, 0 failed, 2 ignored (fixture regenerators); the new `compat` check replays four pre-slice files written by main's build |
 | `reference-check --system dnd5e attest` | 104 records: 103 match, 1 waived (the pre-existing Point Cost naming waiver), 0 mismatch |
-| WASM bundle (both rulesets) | 1,729,479 bytes, one module (budget 2,621,440); bindings fresh after a rebuild |
+| WASM bundle (both rulesets) | 1,743,451 bytes, one module (budget 2,621,440); bindings rebuilt after the last ruleset edit — a stale binding surfaced once more by hand (the point-buy meter's tentative preview still said "Points" while the server said "Points left"); sheet parity cannot see a label-only drift, so rebuilding the bindings is a listed step in How to verify |
 | `npm run typecheck`, `npm run lint` | clean |
-| `npm test` (vitest) | 11 files, 73 tests passed — parity now covers every fixture of both games (a stale engine binary fails five of them; verified by swapping the old binary in) |
-| `npm run e2e` (Playwright, full suite) | 53 passed, 0 failed (1.4 min), rerun after the last iteration; the level-up walk now presses Change on the choice card, switches fixed↔roll, and asserts no engine-failure notice |
-| Driven by hand in a browser (2026-09-07) | The level-up flow end to end on a fresh 5.5e campaign: choose Roll then Change (the reported crash) → dialog; clear to fixed; back to roll; roll, reroll; enter 11 (refused) then 7; reload mid-level (history and choice intact); abandon (dialog lists the choice and every set); level 2 again with the fixed value, finalize (20); level 3 with the Champion, roll chosen, a double tap on Roll (one set), finalize. No console errors from the current bundle, no engine-failure notice |
+| `npm test` (vitest) | 11 files, 75 tests passed — parity covers every fixture of both games (a stale engine binary fails five of them; verified by swapping the old binary in); the roll card's rest after a roll and the whole-number hint are pinned |
+| `npm run e2e` (Playwright, full suite) | 53 passed, 0 failed (1.2 min), rerun after the last fix; the level-up walk presses Change on the choice card, switches fixed↔roll, and asserts no engine-failure notice; the double-tap walk waits for the rested button first |
+| Driven by hand in a browser (2026-09-07) | The plan above: 20 cases over two campaigns, three failures found and fixed (items 12–14), two wording findings fixed (items 15–16); no console errors from the current bundle, no engine-failure notice in any case |
 
 Test-suite wall time: on this machine the whole suite measures 33 s idle
 against main's 39 s measured the same way minutes apart — the noise floor
@@ -411,7 +503,7 @@ built through confirms instead of a mint). CI's 20 s gate is the arbiter;
 if it trips, the seeded and crash rows are the candidates to move behind
 a slow tag.
 
-Branch: 17 commits on `checkpoint/dnd-dice`; 82 files changed against `main`.
+Branch: 18 commits on `checkpoint/dnd-dice`; 91 files changed against `main`.
 
 ## Complaints logged
 

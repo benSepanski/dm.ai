@@ -29,6 +29,9 @@ import { Sheet } from './Sheet';
 import { ClearConfirmDialog, SlotCard } from './SlotCard';
 import { SheetDiffTable } from './VersionFlag';
 
+
+/** How long the Roll button rests after a roll answers (a double tap is one roll). */
+const ROLL_COOLDOWN_MS = 400;
 function badge(status: StepStatus): string {
   switch (status) {
     case 'complete':
@@ -106,6 +109,19 @@ export function Wizard({
   // synchronous double-dispatch a re-render has not caught up with), so
   // it can never race the first request into a stale-version conflict.
   const rollInFlight = useRef(false);
+  // After a roll answers, the Roll button rests for a moment: a hand-speed
+  // double tap is one roll, not two sets in the record. Only the roll
+  // button waits; every other control stays live.
+  const [rollCooling, setRollCooling] = useState(false);
+  const rollCoolTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (rollCoolTimer.current !== null) {
+        window.clearTimeout(rollCoolTimer.current);
+      }
+    },
+    [],
+  );
   const [clearDialog, setClearDialog] = useState<{
     slot: string;
     label: string;
@@ -331,6 +347,14 @@ export function Wizard({
     } finally {
       rollInFlight.current = false;
       setBusy(false);
+      setRollCooling(true);
+      if (rollCoolTimer.current !== null) {
+        window.clearTimeout(rollCoolTimer.current);
+      }
+      rollCoolTimer.current = window.setTimeout(() => {
+        rollCoolTimer.current = null;
+        setRollCooling(false);
+      }, ROLL_COOLDOWN_MS);
     }
   };
 
@@ -669,6 +693,7 @@ export function Wizard({
             }
             onConfirm={(selection) => void confirm(slot.id, selection)}
             onRoll={() => roll(slot.id, slot.label)}
+            rollCooling={rollCooling}
             onRequestChange={() => requestChange(slot.id, slot.label)}
             busy={busy}
             ack={ack !== null && ack.slot === slot.id ? ack.message : null}

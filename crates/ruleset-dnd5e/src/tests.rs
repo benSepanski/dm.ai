@@ -421,7 +421,7 @@ fn point_buy_overspend_is_illegal_and_the_meter_shows_the_overshoot() {
         .iter()
         .any(|e| e.slot.as_str() == SLOT_SCORES_ASSIGN));
     let meter = &slot_view(&p, SLOT_SCORES_ASSIGN).unwrap().meters;
-    let points = meter.iter().find(|m| m.label == "Points").unwrap();
+    let points = meter.iter().find(|m| m.label == "Points left").unwrap();
     assert_eq!(
         (points.current.as_str(), points.state),
         ("0", MeterState::Ok)
@@ -454,7 +454,7 @@ fn point_buy_overspend_is_illegal_and_the_meter_shows_the_overshoot() {
         .unwrap()
         .meters
         .iter()
-        .find(|m| m.label == "Points")
+        .find(|m| m.label == "Points left")
         .unwrap()
         .clone();
     assert_eq!(

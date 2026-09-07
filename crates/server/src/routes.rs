@@ -1869,6 +1869,15 @@ async fn version_repin(
         } => {
             let from = pinned.clone();
             loaded.rules_version = cx.rs.rules_version().to_string();
+            // Identical means the same values; the replayed sheet may word
+            // its breakdowns as today's build does, so store it — the
+            // numbers the table saw are unchanged, the explanations are
+            // current.
+            loaded.sheet = cx
+                .rs
+                .engine()
+                .sheet(loaded.finalized_prefix())
+                .map_err(|e| Failure::Internal(e.to_string()))?;
             loaded.keep_old = None;
             loaded.version_history.push(resolution_event(
                 "re_pin",

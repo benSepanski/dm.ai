@@ -43,7 +43,11 @@ function rollSlot(history: OptionView[], groups = 2, dice = 3, sides = 6): SlotV
   };
 }
 
-function renderCard(slot: SlotView, tentative: Selection | null = null) {
+function renderCard(
+  slot: SlotView,
+  tentative: Selection | null = null,
+  rollCooling = false,
+) {
   const onTentative = vi.fn();
   const onConfirm = vi.fn();
   const onRoll = vi.fn();
@@ -54,6 +58,7 @@ function renderCard(slot: SlotView, tentative: Selection | null = null) {
       onTentative={onTentative}
       onConfirm={onConfirm}
       onRoll={onRoll}
+      rollCooling={rollCooling}
       onRequestChange={() => undefined}
       busy={false}
     />,
@@ -67,6 +72,25 @@ describe('SlotCard roll editor', () => {
     expect(screen.getByText('Nothing rolled yet.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Roll' }));
     expect(onRoll).toHaveBeenCalledTimes(1);
+  });
+
+  it('rests the roll button while a roll cools, and only that button', async () => {
+    // A hand-speed double tap is one roll: after the first answers the
+    // button rests, while dice entry stays open.
+    const { onRoll } = renderCard(rollSlot([]), null, true);
+    expect(screen.getByRole('button', { name: 'Roll' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Enter dice' })).toBeEnabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Roll' }));
+    expect(onRoll).not.toHaveBeenCalled();
+  });
+
+  it('names whole numbers when a face is fractional', async () => {
+    renderCard(rollSlot([], 1, 1, 10));
+    await userEvent.click(screen.getByRole('button', { name: 'Enter dice' }));
+    const [input] = screen.getAllByRole('spinbutton');
+    await userEvent.type(input!, '3.5');
+    expect(screen.getByRole('button', { name: /confirm entered dice/i })).toBeDisabled();
+    expect(screen.getByText('Faces are whole numbers from 1 to 10.')).toBeInTheDocument();
   });
 
   it('renders the history as the engine describes it, live set marked, and stays open', () => {

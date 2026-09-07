@@ -498,7 +498,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         // Exceeded (negative, never clamped) once overspent.
         meters: Box::new(move |state, _| match method(&d_meter, state) {
             Some(m) if m.is_point_buy() => vec![MeterView::budget(
-                "Points",
+                "Points left",
                 points_spent(state, m),
                 m.budget as i64,
                 |v| v.to_string(),
