@@ -266,13 +266,62 @@ fn value(sheet: &types::SheetView, section: &str, label: &str) -> String {
 
 type GoldenBuild = fn(&ruleset_dnd5e::Dnd5eEngine) -> Vec<Decision>;
 
-fn golden_names() -> [(&'static str, GoldenBuild); 4] {
+fn golden_names() -> [(&'static str, GoldenBuild); 5] {
     [
         ("brannock", brannock_log),
         ("brannock-3", brannock_3_log),
         ("nell-gold", gold_log),
         ("ysolde", ysolde_log),
+        ("ysolde-3", ysolde_3_log),
     ]
+}
+
+/// Ysolde at 3 (dnd-dice): level 2 chose to roll and entered a 7 after an
+/// app roll of 3 (both kept); level 3 took the fixed value explicitly.
+/// Exercises the hit point choice and the hit die on the wire — the
+/// browser engine's parity smoke runs this log, so a stale WASM build
+/// that lacks either slot fails loudly.
+fn ysolde_3_log(engine: &ruleset_dnd5e::Dnd5eEngine) -> Vec<Decision> {
+    let mut log = ysolde_log(engine);
+    advance(engine, &mut log, 2);
+    confirm(
+        engine,
+        &mut log,
+        &ruleset_dnd5e::slot_level_hit_points(2),
+        one("hp.roll"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        &ruleset_dnd5e::slot_level_hit_die(2),
+        Selection::Rolled(vec![types::RolledSet {
+            groups: vec![vec![3]],
+            origin: types::RollOrigin::App,
+        }]),
+    );
+    confirm(
+        engine,
+        &mut log,
+        &ruleset_dnd5e::slot_level_hit_die(2),
+        Selection::Rolled(vec![types::RolledSet {
+            groups: vec![vec![7]],
+            origin: types::RollOrigin::Entered,
+        }]),
+    );
+    advance(engine, &mut log, 3);
+    confirm(
+        engine,
+        &mut log,
+        &ruleset_dnd5e::slot_level_subclass(3),
+        one("subclass.fighter.champion"),
+    );
+    confirm(
+        engine,
+        &mut log,
+        &ruleset_dnd5e::slot_level_hit_points(3),
+        one("hp.fixed"),
+    );
+    log
 }
 
 fn rolled_set(groups: &[[u8; 4]], origin: types::RollOrigin) -> types::RolledSet {

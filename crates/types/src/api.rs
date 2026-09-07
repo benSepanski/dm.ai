@@ -19,6 +19,11 @@ pub struct DraftView {
     /// Server-side step cursor: where resume lands.
     pub current_step: StepId,
     pub projection: ProjectionView,
+    /// The whole decision log the projection derives from — including
+    /// decisions in steps that are not live (a finalized prefix, a level
+    /// advance) — so the browser engine previews over the same log the
+    /// server folds, never over a reconstruction from the live steps.
+    pub log: Vec<crate::Decision>,
     /// The rules-data version this draft is built against.
     pub rules_version: String,
     /// Where that pin stands against the shipped data (always `Current`

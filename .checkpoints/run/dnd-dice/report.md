@@ -30,6 +30,13 @@ in the ability-score step:
    no reason); and its Why column replayed every earlier level instead of
    the rule for this level's change. Reviewed with a design pass and a
    reviewer subagent before building.
+10. **"Unreachable code should not be executed" on Change after choosing
+    Roll a d10** — a WASM panic. Ben asked whether the flows had been
+    driven by hand in a browser; they had not (Playwright and unit tests
+    only), and the browser copy of the engine committed in the roll-card
+    step predated the hit point choice slot, so the Change dialog's
+    engine call met an unknown slot. The wizard's preview fallbacks had
+    masked the stale engine in every automated walk.
 
 Reproduced in the browser at phone width, then fixed on the same branch:
 
@@ -64,6 +71,30 @@ Reproduced in the browser at phone width, then fixed on the same branch:
   architecture review had folded into one; the boundary is unchanged.
   The gains-table marker reads "fixed value unless you choose to roll
   below" before a choice and "waiting for your roll below" after.
+- **The browser engine is fresh, and staleness fails loudly.** The
+  bindings and bundle are rebuilt; the WASM/native parity smoke now runs
+  every fixture of both games, including a new `ysolde-3` golden that
+  uses the hit point choice, the die, and a roll history, so a committed
+  binary that lacks a slot fails the unit suite (verified: the stale
+  binary fails five of eight parity cases, the fresh one passes).
+- **A dead engine is loud.** When the in-browser engine throws during a
+  preview, the wizard says so once at the top of the step instead of
+  silently degrading to the server's projection. Making it loud exposed
+  a second, older defect: during a level-up the browser rebuilt its log
+  from the projection's live steps only, so every level-up preview had
+  been folding a log without its finalized prefix or the advance and
+  failing quietly. The draft view now carries the whole decision log the
+  projection derives from, and the browser previews and clears against
+  that; the reconstruction helper is gone from the wizard.
+- **A double tap cannot race itself.** Two synchronous clicks on Roll
+  (found by hand: a JavaScript double-dispatch got the second request
+  out before the disabled button re-rendered, and it came back as a
+  stale-version "changed from another tab" notice — one set was still
+  recorded, but the notice lied) are now stopped by an in-flight guard
+  in the wizard; the double-tap walk asserts no notice.
+- **The sidebar sheet honours undecided values too**: entries a card the
+  player has not decided will set render "?" with the pointer as their
+  title, matching the gains table.
 - **Undecided rows show no value.** A gains row that an undecided card in
   the level will set (matched by label; the projection carries only the
   level's live cards) renders "?" with a pointer — "🎲 decide below", or
@@ -354,12 +385,13 @@ Final run on the branch head (2026-09-06):
 | `cargo fmt --all -- --check` | clean |
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `cargo deny check` | advisories, bans, licenses, sources ok |
-| `cargo test --workspace --no-fail-fast` | 22 test binaries with tests, 229 passed, 0 failed, 2 ignored (fixture regenerators) — rerun after the iteration, same |
+| `cargo test --workspace --no-fail-fast` | 231 passed, 0 failed, 2 ignored (fixture regenerators), rerun after the last iteration |
 | `reference-check --system dnd5e attest` | 104 records: 103 match, 1 waived (the pre-existing Point Cost naming waiver), 0 mismatch |
 | WASM bundle (both rulesets) | 1,729,479 bytes, one module (budget 2,621,440); bindings fresh after a rebuild |
 | `npm run typecheck`, `npm run lint` | clean |
-| `npm test` (vitest) | 10 files, 66 tests passed (the grouped-editor tests rewritten for the tray and the stepper); rerun after the gains change, same |
-| `npm run e2e` (Playwright, full suite) | 53 passed, 0 failed (1.2 min) — `dice.spec.ts` 4 walks and `dnd.spec.ts` drive the tray and the stepper through shared helpers; every PF2e spec unchanged. After the gains change: dice, 5.5e, and level-up specs rerun, 15 passed |
+| `npm test` (vitest) | 11 files, 73 tests passed — parity now covers every fixture of both games (a stale engine binary fails five of them; verified by swapping the old binary in) |
+| `npm run e2e` (Playwright, full suite) | 53 passed, 0 failed (1.4 min), rerun after the last iteration; the level-up walk now presses Change on the choice card, switches fixed↔roll, and asserts no engine-failure notice |
+| Driven by hand in a browser (2026-09-07) | The level-up flow end to end on a fresh 5.5e campaign: choose Roll then Change (the reported crash) → dialog; clear to fixed; back to roll; roll, reroll; enter 11 (refused) then 7; reload mid-level (history and choice intact); abandon (dialog lists the choice and every set); level 2 again with the fixed value, finalize (20); level 3 with the Champion, roll chosen, a double tap on Roll (one set), finalize. No console errors from the current bundle, no engine-failure notice |
 
 Test-suite wall time: on this machine the whole suite measures 33 s idle
 against main's 39 s measured the same way minutes apart — the noise floor
@@ -371,7 +403,7 @@ built through confirms instead of a mint). CI's 20 s gate is the arbiter;
 if it trips, the seeded and crash rows are the candidates to move behind
 a slow tag.
 
-Branch: 15 commits on `checkpoint/dnd-dice`; 80 files changed against `main`.
+Branch: 16 commits on `checkpoint/dnd-dice`; 82 files changed against `main`.
 
 ## Complaints logged
 

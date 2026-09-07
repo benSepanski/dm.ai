@@ -1626,3 +1626,44 @@ mod hit_dice {
         engine.sheet(log).unwrap()
     }
 }
+
+/// Changing the hit point choice previews what it drags along (the die,
+/// once rolled) — the Change… dialog's engine call, natively.
+#[test]
+fn changing_the_hit_point_choice_previews_the_die_it_clears() {
+    use crate::mechanics::{
+        slot_level_advance, slot_level_hit_die, slot_level_hit_points, HP_OPTION_ROLL,
+    };
+    let engine = engine();
+    let mut log = brannock_log(&engine);
+    confirm(&engine, &mut log, &slot_level_advance(2), one("advance.2"));
+    confirm(
+        &engine,
+        &mut log,
+        &slot_level_hit_points(2),
+        one(HP_OPTION_ROLL),
+    );
+    let preview = engine
+        .clear_preview(&log, &SlotId::new(slot_level_hit_points(2)))
+        .unwrap();
+    assert_eq!(preview.cleared.len(), 1);
+    assert_eq!(preview.cleared[0].selection_label, "roll the hit die");
+    confirm(
+        &engine,
+        &mut log,
+        &slot_level_hit_die(2),
+        Selection::Rolled(vec![types::RolledSet {
+            groups: vec![vec![7]],
+            origin: types::RollOrigin::App,
+        }]),
+    );
+    let preview = engine
+        .clear_preview(&log, &SlotId::new(slot_level_hit_points(2)))
+        .unwrap();
+    let labels: Vec<&str> = preview
+        .cleared
+        .iter()
+        .map(|c| c.selection_label.as_str())
+        .collect();
+    assert_eq!(labels, vec!["roll the hit die", "7 (rolled, roll 1 of 1)"]);
+}

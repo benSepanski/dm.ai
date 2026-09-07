@@ -1,7 +1,7 @@
 // The guided creation wizard: non-linear steps with badges, live checklist,
 // live summary sidebar, confirm-per-choice durability, and the
 // change-confirmed-choice flow with its dependent-clearing prompt.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   abandonLevel,
   amendDecision,
@@ -24,7 +24,7 @@ import type {
   StepStatus,
 } from './engine';
 import { clearPreview as engineClearPreview, initEngine, project as engineProject } from './engine';
-import { logFromProjection, newDecisionId } from './log';
+import { newDecisionId } from './log';
 import { Sheet } from './Sheet';
 import { ClearConfirmDialog, SlotCard } from './SlotCard';
 import { SheetDiffTable } from './VersionFlag';
@@ -99,6 +99,13 @@ export function Wizard({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [engineReady, setEngineReady] = useState(false);
+  // The first in-browser engine failure, shown as a notice until reload.
+  const [engineFailure, setEngineFailure] = useState<string | null>(null);
+  // A roll in flight: a second tap before the first answers is ignored
+  // outright (the disabled button covers real taps; this covers the
+  // synchronous double-dispatch a re-render has not caught up with), so
+  // it can never race the first request into a stale-version conflict.
+  const rollInFlight = useRef(false);
   const [clearDialog, setClearDialog] = useState<{
     slot: string;
     label: string;
@@ -142,7 +149,9 @@ export function Wizard({
     };
   }, []);
 
-  const serverLog = useMemo(() => logFromProjection(draft.projection), [draft]);
+  // The server's own log for this draft (every decision, live step or
+  // not) — what the browser engine previews and clears against.
+  const serverLog = useMemo(() => draft.log, [draft]);
 
   // A tentative edit identical to the confirmed selection is not an edit.
   // Pruning on every draft change keeps `pending` meaning exactly "differs
@@ -150,9 +159,7 @@ export function Wizard({
   // chip both rely on that.
   useEffect(() => {
     setPending((p) => {
-      const confirmed = new Map(
-        logFromProjection(draft.projection).map((d) => [d.slot, d.selection]),
-      );
+      const confirmed = new Map(draft.log.map((d) => [d.slot, d.selection]));
       const kept = Object.entries(p).filter(([slot, selection]) =>
         isRealEdit(confirmed.get(slot), selection),
       );
@@ -198,7 +205,12 @@ export function Wizard({
         });
       }
       return engineProject(hypothetical);
-    } catch {
+    } catch (error) {
+      // A dead engine is loud, never a silently inert preview: say so once
+      // at the top of the step; confirms still work through the server.
+      const message = String(error instanceof Error ? error.message : error);
+      console.error('in-browser engine failed', error);
+      setEngineFailure((f) => f ?? message);
       return draft.projection;
     }
   }, [draft, pending, serverLog, engineReady]);
@@ -299,6 +311,10 @@ export function Wizard({
   };
 
   const executeRoll = async (slot: string) => {
+    if (rollInFlight.current) {
+      return;
+    }
+    rollInFlight.current = true;
     setBusy(true);
     setNotice(null);
     setCardError(null);
@@ -313,6 +329,7 @@ export function Wizard({
         )}). Try again.`,
       });
     } finally {
+      rollInFlight.current = false;
       setBusy(false);
     }
   };
@@ -603,6 +620,12 @@ export function Wizard({
             {notice}
           </div>
         )}
+        {engineFailure !== null && (
+          <div className="notice" role="alert" data-testid="engine-failure">
+            The in-browser engine failed ({engineFailure}). Live previews are off
+            until you reload; every confirm still goes through the server.
+          </div>
+        )}
         {draft.level_up !== undefined && (
           <section className="level-gains" aria-label="level gains">
             <h2>At level {draft.level_up.level} you gain…</h2>
@@ -684,7 +707,7 @@ export function Wizard({
             />
           </section>
         )}
-        <Sheet sheet={displayed.sheet} compact />
+        <Sheet sheet={displayed.sheet} compact undecided={rollMarkers} />
       </aside>
 
       {leaveDialog && (

@@ -18,6 +18,7 @@ import {
   createCharacter,
   gotoStep,
   placeScores,
+  sideSheetEntry,
   slot,
 } from './helpers';
 import { expectSaneLayout } from './layout';
@@ -269,6 +270,9 @@ test('entered dice: a face off the die is refused, duplicates assign, the cap is
   await expect(card.locator('.roll-set')).toHaveCount(3);
   await page.waitForTimeout(400);
   await expect(card.locator('.roll-set')).toHaveCount(3);
+  // ...and without a stale-version conflict notice: the second tap was
+  // ignored, not raced.
+  await expect(page.locator('.notice')).toHaveCount(0);
   expect(rollHistory(characterFile(server, 'Marrow'), 'dnd5e.scores.roll')).toHaveLength(3);
 });
 
@@ -294,6 +298,10 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await expect(choice).toContainText(/= \d+ hit points/);
   await expect(slot(page, 'dnd5e.level.2.hit-die')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Finalize level 2' })).toBeEnabled();
+  // The sidebar sheet shows no default either, and the browser engine
+  // previews over the full log (no failure notice, ever, during a level).
+  await expect(sideSheetEntry(page, 'Hit Points')).toHaveText('?');
+  await expect(page.getByTestId('engine-failure')).toHaveCount(0);
   await expectSaneLayout(page);
 
   // Choose to roll: the die card opens and finalize waits on it.
@@ -312,7 +320,21 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await expect(hitDie.locator('.roll-set').nth(0)).toHaveClass(/roll-superseded/);
   await expect(page.getByTestId('diff-marker-Hit Points')).toHaveCount(0);
   await expect(page.locator('.level-gains')).toContainText('rolled');
+  await expect(sideSheetEntry(page, 'Hit Points')).not.toHaveText('?');
   await expect(page.getByRole('button', { name: 'Finalize level 2' })).toBeEnabled();
+  // Change the choice back to the fixed value: the dialog names the die
+  // it clears; the sheet and the row follow.
+  await slot(page, 'dnd5e.level.2.hit-points').getByRole('button', { name: /change/i }).click();
+  const change = page.getByRole('dialog');
+  await expect(change).toContainText('Change Hit Points?');
+  await expect(change).toContainText('roll the hit die');
+  await change.getByRole('button', { name: 'Clear and change' }).click();
+  await expect(slot(page, 'dnd5e.level.2.hit-die')).toHaveCount(0);
+  await expect(page.getByTestId('diff-marker-Hit Points')).toContainText('decide below');
+  await confirmOption(page, 'dnd5e.level.2.hit-points', 'Roll a d10');
+  await slot(page, 'dnd5e.level.2.hit-die').getByRole('button', { name: 'Roll' }).click();
+  await expect(slot(page, 'dnd5e.level.2.hit-die').locator('.roll-set')).toHaveCount(1);
+  await expect(page.getByTestId('engine-failure')).toHaveCount(0);
   await expectSaneLayout(page);
 
   // Abandon: the confirm names the choice and the die; the file holds no trace.

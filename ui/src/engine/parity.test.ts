@@ -20,13 +20,28 @@ function normalize(value: unknown): unknown {
   return JSON.parse(JSON.stringify(value, (_key, v: unknown) => v ?? undefined) ?? 'null') as unknown;
 }
 
+// A stale committed binary is caught here, not by a byte comparison (the
+// binary embeds environment-dependent bytes): every fixture of both games
+// must project, and the 5.5e set includes logs that use every slot the
+// dice slice added (the choice, the die, the roll history).
+const cases: [string, string][] = [
+  ['pf2e', 'torvald'],
+  ['pf2e', 'elyse'],
+  ['pf2e', 'krivvy'],
+  ['dnd5e', 'brannock'],
+  ['dnd5e', 'brannock-3'],
+  ['dnd5e', 'nell-gold'],
+  ['dnd5e', 'ysolde'],
+  ['dnd5e', 'ysolde-3'],
+];
+
 describe('wasm/native parity', () => {
-  for (const name of ['torvald', 'elyse', 'krivvy']) {
+  for (const [system, name] of cases) {
     it(`replays ${name} to the native sheet`, async () => {
       await initEngine(wasmBytes);
       // A test may name a system; shipped source only ever relays the
       // campaign view's id.
-      selectSystem('pf2e');
+      selectSystem(system);
       const log = JSON.parse(
         readFileSync(join(fixtures, `${name}.log.json`), 'utf8'),
       ) as Decision[];

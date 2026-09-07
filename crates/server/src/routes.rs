@@ -214,6 +214,7 @@ fn draft_view(cx: &Ctx, loaded: &Loaded) -> Result<DraftView, Failure> {
         version: loaded.draft_version,
         current_step: loaded.current_step.clone(),
         projection,
+        log: loaded.log.clone(),
         rules_version: loaded.rules_version.clone(),
         // Only current drafts are projected; flagged drafts arrive as
         // CharacterView::FlaggedDraft instead.
