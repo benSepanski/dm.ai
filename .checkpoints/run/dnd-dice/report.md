@@ -59,13 +59,18 @@ Reproduced in the browser at phone width, then fixed on the same branch:
   architecture review had folded into one; the boundary is unchanged.
   The gains-table marker reads "fixed value unless you choose to roll
   below" before a choice and "waiting for your roll below" after.
-- **The hit point breakdown is prose, second pass.** The Constitution
-  modifier is named once, then each level: "Constitution modifier +2 is
-  added at every level. Level 1: 10 (Fighter) + 2 = 12. Level 2: fixed 6
-  + 2 = 8. Total 20." — "Level 2: rolled 8 + 2 = 10." once a die is
-  involved, "= 0 → 1 (minimum 1 per level)" when the minimum applies,
-  "Dwarf adds 1 per level: +2." for a species bonus. Values unchanged;
-  the four 5.5e golden sheets were regenerated for the wording.
+- **The hit point breakdown is a rule line and bullets, third pass** (Ben:
+  the run-on sentences were the problem). Rendered as separate lines:
+  "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or
+  the fixed value 6) plus your Constitution modifier (+2)." then
+  "• Level 1: 10 + 2 = 12", "• Level 2: fixed value 6 + 2 = 8" (or
+  "rolled 8 + 2 = 10", "entered 7 + 2 = 9", "rolled 1 − 1 = 0, minimum
+  1 → 1"), "• Dwarf: +1 per level = +2" when it applies, "• Total: 20".
+  Sheet breakdowns and the gains table's Why column render line breaks.
+  Values unchanged; the four 5.5e golden sheets were regenerated for the
+  wording. The "?" for a die not yet decided lives in the gains table's
+  marker beside the row, not in the breakdown (a finalized level that
+  never rolled and a pending one look the same to the fold).
 - **Dice entry copy per shape**: "Type the face you rolled (1 to 10)." for
   one die; "Type the faces you rolled: 6 sets of 4 dice, each face 1 to
   6." for the ability scores.
@@ -196,11 +201,12 @@ cargo run --release -p server -- --data-dir ./campaign-dice
    **Abandon level 2**: the dialog names
    Hit Points among what it discards; afterwards the file holds no hit-die
    decision. Level up again, roll once, finalize: the sheet's Hit Points
-   breakdown reads "Level 2: rolled N + 2 = …" (or "fixed 6 + 2" when you took the fixed value).
+   breakdown lists "• Level 2: rolled N + 2 = …" (or "fixed value 6 + 2"
+   when you took the fixed value).
    At level 3 pick the
    Champion and **Enter dice** on the hit die: 11 is refused with the rule
    named, 7 is accepted and tagged entered; finalize and the breakdown
-   reads "Level 3: entered 7 + 2 = 9". Open Brannock in your existing campaign:
+   lists "• Level 3: entered 7 + 2 = 9". Open Brannock in your existing campaign:
    his hit points and his file are unchanged.
 6. **The crash.** `kill -9` the server the instant after tapping Roll, a
    few times; restart on the same directory: the history holds either no
@@ -341,7 +347,7 @@ built through confirms instead of a mint). CI's 20 s gate is the arbiter;
 if it trips, the seeded and crash rows are the candidates to move behind
 a slow tag.
 
-Branch: 13 commits on `checkpoint/dnd-dice`; 79 files changed against `main`.
+Branch: 14 commits on `checkpoint/dnd-dice`; 79 files changed against `main`.
 
 ## Complaints logged
 

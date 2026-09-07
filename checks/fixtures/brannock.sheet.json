@@ -46,7 +46,7 @@
         {
           "label": "Hit Points",
           "value": "12",
-          "detail": "Constitution modifier +2 is added at every level. Level 1: 10 (Fighter) + 2 = 12. Total 12."
+          "detail": "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (+2).\n• Level 1: 10 + 2 = 12\n• Total: 12"
         },
         {
           "label": "Armor Class",

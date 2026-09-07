@@ -609,6 +609,8 @@ textarea {
   font-weight: 700;
 }
 .sheet-detail {
+  /* Breakdowns arrive as lines (a rule, then one bullet per part). */
+  white-space: pre-line;
   display: block;
   color: var(--ink-soft);
   font-size: 0.85rem;
@@ -1082,6 +1084,7 @@ li.option-group-heading {
 /* The explanation column is prose (a sheet entry's own detail line); let
    it wrap anywhere so its longest token never sets the table's floor. */
 .version-diff td.diff-why {
+  white-space: pre-line;
   overflow-wrap: anywhere;
 }
 .level-deltas h3 {

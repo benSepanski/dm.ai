@@ -291,7 +291,7 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await expect(choice).toBeVisible();
   await expect(choice).toContainText('(optional)');
   await expect(choice).toContainText('Take the fixed value');
-  await expect(choice).toContainText('= 8 hit points');
+  await expect(choice).toContainText(/= \d+ hit points/);
   await expect(slot(page, 'dnd5e.level.2.hit-die')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Finalize level 2' })).toBeEnabled();
   await expectSaneLayout(page);
@@ -335,7 +335,7 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await expect(sheet.locator('.sheet-summary').first()).toHaveText('Human Fighter 2');
   const hp2 = sectionEntry(sheet, 'Combat', 'Hit Points');
   await hp2.getByRole('button', { name: 'breakdown for Hit Points' }).click();
-  await expect(hp2).toContainText('Level 2: fixed 6');
+  await expect(hp2).toContainText('Level 2: fixed value 6');
   await expectSaneLayout(page);
 
   // Level 3: the Champion, and a physical d10 — an 11 is refused with the

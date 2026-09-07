@@ -1454,7 +1454,7 @@ fn hit_dice_ride_the_level_up_views_and_abandon_discards_them() {
         hp["detail"]
             .as_str()
             .unwrap()
-            .contains("Level 2: fixed 6 +"),
+            .contains("Level 2: fixed value 6 +"),
         "{hp}"
     );
 }
