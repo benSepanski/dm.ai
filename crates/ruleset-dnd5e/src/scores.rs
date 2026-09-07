@@ -18,7 +18,7 @@ use types::{
 use crate::data::{RollSpec, RulesData, ScoreMethodRecord};
 use crate::mechanics::{
     describe_selection, dropped_faces, faces_text, group_total, illegal, incomplete, origin_label,
-    parse_score_option, roll_totals, score_option_id, sel_multi, sel_single, Ability, Dnd5eState,
+    parse_score_option, roll_totals, score_instance_id, sel_multi, sel_single, Ability, Dnd5eState,
     SLOT_SCORES_ASSIGN, SLOT_SCORES_METHOD, SLOT_SCORES_ROLL, STEP_SCORES,
 };
 
@@ -82,7 +82,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_SCORES),
         label: "Generation method".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|_| Availability::Open),
         dependents: vec![
@@ -159,7 +159,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_SCORES),
         label: "Roll ability scores".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(move |state| {
             // The shape sizes the entry grid; a hidden slot still reports
             // the method's shape when one is known.
@@ -289,12 +289,19 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
     let d_val = data.clone();
     let d_meter = data.clone();
     let d_desc = data.clone();
+    let d_hint = data.clone();
     regs.push(SlotRegistration::<Dnd5eState> {
         id: SlotId::new(SLOT_SCORES_ASSIGN),
         step: StepId::new(STEP_SCORES),
         label: "Assign ability scores".into(),
         required: true,
-        presentation_hint: Some("one-per-group".into()),
+        // A fixed pool of values (array, roll) places by tap; a point buy
+        // steps each ability through the cost table.
+        presentation_hint: Box::new(move |state| match method(&d_hint, state) {
+            Some(m) if m.is_point_buy() => Some("assign-budget".into()),
+            Some(_) => Some("assign-pool".into()),
+            None => None,
+        }),
         kind: Box::new(|_| SlotViewKind::Multi {
             count: Ability::ALL.len() as u32,
         }),
@@ -318,7 +325,10 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
                 for (score, offered) in &counts {
                     // Under an array or a roll, a value is available for
                     // this ability while its assignments elsewhere have
-                    // not used up every listing of it.
+                    // not used up every listing of it. A value offered
+                    // more than once is one option per listing (a value
+                    // rolled twice is two chips in the tray), the extra
+                    // listings carrying an instance suffix on the id.
                     let taken_by: Vec<Ability> = if m.is_point_buy() {
                         vec![]
                     } else {
@@ -330,31 +340,31 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
                             .collect()
                     };
                     let available = taken_by.len() < *offered;
-                    out.push(OptionView {
-                        id: score_option_id(ability, *score),
-                        label: score.to_string(),
-                        summary: if m.is_point_buy() {
-                            format!("{} points", m.cost_of(*score).unwrap_or(0))
-                        } else if *offered > 1 {
-                            format!("offered {offered} times")
-                        } else {
-                            String::new()
-                        },
-                        details: vec![],
-                        available,
-                        unavailable_reason: (!available).then(|| {
-                            format!(
-                                "assigned to {}",
-                                taken_by
-                                    .iter()
-                                    .map(|a| a.name())
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            )
-                        }),
-                        group: Some(ability.name().to_string()),
-                        badge: None,
-                    });
+                    for instance in 1..=*offered {
+                        out.push(OptionView {
+                            id: score_instance_id(ability, *score, instance),
+                            label: score.to_string(),
+                            summary: if m.is_point_buy() {
+                                format!("{} points", m.cost_of(*score).unwrap_or(0))
+                            } else {
+                                String::new()
+                            },
+                            details: vec![],
+                            available,
+                            unavailable_reason: (!available).then(|| {
+                                format!(
+                                    "assigned to {}",
+                                    taken_by
+                                        .iter()
+                                        .map(|a| a.name())
+                                        .collect::<Vec<_>>()
+                                        .join(", ")
+                                )
+                            }),
+                            group: Some(ability.name().to_string()),
+                            badge: None,
+                        });
+                    }
                 }
             }
             out

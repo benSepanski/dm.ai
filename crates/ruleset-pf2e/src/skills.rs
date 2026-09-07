@@ -110,7 +110,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Class skill".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|state| match state.class {
             Some(_) => Availability::Open,
@@ -179,7 +179,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Trained skills".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(move |state| SlotViewKind::Multi {
             count: additional_skill_count(&d_kind, state).unwrap_or(3),
         }),
@@ -297,7 +297,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP_ANCESTRY),
         label: "Lore (feat)".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Text { multiline: false }),
         unlock: Box::new(|state| match choose_lore_grant(state) {
             Some(_) => Availability::Open,
@@ -348,7 +348,7 @@ fn chooser_slot(
         step: StepId::new(step),
         label: label.to_string(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(
             move |state| match choose_skills_grant(&d_kind, state, from_heritage) {
                 Some((1, _, _)) | None => SlotViewKind::Single,
@@ -516,7 +516,7 @@ fn increase_registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eSta
             step: StepId::new(&step),
             label: format!("Skill increase (level {level})"),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Single),
             unlock: Box::new(move |state| {
                 if state.level() as u32 >= level {

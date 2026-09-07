@@ -235,7 +235,7 @@ impl<S> Engine<S> {
                     id: reg.id.clone(),
                     label: reg.label.clone(),
                     kind,
-                    presentation_hint: reg.presentation_hint.clone(),
+                    presentation_hint: (reg.presentation_hint)(&state),
                     locked_reason,
                     required: reg.required,
                     status,

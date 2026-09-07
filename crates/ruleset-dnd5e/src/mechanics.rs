@@ -160,9 +160,30 @@ pub fn score_option_id(ability: Ability, value: u32) -> OptionId {
     OptionId::new(format!("score.{}.{value}", ability.key()))
 }
 
+/// `score.<ability>.<value>.<n>` — the n-th listing of a value offered
+/// more than once (a rolled total that came up twice); the first listing
+/// carries no suffix, so every pre-dice id is the first instance.
+pub fn score_instance_id(ability: Ability, value: u32, instance: usize) -> OptionId {
+    if instance <= 1 {
+        score_option_id(ability, value)
+    } else {
+        OptionId::new(format!("score.{}.{value}.{instance}", ability.key()))
+    }
+}
+
+/// The ability and value of a score option, with or without an instance
+/// suffix (which listing was picked never matters to the fold).
 pub fn parse_score_option(id: &OptionId) -> Option<(Ability, u32)> {
     let rest = id.as_str().strip_prefix("score.")?;
-    let (key, value) = rest.split_once('.')?;
+    let mut parts = rest.split('.');
+    let key = parts.next()?;
+    let value = parts.next()?;
+    if let Some(instance) = parts.next() {
+        instance.parse::<usize>().ok().filter(|n| *n >= 2)?;
+    }
+    if parts.next().is_some() {
+        return None;
+    }
     Some((Ability::from_key(key)?, value.parse().ok()?))
 }
 

@@ -534,7 +534,7 @@ fn array_violations_are_flagged_not_clamped() {
     confirm(&engine, &mut log, SLOT_SCORES_ASSIGN, brannock_array());
     let p = engine.project(&log).unwrap();
     let slot = slot_view(&p, SLOT_SCORES_ASSIGN).unwrap();
-    assert_eq!(slot.presentation_hint.as_deref(), Some("one-per-group"));
+    assert_eq!(slot.presentation_hint.as_deref(), Some("assign-pool"));
     assert_eq!(slot.options.len(), 36);
     let dex_15 = slot
         .options
@@ -1051,13 +1051,26 @@ mod dice {
             .filter(|o| o.group.as_deref() == Some("Strength"))
             .map(|o| o.label.as_str())
             .collect();
-        assert_eq!(str_options, vec!["14", "12", "10", "9", "8"]);
-        let twelve = assign
+        // The rolled-twice 12 is two listings, the second with an instance
+        // suffix, so a tray shows two chips.
+        assert_eq!(str_options, vec!["14", "12", "12", "10", "9", "8"]);
+        let ids: Vec<&str> = assign
             .options
             .iter()
-            .find(|o| o.id.as_str() == "score.str.12")
-            .unwrap();
-        assert_eq!(twelve.summary, "offered 2 times");
+            .filter(|o| o.group.as_deref() == Some("Strength"))
+            .map(|o| o.id.as_str())
+            .collect();
+        assert!(
+            ids.contains(&"score.str.12") && ids.contains(&"score.str.12.2"),
+            "{ids:?}"
+        );
+        assert_eq!(
+            slot_view(&p, SLOT_SCORES_ASSIGN)
+                .unwrap()
+                .presentation_hint
+                .as_deref(),
+            Some("assign-pool")
+        );
         // Assign both twelves to two abilities: legal. A third twelve is
         // illegal with the rule named; the array's rule is untouched.
         confirm(

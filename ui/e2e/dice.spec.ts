@@ -11,7 +11,15 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { confirmMultiUntilFull, confirmOption, createCharacter, gotoStep, slot } from './helpers';
+import {
+  confirmAssignment,
+  confirmMultiUntilFull,
+  confirmOption,
+  createCharacter,
+  gotoStep,
+  placeScores,
+  slot,
+} from './helpers';
 import { expectSaneLayout } from './layout';
 import { TestServer } from './server';
 
@@ -82,17 +90,8 @@ async function liveTotals(card: Locator): Promise<number[]> {
 const ABILITIES = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
 
 async function assignScores(page: Page, scores: Record<string, number>) {
-  const card = slot(page, 'dnd5e.scores.assign');
-  await card.scrollIntoViewIfNeeded();
-  for (const [ability, value] of Object.entries(scores)) {
-    await card
-      .locator('.select-row', { hasText: ability })
-      .locator('select')
-      .selectOption({ label: String(value) });
-  }
-  await expect(card.getByTestId('counter-dnd5e.scores.assign')).toHaveText('All choices made');
-  await card.getByRole('button', { name: /confirm/i }).click();
-  await expect(card.locator('.slot-confirmed-value')).toBeVisible();
+  await placeScores(page, 'dnd5e.scores.assign', scores);
+  await confirmAssignment(page, 'dnd5e.scores.assign');
 }
 
 function modifier(score: number): string {

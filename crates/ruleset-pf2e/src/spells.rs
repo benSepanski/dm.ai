@@ -136,7 +136,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Arcane thesis".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| caster_unlock(state, &d_unlock)),
         dependents: vec![],
@@ -195,7 +195,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Arcane school".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| caster_unlock(state, &d_unlock)),
         dependents: vec![],
@@ -271,7 +271,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Spellbook: cantrips".into(),
         required: true,
-        presentation_hint: Some("spell-list".into()),
+        presentation_hint: Box::new(|_| Some("spell-list".into())),
         kind: Box::new(move |state| SlotViewKind::Multi {
             count: caster(state, &d_kind)
                 .map(|sc| sc.spellbook_cantrips)
@@ -338,7 +338,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Spellbook: rank-1 spells".into(),
         required: true,
-        presentation_hint: Some("spell-list".into()),
+        presentation_hint: Box::new(|_| Some("spell-list".into())),
         kind: Box::new(move |state| SlotViewKind::Multi {
             count: rank1_count(state, &d_kind),
         }),
@@ -533,7 +533,7 @@ fn growth_registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState
             step: StepId::new(&step),
             label: format!("Spellbook: new spells (level {level})"),
             required: true,
-            presentation_hint: Some("spell-list".into()),
+            presentation_hint: Box::new(|_| Some("spell-list".into())),
             kind: Box::new(move |state| SlotViewKind::Multi {
                 count: caster(state, &d_kind)
                     .map(|sc| sc.spells_per_level)

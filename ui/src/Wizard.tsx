@@ -537,6 +537,7 @@ export function Wizard({
             Abandon level {draft.level_up.level}
           </button>
         )}
+        <div className="finalize-status">
         {pendingSlots.length > 0 ? (
           <div className="finalize-blockers pending-chip" id="finalize-blockers" role="status">
             <p>Unconfirmed changes:</p>
@@ -568,6 +569,7 @@ export function Wizard({
             </p>
           )
         )}
+        </div>
       </nav>
 
       <main className="wizard-main">

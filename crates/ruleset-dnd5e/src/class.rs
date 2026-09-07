@@ -40,7 +40,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_CLASS),
         label: "Class".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|_| Availability::Open),
         dependents: vec![
@@ -125,7 +125,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_CLASS_CHOICES),
         label: "Class skills".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(move |state| SlotViewKind::Multi {
             count: state
                 .class
@@ -264,7 +264,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_CLASS_CHOICES),
         label: "Weapon masteries".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(move |state| SlotViewKind::Multi {
             count: state
                 .class
@@ -394,7 +394,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
             step: StepId::new(step_level(level)),
             label: "Subclass".into(),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Single),
             unlock: Box::new(move |state| {
                 let opens = state
@@ -485,7 +485,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
             step: StepId::new(step_level(level)),
             label: "Hit Points".into(),
             required: false,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(move |state| {
                 let sides = state
                     .class

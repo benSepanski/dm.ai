@@ -50,7 +50,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Background".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|_| Availability::Open),
         dependents: vec![
@@ -161,7 +161,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Background boost".into(),
         required: true,
-        presentation_hint: Some("attribute-boosts".into()),
+        presentation_hint: Box::new(|_| Some("attribute-boosts".into())),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|state| match state.background {
             Some(_) => Availability::Open,
@@ -221,7 +221,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Background free boost".into(),
         required: true,
-        presentation_hint: Some("attribute-boosts".into()),
+        presentation_hint: Box::new(|_| Some("attribute-boosts".into())),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|state| match state.background {
             Some(_) => Availability::Open,
@@ -304,7 +304,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Background skill".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| {
             if background_with_skill_choice(&d_unlock, state).is_some() {
@@ -380,7 +380,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Background Lore".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Text { multiline: false }),
         unlock: Box::new(move |state| {
             if background_with_player_lore(&d_unlock, state).is_some() {

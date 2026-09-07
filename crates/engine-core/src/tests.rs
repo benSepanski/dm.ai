@@ -65,7 +65,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("one"),
             label: "Primary".into(),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Single),
             unlock: Box::new(|_| Availability::Open),
             dependents: vec![SlotId::new("secondary"), SlotId::new("bonus")],
@@ -93,7 +93,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("one"),
             label: "Secondary".into(),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Single),
             unlock: Box::new(|s| match s.primary {
                 Some(_) => Availability::Open,
@@ -138,7 +138,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("two"),
             label: "Picks".into(),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Multi { count: 2 }),
             unlock: Box::new(|_| Availability::Open),
             dependents: vec![],
@@ -188,7 +188,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("two"),
             label: "Name".into(),
             required: true,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Text { multiline: false }),
             unlock: Box::new(|_| Availability::Open),
             dependents: vec![],
@@ -216,7 +216,7 @@ fn toy_engine() -> Engine<ToyState> {
             step: StepId::new("two"),
             label: "Bonus".into(),
             required: false,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Single),
             unlock: Box::new(|s| match s.primary.as_deref() {
                 Some("b") => Availability::Open,
@@ -847,7 +847,7 @@ mod rolls {
                 step: StepId::new("one"),
                 label: "Roll".into(),
                 required: true,
-                presentation_hint: None,
+                presentation_hint: Box::new(|_| None),
                 kind: Box::new(|_| SlotViewKind::Roll {
                     sides: 6,
                     dice: 2,
@@ -888,7 +888,7 @@ mod rolls {
                 step: StepId::new("one"),
                 label: "Assign".into(),
                 required: true,
-                presentation_hint: None,
+                presentation_hint: Box::new(|_| None),
                 kind: Box::new(|_| SlotViewKind::Single),
                 unlock: Box::new(|s| {
                     if s.sets.is_empty() {

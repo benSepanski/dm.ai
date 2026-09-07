@@ -17,10 +17,13 @@ import { copyFileSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import {
+  buyScores,
+  confirmAssignment,
   confirmMultiUntilFull,
   confirmOption,
   createCharacter,
   gotoStep,
+  placeScores,
   sideSheetEntry,
   slot,
 } from './helpers';
@@ -92,24 +95,14 @@ function sectionDetail(root: Locator, section: string, label: string) {
     .filter({ has: root.page().getByRole('button', { name: `breakdown for ${label}` }) });
 }
 
-/** The one-select-per-ability assignment editor: set each ability's score. */
+/** The array's tap-to-place editor: place each ability's value. */
 async function assignScores(page: Page, scores: Record<string, number>) {
-  const card = slot(page, 'dnd5e.scores.assign');
-  await card.scrollIntoViewIfNeeded();
-  for (const [ability, value] of Object.entries(scores)) {
-    await card
-      .locator('.select-row', { hasText: ability })
-      .locator('select')
-      .selectOption({ label: String(value) });
-  }
+  await placeScores(page, 'dnd5e.scores.assign', scores);
 }
 
 async function confirmScores(page: Page, scores: Record<string, number>) {
   await assignScores(page, scores);
-  const card = slot(page, 'dnd5e.scores.assign');
-  await expect(card.getByTestId('counter-dnd5e.scores.assign')).toHaveText('All choices made');
-  await card.getByRole('button', { name: /confirm/i }).click();
-  await expect(card.locator('.slot-confirmed-value')).toBeVisible();
+  await confirmAssignment(page, 'dnd5e.scores.assign');
 }
 
 /**
@@ -301,8 +294,11 @@ test('the buy: the point-buy meter drains, an overspend is against the rules, th
   const meter = card.getByTestId('meter-Points');
   await expect(meter).toHaveText('Points 27 of 27');
 
-  // 15, 15, 15, 8, 8, 8 costs exactly 27 — the meter drains to zero.
-  await assignScores(page, {
+  // Each row shows its cost as it steps; 15, 15, 15, 8, 8, 8 costs exactly
+  // 27 — the meter drains to zero.
+  await buyScores(page, 'dnd5e.scores.assign', { Strength: 15 });
+  await expect(card.getByTestId('budget-row-Strength')).toContainText('9 points');
+  await buyScores(page, 'dnd5e.scores.assign', {
     Strength: 15,
     Dexterity: 15,
     Constitution: 15,
@@ -316,7 +312,7 @@ test('the buy: the point-buy meter drains, an overspend is against the rules, th
 
   // One more point is one too many: the meter shows the true overshoot
   // and the checklist names the rule, live, before anything is confirmed.
-  await assignScores(page, { Intelligence: 9 });
+  await buyScores(page, 'dnd5e.scores.assign', { Intelligence: 9 });
   await expect(meter).toHaveText('Points -1 of 27 — over the limit');
   await expect(meter).toHaveClass(/meter-exceeded/);
   await expect(checklist.getByText('Against the rules')).toBeVisible();
@@ -328,7 +324,7 @@ test('the buy: the point-buy meter drains, an overspend is against the rules, th
 
   // A legal buy (13, 15, 14, 8, 12, 10 = 27); the Criminal's +1s stack on
   // top, and the sidebar shows the result as he confirms.
-  await confirmScores(page, {
+  await buyScores(page, 'dnd5e.scores.assign', {
     Strength: 13,
     Dexterity: 15,
     Constitution: 14,
@@ -336,6 +332,7 @@ test('the buy: the point-buy meter drains, an overspend is against the rules, th
     Wisdom: 12,
     Charisma: 10,
   });
+  await confirmAssignment(page, 'dnd5e.scores.assign');
   await expect(checklist.getByText('Against the rules')).toHaveCount(0);
   await expect(sectionEntry(side, 'Ability Scores', 'Dexterity')).toHaveText('16 (+3)');
   await expect(sectionEntry(side, 'Ability Scores', 'Constitution')).toHaveText('15 (+2)');

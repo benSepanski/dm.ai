@@ -22,7 +22,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Pf2eState>> 
         step: StepId::new(STEP),
         label: "Free attribute boosts".into(),
         required: true,
-        presentation_hint: Some("attribute-boosts".into()),
+        presentation_hint: Box::new(|_| Some("attribute-boosts".into())),
         kind: Box::new(|_| SlotViewKind::Multi {
             count: COUNT as u32,
         }),

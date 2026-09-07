@@ -31,7 +31,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
             // Never on the checklist: a character is complete at every
             // level; advancing is an act, not a gap.
             required: false,
-            presentation_hint: None,
+            presentation_hint: Box::new(|_| None),
             kind: Box::new(|_| SlotViewKind::Single),
             unlock: Box::new(move |state| {
                 let cap = state

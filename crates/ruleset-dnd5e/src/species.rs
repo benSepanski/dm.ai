@@ -43,7 +43,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_ORIGIN),
         label: "Species".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(|_| Availability::Open),
         dependents: vec![
@@ -107,7 +107,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_ORIGIN),
         label: "Species skill".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| {
             if chosen(&d_unlock, state).is_some_and(|s| s.skill_choices > 0) {
@@ -206,7 +206,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_ORIGIN),
         label: "Species origin feat".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| {
             if chosen(&d_unlock, state).is_some_and(|s| s.origin_feat_choice) {
@@ -304,7 +304,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         step: StepId::new(STEP_ORIGIN),
         label: "Species trait choice".into(),
         required: true,
-        presentation_hint: None,
+        presentation_hint: Box::new(|_| None),
         kind: Box::new(|_| SlotViewKind::Single),
         unlock: Box::new(move |state| {
             if chosen(&d_unlock, state).is_some_and(|s| s.choice_trait.is_some()) {
