@@ -25,6 +25,11 @@ in the ability-score step:
    link too quiet to notice, with no scroll bar.
 8. **Taking the fixed hit points should be an explicit option**, not a
    default buried in text; and the breakdown text still read poorly.
+9. **The gains table's third column did not wrap; it showed the fixed
+   value before any choice** (preferring one decision over the other for
+   no reason); and its Why column replayed every earlier level instead of
+   the rule for this level's change. Reviewed with a design pass and a
+   reviewer subagent before building.
 
 Reproduced in the browser at phone width, then fixed on the same branch:
 
@@ -59,6 +64,24 @@ Reproduced in the browser at phone width, then fixed on the same branch:
   architecture review had folded into one; the boundary is unchanged.
   The gains-table marker reads "fixed value unless you choose to roll
   below" before a choice and "waiting for your roll below" after.
+- **Undecided rows show no value.** A gains row that an undecided card in
+  the level will set (matched by label; the projection carries only the
+  level's live cards) renders "?" with a pointer — "🎲 decide below", or
+  "🎲 roll below" once rolling is chosen — and only the rule line of its
+  explanation, so no default the player has not chosen is displayed. The
+  fold still needs a number underneath; the table refuses to show it.
+  "Changes so far" takes the same markers. Once the choice is confirmed
+  (fixed, or roll and rolled) the value and its bullet appear.
+- **Explanations are scoped to the change.** The server's diff keeps a
+  multi-line explanation's first line (the rule) and only the bullets new
+  against the old entry — a game-free string shape documented on the wire
+  type — so at level 2 the Why reads the rule plus "• Level 2: rolled 8 +
+  2 = 10", never the level-1 line; version-review diffs get the same
+  scoping. The sheet's own breakdown keeps the full per-level list. Each
+  bullet is now complete on its own (the species bonus rides in each
+  level's line; no "Total" bullet — the value column has the total).
+- **The table wraps**: fixed layout with column widths (24 / 15 / 15 /
+  remainder), wrapping in every cell, the pointer on its own line.
 - **The hit point breakdown is a rule line and bullets, third pass** (Ben:
   the run-on sentences were the problem). Rendered as separate lines:
   "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or
@@ -193,11 +216,12 @@ cargo run --release -p server -- --data-dir ./campaign-dice
    packages). Level up to 2: the gains panel lists the fixed hit points;
    the one card is **Hit Points (optional)** and Finalize is enabled at
    once; the card offers "Take the fixed value (… = 8 hit points)" and
-   "Roll a d10", and the Hit Points row in the gains table says "fixed
-   value unless you choose to roll below". Pick Roll: a die card opens,
-   Finalize waits on it, and the checklist says so. Tap Roll — a face —
-   and the row updates in place with "rolled" in its Why column; Roll
-   again: both kept, the second live, the row follows the live one.
+   "Roll a d10", and the Hit Points row in the gains table shows "?" with
+   "🎲 decide below" and only the rule in its Why column — no number until
+   you decide. Pick Roll: a die card opens, Finalize waits on it, the
+   pointer says "🎲 roll below". Tap Roll — a face — and the row shows the
+   value with "• Level 2: rolled N + …" as its Why; Roll again: both kept,
+   the second live, the row follows the live one.
    **Abandon level 2**: the dialog names
    Hit Points among what it discards; afterwards the file holds no hit-die
    decision. Level up again, roll once, finalize: the sheet's Hit Points
@@ -347,7 +371,7 @@ built through confirms instead of a mint). CI's 20 s gate is the arbiter;
 if it trips, the seeded and crash rows are the candidates to move behind
 a slow tag.
 
-Branch: 14 commits on `checkpoint/dnd-dice`; 79 files changed against `main`.
+Branch: 15 commits on `checkpoint/dnd-dice`; 80 files changed against `main`.
 
 ## Complaints logged
 

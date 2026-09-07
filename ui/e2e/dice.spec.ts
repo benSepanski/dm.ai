@@ -286,7 +286,7 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await page.getByRole('button', { name: 'Level up to 2' }).click();
   await expect(page.locator('.wizard')).toBeVisible();
   await expect(page.locator('.level-gains')).toContainText('Hit Points');
-  await expect(page.getByTestId('diff-marker-Hit Points')).toContainText('unless you choose to roll');
+  await expect(page.getByTestId('diff-marker-Hit Points')).toContainText('decide below');
   const choice = slot(page, 'dnd5e.level.2.hit-points');
   await expect(choice).toBeVisible();
   await expect(choice).toContainText('(optional)');
@@ -298,7 +298,7 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
 
   // Choose to roll: the die card opens and finalize waits on it.
   await confirmOption(page, 'dnd5e.level.2.hit-points', 'Roll a d10');
-  await expect(page.getByTestId('diff-marker-Hit Points')).toContainText('waiting for your roll');
+  await expect(page.getByTestId('diff-marker-Hit Points')).toContainText('roll below');
   const hitDie = slot(page, 'dnd5e.level.2.hit-die');
   await expect(hitDie).toBeVisible();
   await expect(page.getByRole('button', { name: 'Finalize level 2' })).toBeDisabled();

@@ -857,13 +857,26 @@ textarea {
   border-collapse: collapse;
   margin: 0.6rem 0;
   width: 100%;
+  table-layout: fixed;
 }
 .version-diff th,
 .version-diff td {
   border: 1px solid var(--line);
   padding: 0.3rem 0.6rem;
   text-align: left;
+  vertical-align: top;
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.version-diff thead th:nth-child(1) {
+  width: 24%;
+}
+.version-diff thead th:nth-child(2),
+.version-diff thead th:nth-child(3) {
+  width: 15%;
+}
+.diff-undecided {
+  font-weight: 700;
 }
 .version-old {
   color: var(--bad);
@@ -1203,7 +1216,7 @@ li.option-group-heading {
   color: var(--ink-soft);
 }
 .diff-marker {
+  display: block;
   color: var(--ink-soft);
   font-size: 0.85rem;
-  white-space: nowrap;
 }

@@ -73,9 +73,11 @@ pub struct SheetDiff {
     /// The value current data derives ("(absent)" when it no longer exists).
     pub new: String,
     /// Render-ready explanation of the new value — the sheet entry's own
-    /// detail line ("7 expert + 2 Con"), when the sheet carries one. So a
-    /// reader of a diff (a level-up's gains, a version review) sees why a
-    /// number moved, not only that it did.
+    /// detail ("7 expert + 2 Con"), when the sheet carries one, scoped to
+    /// the change: for a multi-line detail (a rule line, then bullet
+    /// lines) only the rule and the bullets new against the old entry
+    /// remain. So a reader of a diff (a level-up's gains, a version
+    /// review) sees why a number moved, not the whole history.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub why: Option<String>,
 }

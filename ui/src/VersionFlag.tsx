@@ -18,8 +18,10 @@ export function SheetDiffTable({
   differences: SheetDiff[];
   oldHeading: string;
   newHeading: string;
-  /** Render-ready notes keyed by row label — a value a card in this step
-   * can still change (a die not yet rolled) says so beside its number. */
+  /** Render-ready pointers keyed by row label: a value an undecided card
+   * in this step will set. Such a row shows no new value — only the
+   * pointer — and only the first line of its explanation (the rule), so
+   * no default the player has not chosen is displayed. */
   markers?: Record<string, string> | undefined;
 }) {
   // The explanation column appears whenever the server sent one: each
@@ -43,15 +45,26 @@ export function SheetDiffTable({
             </th>
             <td className="version-old">{d.old}</td>
             <td className="version-new">
-              {d.new}
-              {markers?.[d.label] !== undefined && (
-                <span className="diff-marker" data-testid={`diff-marker-${d.label}`}>
-                  {' '}
-                  {markers[d.label]}
-                </span>
+              {markers?.[d.label] === undefined ? (
+                d.new
+              ) : (
+                <>
+                  <span className="diff-undecided" title="Not decided yet">
+                    ?
+                  </span>
+                  <span className="diff-marker" data-testid={`diff-marker-${d.label}`}>
+                    {markers[d.label]}
+                  </span>
+                </>
               )}
             </td>
-            {explained && <td className="diff-why">{d.why ?? ''}</td>}
+            {explained && (
+              <td className="diff-why">
+                {markers?.[d.label] === undefined
+                  ? (d.why ?? '')
+                  : (d.why ?? '').split('\n')[0]}
+              </td>
+            )}
           </tr>
         ))}
       </tbody>

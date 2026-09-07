@@ -46,7 +46,7 @@
         {
           "label": "Hit Points",
           "value": "11",
-          "detail": "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (+1).\n• Level 1: 10 + 1 = 11\n• Total: 11"
+          "detail": "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (+1).\n• Level 1: 10 + 1 = 11"
         },
         {
           "label": "Armor Class",

@@ -1417,7 +1417,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "20");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (+2).\n• Level 1: 10 + 2 = 12\n• Level 2: fixed value 6 + 2 = 8\n• Total: 20"
+            "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (+2).\n• Level 1: 10 + 2 = 12\n• Level 2: fixed value 6 + 2 = 8"
         );
 
         // Taking the fixed value records a decision and changes nothing.
@@ -1502,7 +1502,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "22");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (+2).\n• Level 1: 10 + 2 = 12\n• Level 2: entered 8 + 2 = 10\n• Total: 22"
+            "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (+2).\n• Level 1: 10 + 2 = 12\n• Level 2: entered 8 + 2 = 10"
         );
         let described = engine
             .describe_decision(
@@ -1532,7 +1532,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "30");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (+2).\n• Level 1: 10 + 2 = 12\n• Level 2: entered 8 + 2 = 10\n• Level 3: fixed value 6 + 2 = 8\n• Total: 30"
+            "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (+2).\n• Level 1: 10 + 2 = 12\n• Level 2: entered 8 + 2 = 10\n• Level 3: fixed value 6 + 2 = 8"
         );
         // Out of shape: an 11 on a d10, or two dice.
         confirm(
@@ -1618,7 +1618,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "10");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (-1).\n• Level 1: 10 − 1 = 9\n• Level 2: rolled 1 − 1 = 0, minimum 1 → 1\n• Total: 10"
+            "Fighter: 10 hit points at level 1, then each level adds a d10 roll (or the fixed value 6) plus your Constitution modifier (-1).\n• Level 1: 10 − 1 = 9\n• Level 2: rolled 1 − 1 = 0, minimum 1 → 1"
         );
     }
 

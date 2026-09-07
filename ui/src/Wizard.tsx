@@ -203,9 +203,11 @@ export function Wizard({
     }
   }, [draft, pending, serverLog, engineReady]);
 
-  // Gains rows a roll card in the pending step can still change: a card
-  // with nothing rolled marks its row (matched by label — the UI learns no
-  // game word) so the number reads as provisional until the die lands.
+  // Gains rows an undecided card in the pending level can still change,
+  // matched by label (the UI learns no game word): the table shows no
+  // value for them — the fold must have a number, the player has not
+  // chosen one — only a pointer to the card. The projection carries only
+  // live steps, so during a level-up these are the level's own cards.
   const rollMarkers = useMemo(() => {
     const markers: Record<string, string> = {};
     if (draft.level_up === undefined) {
@@ -217,9 +219,9 @@ export function Wizard({
           continue;
         }
         if (sl.kind.kind === 'roll') {
-          markers[sl.label] = '🎲 waiting for your roll below';
+          markers[sl.label] = '🎲 roll below';
         } else if (markers[sl.label] === undefined) {
-          markers[sl.label] = '🎲 fixed value unless you choose to roll below';
+          markers[sl.label] = '🎲 decide below';
         }
       }
     }
@@ -606,10 +608,10 @@ export function Wizard({
             <h2>At level {draft.level_up.level} you gain…</h2>
             <p className="level-gains-intro">
               These change on their own the moment you reach level{' '}
-              {draft.level_up.level} — before any choice below (a die you roll
-              here counts as part of the level, so its row follows the roll).
+              {draft.level_up.level} — before any choice below. A value that
+              waits on a card below shows no number until you decide it.
               Every value on the sheet derives from your level and your choices;
-              the Why column is each value's own formula.
+              the Why column is the rule behind each change.
             </p>
             {draft.level_up.gains.length === 0 ? (
               <p>Only the choices below — nothing changes on its own.</p>
@@ -678,6 +680,7 @@ export function Wizard({
               differences={draft.level_up.deltas}
               oldHeading="Before"
               newHeading="After"
+              markers={rollMarkers}
             />
           </section>
         )}
