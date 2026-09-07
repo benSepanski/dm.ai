@@ -1369,6 +1369,26 @@ fn hit_dice_ride_the_level_up_views_and_abandon_discards_them() {
         .parse::<i64>()
         .unwrap();
 
+    // The stored sheet may carry an earlier build's wording (a one-line
+    // formula): rewrite it as such before leveling. Explanations must
+    // still scope to this level — never "Level 1" — because scoping is
+    // judged against a fresh fold, not the stored text.
+    {
+        let path = dir.path().join(format!("characters/{id}.json"));
+        let mut doc: Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        for section in doc["sheet"]["sections"].as_array_mut().unwrap() {
+            for entry in section["entries"].as_array_mut().unwrap() {
+                if entry["label"] == "Hit Points" {
+                    entry["detail"] = json!("10 + 2 Con");
+                }
+            }
+        }
+        std::fs::write(&path, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+    }
+    drop(server);
+    let server = TestServer::spawn(dir.path());
+    let url = server.url.as_str();
     let draft = lv::start_level(&client, url, &id);
     assert!(draft["projection"]["can_finalize"].as_bool().unwrap());
     let choice = lv::slot_view(&draft, "dnd5e.level.2.hit-points").expect("the choice card");
@@ -1448,6 +1468,17 @@ fn hit_dice_ride_the_level_up_views_and_abandon_discards_them() {
         .clone();
     assert!(
         rolled_row["why"].as_str().unwrap().contains("rolled"),
+        "{rolled_row}"
+    );
+    assert!(
+        !rolled_row["why"].as_str().unwrap().contains("Level 1"),
+        "a stale stored wording must not surface the level-1 line: {rolled_row}"
+    );
+    assert!(
+        rolled_row["why"]
+            .as_str()
+            .unwrap()
+            .contains("Level 2: rolled"),
         "{rolled_row}"
     );
     assert!(

@@ -225,6 +225,20 @@ pub fn scope_explanation(new_detail: &str, old_detail: &str) -> String {
 }
 
 pub fn sheet_diffs(old: &SheetView, new: &SheetView) -> Vec<SheetDiff> {
+    sheet_diffs_explained(old, new, old)
+}
+
+/// `sheet_diffs` with the explanations scoped against `baseline` rather
+/// than `old`: values still compare the stored sheet to the new fold (what
+/// the table saw against what it will see), but "which bullets are new" is
+/// judged against a fresh fold under today's rules and wording — a stored
+/// sheet written by an earlier build keeps its old detail text until the
+/// character is re-derived, and must not make every bullet look new.
+pub fn sheet_diffs_explained(
+    old: &SheetView,
+    new: &SheetView,
+    baseline: &SheetView,
+) -> Vec<SheetDiff> {
     const ABSENT: &str = "(absent)";
     let mut diffs = Vec::new();
     if old.name != new.name {
@@ -252,7 +266,7 @@ pub fn sheet_diffs(old: &SheetView, new: &SheetView) -> Vec<SheetDiff> {
     // are new against the old entry — what changed, not the whole history.
     let why_of = |section: &str, label: &str| -> Option<String> {
         let detail = new.entry(section, label).and_then(|e| e.detail.clone())?;
-        let old_detail = old
+        let old_detail = baseline
             .entry(section, label)
             .and_then(|e| e.detail.clone())
             .unwrap_or_default();

@@ -32,7 +32,7 @@ use types::{RollRequest, SlotViewKind};
 use crate::clock;
 use crate::dice::{self, Entropy, RollKey};
 use crate::persistence::{DocState, KeepOldMarker, Loaded, Store, StoreError, VersionEvent};
-use crate::version::{repair_replay, sheet_diffs, status_for, KnownVersions};
+use crate::version::{repair_replay, sheet_diffs_explained, status_for, KnownVersions};
 
 pub(crate) struct App {
     /// Every shipped ruleset; the campaign's declaration selects one.
@@ -257,10 +257,18 @@ fn level_up_view(cx: &Ctx, loaded: &Loaded) -> Result<LevelUpView, Failure> {
         .engine()
         .sheet(&loaded.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
+    // Explanations are scoped against the finalized prefix folded under
+    // today's rules — the stored sheet may carry an earlier build's
+    // wording, and a wording change must not read as a level's gain.
+    let before_sheet = cx
+        .rs
+        .engine()
+        .sheet(prefix)
+        .map_err(|e| Failure::Internal(e.to_string()))?;
     Ok(LevelUpView {
         level,
-        gains: sheet_diffs(&loaded.sheet, &advance_sheet),
-        deltas: sheet_diffs(&loaded.sheet, &full_sheet),
+        gains: sheet_diffs_explained(&loaded.sheet, &advance_sheet, &before_sheet),
+        deltas: sheet_diffs_explained(&loaded.sheet, &full_sheet, &before_sheet),
         pending: tail
             .iter()
             .filter_map(|d| cx.rs.engine().describe_decision(d))

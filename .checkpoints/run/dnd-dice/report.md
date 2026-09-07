@@ -37,6 +37,14 @@ in the ability-score step:
     step predated the hit point choice slot, so the Change dialog's
     engine call met an unknown slot. The wizard's preview fallbacks had
     masked the stale engine in every automated walk.
+11. **After a roll on an existing character, the Why still listed the
+    level-1 line.** The character had been finalized by an earlier build,
+    so its stored sheet carried the old one-line wording; the scoping
+    compared the new bullets against that text and kept them all. Every
+    test had used characters created by the current build. Explanations
+    are now scoped against a fresh fold of the finalized prefix under
+    today's rules, and a check rewrites a stored sheet to the old wording
+    before leveling and asserts the level-1 line stays out.
 
 Reproduced in the browser at phone width, then fixed on the same branch:
 
@@ -403,7 +411,7 @@ built through confirms instead of a mint). CI's 20 s gate is the arbiter;
 if it trips, the seeded and crash rows are the candidates to move behind
 a slow tag.
 
-Branch: 16 commits on `checkpoint/dnd-dice`; 82 files changed against `main`.
+Branch: 17 commits on `checkpoint/dnd-dice`; 82 files changed against `main`.
 
 ## Complaints logged
 
