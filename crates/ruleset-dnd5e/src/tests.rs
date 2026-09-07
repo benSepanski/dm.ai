@@ -11,12 +11,12 @@ use types::{
 };
 
 use crate::mechanics::{
-    slot_level_advance, slot_level_hit_die, slot_level_subclass, step_level, Ability, Increase,
-    BACKGROUND_EQUIPMENT_GOLD, BACKGROUND_EQUIPMENT_PACKAGE, SLOT_BACKGROUND,
-    SLOT_BACKGROUND_EQUIPMENT, SLOT_BACKGROUND_INCREASE, SLOT_CLASS, SLOT_CLASS_MASTERIES,
-    SLOT_CLASS_SKILLS, SLOT_CLASS_STYLE, SLOT_EQUIPMENT_PACKAGE, SLOT_FEAT_SKILLED, SLOT_NAME,
-    SLOT_SCORES_ASSIGN, SLOT_SCORES_METHOD, SLOT_SPECIES, SLOT_SPECIES_ANCESTRY, SLOT_SPECIES_FEAT,
-    SLOT_SPECIES_SKILL,
+    slot_level_advance, slot_level_hit_die, slot_level_hit_points, slot_level_subclass, step_level,
+    Ability, Increase, BACKGROUND_EQUIPMENT_GOLD, BACKGROUND_EQUIPMENT_PACKAGE, HP_OPTION_FIXED,
+    HP_OPTION_ROLL, SLOT_BACKGROUND, SLOT_BACKGROUND_EQUIPMENT, SLOT_BACKGROUND_INCREASE,
+    SLOT_CLASS, SLOT_CLASS_MASTERIES, SLOT_CLASS_SKILLS, SLOT_CLASS_STYLE, SLOT_EQUIPMENT_PACKAGE,
+    SLOT_FEAT_SKILLED, SLOT_NAME, SLOT_SCORES_ASSIGN, SLOT_SCORES_METHOD, SLOT_SPECIES,
+    SLOT_SPECIES_ANCESTRY, SLOT_SPECIES_FEAT, SLOT_SPECIES_SKILL,
 };
 use crate::Dnd5eEngine;
 
@@ -329,9 +329,10 @@ fn brannock_levels_to_3_through_the_advance_and_subclass_slots() {
     let live: Vec<String> = p.steps.iter().map(|s| s.id.as_str().to_string()).collect();
     assert_eq!(live, vec![step_level(2)]);
     // Level 2 grants no choice slot: its only card is the unrequired
-    // hit-die roll (dnd-dice), which never blocks finalize.
+    // fixed-or-roll hit point choice (dnd-dice), which never blocks
+    // finalize; the die itself is hidden until rolling is chosen.
     assert_eq!(p.steps[0].slots.len(), 1);
-    assert_eq!(p.steps[0].slots[0].id.as_str(), slot_level_hit_die(2));
+    assert_eq!(p.steps[0].slots[0].id.as_str(), slot_level_hit_points(2));
     assert!(!p.steps[0].slots[0].required);
     assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "20");
     assert_eq!(value(&p.sheet, "Features", "Action Surge"), "Fighter 2");
@@ -1375,8 +1376,31 @@ mod hit_dice {
             value(&log_sheet(&engine, &log), "Combat", "Hit Points"),
             "12"
         );
-        // Not yet at level 2: the level-2 hit die is hidden and refused.
+        // Not yet at level 2: the level-2 choice and die are hidden and refused.
         let p = engine.project(&log).unwrap();
+        assert!(slot_view(&p, &slot_level_hit_points(2)).is_none());
+        assert!(slot_view(&p, &slot_level_hit_die(2)).is_none());
+        assert!(try_confirm(
+            &engine,
+            &log,
+            &slot_level_hit_points(2),
+            one(HP_OPTION_ROLL)
+        )
+        .is_err());
+
+        confirm(&engine, &mut log, &slot_level_advance(2), one("advance.2"));
+        let p = engine.project(&log).unwrap();
+        // The choice card: unrequired, two options with the numbers spelled
+        // out; the die is hidden and refused until rolling is chosen.
+        let choice = slot_view(&p, &slot_level_hit_points(2)).unwrap();
+        assert!(!choice.required);
+        assert_eq!(choice.kind, SlotViewKind::Single);
+        assert_eq!(choice.options[0].label, "Take the fixed value");
+        assert_eq!(
+            choice.options[0].summary,
+            "6 + Constitution modifier (+2) = 8 hit points"
+        );
+        assert_eq!(choice.options[1].label, "Roll a d10");
         assert!(slot_view(&p, &slot_level_hit_die(2)).is_none());
         assert!(try_confirm(
             &engine,
@@ -1385,8 +1409,44 @@ mod hit_dice {
             die(8, RollOrigin::App)
         )
         .is_err());
+        assert!(
+            p.can_finalize,
+            "the unrequired choice never blocks finalize"
+        );
+        // Fixed: 12 + (6 + 2) = 20, the exact pre-dice detail text.
+        assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "20");
+        assert_eq!(
+            detail(&p.sheet, "Combat", "Hit Points"),
+            "Constitution modifier +2 is added at every level. Level 1: 10 (Fighter) + 2 = 12. Level 2: fixed 6 + 2 = 8. Total 20."
+        );
 
-        confirm(&engine, &mut log, &slot_level_advance(2), one("advance.2"));
+        // Taking the fixed value records a decision and changes nothing.
+        confirm(
+            &engine,
+            &mut log,
+            &slot_level_hit_points(2),
+            one(HP_OPTION_FIXED),
+        );
+        assert_eq!(
+            value(&log_sheet(&engine, &log), "Combat", "Hit Points"),
+            "20"
+        );
+        // Choosing to roll opens the die, required until rolled.
+        let AppendOutcome::Appended(new_log) = engine
+            .amend(
+                &log,
+                DecisionInput {
+                    id: DecisionId::new("choose-roll"),
+                    slot: SlotId::new(slot_level_hit_points(2)),
+                    selection: one(HP_OPTION_ROLL),
+                    source: DecisionSource::Player,
+                },
+            )
+            .unwrap()
+        else {
+            panic!()
+        };
+        log = new_log;
         let p = engine.project(&log).unwrap();
         let card = slot_view(&p, &slot_level_hit_die(2)).unwrap();
         assert_eq!(
@@ -1397,19 +1457,14 @@ mod hit_dice {
                 groups: 1
             }
         );
-        assert!(!card.required);
-        assert!(card.options.is_empty());
+        assert!(card.required);
         assert!(
-            p.can_finalize,
-            "the unrequired hit die never blocks finalize"
+            !p.can_finalize,
+            "a chosen-but-unrolled die is a visible gap"
         );
-        // Fixed: 12 + (6 + 2) = 20, the exact pre-dice detail text.
-        assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "20");
-        assert_eq!(
-            detail(&p.sheet, "Combat", "Hit Points"),
-            "Level 1: 10 (Fighter) + Constitution modifier (+2) = 12. Level 2: fixed value 6 + Constitution modifier (+2) = 8. Total 20."
-        );
-
+        assert!(p.checklist.iter().any(|e| e
+            .message
+            .contains("Roll your hit die, or take the fixed value")));
         // Roll a 3, then reroll an 8: the history keeps both, the 8 is live.
         confirm(
             &engine,
@@ -1447,7 +1502,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "22");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "Level 1: 10 (Fighter) + Constitution modifier (+2) = 12. Level 2: entered 8 + Constitution modifier (+2) = 10. Total 22."
+            "Constitution modifier +2 is added at every level. Level 1: 10 (Fighter) + 2 = 12. Level 2: entered 8 + 2 = 10. Total 22."
         );
         let described = engine
             .describe_decision(
@@ -1468,13 +1523,24 @@ mod hit_dice {
         );
         let p = engine.project(&log).unwrap();
         assert!(slot_view(&p, &slot_level_hit_die(2)).is_none());
-        assert!(slot_view(&p, &slot_level_hit_die(3)).is_some());
+        assert!(slot_view(&p, &slot_level_hit_points(2)).is_none());
+        assert!(slot_view(&p, &slot_level_hit_points(3)).is_some());
+        assert!(
+            slot_view(&p, &slot_level_hit_die(3)).is_none(),
+            "hidden until chosen"
+        );
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "30");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "Level 1: 10 (Fighter) + Constitution modifier (+2) = 12. Level 2: entered 8 + Constitution modifier (+2) = 10. Level 3: fixed value 6 + Constitution modifier (+2) = 8. Total 30."
+            "Constitution modifier +2 is added at every level. Level 1: 10 (Fighter) + 2 = 12. Level 2: entered 8 + 2 = 10. Level 3: fixed 6 + 2 = 8. Total 30."
         );
         // Out of shape: an 11 on a d10, or two dice.
+        confirm(
+            &engine,
+            &mut log,
+            &slot_level_hit_points(3),
+            one(HP_OPTION_ROLL),
+        );
         assert!(try_confirm(
             &engine,
             &log,
@@ -1538,6 +1604,12 @@ mod hit_dice {
         confirm(
             &engine,
             &mut log,
+            &slot_level_hit_points(2),
+            one(HP_OPTION_ROLL),
+        );
+        confirm(
+            &engine,
+            &mut log,
             &slot_level_hit_die(2),
             die(1, RollOrigin::App),
         );
@@ -1546,7 +1618,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "10");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "Level 1: 10 (Fighter) + Constitution modifier (-1) = 9. Level 2: rolled 1 + Constitution modifier (-1) = 0, raised to the minimum of 1. Total 10."
+            "Constitution modifier -1 is added at every level. Level 1: 10 (Fighter) − 1 = 9. Level 2: rolled 1 − 1 = 0 → 1 (minimum 1 per level). Total 10."
         );
     }
 

@@ -300,6 +300,9 @@ pub struct Dnd5eState {
     /// Level advances applied, in order: the character's level is one plus
     /// this count. Set only by the advance slots' `apply`.
     pub level_advances: u32,
+    /// How each level's hit points are decided (dnd-dice): take the fixed
+    /// value or roll the hit die. Absent means the fixed value.
+    pub hit_points_choice: BTreeMap<u32, HitPointsChoice>,
     /// Rolled hit dice by level (dnd-dice): each level's recorded history,
     /// the last set live. A level absent here takes the class's fixed value.
     pub hit_die_rolls: BTreeMap<u32, Vec<RolledSet>>,
@@ -307,6 +310,16 @@ pub struct Dnd5eState {
     pub granted_features: Vec<(u32, String)>,
     pub subclass: Option<String>,
 }
+
+/// The published choice at each level: the fixed value, or a roll.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HitPointsChoice {
+    Fixed,
+    Roll,
+}
+
+pub const HP_OPTION_FIXED: &str = "hp.fixed";
+pub const HP_OPTION_ROLL: &str = "hp.roll";
 
 /// One skill or tool proficiency and where it came from.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -780,6 +793,11 @@ pub fn slot_level_subclass(level: u32) -> String {
 pub fn slot_level_hit_die(level: u32) -> String {
     format!("dnd5e.level.{level}.hit-die")
 }
+/// The unrequired fixed-or-roll choice of a level (dnd-dice): absent means
+/// the fixed value; choosing to roll opens the hit-die slot.
+pub fn slot_level_hit_points(level: u32) -> String {
+    format!("dnd5e.level.{level}.hit-points")
+}
 /// The level an advance slot ID advances to, if it is one.
 pub fn advance_level_of(slot: &str) -> Option<u32> {
     slot.strip_prefix("dnd5e.level.")?
@@ -933,15 +951,20 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
     match class {
         Some(c) => {
             // The breakdown is prose a player can read without the rule:
-            // what level 1 gave, what each later level added (the fixed
-            // value or the die that was rolled or entered), the
-            // Constitution modifier named as such, the minimum when it
-            // applied, the species bonus, and the total.
-            let con_text = format!("Constitution modifier ({})", format_signed(con));
+            // the Constitution modifier named once, then what each level
+            // gave (the fixed value or the die that was rolled or entered),
+            // the minimum when it applied, the species bonus, the total.
+            let con_term = if con >= 0 {
+                format!("+ {con}")
+            } else {
+                format!("− {}", -con)
+            };
             let mut hp = c.hp_at_level_1 as i32 + con;
             let mut detail = format!(
-                "Level 1: {} ({}) + {con_text} = {hp}.",
-                c.hp_at_level_1, c.name
+                "Constitution modifier {} is added at every level. Level 1: {} ({}) {con_term} = {hp}.",
+                format_signed(con),
+                c.hp_at_level_1,
+                c.name
             );
             let any_rolled = (2..=level).any(|l| state.hit_die_live(l).is_some());
             if level > 1 && !any_rolled {
@@ -953,13 +976,12 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
                 hp += per * levels;
                 if levels == 1 {
                     detail.push_str(&format!(
-                        " Level 2: fixed value {} + {con_text} = {per}.",
+                        " Level 2: fixed {} {con_term} = {per}.",
                         c.hp_per_level
                     ));
                 } else {
                     detail.push_str(&format!(
-                        " Levels 2 to {level}: fixed value {} + {con_text} = {per} each, \
-                         {levels} levels = {}.",
+                        " Levels 2 to {level}: fixed {} {con_term} = {per} each, {levels} levels = {}.",
                         c.hp_per_level,
                         per * levels
                     ));
@@ -971,19 +993,17 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
                 for l in 2..=level {
                     let (value, how) = match state.hit_die_live(l) {
                         Some((face, origin)) => (face as i32, origin_label(origin).to_string()),
-                        None => (c.hp_per_level as i32, "fixed value".to_string()),
+                        None => (c.hp_per_level as i32, "fixed".to_string()),
                     };
                     let raw = value + con;
                     let gain = raw.max(1);
                     hp += gain;
                     if raw < 1 {
                         detail.push_str(&format!(
-                            " Level {l}: {how} {value} + {con_text} = {raw}, raised to the \
-                             minimum of 1."
+                            " Level {l}: {how} {value} {con_term} = {raw} → 1 (minimum 1 per level)."
                         ));
                     } else {
-                        detail
-                            .push_str(&format!(" Level {l}: {how} {value} + {con_text} = {gain}."));
+                        detail.push_str(&format!(" Level {l}: {how} {value} {con_term} = {gain}."));
                     }
                 }
             }
@@ -991,7 +1011,7 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
                 let bonus = sp.hp_bonus_per_level * level;
                 hp += bonus as i32;
                 detail.push_str(&format!(
-                    " Plus {}: {} per level = {bonus}.",
+                    " {} adds {} per level: +{bonus}.",
                     sp.name, sp.hp_bonus_per_level
                 ));
             }

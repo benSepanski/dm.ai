@@ -213,8 +213,13 @@ export function Wizard({
     }
     for (const st of draft.projection.steps) {
       for (const sl of st.slots) {
-        if (sl.kind.kind === 'roll' && (sl.decision === undefined || sl.decision === null)) {
-          markers[sl.label] = '🎲 fixed value — or roll below';
+        if (sl.decision !== undefined && sl.decision !== null) {
+          continue;
+        }
+        if (sl.kind.kind === 'roll') {
+          markers[sl.label] = '🎲 waiting for your roll below';
+        } else if (markers[sl.label] === undefined) {
+          markers[sl.label] = '🎲 fixed value unless you choose to roll below';
         }
       }
     }

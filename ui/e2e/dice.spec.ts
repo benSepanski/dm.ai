@@ -282,30 +282,40 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   const sheet = page.locator('.sheet-page');
 
   // Level 2: the gains panel carries the fixed hit points; the one card is
-  // the optional hit die; finalize is open at once.
+  // the optional fixed-or-roll choice; finalize is open at once.
   await page.getByRole('button', { name: 'Level up to 2' }).click();
   await expect(page.locator('.wizard')).toBeVisible();
   await expect(page.locator('.level-gains')).toContainText('Hit Points');
-  // Before any roll the row reads as provisional.
-  await expect(page.getByTestId('diff-marker-Hit Points')).toContainText('or roll below');
-  const hitDie = slot(page, 'dnd5e.level.2.hit-die');
-  await expect(hitDie).toBeVisible();
-  await expect(hitDie).toContainText('(optional)');
+  await expect(page.getByTestId('diff-marker-Hit Points')).toContainText('unless you choose to roll');
+  const choice = slot(page, 'dnd5e.level.2.hit-points');
+  await expect(choice).toBeVisible();
+  await expect(choice).toContainText('(optional)');
+  await expect(choice).toContainText('Take the fixed value');
+  await expect(choice).toContainText('= 8 hit points');
+  await expect(slot(page, 'dnd5e.level.2.hit-die')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Finalize level 2' })).toBeEnabled();
   await expectSaneLayout(page);
 
-  // Roll a die, then again: both kept, the second live, the deltas show HP.
+  // Choose to roll: the die card opens and finalize waits on it.
+  await confirmOption(page, 'dnd5e.level.2.hit-points', 'Roll a d10');
+  await expect(page.getByTestId('diff-marker-Hit Points')).toContainText('waiting for your roll');
+  const hitDie = slot(page, 'dnd5e.level.2.hit-die');
+  await expect(hitDie).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Finalize level 2' })).toBeDisabled();
+  await expect(page.getByTestId('checklist')).toContainText('Roll your hit die');
+
+  // Roll a die, then again: both kept, the second live, the gains follow.
   await hitDie.getByRole('button', { name: 'Roll' }).click();
   await expect(hitDie.locator('.roll-set')).toHaveCount(1);
   await hitDie.getByRole('button', { name: 'Roll again' }).click();
   await expect(hitDie.locator('.roll-set')).toHaveCount(2);
   await expect(hitDie.locator('.roll-set').nth(0)).toHaveClass(/roll-superseded/);
-  // The gains row follows the roll: the marker is gone, the Why says rolled.
   await expect(page.getByTestId('diff-marker-Hit Points')).toHaveCount(0);
   await expect(page.locator('.level-gains')).toContainText('rolled');
+  await expect(page.getByRole('button', { name: 'Finalize level 2' })).toBeEnabled();
   await expectSaneLayout(page);
 
-  // Abandon: the confirm names the hit die; the file holds no trace.
+  // Abandon: the confirm names the choice and the die; the file holds no trace.
   await page.getByRole('button', { name: 'Abandon level 2' }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('Abandon level 2?');
@@ -314,17 +324,18 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await expect(sheet.locator('.sheet-summary').first()).toHaveText('Human Fighter 1');
   expect(rollHistory(characterFile(server, 'Tam'), 'dnd5e.level.2.hit-die')).toHaveLength(0);
 
-  // Level again, roll once, finalize: the breakdown says rolled.
+  // Level again and take the fixed value outright: the marker goes, the
+  // breakdown says fixed.
   await page.getByRole('button', { name: 'Level up to 2' }).click();
   await expect(page.locator('.wizard')).toBeVisible();
-  await slot(page, 'dnd5e.level.2.hit-die').getByRole('button', { name: 'Roll' }).click();
-  await expect(slot(page, 'dnd5e.level.2.hit-die').locator('.roll-set')).toHaveCount(1);
+  await confirmOption(page, 'dnd5e.level.2.hit-points', 'Take the fixed value');
+  await expect(page.getByTestId('diff-marker-Hit Points')).toHaveCount(0);
   await page.getByRole('button', { name: 'Finalize level 2' }).click();
   await expect(sheet).toBeVisible();
   await expect(sheet.locator('.sheet-summary').first()).toHaveText('Human Fighter 2');
   const hp2 = sectionEntry(sheet, 'Combat', 'Hit Points');
   await hp2.getByRole('button', { name: 'breakdown for Hit Points' }).click();
-  await expect(hp2).toContainText('Level 2: rolled');
+  await expect(hp2).toContainText('Level 2: fixed 6');
   await expectSaneLayout(page);
 
   // Level 3: the Champion, and a physical d10 — an 11 is refused with the
@@ -332,6 +343,7 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await page.getByRole('button', { name: 'Level up to 3' }).click();
   await expect(page.locator('.wizard')).toBeVisible();
   await confirmOption(page, 'dnd5e.level.3.subclass', 'Champion');
+  await confirmOption(page, 'dnd5e.level.3.hit-points', 'Roll a d10');
   const die3 = slot(page, 'dnd5e.level.3.hit-die');
   await die3.getByRole('button', { name: 'Enter dice' }).click();
   const input = die3.getByRole('spinbutton');

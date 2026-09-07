@@ -9,10 +9,10 @@ use types::{check_roll_shape, OptionId, OptionView, Selection, SlotId, SlotViewK
 
 use crate::data::RulesData;
 use crate::mechanics::{
-    describe_selection, illegal, incomplete, origin_label, sel_multi, sel_single,
-    slot_level_hit_die, slot_level_subclass, step_level, Dnd5eState, SLOT_CLASS,
-    SLOT_CLASS_MASTERIES, SLOT_CLASS_SKILLS, SLOT_CLASS_STYLE, SLOT_EQUIPMENT_PACKAGE, STEP_CLASS,
-    STEP_CLASS_CHOICES,
+    describe_selection, format_signed, illegal, incomplete, origin_label, sel_multi, sel_single,
+    slot_level_hit_die, slot_level_hit_points, slot_level_subclass, step_level, Dnd5eState,
+    HitPointsChoice, HP_OPTION_FIXED, HP_OPTION_ROLL, SLOT_CLASS, SLOT_CLASS_MASTERIES,
+    SLOT_CLASS_SKILLS, SLOT_CLASS_STYLE, SLOT_EQUIPMENT_PACKAGE, STEP_CLASS, STEP_CLASS_CHOICES,
 };
 
 fn option(id: &str, label: &str, summary: String, details: Vec<String>) -> OptionView {
@@ -472,11 +472,83 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
         });
     }
 
-    // --- Hit die, one unrequired roll slot per advancement level ---
-    // Absent, the class's fixed value applies (the SRD's "instead of
-    // rolling" — a default the fold applies, never one written into a
-    // log). Present, the live face replaces the fixed value for that level.
+    // --- Hit points per advancement level (dnd-dice) ---
+    // An unrequired fixed-or-roll choice (absent means the fixed value,
+    // the SRD's "instead of rolling" — a default the fold applies) and,
+    // once rolling is chosen, the hit-die roll slot it opens, required
+    // while open so a chosen-but-unrolled die is a visible gap.
     for level in 2..=data.max_advancement_level() {
+        let d_opts = data.clone();
+        let d_unlock = data.clone();
+        regs.push(SlotRegistration::<Dnd5eState> {
+            id: SlotId::new(slot_level_hit_points(level)),
+            step: StepId::new(step_level(level)),
+            label: "Hit Points".into(),
+            required: false,
+            presentation_hint: Box::new(|_| None),
+            kind: Box::new(|_| SlotViewKind::Single),
+            unlock: Box::new(move |state| {
+                let known = state.class.as_ref().and_then(|id| d_unlock.class(id));
+                if known.is_some() && state.level() == level {
+                    Availability::Open
+                } else {
+                    Availability::Hidden
+                }
+            }),
+            dependents: vec![SlotId::new(slot_level_hit_die(level))],
+            options: Box::new(move |state| {
+                let Some(c) = state.class.as_ref().and_then(|id| d_opts.class(id)) else {
+                    return vec![];
+                };
+                let con = state.modifier(crate::mechanics::Ability::Con, &d_opts);
+                let fixed = (c.hp_per_level as i32 + con).max(1);
+                vec![
+                    option(
+                        HP_OPTION_FIXED,
+                        "Take the fixed value",
+                        format!(
+                            "{} + Constitution modifier ({}) = {fixed} hit points",
+                            c.hp_per_level,
+                            format_signed(con)
+                        ),
+                        vec![],
+                    ),
+                    option(
+                        HP_OPTION_ROLL,
+                        &format!("Roll a d{}", c.hit_die),
+                        format!(
+                            "The roll + Constitution modifier ({}), minimum 1; every roll stays in your record",
+                            format_signed(con)
+                        ),
+                        vec![],
+                    ),
+                ]
+            }),
+            apply: Box::new(move |state, decision| {
+                let id = sel_single(&decision.selection)?;
+                let choice = match id.as_str() {
+                    HP_OPTION_FIXED => HitPointsChoice::Fixed,
+                    HP_OPTION_ROLL => HitPointsChoice::Roll,
+                    other => return Err(ApplyError::new(format!("'{other}' is not a hit point choice"))),
+                };
+                if state.level() != level {
+                    return Err(ApplyError::new(format!(
+                        "level {level} hit points are decided at level {level}, not {}",
+                        state.level()
+                    )));
+                }
+                state.hit_points_choice.insert(level, choice);
+                Ok(())
+            }),
+            validate: Box::new(|_, _| vec![]),
+            meters: Box::new(|_, _| vec![]),
+            describe: Box::new(|sel| match sel {
+                Selection::Option(id) if id.as_str() == HP_OPTION_FIXED => "the fixed value".into(),
+                Selection::Option(id) if id.as_str() == HP_OPTION_ROLL => "roll the hit die".into(),
+                other => format!("{other:?}"),
+            }),
+        });
+
         let d_kind = data.clone();
         let d_unlock = data.clone();
         let d_apply = data.clone();
@@ -484,7 +556,7 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
             id: SlotId::new(slot_level_hit_die(level)),
             step: StepId::new(step_level(level)),
             label: "Hit Points".into(),
-            required: false,
+            required: true,
             presentation_hint: Box::new(|_| None),
             kind: Box::new(move |state| {
                 let sides = state
@@ -501,7 +573,9 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
             }),
             unlock: Box::new(move |state| {
                 let known = state.class.as_ref().and_then(|id| d_unlock.class(id));
-                if known.is_some() && state.level() == level {
+                let chose_roll =
+                    state.hit_points_choice.get(&level) == Some(&HitPointsChoice::Roll);
+                if known.is_some() && chose_roll && state.level() == level {
                     Availability::Open
                 } else {
                     Availability::Hidden
@@ -550,11 +624,31 @@ pub fn registrations(data: &Arc<RulesData>) -> Vec<SlotRegistration<Dnd5eState>>
                         state.level()
                     )));
                 }
+                // The choice gates the slot's unlock (append refuses a die
+                // nobody chose to roll); apply itself stays choice-blind so
+                // a partial fold that carries the die — the level-up gains
+                // view folds recorded inputs without the choices — still
+                // replays.
                 check_roll_shape(class.hit_die as u8, 1, 1, sets).map_err(ApplyError::new)?;
                 state.hit_die_rolls.insert(level, sets.clone());
                 Ok(())
             }),
-            validate: Box::new(|_, _| vec![]),
+            validate: Box::new(move |state, decision| {
+                if state.hit_points_choice.get(&level) == Some(&HitPointsChoice::Roll)
+                    && decision.is_none()
+                    && state.hit_die_live(level).is_none()
+                {
+                    vec![incomplete(
+                        &slot_level_hit_die(level),
+                        &step_level(level),
+                        "Hit Points",
+                        "Roll your hit die, or take the fixed value instead",
+                        &format!("from level {level}"),
+                    )]
+                } else {
+                    vec![]
+                }
+            }),
             meters: Box::new(|_, _| vec![]),
             describe: Box::new(move |sel| match sel {
                 Selection::Rolled(sets) => match sets.last() {

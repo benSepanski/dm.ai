@@ -46,7 +46,7 @@
         {
           "label": "Hit Points",
           "value": "28",
-          "detail": "Level 1: 10 (Fighter) + Constitution modifier (+2) = 12. Levels 2 to 3: fixed value 6 + Constitution modifier (+2) = 8 each, 2 levels = 16. Total 28."
+          "detail": "Constitution modifier +2 is added at every level. Level 1: 10 (Fighter) + 2 = 12. Levels 2 to 3: fixed 6 + 2 = 8 each, 2 levels = 16. Total 28."
         },
         {
           "label": "Armor Class",

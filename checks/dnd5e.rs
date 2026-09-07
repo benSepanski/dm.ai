@@ -538,7 +538,7 @@ fn level_2_is_empty_and_level_3_offers_the_subclass_records() {
     assert_eq!(p2.steps[0].slots.len(), 1);
     assert_eq!(
         p2.steps[0].slots[0].id.as_str(),
-        ruleset_dnd5e::slot_level_hit_die(2)
+        ruleset_dnd5e::slot_level_hit_points(2)
     );
 
     advance(&engine, &mut log, 3);
@@ -1322,14 +1322,34 @@ fn hit_dice_ride_the_level_up_views_and_abandon_discards_them() {
 
     let draft = lv::start_level(&client, url, &id);
     assert!(draft["projection"]["can_finalize"].as_bool().unwrap());
-    let card = lv::slot_view(&draft, "dnd5e.level.2.hit-die").expect("the hit-die card");
-    assert_eq!(card["required"], false);
-    assert_eq!(card["kind"]["kind"], "roll");
+    let choice = lv::slot_view(&draft, "dnd5e.level.2.hit-points").expect("the choice card");
+    assert_eq!(choice["required"], false);
+    assert_eq!(choice["kind"]["kind"], "single");
+    assert!(
+        lv::slot_view(&draft, "dnd5e.level.2.hit-die").is_none(),
+        "the die waits on the choice"
+    );
     assert!(draft["level_up"]["gains"]
         .as_array()
         .unwrap()
         .iter()
         .any(|d| d["label"] == "Hit Points"));
+    // Choose to roll: the die opens, required; finalize waits on it.
+    let chosen = lv::confirm_option(
+        &client,
+        url,
+        &id,
+        draft["version"].as_u64().unwrap(),
+        "hd-choose",
+        "dnd5e.level.2.hit-points",
+        "hp.roll",
+    );
+    assert_eq!(chosen["outcome"], "confirmed", "{chosen}");
+    let draft = chosen["draft"].clone();
+    let card = lv::slot_view(&draft, "dnd5e.level.2.hit-die").expect("the hit-die card");
+    assert_eq!(card["required"], true);
+    assert_eq!(card["kind"]["kind"], "roll");
+    assert!(!draft["projection"]["can_finalize"].as_bool().unwrap());
     // Roll it through the route.
     let (status, rolled) = lv::post_json(
         &client,
@@ -1405,7 +1425,7 @@ fn hit_dice_ride_the_level_up_views_and_abandon_discards_them() {
         .as_array()
         .unwrap()
         .iter()
-        .any(|d| d["slot"] == "dnd5e.level.2.hit-die"));
+        .any(|d| d["slot"] == "dnd5e.level.2.hit-die" || d["slot"] == "dnd5e.level.2.hit-points"));
     // Level again and finalize at once without rolling: the fixed value.
     let draft = lv::start_level(&client, url, &id);
     let (status, fin2) = lv::post_json(
@@ -1434,7 +1454,7 @@ fn hit_dice_ride_the_level_up_views_and_abandon_discards_them() {
         hp["detail"]
             .as_str()
             .unwrap()
-            .contains("Level 2: fixed value 6 +"),
+            .contains("Level 2: fixed 6 +"),
         "{hp}"
     );
 }

@@ -813,7 +813,18 @@ fn rolls_under_sigkill_are_prior_or_next_state() {
             json!({"version": v}),
         );
         assert_eq!(status, 200, "{fin}");
-        leveling::start_level(&client, &server.url, &leveler);
+        let pending = leveling::start_level(&client, &server.url, &leveler);
+        // Choose to roll, so the die is open for the kill cycle.
+        let chosen = leveling::confirm_option(
+            &client,
+            &server.url,
+            &leveler,
+            pending["version"].as_u64().unwrap(),
+            "crash-hd-choose",
+            "dnd5e.level.2.hit-points",
+            "hp.roll",
+        );
+        assert_eq!(chosen["outcome"], "confirmed", "{chosen}");
     }
     let hit_die_sets = |doc: &Value| -> usize {
         doc["log"]

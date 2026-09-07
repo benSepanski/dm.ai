@@ -394,7 +394,7 @@ test("level 2's empty level and the level-3 subclass: abandon, resume mid-level,
   await expect(gains).toContainText('Hit Points');
   // The one card is the optional hit die (dnd-dice); no choice is required.
   await expect(page.locator('.wizard-main [data-slot]')).toHaveCount(1);
-  await expect(slot(page, 'dnd5e.level.2.hit-die')).toContainText('(optional)');
+  await expect(slot(page, 'dnd5e.level.2.hit-points')).toContainText('(optional)');
   await expect(page.locator('.wizard-steps .step-link')).toHaveText([/Level 2/]);
   await expect(page.getByTestId('checklist').getByText('Everything checks out')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Finalize level 2' })).toBeEnabled();
