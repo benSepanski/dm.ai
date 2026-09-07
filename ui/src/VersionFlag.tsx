@@ -13,10 +13,14 @@ export function SheetDiffTable({
   differences,
   oldHeading,
   newHeading,
+  markers,
 }: {
   differences: SheetDiff[];
   oldHeading: string;
   newHeading: string;
+  /** Render-ready notes keyed by row label — a value a card in this step
+   * can still change (a die not yet rolled) says so beside its number. */
+  markers?: Record<string, string> | undefined;
 }) {
   // The explanation column appears whenever the server sent one: each
   // "why" is the sheet entry's own detail line, never computed here.
@@ -38,7 +42,15 @@ export function SheetDiffTable({
               <span className="diff-section">{d.section}</span> {d.label}
             </th>
             <td className="version-old">{d.old}</td>
-            <td className="version-new">{d.new}</td>
+            <td className="version-new">
+              {d.new}
+              {markers?.[d.label] !== undefined && (
+                <span className="diff-marker" data-testid={`diff-marker-${d.label}`}>
+                  {' '}
+                  {markers[d.label]}
+                </span>
+              )}
+            </td>
             {explained && <td className="diff-why">{d.why ?? ''}</td>}
           </tr>
         ))}

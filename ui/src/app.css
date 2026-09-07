@@ -1199,3 +1199,8 @@ li.option-group-heading {
   font-size: 0.85rem;
   color: var(--ink-soft);
 }
+.diff-marker {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}

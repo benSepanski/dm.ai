@@ -1362,6 +1362,36 @@ fn hit_dice_ride_the_level_up_views_and_abandon_discards_them() {
         .unwrap()
         .iter()
         .any(|d| d["label"] == "Hit Points"));
+    // The gains table follows the roll: a die is an input, not a choice.
+    let fixed_row = draft["level_up"]["gains"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["label"] == "Hit Points")
+        .unwrap()
+        .clone();
+    let rolled_row = after["level_up"]["gains"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["label"] == "Hit Points")
+        .unwrap()
+        .clone();
+    assert!(
+        rolled_row["why"].as_str().unwrap().contains("rolled"),
+        "{rolled_row}"
+    );
+    assert!(
+        !fixed_row["why"].as_str().unwrap().contains("rolled"),
+        "{fixed_row}"
+    );
+    let fixed_hp: i64 = fixed_row["new"].as_str().unwrap().parse().unwrap();
+    let rolled_hp: i64 = rolled_row["new"].as_str().unwrap().parse().unwrap();
+    assert_eq!(
+        rolled_hp - fixed_hp,
+        face - 6,
+        "the row moved by roll minus fixed"
+    );
     // Abandon: the file holds no hit-die decision; the sheet is untouched.
     let (status, ab) = lv::post_json(
         &client,

@@ -203,6 +203,24 @@ export function Wizard({
     }
   }, [draft, pending, serverLog, engineReady]);
 
+  // Gains rows a roll card in the pending step can still change: a card
+  // with nothing rolled marks its row (matched by label — the UI learns no
+  // game word) so the number reads as provisional until the die lands.
+  const rollMarkers = useMemo(() => {
+    const markers: Record<string, string> = {};
+    if (draft.level_up === undefined) {
+      return markers;
+    }
+    for (const st of draft.projection.steps) {
+      for (const sl of st.slots) {
+        if (sl.kind.kind === 'roll' && (sl.decision === undefined || sl.decision === null)) {
+          markers[sl.label] = '🎲 fixed value — or roll below';
+        }
+      }
+    }
+    return markers;
+  }, [draft]);
+
   // Step badges, checklist, and the sheet react to tentative selections;
   // the slot editors themselves render the server-confirmed state, so a
   // choice never looks confirmed before it is durably saved.
@@ -583,9 +601,10 @@ export function Wizard({
             <h2>At level {draft.level_up.level} you gain…</h2>
             <p className="level-gains-intro">
               These change on their own the moment you reach level{' '}
-              {draft.level_up.level} — before any choice below. Every value on
-              the sheet derives from your level and your choices; the Why column
-              is each value's own formula.
+              {draft.level_up.level} — before any choice below (a die you roll
+              here counts as part of the level, so its row follows the roll).
+              Every value on the sheet derives from your level and your choices;
+              the Why column is each value's own formula.
             </p>
             {draft.level_up.gains.length === 0 ? (
               <p>Only the choices below — nothing changes on its own.</p>
@@ -594,6 +613,7 @@ export function Wizard({
                 differences={draft.level_up.gains}
                 oldHeading={`Level ${draft.level_up.level - 1}`}
                 newHeading={`Level ${draft.level_up.level}`}
+                markers={rollMarkers}
               />
             )}
           </section>

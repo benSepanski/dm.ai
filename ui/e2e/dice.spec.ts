@@ -286,6 +286,8 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await page.getByRole('button', { name: 'Level up to 2' }).click();
   await expect(page.locator('.wizard')).toBeVisible();
   await expect(page.locator('.level-gains')).toContainText('Hit Points');
+  // Before any roll the row reads as provisional.
+  await expect(page.getByTestId('diff-marker-Hit Points')).toContainText('or roll below');
   const hitDie = slot(page, 'dnd5e.level.2.hit-die');
   await expect(hitDie).toBeVisible();
   await expect(hitDie).toContainText('(optional)');
@@ -298,7 +300,9 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await hitDie.getByRole('button', { name: 'Roll again' }).click();
   await expect(hitDie.locator('.roll-set')).toHaveCount(2);
   await expect(hitDie.locator('.roll-set').nth(0)).toHaveClass(/roll-superseded/);
-  await expect(page.locator('.level-deltas')).toContainText('Hit Points');
+  // The gains row follows the roll: the marker is gone, the Why says rolled.
+  await expect(page.getByTestId('diff-marker-Hit Points')).toHaveCount(0);
+  await expect(page.locator('.level-gains')).toContainText('rolled');
   await expectSaneLayout(page);
 
   // Abandon: the confirm names the hit die; the file holds no trace.

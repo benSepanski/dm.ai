@@ -14,6 +14,8 @@ in the ability-score step:
    Origin step.
 3. **Standard Array was hard to use through the same selects, and Point
    Buy never showed what each score costs.**
+4. **Rolling a hit die changed nothing in the level-up table** (2026-09-07),
+   and nothing in the table said the Hit Points row was provisional.
 
 Reproduced in the browser at phone width, then fixed on the same branch:
 
@@ -28,6 +30,15 @@ Reproduced in the browser at phone width, then fixed on the same branch:
   published scores with that score's cost beside it ("9 points"); the
   always-on Points meter shows what is left, and an overspend is still
   the checklist's verdict.
+- **The gains table follows the roll.** The "At level N you gain…" table
+  was computed from the advance alone, deliberately before any choice —
+  but a rolled die is a recorded input, not a choice, and the row stayed
+  on the fixed value. The fold behind the gains now includes any roll in
+  the pending level, so Hit Points updates in place with "rolled 8" in
+  the Why column; "Changes so far" then shows only choice-driven changes.
+  Before a roll, any gains row that a roll card in the step can still
+  change carries a marker ("🎲 fixed value — or roll below"), matched to
+  the card by label so the UI still learns no game word.
 - **A steady step nav on narrow screens.** The cause was the
   "Unconfirmed changes" chip: on a phone the step nav sits above the
   cards, and the chip appearing grew it by 39 px the moment a tentative
@@ -139,8 +150,10 @@ cargo run --release -p server -- --data-dir ./campaign-dice
 5. **The hit die.** Finish and finalize Ysolde (skills, style, masteries,
    packages). Level up to 2: the gains panel lists the fixed hit points;
    the one card is **Hit Points (optional)** and Finalize is enabled at
-   once. Tap Roll — a face — then Roll again: both kept, the second live;
-   "Changes so far" shows Hit Points. **Abandon level 2**: the dialog names
+   once; the Hit Points row in the gains table carries "🎲 fixed value —
+   or roll below". Tap Roll — a face — and the row updates in place with
+   "rolled" in its Why column; Roll again: both kept, the second live, the
+   row follows the live one. **Abandon level 2**: the dialog names
    Hit Points among what it discards; afterwards the file holds no hit-die
    decision. Level up again, roll once, finalize: the sheet's Hit Points
    breakdown reads "level 2: N (rolled) + Con". At level 3 pick the
@@ -274,8 +287,8 @@ Final run on the branch head (2026-09-06):
 | `reference-check --system dnd5e attest` | 104 records: 103 match, 1 waived (the pre-existing Point Cost naming waiver), 0 mismatch |
 | WASM bundle (both rulesets) | 1,729,479 bytes, one module (budget 2,621,440); bindings fresh after a rebuild |
 | `npm run typecheck`, `npm run lint` | clean |
-| `npm test` (vitest) | 10 files, 66 tests passed (the grouped-editor tests rewritten for the tray and the stepper) |
-| `npm run e2e` (Playwright, full suite) | 53 passed, 0 failed (1.2 min) — `dice.spec.ts` 4 walks and `dnd.spec.ts` drive the tray and the stepper through shared helpers; every PF2e spec unchanged |
+| `npm test` (vitest) | 10 files, 66 tests passed (the grouped-editor tests rewritten for the tray and the stepper); rerun after the gains change, same |
+| `npm run e2e` (Playwright, full suite) | 53 passed, 0 failed (1.2 min) — `dice.spec.ts` 4 walks and `dnd.spec.ts` drive the tray and the stepper through shared helpers; every PF2e spec unchanged. After the gains change: dice, 5.5e, and level-up specs rerun, 15 passed |
 
 Test-suite wall time: on this machine the whole suite measures 33 s idle
 against main's 39 s measured the same way minutes apart — the noise floor
@@ -287,7 +300,7 @@ built through confirms instead of a mint). CI's 20 s gate is the arbiter;
 if it trips, the seeded and crash rows are the candidates to move behind
 a slow tag.
 
-Branch: 10 commits on `checkpoint/dnd-dice`; 79 files changed against `main`.
+Branch: 11 commits on `checkpoint/dnd-dice`; 79 files changed against `main`.
 
 ## Complaints logged
 

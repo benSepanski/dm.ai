@@ -233,7 +233,19 @@ fn level_up_view(cx: &Ctx, loaded: &Loaded) -> Result<LevelUpView, Failure> {
         .rs
         .level_of(&loaded.log)
         .map_err(|e| Failure::Internal(e.to_string()))?;
-    let advanced: Vec<Decision> = prefix.iter().chain(tail.iter().take(1)).cloned().collect();
+    // What the level grants on its own: the advance plus any recorded
+    // input in the tail (a rolled die is an input, not a choice — the
+    // gains table follows it), before any choice.
+    let advanced: Vec<Decision> = prefix
+        .iter()
+        .chain(
+            tail.iter()
+                .enumerate()
+                .filter(|(i, d)| *i == 0 || matches!(d.selection, Selection::Rolled(_)))
+                .map(|(_, d)| d),
+        )
+        .cloned()
+        .collect();
     let advance_sheet = cx
         .rs
         .engine()
