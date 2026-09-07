@@ -932,41 +932,70 @@ pub fn derive_sheet(state: &Dnd5eState, data: &RulesData) -> SheetView {
     let mut combat = Vec::new();
     match class {
         Some(c) => {
+            // The breakdown is prose a player can read without the rule:
+            // what level 1 gave, what each later level added (the fixed
+            // value or the die that was rolled or entered), the
+            // Constitution modifier named as such, the minimum when it
+            // applied, the species bonus, and the total.
+            let con_text = format!("Constitution modifier ({})", format_signed(con));
             let mut hp = c.hp_at_level_1 as i32 + con;
-            let mut detail = format!("{} + {con} Con", c.hp_at_level_1);
+            let mut detail = format!(
+                "Level 1: {} ({}) + {con_text} = {hp}.",
+                c.hp_at_level_1, c.name
+            );
             let any_rolled = (2..=level).any(|l| state.hit_die_live(l).is_some());
             if level > 1 && !any_rolled {
-                // No level rolled its hit die: the fixed value, exactly as
-                // before dice existed (the detail text is a golden fact).
-                let per = c.hp_per_level as i32 + con;
-                hp += per * (level as i32 - 1);
-                detail.push_str(&format!(
-                    " + {} × ({} + {con} Con)",
-                    level - 1,
-                    c.hp_per_level
-                ));
+                // No level rolled its hit die: the fixed value, every level
+                // alike (minimum 1 per level, never reached by a fixed value
+                // at any legal Constitution).
+                let per = (c.hp_per_level as i32 + con).max(1);
+                let levels = level as i32 - 1;
+                hp += per * levels;
+                if levels == 1 {
+                    detail.push_str(&format!(
+                        " Level 2: fixed value {} + {con_text} = {per}.",
+                        c.hp_per_level
+                    ));
+                } else {
+                    detail.push_str(&format!(
+                        " Levels 2 to {level}: fixed value {} + {con_text} = {per} each, \
+                         {levels} levels = {}.",
+                        c.hp_per_level,
+                        per * levels
+                    ));
+                }
             } else if level > 1 {
                 // Per level: the live rolled face or the fixed value, plus
                 // Con, minimum 1 per level (SRD 5.2.1 p. 23, "Gaining a
                 // Level").
                 for l in 2..=level {
                     let (value, how) = match state.hit_die_live(l) {
-                        Some((face, origin)) => (face as i32, origin_label(origin)),
-                        None => (c.hp_per_level as i32, "fixed"),
+                        Some((face, origin)) => (face as i32, origin_label(origin).to_string()),
+                        None => (c.hp_per_level as i32, "fixed value".to_string()),
                     };
-                    let gain = (value + con).max(1);
+                    let raw = value + con;
+                    let gain = raw.max(1);
                     hp += gain;
-                    detail.push_str(&format!(" + level {l}: {value} ({how}) + {con} Con"));
-                    if value + con < 1 {
-                        detail.push_str(", minimum 1");
+                    if raw < 1 {
+                        detail.push_str(&format!(
+                            " Level {l}: {how} {value} + {con_text} = {raw}, raised to the \
+                             minimum of 1."
+                        ));
+                    } else {
+                        detail
+                            .push_str(&format!(" Level {l}: {how} {value} + {con_text} = {gain}."));
                     }
                 }
             }
             if let Some(sp) = species.filter(|s| s.hp_bonus_per_level > 0) {
                 let bonus = sp.hp_bonus_per_level * level;
                 hp += bonus as i32;
-                detail.push_str(&format!(" + {bonus} ({})", sp.name));
+                detail.push_str(&format!(
+                    " Plus {}: {} per level = {bonus}.",
+                    sp.name, sp.hp_bonus_per_level
+                ));
             }
+            detail.push_str(&format!(" Total {}.", hp.max(1)));
             combat.push(entry("Hit Points", hp.max(1).to_string(), Some(detail)));
         }
         None => combat.push(entry("Hit Points", "—", Some("choose a class".into()))),

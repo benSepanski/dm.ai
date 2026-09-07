@@ -324,8 +324,7 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await expect(sheet.locator('.sheet-summary').first()).toHaveText('Human Fighter 2');
   const hp2 = sectionEntry(sheet, 'Combat', 'Hit Points');
   await hp2.getByRole('button', { name: 'breakdown for Hit Points' }).click();
-  await expect(hp2).toContainText('level 2');
-  await expect(hp2).toContainText('rolled');
+  await expect(hp2).toContainText('Level 2: rolled');
   await expectSaneLayout(page);
 
   // Level 3: the Champion, and a physical d10 — an 11 is refused with the
@@ -348,7 +347,7 @@ test('the hit die: rolled at level 2 with a kept reroll, abandoned with the leve
   await expect(sheet).toBeVisible();
   const hp3 = sectionEntry(sheet, 'Combat', 'Hit Points');
   await hp3.getByRole('button', { name: 'breakdown for Hit Points' }).click();
-  await expect(hp3).toContainText('level 3: 7 (entered)');
+  await expect(hp3).toContainText('Level 3: entered 7');
   await expectSaneLayout(page);
 });
 

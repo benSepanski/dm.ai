@@ -1407,7 +1407,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "20");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "10 + 2 Con + 1 × (6 + 2 Con)"
+            "Level 1: 10 (Fighter) + Constitution modifier (+2) = 12. Level 2: fixed value 6 + Constitution modifier (+2) = 8. Total 20."
         );
 
         // Roll a 3, then reroll an 8: the history keeps both, the 8 is live.
@@ -1447,7 +1447,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "22");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "10 + 2 Con + level 2: 8 (entered) + 2 Con"
+            "Level 1: 10 (Fighter) + Constitution modifier (+2) = 12. Level 2: entered 8 + Constitution modifier (+2) = 10. Total 22."
         );
         let described = engine
             .describe_decision(
@@ -1472,7 +1472,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "30");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "10 + 2 Con + level 2: 8 (entered) + 2 Con + level 3: 6 (fixed) + 2 Con"
+            "Level 1: 10 (Fighter) + Constitution modifier (+2) = 12. Level 2: entered 8 + Constitution modifier (+2) = 10. Level 3: fixed value 6 + Constitution modifier (+2) = 8. Total 30."
         );
         // Out of shape: an 11 on a d10, or two dice.
         assert!(try_confirm(
@@ -1546,7 +1546,7 @@ mod hit_dice {
         assert_eq!(value(&p.sheet, "Combat", "Hit Points"), "10");
         assert_eq!(
             detail(&p.sheet, "Combat", "Hit Points"),
-            "10 + -1 Con + level 2: 1 (rolled) + -1 Con, minimum 1"
+            "Level 1: 10 (Fighter) + Constitution modifier (-1) = 9. Level 2: rolled 1 + Constitution modifier (-1) = 0, raised to the minimum of 1. Total 10."
         );
     }
 

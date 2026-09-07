@@ -1430,5 +1430,11 @@ fn hit_dice_ride_the_level_up_views_and_abandon_discards_them() {
         .clone();
     let con_bonus = hp["value"].as_str().unwrap().parse::<i64>().unwrap() - hp_before - 6;
     assert!((-5..=5).contains(&con_bonus), "fixed 6 + Con: {hp}");
-    assert!(hp["detail"].as_str().unwrap().contains("1 × (6 +"), "{hp}");
+    assert!(
+        hp["detail"]
+            .as_str()
+            .unwrap()
+            .contains("Level 2: fixed value 6 +"),
+        "{hp}"
+    );
 }

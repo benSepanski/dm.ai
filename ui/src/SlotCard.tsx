@@ -1,7 +1,7 @@
 // One choice slot: options, tentative selection, confirm, and the
 // change-with-dependent-clearing flow. Pure presentation — counts, legality,
 // and effects all come from the engine.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type {
   ClearPreview,
   Decision,
@@ -1195,9 +1195,6 @@ function TextEditor({
   );
 }
 
-/** How many history entries a roll card shows before "show all". */
-export const ROLL_HISTORY_SHOWN = 3;
-
 /**
  * Recorded dice: the slot's history (one render-ready entry per set,
  * from the engine — totals, faces, tag, which is live), a button that asks
@@ -1226,14 +1223,20 @@ function RollEditor({
   onRoll?: (() => void) | undefined;
   busy: boolean;
 }) {
-  const [showAll, setShowAll] = useState(false);
   const [entering, setEntering] = useState(false);
+  // Every set stays visible in a scrolling list; the live (last) set is
+  // scrolled into view whenever the history grows.
+  const liveRef = useRef<HTMLLIElement | null>(null);
+  useEffect(() => {
+    const live = liveRef.current;
+    if (live !== null && typeof live.scrollIntoView === 'function') {
+      live.scrollIntoView({ block: 'nearest' });
+    }
+  }, [slot.options.length]);
   const [faces, setFaces] = useState<string[][]>(() =>
     Array.from({ length: groups }, () => Array.from({ length: dice }, () => '')),
   );
   const history = slot.options;
-  const hidden = showAll ? 0 : Math.max(0, history.length - ROLL_HISTORY_SHOWN);
-  const shown = history.slice(hidden);
 
   const parsed: number[][] = faces.map((g) =>
     g.map((f) => (f.trim() === '' ? Number.NaN : Number(f))),
@@ -1258,7 +1261,11 @@ function RollEditor({
   };
 
   const disabledReason = !complete
-    ? `Enter every die (${groups} set${groups === 1 ? '' : 's'} of ${dice}).`
+    ? groups === 1 && dice === 1
+      ? "Enter the die's face."
+      : groups === 1
+        ? `Enter all ${dice} dice.`
+        : `Enter every die (${groups} sets of ${dice}).`
     : !onDie
       ? `Every face must be from 1 to ${sides}.`
       : null;
@@ -1269,15 +1276,16 @@ function RollEditor({
         <p className="roll-empty">Nothing rolled yet.</p>
       ) : (
         <div className="roll-history" data-testid={`roll-history-${slot.id}`}>
-          {hidden > 0 && (
-            <button type="button" className="roll-show-all" onClick={() => setShowAll(true)}>
-              Show all {history.length} sets
-            </button>
-          )}
+          <p className="roll-count" data-testid={`roll-count-${slot.id}`}>
+            {history.length === 1
+              ? '1 set recorded.'
+              : `${history.length} sets recorded — every one stays in your record; the last is live.`}
+          </p>
           <ol className="roll-sets">
-            {shown.map((set) => (
+            {history.map((set) => (
               <li
                 key={set.id}
+                ref={set.available ? liveRef : null}
                 className={`roll-set ${set.available ? 'roll-live' : 'roll-superseded'}`}
                 data-testid="roll-set"
                 data-live={set.available || undefined}
@@ -1321,8 +1329,11 @@ function RollEditor({
       {entering && (
         <div className="roll-grid" data-testid={`roll-grid-${slot.id}`}>
           <p className="roll-grid-intro">
-            Type the faces you rolled: {groups} set{groups === 1 ? '' : 's'} of {dice},
-            each from 1 to {sides}.
+            {groups === 1 && dice === 1
+              ? `Type the face you rolled (1 to ${sides}).`
+              : groups === 1
+                ? `Type the faces you rolled: ${dice} dice, each face 1 to ${sides}.`
+                : `Type the faces you rolled: ${groups} sets of ${dice} dice, each face 1 to ${sides}.`}
           </p>
           {faces.map((row, g) => (
             <div className="roll-grid-row" key={g}>

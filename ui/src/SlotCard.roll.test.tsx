@@ -86,14 +86,12 @@ describe('SlotCard roll editor', () => {
     expect(screen.getByRole('button', { name: 'Roll again' })).toBeEnabled();
   });
 
-  it('collapses a long history behind show-all', async () => {
-    renderCard(
-      rollSlot([1, 2, 3, 4, 5].map((n) => historyEntry(n, n === 5, 'rolled'))),
-    );
+  it('keeps every set visible with a count, the live one last', () => {
+    renderCard(rollSlot([1, 2, 3, 4, 5].map((n) => historyEntry(n, n === 5, 'rolled'))));
     const history = screen.getByTestId('roll-history-toy.roll');
-    expect(within(history).getAllByTestId('roll-set')).toHaveLength(3);
-    await userEvent.click(screen.getByRole('button', { name: 'Show all 5 sets' }));
     expect(within(history).getAllByTestId('roll-set')).toHaveLength(5);
+    expect(screen.getByTestId('roll-count-toy.roll')).toHaveTextContent('5 sets recorded');
+    expect(within(history).getAllByTestId('roll-set')[4]).toHaveAttribute('data-live', 'true');
   });
 
   it('sizes the entry grid from the kind, previews complete entries, and refuses a face off the die', async () => {

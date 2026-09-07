@@ -1127,9 +1127,17 @@ li.option-group-heading {
 .roll-sets {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0.15rem;
   display: grid;
   gap: 0.4rem;
+  /* Every set stays; past a few the list scrolls rather than hides. */
+  max-height: 16rem;
+  overflow-y: auto;
+}
+.roll-count {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
 }
 .roll-set {
   display: grid;
@@ -1157,14 +1165,6 @@ li.option-group-heading {
   grid-column: 1 / -1;
   margin: 0;
   padding-left: 1rem;
-  font-size: 0.85rem;
-}
-.roll-show-all {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--ink-soft);
-  cursor: pointer;
   font-size: 0.85rem;
 }
 .roll-actions {

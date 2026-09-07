@@ -16,6 +16,13 @@ in the ability-score step:
    Buy never showed what each score costs.**
 4. **Rolling a hit die changed nothing in the level-up table** (2026-09-07),
    and nothing in the table said the Hit Points row was provisional.
+5. **The hit point breakdown was a bare formula** ("10 + 0 Con + 1 × (6 +
+   0 Con)") that needed the rule to read, and its rolled form was no
+   clearer.
+6. **The dice-entry copy read oddly for one die** ("1 set of 1, each from
+   1 to 10").
+7. **Past three sets the earlier rolls vanished** behind a "Show all"
+   link too quiet to notice, with no scroll bar.
 
 Reproduced in the browser at phone width, then fixed on the same branch:
 
@@ -39,6 +46,24 @@ Reproduced in the browser at phone width, then fixed on the same branch:
   Before a roll, any gains row that a roll card in the step can still
   change carries a marker ("🎲 fixed value — or roll below"), matched to
   the card by label so the UI still learns no game word.
+- **The hit point breakdown is prose.** "Level 1: 10 (Fighter) +
+  Constitution modifier (+0) = 10. Level 2: fixed value 6 + Constitution
+  modifier (+0) = 6. Total 16." — and per level once a die is involved:
+  "Level 2: rolled 8 + Constitution modifier (+2) = 10." with "= 0, raised
+  to the minimum of 1." when the minimum applies, and "Plus Dwarf: 1 per
+  level = 2." for a species bonus. The values are unchanged; the four
+  5.5e golden sheets were regenerated for the wording (a deliberate golden
+  update, values hand-checked as before).
+- **Dice entry copy per shape**: "Type the face you rolled (1 to 10)." for
+  one die; "Type the faces you rolled: 6 sets of 4 dice, each face 1 to
+  6." for the ability scores.
+- **The roll history scrolls instead of hiding.** Every set stays visible
+  in a list that scrolls past a few entries, with a count line ("5 sets
+  recorded — every one stays in your record; the last is live") and the
+  live set scrolled into view as the history grows. This replaces the
+  architecture's "collapse behind show all" presentation detail on
+  review feedback; the boundary (history rendered from engine-described
+  entries, nothing computed) is unchanged.
 - **A steady step nav on narrow screens.** The cause was the
   "Unconfirmed changes" chip: on a phone the step nav sits above the
   cards, and the chip appearing grew it by 39 px the moment a tentative
@@ -156,10 +181,11 @@ cargo run --release -p server -- --data-dir ./campaign-dice
    row follows the live one. **Abandon level 2**: the dialog names
    Hit Points among what it discards; afterwards the file holds no hit-die
    decision. Level up again, roll once, finalize: the sheet's Hit Points
-   breakdown reads "level 2: N (rolled) + Con". At level 3 pick the
+   breakdown reads "Level 2: rolled N + Constitution modifier (…) = …".
+   At level 3 pick the
    Champion and **Enter dice** on the hit die: 11 is refused with the rule
    named, 7 is accepted and tagged entered; finalize and the breakdown
-   reads "level 3: 7 (entered)". Open Brannock in your existing campaign:
+   reads "Level 3: entered 7 + Constitution modifier (…) = …". Open Brannock in your existing campaign:
    his hit points and his file are unchanged.
 6. **The crash.** `kill -9` the server the instant after tapping Roll, a
    few times; restart on the same directory: the history holds either no
@@ -300,7 +326,7 @@ built through confirms instead of a mint). CI's 20 s gate is the arbiter;
 if it trips, the seeded and crash rows are the candidates to move behind
 a slow tag.
 
-Branch: 11 commits on `checkpoint/dnd-dice`; 79 files changed against `main`.
+Branch: 12 commits on `checkpoint/dnd-dice`; 79 files changed against `main`.
 
 ## Complaints logged
 

@@ -46,7 +46,7 @@
         {
           "label": "Hit Points",
           "value": "11",
-          "detail": "10 + 1 Con"
+          "detail": "Level 1: 10 (Fighter) + Constitution modifier (+1) = 11. Total 11."
         },
         {
           "label": "Armor Class",
